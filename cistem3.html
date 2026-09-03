@@ -138,6 +138,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .field input{font-family:var(--font-mono);}
 .field input::placeholder{color:var(--text-tertiary);}
 .field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+.field input:disabled,.field select:disabled{opacity:.5;cursor:not-allowed;background:var(--surface-sunken);}
 .field.field-checkbox{flex-direction:row;align-items:center;gap:8px;}
 .field.field-checkbox input{width:auto;}
 
@@ -173,13 +174,27 @@ button.link:hover{background:none;text-decoration:underline;}
 .asset-subtab-btn:hover{background:var(--surface-sunken);}
 .asset-subtab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
 
-.assets-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;}
-.group-list{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto;border:1px solid var(--border);}
+.assets-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:stretch;height:340px;}
+.assets-layout > .groupbox{display:flex;flex-direction:column;}
+/* A plain 1px border on this element doesn't reliably paint in Chromium once
+   its content is shorter than the fixed-height box (a rendering quirk of
+   hairline borders on a scroll container here) -- use a background fill
+   instead, which isn't affected, so the box still visibly extends to the
+   bottom of its 340px height even when there's little/no content. */
+.assets-layout .table-scroll{flex:1;overflow-y:auto;background:var(--surface-sunken);margin:0;}
+.assets-layout .table-scroll thead th{position:sticky;top:0;z-index:1;}
+.assets-layout .table-scroll tbody td{background:var(--surface);}
+.assets-layout .table-scroll tbody tr:nth-child(even) td{background:var(--surface-sunken);}
+/* Let the table's own (reliably-rendering) row backgrounds fill the box down
+   to its full height instead of leaving bare space below a short table --
+   the sunken background above is just a fallback for any rounding gap. */
+.assets-layout .table-scroll table.queue{height:100%;}
+.group-list{list-style:none;margin:0;padding:0;flex:1;overflow-y:auto;border:1px solid var(--border);}
 .group-list li{padding:7px 10px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-bottom:1px solid var(--border);}
 .group-list li:last-child{border-bottom:none;}
 .group-list li:hover{background:var(--surface-sunken);}
 .group-list li.selected{background:var(--accent);color:#fff;}
-.asset-toolbar{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.asset-toolbar{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;flex-shrink:0;}
 
 .details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 24px;margin-top:2px;}
 .details-item{display:flex;justify-content:space-between;gap:8px;font-size:12px;border-bottom:1px solid var(--border);padding-bottom:4px;}
@@ -187,7 +202,8 @@ button.link:hover{background:none;text-decoration:underline;}
 .details-val{font-family:var(--font-mono);color:var(--text);}
 
 @media (max-width:900px){
-  .assets-layout{grid-template-columns:1fr;}
+  .assets-layout{grid-template-columns:1fr;height:auto;}
+  .assets-layout > .groupbox{height:300px;}
   .details-grid{grid-template-columns:repeat(2,1fr);}
 }
 
@@ -283,6 +299,51 @@ td.mono{font-family:var(--font-mono);}
 .log-actions{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
 .scrim{position:fixed;inset:0;background:rgba(20,24,28,0.25);z-index:19;opacity:0;pointer-events:none;transition:opacity .18s ease;}
 .scrim.open{opacity:1;pointer-events:auto;}
+
+/* ---------- modal (centered pop-up dialog) ---------- */
+/* Vertically centered (equal breathing room top and bottom, so it never
+   looks like it's hugging or spilling past an edge) and laid out as a
+   column with the head as a non-shrinking flex item -- so a tall/scrolling
+   form can never push the head, and its close button, out of view. */
+.modal{
+  position:fixed;top:50%;left:50%;width:min(640px,92vw);max-height:86%;
+  background:var(--surface);border:1px solid var(--border-strong);
+  z-index:21;box-shadow:0 10px 32px rgba(0,0,0,0.25);opacity:0;pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease;
+  display:flex;flex-direction:column;
+  transform:translate(-50%,-46%);
+}
+.modal.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%);}
+.modal-head{
+  display:flex;justify-content:space-between;align-items:center;padding:12px 16px;
+  background:var(--chrome);border-bottom:1px solid var(--border-strong);
+  flex-shrink:0;
+}
+.modal-title{font-size:12.5px;font-weight:700;}
+.modal-body{padding:18px 18px 20px;overflow-y:auto;flex:1 1 auto;min-height:0;}
+
+/* Opens from within an already-open modal (Import Movies), so it needs to
+   stack above it -- one tier higher than the regular .scrim/.modal z-index. */
+.browse-scrim{z-index:22;}
+.modal.browse-modal{z-index:23;}
+
+.browse-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.browse-path{
+  font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);
+  background:var(--surface-sunken);padding:6px 10px;border:1px solid var(--border);
+  flex:1;overflow-x:auto;white-space:nowrap;
+}
+.browse-list{list-style:none;margin:0;padding:0;border:1px solid var(--border);max-height:360px;overflow-y:auto;}
+.browse-list li{
+  padding:7px 10px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;color:var(--text);
+}
+.browse-list li:last-child{border-bottom:none;}
+.browse-list li:hover{background:var(--accent-soft);}
+.browse-list li.dir{font-weight:600;}
+.browse-list svg{width:15px;height:15px;flex-shrink:0;color:var(--text-tertiary);}
+.field-row{display:flex;gap:8px;}
+.field-row input{flex:1;}
 
 @media (max-width:760px){
   .actions-layout{grid-template-columns:1fr;}
@@ -428,6 +489,10 @@ From branch : <span id="versionBranch">—</span></p>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1"/><path d="M3.5 9.5h17M9 9.5V19.5"/></svg>
       <span>Results</span>
     </button>
+    <button class="rail-item" data-tab="details" title="Details">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19v-8M12 19V5M18 19v-5"/></svg>
+      <span>Details</span>
+    </button>
     <button class="rail-item" data-tab="settings" title="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.4-2-3.4-2.3.8a7.5 7.5 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.5 7.5 0 0 0-2.6 1.5l-2.3-.8-2 3.4 2 1.4a7.6 7.6 0 0 0 0 3l-2 1.4 2 3.4 2.3-.8a7.5 7.5 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.5 7.5 0 0 0 2.6-1.5l2.3.8 2-3.4-2-1.4z"/></svg>
       <span>Settings</span>
@@ -483,9 +548,9 @@ From branch : <span id="versionBranch">—</span></p>
               <span class="groupbox-label">Groups</span>
               <ul class="group-list" id="movieGroupList"></ul>
               <div class="asset-toolbar">
-                <button class="small" disabled title="Not implemented yet -- groups are created automatically at import time, one per import batch.">Add</button>
-                <button class="small" disabled title="Not implemented yet -- groups are created automatically at import time, one per import batch.">Remove</button>
-                <button class="small" disabled title="Not implemented yet -- groups are created automatically at import time, one per import batch.">Invert</button>
+                <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Add</button>
+                <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Remove</button>
+                <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Invert</button>
               </div>
             </div>
 
@@ -504,7 +569,7 @@ From branch : <span id="versionBranch">—</span></p>
                 </table>
               </div>
               <div class="asset-toolbar">
-                <button class="small" id="movieImportScrollBtn">Import</button>
+                <button class="small" id="movieImportOpenBtn">Import</button>
                 <button class="small" disabled title="Not implemented yet.">Remove</button>
                 <button class="small" disabled title="Not implemented yet.">Remove All</button>
                 <button class="small" disabled title="Not implemented yet.">Rename</button>
@@ -530,15 +595,6 @@ From branch : <span id="versionBranch">—</span></p>
             </div>
           </div>
 
-          <div class="groupbox" id="importMoviesBox">
-            <span class="groupbox-label">Import Movies</span>
-            <p class="page-sub" style="margin:0 0 12px;">Microscope metadata is set once per import batch and stored with each movie — job forms below reference it instead of asking again.</p>
-            <div id="importFields"></div>
-            <div class="submit-row">
-              <button class="primary" id="importBtn">Import</button>
-            </div>
-            <p class="form-note" id="importNote"></p>
-          </div>
         </div>
 
         <!-- IMAGES / PARTICLE POSITIONS / 3D VOLUMES / REFINE PKGS: no backend data model yet -->
@@ -565,24 +621,6 @@ From branch : <span id="versionBranch">—</span></p>
           </div>
         </div>
 
-        <div class="groupbox">
-          <span class="groupbox-label">Queue Summary</span>
-          <div class="asset-grid">
-            <div class="asset-tile"><div class="asset-label">Queued</div><div class="asset-value" id="sumQueued">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Running</div><div class="asset-value running" id="sumRunning">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Completed</div><div class="asset-value completed" id="sumCompleted">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Failed</div><div class="asset-value failed" id="sumFailed">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Total</div><div class="asset-value" id="sumTotal">0</div></div>
-          </div>
-        </div>
-
-        <div class="groupbox">
-          <span class="groupbox-label">Stage Inventory</span>
-          <table class="stage-inventory" id="stageInventory">
-            <thead><tr><th>Stage</th><th class="num">Jobs Run</th><th class="num">Completed</th><th class="num">Failed</th></tr></thead>
-            <tbody id="stageInventoryBody"></tbody>
-          </table>
-        </div>
       </section>
 
       <!-- ACTIONS -->
@@ -647,6 +685,31 @@ From branch : <span id="versionBranch">—</span></p>
         </div>
       </section>
 
+      <!-- DETAILS -->
+      <section class="tabpage" id="page-details" hidden>
+        <h2 class="page-heading">Details</h2>
+        <p class="page-sub">Queue status and per-stage job totals for this project.</p>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Queue Summary</span>
+          <div class="asset-grid">
+            <div class="asset-tile"><div class="asset-label">Queued</div><div class="asset-value" id="sumQueued">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Running</div><div class="asset-value running" id="sumRunning">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Completed</div><div class="asset-value completed" id="sumCompleted">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Failed</div><div class="asset-value failed" id="sumFailed">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Total</div><div class="asset-value" id="sumTotal">0</div></div>
+          </div>
+        </div>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Stage Inventory</span>
+          <table class="stage-inventory" id="stageInventory">
+            <thead><tr><th>Stage</th><th class="num">Jobs Run</th><th class="num">Completed</th><th class="num">Failed</th></tr></thead>
+            <tbody id="stageInventoryBody"></tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- SETTINGS -->
       <section class="tabpage" id="page-settings" hidden>
         <h2 class="page-heading">Settings</h2>
@@ -680,6 +743,42 @@ From branch : <span id="versionBranch">—</span></p>
       </section>
 
     </div>
+  </div>
+</div>
+
+<div class="scrim" id="importScrim"></div>
+<div class="modal" id="importModal">
+  <div class="modal-head">
+    <div class="modal-title">Import Movies</div>
+    <button class="log-close" id="importModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">Microscope metadata is set once per import batch and stored with each movie — job forms below reference it instead of asking again.</p>
+    <div id="importFields"></div>
+    <div class="submit-row">
+      <button class="primary" id="importBtn">Import</button>
+    </div>
+    <p class="form-note" id="importNote"></p>
+  </div>
+</div>
+
+<!-- Browses the filesystem of the machine running the API server (not the
+     browser's) -- that's deliberate, since that's where a glob typed by hand
+     into Movie files would be resolved too. Opens on top of the already-open
+     Import Movies modal, hence the higher z-index (see .browse-modal CSS). -->
+<div class="scrim browse-scrim" id="browseScrim"></div>
+<div class="modal browse-modal" id="browseModal">
+  <div class="modal-head">
+    <div class="modal-title">Choose Movie Files</div>
+    <button class="log-close" id="browseModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="browse-toolbar">
+      <button class="small" id="browseUpBtn">&uarr; Up</button>
+      <span class="browse-path" id="browsePath"></span>
+    </div>
+    <ul class="browse-list" id="browseList"></ul>
+    <p class="form-note">Click a folder to open it, or a movie file to match every file of that type in its folder.</p>
   </div>
 </div>
 
@@ -803,8 +902,10 @@ From branch : <span id="versionBranch">—</span></p>
    "settingsConnStatus","settingsConnDot","settingsConnLabel",
    "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
    "previewDesc","jobSummaryBody",
-   "importFields","importBtn","importNote","movieListBody","movieGroupList","movieImportScrollBtn",
-   "importMoviesBox","assetpageMovies","assetpagePlaceholder","placeholderPanelLabel",
+   "importFields","importBtn","importNote","movieListBody","movieGroupList","movieImportOpenBtn",
+   "importScrim","importModal","importModalClose",
+   "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
+   "assetpageMovies","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
    "dMovieName","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
@@ -842,6 +943,7 @@ From branch : <span id="versionBranch">—</span></p>
     assets: document.getElementById("page-assets"),
     actions: document.getElementById("page-actions"),
     results: document.getElementById("page-results"),
+    details: document.getElementById("page-details"),
     settings: document.getElementById("page-settings")
   };
   function showTab(name){
@@ -882,11 +984,95 @@ From branch : <span id="versionBranch">—</span></p>
   });
   showAssetTab("movies");
 
-  els.movieImportScrollBtn.addEventListener("click", function(){
-    els.importMoviesBox.scrollIntoView({behavior: "smooth", block: "start"});
+  // ---------- import movies modal ----------
+  function openImportModal(){
+    els.importModal.classList.add("open");
+    els.importScrim.classList.add("open");
     var glob = els.importFields.querySelector('[data-key="input_glob"]');
     if (glob) glob.focus();
-  });
+  }
+  function closeImportModal(){
+    els.importModal.classList.remove("open");
+    els.importScrim.classList.remove("open");
+  }
+  els.movieImportOpenBtn.addEventListener("click", openImportModal);
+  els.importModalClose.addEventListener("click", closeImportModal);
+  els.importScrim.addEventListener("click", closeImportModal);
+
+  // ---------- browse (server-side file picker) ----------
+  // Lists directories on whatever machine is running the API server -- the
+  // same machine a hand-typed glob in Movie files would already be resolved
+  // against -- not the browser's own filesystem, which a native <input
+  // type=file> can't avoid (and which is usually the wrong machine here
+  // anyway, since the API server commonly runs elsewhere on the network).
+  var FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-11z"/></svg>';
+  var FILE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14.5 3v4.5H19"/></svg>';
+  var browseParent = null;
+
+  function openBrowseModal(){
+    els.browseModal.classList.add("open");
+    els.browseScrim.classList.add("open");
+    var glob = els.importFields.querySelector('[data-key="input_glob"]').value.trim();
+    var startDir = glob ? glob.replace(/[^/\\]*$/, "").replace(/[/\\]+$/, "") : "";
+    loadBrowseDir(startDir || null);
+  }
+  function closeBrowseModal(){
+    els.browseModal.classList.remove("open");
+    els.browseScrim.classList.remove("open");
+  }
+  function loadBrowseDir(path){
+    els.browseList.innerHTML = '<li class="browse-empty" style="display:block;">Loading…</li>';
+    var url = apiUrl("/browse") + (path ? "?path=" + encodeURIComponent(path) : "");
+    apiFetch(url).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(d){
+      els.browsePath.textContent = d.path;
+      browseParent = d.parent;
+      els.browseUpBtn.disabled = !d.parent;
+      renderBrowseList(d);
+    }).catch(function(err){
+      els.browseList.innerHTML = "";
+      var li = document.createElement("li");
+      li.className = "browse-empty";
+      li.textContent = "Could not list that folder: " + err.message;
+      els.browseList.appendChild(li);
+    });
+  }
+  function renderBrowseList(d){
+    els.browseList.innerHTML = "";
+    if (!d.directories.length && !d.files.length){
+      var empty = document.createElement("li");
+      empty.className = "browse-empty";
+      empty.textContent = "No subfolders or movie files here";
+      els.browseList.appendChild(empty);
+      return;
+    }
+    d.directories.forEach(function(name){
+      var li = document.createElement("li");
+      li.className = "dir";
+      li.innerHTML = FOLDER_ICON + "<span></span>";
+      li.querySelector("span").textContent = name;
+      li.addEventListener("click", function(){ loadBrowseDir(d.path + "/" + name); });
+      els.browseList.appendChild(li);
+    });
+    d.files.forEach(function(name){
+      var li = document.createElement("li");
+      li.innerHTML = FILE_ICON + "<span></span>";
+      li.querySelector("span").textContent = name;
+      li.addEventListener("click", function(){
+        var ext = name.slice(name.lastIndexOf("."));
+        var glob = els.importFields.querySelector('[data-key="input_glob"]');
+        glob.value = d.path + "/*" + ext;
+        glob.dispatchEvent(new Event("input", {bubbles: true}));
+        closeBrowseModal();
+      });
+      els.browseList.appendChild(li);
+    });
+  }
+  els.browseUpBtn.addEventListener("click", function(){ if (browseParent) loadBrowseDir(browseParent); });
+  els.browseModalClose.addEventListener("click", closeBrowseModal);
+  els.browseScrim.addEventListener("click", closeBrowseModal);
 
   // ---------- home screen / project switching ----------
   function showScreen(name){
@@ -1535,22 +1721,109 @@ From branch : <span id="versionBranch">—</span></p>
   });
 
   // ---------- movie import ----------
+  // Field set and grouping mirror cisTEM's own MovieImportDialog (see
+  // MyMovieImportDialog.cpp): Input / Microscope / EER / Corrections /
+  // Resampling, with gain/dark reference and desired pixel size gated behind
+  // their own checkboxes rather than "blank means off". Left out: mag
+  // distortion correction -- the schema has the columns, but with no real
+  // processing pipeline behind Align Movies yet, exposing angle/scale inputs
+  // that do nothing would be worse than not having them. EER detection
+  // itself also differs from the reference: cisTEM inspects each selected
+  // file's actual extension; this app only has a glob pattern to go on
+  // (there's no client-side file listing here), so it treats a glob ending
+  // in ".eer" as an EER import -- see updateEerFieldState() below. The
+  // server double-checks against the files it actually resolves.
   var IMPORT_FIELDS = [
     {key:"input_glob", label:"Movie files", unit:"", type:"text", placeholder:"/data/session01/movies/*.tif", group:"Input"},
-    {key:"group_name", label:"Group name", unit:"", type:"text", placeholder:"e.g. Session 1", group:"Input"},
+
     {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300", group:"Microscope"},
     {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7", group:"Microscope"},
     {key:"pixel_size_a", label:"Pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"0.83", group:"Microscope"},
     {key:"dose_per_frame", label:"Dose per frame", unit:"e⁻/Å²", type:"number", step:"0.01", placeholder:"1.2", group:"Microscope"},
-    {key:"gain_ref", label:"Gain reference", unit:"", type:"text", placeholder:"/data/session01/gain.mrc (optional)", group:"Corrections"},
-    {key:"dark_ref", label:"Dark reference", unit:"", type:"text", placeholder:"(optional)", group:"Corrections"}
+    {key:"protein_is_white", label:"Movies have inverted contrast (protein is white)", type:"checkbox", group:"Microscope"},
+
+    {key:"eer_frames_per_image", label:"EER frames per image", type:"number", step:"1", min:1, placeholder:"25", group:"EER", tooltip:"Only used when Movie files points at .eer files -- detected automatically from the path above."},
+    {key:"eer_super_res_factor", label:"EER super-resolution factor", type:"select", options:["1","2","4"], group:"EER", tooltip:"Only used when Movie files points at .eer files -- detected automatically from the path above."},
+
+    {key:"apply_gain", label:"Apply gain correction", type:"checkbox", group:"Corrections"},
+    {key:"gain_ref", label:"Gain reference", unit:"", type:"text", placeholder:"/data/session01/gain.mrc", group:"Corrections", enabledBy:"apply_gain"},
+    {key:"apply_dark", label:"Apply dark correction", type:"checkbox", group:"Corrections"},
+    {key:"dark_ref", label:"Dark reference", unit:"", type:"text", placeholder:"/data/session01/dark.mrc", group:"Corrections", enabledBy:"apply_dark"},
+
+    {key:"resample_movies", label:"Resample movies", type:"checkbox", group:"Resampling"},
+    {key:"desired_pixel_size_a", label:"Desired pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"1.00", group:"Resampling", enabledBy:"resample_movies"}
   ];
   renderGroupedFields(els.importFields, IMPORT_FIELDS);
+  wireConditionalFields(els.importFields, IMPORT_FIELDS);
+
+  // Wrap the Movie files input with a Browse… button that opens the
+  // server-side file picker (see "browse (server-side file picker)" below).
+  (function(){
+    var globInput = els.importFields.querySelector('[data-key="input_glob"]');
+    var row = document.createElement("div");
+    row.className = "field-row";
+    globInput.parentNode.insertBefore(row, globInput);
+    row.appendChild(globInput);
+    var browseBtn = document.createElement("button");
+    browseBtn.type = "button";
+    browseBtn.className = "small";
+    browseBtn.textContent = "Browse…";
+    browseBtn.addEventListener("click", openBrowseModal);
+    row.appendChild(browseBtn);
+  })();
+
+  // Sets just the leading text of a field's <label>, leaving its "(unit)"
+  // span (a sibling, appended after that text node -- see buildField())
+  // untouched. Used to switch the Pixel size / Dose per frame labels the
+  // same way SetLabel() does in the reference dialog when EER files are
+  // detected.
+  function setImportFieldLabelText(key, text){
+    var input = els.importFields.querySelector('[data-key="' + key + '"]');
+    var label = input && input.closest(".field").querySelector("label");
+    if (label && label.firstChild) label.firstChild.textContent = text + " ";
+  }
+
+  var EER_FIELD_KEYS = ["eer_frames_per_image", "eer_super_res_factor"];
+  function updateEerFieldState(){
+    var glob = (els.importFields.querySelector('[data-key="input_glob"]').value || "").trim().toLowerCase();
+    var isEer = /\.eer$/.test(glob);
+    EER_FIELD_KEYS.forEach(function(key){
+      var input = els.importFields.querySelector('[data-key="' + key + '"]');
+      if (input) input.disabled = !isEer;
+    });
+    setImportFieldLabelText("pixel_size_a", isEer ? "Pixel size (post EER sampling)" : "Pixel size");
+    setImportFieldLabelText("dose_per_frame", isEer ? "Dose per frame (post EER avg.)" : "Dose per frame");
+  }
+  els.importFields.querySelector('[data-key="input_glob"]').addEventListener("input", updateEerFieldState);
+  updateEerFieldState();
+
+  // Disables (and visually dims) a field until the checkbox named in its
+  // enabledBy points to is checked -- e.g. Gain reference until Apply gain
+  // correction is ticked, matching GainFilePicker->Enable(...) in the
+  // reference dialog.
+  function syncConditionalFields(container, fields){
+    fields.forEach(function(f){
+      if (!f.enabledBy) return;
+      var dependent = container.querySelector('[data-key="' + f.key + '"]');
+      var governor = container.querySelector('[data-key="' + f.enabledBy + '"]');
+      if (dependent && governor) dependent.disabled = !governor.checked;
+    });
+  }
+  function wireConditionalFields(container, fields){
+    fields.forEach(function(f){
+      if (!f.enabledBy) return;
+      var governor = container.querySelector('[data-key="' + f.enabledBy + '"]');
+      if (governor) governor.addEventListener("change", function(){ syncConditionalFields(container, fields); });
+    });
+    syncConditionalFields(container, fields);
+  }
 
   function setImportFieldValue(key, value){
     if (value === null || value === undefined) return;
     var input = els.importFields.querySelector('[data-key="' + key + '"]');
-    if (input) input.value = value;
+    if (!input) return;
+    if (input.type === "checkbox") input.checked = !!value;
+    else input.value = value;
   }
 
   function loadImportDefaults(){
@@ -1564,8 +1837,17 @@ From branch : <span id="versionBranch">—</span></p>
       setImportFieldValue("cs_mm", d.SPHERICAL_ABERRATION);
       setImportFieldValue("pixel_size_a", d.PIXEL_SIZE);
       setImportFieldValue("dose_per_frame", d.EXPOSURE_PER_FRAME);
+      setImportFieldValue("protein_is_white", d.PROTEIN_IS_WHITE);
+      if (d.MOVIES_ARE_GAIN_CORRECTED != null) setImportFieldValue("apply_gain", !d.MOVIES_ARE_GAIN_CORRECTED);
       setImportFieldValue("gain_ref", d.GAIN_REFERENCE_FILENAME);
+      if (d.MOVIES_ARE_DARK_CORRECTED != null) setImportFieldValue("apply_dark", !d.MOVIES_ARE_DARK_CORRECTED);
       setImportFieldValue("dark_ref", d.DARK_REFERENCE_FILENAME);
+      setImportFieldValue("resample_movies", d.RESAMPLE_MOVIES);
+      setImportFieldValue("desired_pixel_size_a", d.DESIRED_PIXEL_SIZE);
+      setImportFieldValue("eer_frames_per_image", d.EER_FRAMES_PER_IMAGE);
+      if (d.EER_SUPER_RES_FACTOR != null) setImportFieldValue("eer_super_res_factor", String(d.EER_SUPER_RES_FACTOR));
+      syncConditionalFields(els.importFields, IMPORT_FIELDS);
+      updateEerFieldState();
     }).catch(function(){});
   }
 
@@ -1574,6 +1856,17 @@ From branch : <span id="versionBranch">—</span></p>
     var body = {};
     els.importFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
     if (!body.input_glob){ alert("Enter a path or glob for movie files."); return; }
+    if (body.apply_gain && !body.gain_ref){ alert("Enter a gain reference path, or untick Apply gain correction."); return; }
+    if (body.apply_dark && !body.dark_ref){ alert("Enter a dark reference path, or untick Apply dark correction."); return; }
+    if (body.resample_movies){
+      if (!body.desired_pixel_size_a){ alert("Enter a desired pixel size, or untick Resample movies."); return; }
+      if (body.pixel_size_a && body.desired_pixel_size_a <= body.pixel_size_a){
+        alert("Desired pixel size must be larger than the current pixel size (resampling only bins down).");
+        return;
+      }
+    }
+    if (!body.apply_gain) body.gain_ref = null;
+    if (!body.apply_dark) body.dark_ref = null;
     els.importBtn.disabled = true;
     els.importBtn.textContent = "Importing…";
     apiFetch(projectApiUrl("/movies/import"), {
@@ -1583,9 +1876,9 @@ From branch : <span id="versionBranch">—</span></p>
       return r.json();
     }).then(function(result){
       els.importNote.textContent = result.synthetic
-        ? "No files matched that path, so " + result.movie_count + ' placeholder movies were created for "' + result.group_name + '" so you can exercise the flow without real data.'
-        : "Imported " + result.movie_count + ' movies into "' + result.group_name + '".';
-      state.selectedGroupId = result.movie_group_id;
+        ? "No files matched that path, so " + result.movie_count + " placeholder movies were added to All Movies so you can exercise the flow without real data."
+        : "Imported " + result.movie_count + " movies into All Movies.";
+      state.selectedGroupId = 0;
       loadMovieGroups();
       loadMovies();
       populateDynamicFields(STAGES.motion_correction.fields);

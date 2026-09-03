@@ -406,6 +406,54 @@ def version_route():
     })
 
 
+MOVIE_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff", ".eer"}
+
+
+@app.route("/api/browse")
+@auth.login_required
+def browse_filesystem():
+    """Lists one directory on this server's own filesystem, for the Movie
+    files "Browse..." picker on the Import Movies dialog. Deliberately the
+    server's filesystem, not the browser's: a hand-typed glob in that same
+    field is already resolved against this machine (see import_movies()), so
+    this is just a friendlier way to fill it in -- not a new capability an
+    authenticated user didn't already have.
+    """
+    raw_path = request.args.get("path") or str(Path.home())
+    path = Path(raw_path).expanduser()
+    if not path.is_dir():
+        return jsonify({"error": "not a directory: {}".format(path)}), 400
+    try:
+        entries = list(path.iterdir())
+    except OSError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    directories = []
+    files = []
+    for entry in entries:
+        if entry.name.startswith("."):
+            continue
+        try:
+            is_dir = entry.is_dir()
+        except OSError:
+            continue
+        if is_dir:
+            directories.append(entry.name)
+        elif entry.suffix.lower() in MOVIE_EXTENSIONS:
+            files.append(entry.name)
+    directories.sort(key=str.lower)
+    files.sort(key=str.lower)
+
+    resolved = path.resolve()
+    parent = resolved.parent
+    return jsonify({
+        "path": str(resolved),
+        "parent": str(parent) if parent != resolved else None,
+        "directories": directories,
+        "files": files,
+    })
+
+
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
@@ -572,29 +620,61 @@ def import_movies(project_id):
     body = request.get_json(force=True, silent=True) or {}
 
     input_glob = (body.get("input_glob") or "").strip()
-    group_name = (body.get("group_name") or "").strip() or "Import {}".format(now_iso()[:19])
     voltage_kv = body.get("voltage_kv")
     cs_mm = body.get("cs_mm")
     pixel_size_a = body.get("pixel_size_a")
     dose_per_frame = body.get("dose_per_frame")
-    gain_ref = body.get("gain_ref") or None
-    dark_ref = body.get("dark_ref") or None
+    protein_is_white = bool(body.get("protein_is_white"))
+
+    apply_gain = bool(body.get("apply_gain"))
+    gain_ref = (body.get("gain_ref") or None) if apply_gain else None
+    apply_dark = bool(body.get("apply_dark"))
+    dark_ref = (body.get("dark_ref") or None) if apply_dark else None
+
+    resample_movies = bool(body.get("resample_movies"))
+    desired_pixel_size_a = body.get("desired_pixel_size_a")
+    if resample_movies and desired_pixel_size_a and pixel_size_a:
+        output_binning_factor = desired_pixel_size_a / pixel_size_a
+    else:
+        output_binning_factor = 1.0
+
+    eer_frames_per_image = body.get("eer_frames_per_image")
+    if eer_frames_per_image is not None:
+        eer_frames_per_image = int(eer_frames_per_image)
+    eer_super_res_factor = body.get("eer_super_res_factor")
+    if eer_super_res_factor is not None:
+        eer_super_res_factor = int(eer_super_res_factor)
 
     matched = sorted(glob_module.glob(input_glob)) if input_glob else []
     synthetic = False
     if not matched:
         # No real files found (expected on a demo machine with no data on
         # hand) -- fabricate plausible movies, same spirit as _run_simulated().
+        # Match the requested extension (e.g. a glob ending in *.eer) so the
+        # EER path can be exercised without real data too.
         synthetic = True
-        matched = ["sim_movie_{:04d}.tif".format(i + 1) for i in range(SYNTHETIC_MOVIE_COUNT)]
+        requested_ext = "tif"
+        stem, dot, ext = input_glob.rpartition(".")
+        if dot and ext and "*" not in ext and "/" not in ext:
+            requested_ext = ext
+        matched = ["sim_movie_{:04d}.{}".format(i + 1, requested_ext) for i in range(SYNTHETIC_MOVIE_COUNT)]
 
+    # Like the reference dialog's CheckForEERFiles(), decide from the actual
+    # resolved files -- not just the client's glob-based guess -- whether
+    # this is an EER import. Only store EER fields on the movie rows
+    # themselves when it is (meaningless metadata otherwise); the defaults
+    # row still carries the raw values forward regardless, same as the
+    # reference dialog persisting whatever's in the (possibly disabled)
+    # EER controls every time.
+    is_eer_import = any(p.lower().endswith(".eer") for p in matched)
+    asset_eer_frames_per_image = eer_frames_per_image if is_eer_import else None
+    asset_eer_super_res_factor = eer_super_res_factor if is_eer_import else None
+
+    # Imports land in the All Movies group (id 0) only -- organizing movies
+    # into other groups is a separate, not-yet-built feature (see the
+    # disabled Add/Remove/Invert buttons on the Groups panel).
     conn = db.get_conn(project_id)
     with conn:
-        cur = conn.execute(
-            "INSERT INTO MOVIE_GROUP_LIST(GROUP_NAME, LIST_ID) VALUES (?, 0)", (group_name,)
-        )
-        group_id = cur.lastrowid
-
         movie_ids = []
         for path in matched:
             name = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
@@ -605,20 +685,18 @@ def import_movies(project_id):
                 "INSERT INTO MOVIE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, X_SIZE, Y_SIZE, NUMBER_OF_FRAMES, "
                 "VOLTAGE, PIXEL_SIZE, DOSE_PER_FRAME, SPHERICAL_ABERRATION, GAIN_FILENAME, "
-                "DARK_FILENAME, OUTPUT_BINNING_FACTOR, PROTEIN_IS_WHITE) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "DARK_FILENAME, OUTPUT_BINNING_FACTOR, PROTEIN_IS_WHITE, EER_SUPER_RES_FACTOR, "
+                "EER_FRAMES_PER_IMAGE) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     name, path, 1, x_size, y_size, n_frames,
                     voltage_kv, pixel_size_a, dose_per_frame, cs_mm, gain_ref, dark_ref,
-                    1.0, 0,
+                    output_binning_factor, int(protein_is_white),
+                    asset_eer_super_res_factor, asset_eer_frames_per_image,
                 ),
             )
             movie_id = cur.lastrowid
             movie_ids.append(movie_id)
-            conn.execute(
-                "INSERT INTO MOVIE_GROUP_MEMBERS(GROUP_ID, MOVIE_ASSET_ID) VALUES (?, ?)",
-                (group_id, movie_id),
-            )
             conn.execute(
                 "INSERT INTO MOVIE_GROUP_MEMBERS(GROUP_ID, MOVIE_ASSET_ID) VALUES (0, ?)",
                 (movie_id,),
@@ -626,14 +704,20 @@ def import_movies(project_id):
 
         conn.execute(
             "UPDATE MOVIE_IMPORT_DEFAULTS SET VOLTAGE=?, SPHERICAL_ABERRATION=?, PIXEL_SIZE=?, "
-            "EXPOSURE_PER_FRAME=?, GAIN_REFERENCE_FILENAME=?, DARK_REFERENCE_FILENAME=? WHERE NUMBER=1",
-            (voltage_kv, cs_mm, pixel_size_a, dose_per_frame, gain_ref, dark_ref),
+            "EXPOSURE_PER_FRAME=?, MOVIES_ARE_GAIN_CORRECTED=?, GAIN_REFERENCE_FILENAME=?, "
+            "MOVIES_ARE_DARK_CORRECTED=?, DARK_REFERENCE_FILENAME=?, RESAMPLE_MOVIES=?, "
+            "DESIRED_PIXEL_SIZE=?, PROTEIN_IS_WHITE=?, EER_SUPER_RES_FACTOR=?, "
+            "EER_FRAMES_PER_IMAGE=? WHERE NUMBER=1",
+            (
+                voltage_kv, cs_mm, pixel_size_a, dose_per_frame,
+                int(not apply_gain), gain_ref, int(not apply_dark), dark_ref,
+                int(resample_movies), desired_pixel_size_a, int(protein_is_white),
+                eer_super_res_factor, eer_frames_per_image,
+            ),
         )
     conn.close()
 
     return jsonify({
-        "movie_group_id": group_id,
-        "group_name": group_name,
         "synthetic": synthetic,
         "movie_count": len(movie_ids),
     }), 201

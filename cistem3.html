@@ -174,8 +174,15 @@ button.link:hover{background:none;text-decoration:underline;}
 .asset-subtab-btn:hover{background:var(--surface-sunken);}
 .asset-subtab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
 
-.assets-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:stretch;height:340px;}
-.assets-layout > .groupbox{display:flex;flex-direction:column;min-height:0;}
+/* minmax(0,1fr), not plain 1fr: a 1fr track's automatic minimum is the item's
+   min-content width, and the movies table's nowrap columns (long file paths in
+   particular) make that far wider than the page -- which stretched the Movies
+   box past the Selected Movie box below it instead of scrolling inside. Same
+   reason the boxes need min-width/min-height:0: as flex/grid children their
+   automatic minimum would otherwise size them to content rather than letting
+   the inner scroll containers do their job. */
+.assets-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:stretch;height:340px;}
+.assets-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
 /* A plain 1px border on this element doesn't reliably paint in Chromium once
    its content is shorter than the fixed-height box (a rendering quirk of
    hairline borders on a scroll container here) -- use a background fill

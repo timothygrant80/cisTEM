@@ -38,6 +38,7 @@ import threading
 import time
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from flask import Flask, g, jsonify, request
 from flask_cors import CORS
@@ -47,6 +48,23 @@ import db
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
+
+REPO_ROOT = Path(__file__).parent.parent
+
+
+def _git(args):
+    """Run a git command against this checkout; None on any failure (not a
+    git repo, git not installed, etc.) rather than raising -- the home
+    screen's version display just omits what it can't determine."""
+    try:
+        result = subprocess.run(
+            ["git"] + args, cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=3
+        )
+    except Exception:  # noqa: BLE001
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
 
 SYNTHETIC_MOVIE_COUNT = 12
 
@@ -349,6 +367,18 @@ def _recover_interrupted_jobs():
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok", "time": now_iso()})
+
+
+@app.route("/api/version")
+def version_route():
+    commit = _git(["rev-parse", "--short", "HEAD"])
+    if commit and _git(["status", "--porcelain"]):
+        commit += "-dirty"
+    return jsonify({
+        "commit": commit,
+        "commit_datetime": _git(["log", "-1", "--format=%ci"]),
+        "branch": _git(["rev-parse", "--abbrev-ref", "HEAD"]),
+    })
 
 
 # ---------------------------------------------------------------------------

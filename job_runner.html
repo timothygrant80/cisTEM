@@ -50,6 +50,8 @@ html,body{height:100%;}
 body{
   margin:0;background:var(--page-bg);color:var(--text);
   font-family:var(--font-ui);font-size:12.5px;line-height:1.5;
+  zoom:1.25; /* default render size -- same effect as a viewer manually zooming
+                their browser to 125%, just baked in so it doesn't require that */
 }
 button,input,select{font-family:var(--font-ui);}
 
@@ -163,6 +165,8 @@ button.link:hover{background:none;text-decoration:underline;}
 .home-inner{width:100%;max-width:560px;}
 .home-logo{display:block;width:100%;height:auto;margin:0 auto 14px;}
 .home-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 18px;}
+.home-link{color:var(--accent);}
+.home-link:hover{color:var(--accent-strong);}
 
 /* ---------- Actions ---------- */
 .actions-layout{display:grid;grid-template-columns:200px 1fr 250px;gap:16px;align-items:start;}
@@ -280,8 +284,11 @@ td.mono{font-family:var(--font-mono);}
 <div class="home" id="homeScreen" hidden>
   <div class="home-inner">
     <img class="home-logo" src="logo.png" alt="cisTEM3">
-    <p class="home-sub">Create a new project or open an existing one — everything about a project (imported movies, their metadata, job history) is kept in that project's own database.</p>
-    <p class="home-sub" id="homeConnectedLabel"></p>
+    <p class="home-sub" style="text-align:center;">Welcome to <i>cis</i>TEM (Computational Imaging System for Transmission Electron Microscopy)<br>
+For more information, manuals and tutorials please visit <a href="http://www.cistem.org" target="_blank" rel="noopener noreferrer" class="home-link">cistem.org</a><br>
+<i>cis</i>TEM version : <span id="versionCommit">—</span><br>
+Commit datetime: <span id="versionDatetime">—</span><br>
+From branch : <span id="versionBranch">—</span></p>
 
     <div class="groupbox" id="homeLoginBox" hidden>
       <span class="groupbox-label">Log In</span>
@@ -399,7 +406,7 @@ td.mono{font-family:var(--font-mono);}
   <div class="mainarea">
     <header class="topbar">
       <div class="topbar-title">
-        <span class="app-name">cisTEM3</span>
+        <span class="app-name"><i>cis</i>TEM3</span>
         <span class="app-sub" id="topSub">No pipeline connected</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
@@ -669,7 +676,7 @@ td.mono{font-family:var(--font-mono);}
 
   var els = {};
   ["homeScreen","appShell","connectingScreen","connectingLabel","errorScreen","errorMessage","errorRetryBtn",
-   "homeConnectedLabel",
+   "versionCommit","versionDatetime","versionBranch",
    "homeLoginBox","loginUsername","loginPassword","loginBtn","loginError",
    "homeUserStrip","homeUserLabel","homeUserRole","logoutBtn",
    "changePasswordToggleBtn","changePasswordForm","currentPassword","newPassword","confirmPassword",
@@ -1023,9 +1030,9 @@ td.mono{font-family:var(--font-mono);}
       return r.json();
     }).then(function(){
       setConnected(true);
-      els.homeConnectedLabel.textContent = "Connected to " + state.apiBase;
       showScreen("home");
       checkAuth();
+      loadVersion();
     }).catch(function(){
       setConnected(false, "Unreachable");
       els.errorMessage.textContent = "Could not reach " + state.apiBase + ".";
@@ -1034,6 +1041,22 @@ td.mono{font-family:var(--font-mono);}
   }
   els.errorRetryBtn.addEventListener("click", autoConnect);
   autoConnect();
+
+  // Populates the commit/branch line under the logo from the server's own
+  // git checkout (see /api/version in app.py). Best-effort: any field the
+  // server couldn't determine (not a git checkout, git missing, ...) is left
+  // as the placeholder rather than shown as an error -- this is decoration,
+  // not something worth alarming a viewer over.
+  function loadVersion(){
+    fetch(apiUrl("/version")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      if (data.commit) els.versionCommit.textContent = data.commit;
+      if (data.commit_datetime) els.versionDatetime.textContent = data.commit_datetime;
+      if (data.branch) els.versionBranch.textContent = data.branch;
+    }).catch(function(){});
+  }
 
   // ---------- auth ----------
   function clearAuth(){

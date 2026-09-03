@@ -45,6 +45,7 @@ from flask_cors import CORS
 
 import auth
 import db
+import imageheaders
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
@@ -703,6 +704,12 @@ def import_movies(project_id):
     if eer_super_res_factor is not None:
         eer_super_res_factor = int(eer_super_res_factor)
 
+    # Counting a TIFF/EER movie's frames means walking every IFD in the file;
+    # this skips that and leaves the count NULL, keeping only the dimensions
+    # from the first IFD. MRC is unaffected -- its section count sits in the
+    # fixed header. Cf. skip_full_check_of_tiff_movies in the reference dialog.
+    skip_full_check = bool(body.get("skip_full_check"))
+
     # Mirrors the reference dialog's CheckImportButtonStatus(), which keeps
     # its Import button disabled until the same conditions hold. The dialog
     # enforces these live so this should never fire, but a request can also
@@ -764,13 +771,34 @@ def import_movies(project_id):
     # disabled Add/Remove/Invert buttons on the Groups panel).
     with conn:
         movie_ids = []
+        failed = []
         for path in matched:
             name = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-            # Left NULL: reading real dimensions/frame counts means parsing
-            # MRC/TIFF/EER headers, which this reference server doesn't do.
-            x_size = None
-            y_size = None
-            n_frames = None
+            # Dimensions and frame count come from the file's own header (see
+            # imageheaders.py). A file that won't parse is skipped and
+            # reported rather than failing the whole import, matching the
+            # reference dialog's "%s is not a valid image file, skipping".
+            try:
+                header = imageheaders.read_movie_header(
+                    path,
+                    count_frames=not skip_full_check,
+                    eer_super_res_factor=eer_super_res_factor,
+                    eer_frames_per_image=eer_frames_per_image,
+                )
+            except imageheaders.HeaderError as exc:
+                failed.append({"path": path, "reason": str(exc)})
+                continue
+            x_size = header["x_size"]
+            y_size = header["y_size"]
+            n_frames = header["number_of_frames"]
+            # Same guard the reference dialog applies -- but only when the
+            # count is trustworthy, i.e. we actually counted.
+            if n_frames is not None and n_frames < 3:
+                failed.append({
+                    "path": path,
+                    "reason": "contains fewer than 3 frames ({})".format(n_frames),
+                })
+                continue
             cur = conn.execute(
                 "INSERT INTO MOVIE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, X_SIZE, Y_SIZE, NUMBER_OF_FRAMES, "
@@ -810,6 +838,7 @@ def import_movies(project_id):
     return jsonify({
         "movie_count": len(movie_ids),
         "skipped_count": len(already_imported),
+        "failed": failed,
     }), 201
 
 

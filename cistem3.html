@@ -1757,6 +1757,7 @@ From branch : <span id="versionBranch">—</span></p>
   // server double-checks against the files it actually resolves.
   var IMPORT_FIELDS = [
     {key:"input_glob", label:"Movie files", unit:"", type:"text", placeholder:"/data/session01/movies/*.tif", group:"Input"},
+    {key:"skip_full_check", label:"Skip full integrity check", type:"checkbox", group:"Input", tooltip:"Counting a TIFF/EER movie's frames means reading every frame's header in the file. Tick this to read only the dimensions and leave the frame count blank -- much faster over slow storage. MRC is unaffected: its frame count is in the main header."},
 
     {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300", group:"Microscope"},
     {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7", group:"Microscope"},
@@ -2016,8 +2017,18 @@ From branch : <span id="versionBranch">—</span></p>
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.json();
     }).then(function(result){
-      els.importNote.textContent = "Imported " + result.movie_count + " movie" + (result.movie_count === 1 ? "" : "s") + " into All Movies."
+      var msg = "Imported " + result.movie_count + " movie" + (result.movie_count === 1 ? "" : "s") + " into All Movies."
         + (result.skipped_count ? " Skipped " + result.skipped_count + " already imported." : "");
+      var failed = result.failed || [];
+      if (failed.length){
+        // Name the first few outright -- a bare count leaves you guessing
+        // which files were bad. Same spirit as the reference dialog's
+        // error list, minus a whole extra dialog.
+        msg += " " + failed.length + " could not be read: "
+          + failed.slice(0, 3).map(function(f){ return f.path.split("/").pop() + " (" + f.reason + ")"; }).join(", ")
+          + (failed.length > 3 ? ", …" : "") + ".";
+      }
+      els.importNote.textContent = msg;
       state.selectedGroupId = 0;
       loadMovieGroups();
       loadMovies();

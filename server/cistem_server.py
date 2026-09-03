@@ -723,6 +723,121 @@ def import_movies(project_id):
     }), 201
 
 
+@app.route("/api/projects/<project_id>/movie-groups", methods=["POST"])
+@auth.project_access_required
+def create_movie_group(project_id):
+    body = request.get_json(force=True, silent=True) or {}
+    group_name = (body.get("group_name") or "").strip()
+    if not group_name:
+        return jsonify({"error": "group_name is required"}), 400
+
+    conn = db.get_conn(project_id)
+    existing = conn.execute(
+        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE LOWER(GROUP_NAME) = LOWER(?)", (group_name,)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({"error": 'a group named "{}" already exists'.format(group_name)}), 400
+    with conn:
+        cur = conn.execute(
+            "INSERT INTO MOVIE_GROUP_LIST(GROUP_NAME, LIST_ID) VALUES (?, 0)", (group_name,)
+        )
+        group_id = cur.lastrowid
+    conn.close()
+    return jsonify({"group_id": group_id, "group_name": group_name}), 201
+
+
+@app.route("/api/projects/<project_id>/movies/delete", methods=["POST"])
+@auth.project_access_required
+def delete_movies(project_id):
+    # A straightforward delete -- doesn't cascade-clean any downstream
+    # results (e.g. MOVIE_ALIGNMENT_LIST/IMAGE_ASSETS rows) a completed
+    # Align Movies job may have already written for these movies, matching
+    # this app's existing scope (only Align Movies is wired to real project
+    # data end-to-end; nothing here reconciles derived results either).
+    body = request.get_json(force=True, silent=True) or {}
+    movie_ids = body.get("movie_ids") or []
+    if not movie_ids:
+        return jsonify({"error": "movie_ids is required"}), 400
+
+    conn = db.get_conn(project_id)
+    with conn:
+        placeholders = ",".join("?" * len(movie_ids))
+        conn.execute(
+            "DELETE FROM MOVIE_GROUP_MEMBERS WHERE MOVIE_ASSET_ID IN ({})".format(placeholders),
+            movie_ids,
+        )
+        cur = conn.execute(
+            "DELETE FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID IN ({})".format(placeholders),
+            movie_ids,
+        )
+        deleted = cur.rowcount
+    conn.close()
+    return jsonify({"deleted": deleted})
+
+
+@app.route("/api/projects/<project_id>/movie-groups/<int:group_id>/remove-movies", methods=["POST"])
+@auth.project_access_required
+def remove_movies_from_group(project_id, group_id):
+    # Unlinks movies from this one group only -- they stay in All Movies
+    # (and any other group they're a member of), unlike /movies/delete.
+    # "Remove" while viewing All Movies means removing the movie from the
+    # project entirely, since that's the master list; that's what
+    # /movies/delete is for, so group 0 isn't handled here.
+    if group_id == 0:
+        return jsonify({"error": "group 0 is All Movies -- use /movies/delete to remove movies from the project"}), 400
+    body = request.get_json(force=True, silent=True) or {}
+    movie_ids = body.get("movie_ids") or []
+    if not movie_ids:
+        return jsonify({"error": "movie_ids is required"}), 400
+
+    conn = db.get_conn(project_id)
+    with conn:
+        placeholders = ",".join("?" * len(movie_ids))
+        cur = conn.execute(
+            "DELETE FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ? AND MOVIE_ASSET_ID IN ({})".format(placeholders),
+            [group_id] + movie_ids,
+        )
+        removed = cur.rowcount
+    conn.close()
+    return jsonify({"removed": removed})
+
+
+@app.route("/api/projects/<project_id>/movies/add-to-group", methods=["POST"])
+@auth.project_access_required
+def add_movies_to_group(project_id):
+    body = request.get_json(force=True, silent=True) or {}
+    movie_ids = body.get("movie_ids") or []
+    group_name = (body.get("group_name") or "").strip()
+    if not movie_ids:
+        return jsonify({"error": "movie_ids is required"}), 400
+    if not group_name:
+        return jsonify({"error": "group_name is required"}), 400
+
+    conn = db.get_conn(project_id)
+    with conn:
+        row = conn.execute(
+            "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE LOWER(GROUP_NAME) = LOWER(?)", (group_name,)
+        ).fetchone()
+        if row:
+            group_id = row["GROUP_ID"]
+            created = False
+        else:
+            cur = conn.execute(
+                "INSERT INTO MOVIE_GROUP_LIST(GROUP_NAME, LIST_ID) VALUES (?, 0)", (group_name,)
+            )
+            group_id = cur.lastrowid
+            created = True
+
+        for movie_id in movie_ids:
+            conn.execute(
+                "INSERT OR IGNORE INTO MOVIE_GROUP_MEMBERS(GROUP_ID, MOVIE_ASSET_ID) VALUES (?, ?)",
+                (group_id, movie_id),
+            )
+    conn.close()
+    return jsonify({"group_id": group_id, "group_name": group_name, "created": created})
+
+
 # ---------------------------------------------------------------------------
 # Job routes (project-scoped)
 # ---------------------------------------------------------------------------

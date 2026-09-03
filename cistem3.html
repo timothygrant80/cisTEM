@@ -175,13 +175,13 @@ button.link:hover{background:none;text-decoration:underline;}
 .asset-subtab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
 
 .assets-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:stretch;height:340px;}
-.assets-layout > .groupbox{display:flex;flex-direction:column;}
+.assets-layout > .groupbox{display:flex;flex-direction:column;min-height:0;}
 /* A plain 1px border on this element doesn't reliably paint in Chromium once
    its content is shorter than the fixed-height box (a rendering quirk of
    hairline borders on a scroll container here) -- use a background fill
    instead, which isn't affected, so the box still visibly extends to the
    bottom of its 340px height even when there's little/no content. */
-.assets-layout .table-scroll{flex:1;overflow-y:auto;background:var(--surface-sunken);margin:0;}
+.assets-layout .table-scroll{flex:1;min-height:0;overflow-y:auto;background:var(--surface-sunken);margin:0;}
 .assets-layout .table-scroll thead th{position:sticky;top:0;z-index:1;}
 .assets-layout .table-scroll tbody td{background:var(--surface);}
 .assets-layout .table-scroll tbody tr:nth-child(even) td{background:var(--surface-sunken);}
@@ -189,7 +189,7 @@ button.link:hover{background:none;text-decoration:underline;}
    to its full height instead of leaving bare space below a short table --
    the sunken background above is just a fallback for any rounding gap. */
 .assets-layout .table-scroll table.queue{height:100%;}
-.group-list{list-style:none;margin:0;padding:0;flex:1;overflow-y:auto;border:1px solid var(--border);}
+.group-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;overflow-y:auto;border:1px solid var(--border);}
 .group-list li{padding:7px 10px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-bottom:1px solid var(--border);}
 .group-list li:last-child{border-bottom:none;}
 .group-list li:hover{background:var(--surface-sunken);}
@@ -198,8 +198,9 @@ button.link:hover{background:none;text-decoration:underline;}
 
 .details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 24px;margin-top:2px;}
 .details-item{display:flex;justify-content:space-between;gap:8px;font-size:12px;border-bottom:1px solid var(--border);padding-bottom:4px;}
-.details-key{font-weight:600;color:var(--text-tertiary);}
-.details-val{font-family:var(--font-mono);color:var(--text);}
+.details-item.details-item-wide{grid-column:1 / -1;}
+.details-key{font-weight:600;color:var(--text-tertiary);flex-shrink:0;}
+.details-val{font-family:var(--font-mono);color:var(--text);word-break:break-all;text-align:right;}
 
 @media (max-width:900px){
   .assets-layout{grid-template-columns:1fr;height:auto;}
@@ -265,6 +266,8 @@ table.queue tbody tr:nth-child(even) td{background:var(--surface-sunken);}
 table.queue tbody tr.clickable{cursor:pointer;}
 table.queue tbody tr.clickable:hover td{background:var(--accent-soft);}
 table.queue tbody tr.selected td{background:var(--accent-soft);}
+th.check-col,td.check-col{width:1%;padding-left:10px;padding-right:6px;}
+td.check-col{cursor:default;}
 td.mono{font-family:var(--font-mono);}
 .job-name{font-weight:700;color:var(--text);}
 .job-id{font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);}
@@ -548,7 +551,7 @@ From branch : <span id="versionBranch">—</span></p>
               <span class="groupbox-label">Groups</span>
               <ul class="group-list" id="movieGroupList"></ul>
               <div class="asset-toolbar">
-                <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Add</button>
+                <button class="small" id="movieGroupAddBtn">Add</button>
                 <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Remove</button>
                 <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Invert</button>
               </div>
@@ -559,21 +562,22 @@ From branch : <span id="versionBranch">—</span></p>
               <div class="table-scroll">
                 <table class="queue">
                   <thead><tr>
-                    <th>I.D.</th><th>Name</th><th class="num">X Size</th><th class="num">Y Size</th>
+                    <th class="check-col"><input type="checkbox" id="movieSelectAllCheckbox" title="Select all"></th>
+                    <th>I.D.</th><th>Name</th><th>Filename</th><th class="num">X Size</th><th class="num">Y Size</th>
                     <th class="num">No. frames</th><th class="num">Pixel size</th><th class="num">Exp. per frame</th>
                     <th class="num">Cs</th><th class="num">Voltage</th><th>Dark filename</th><th>Gain filename</th>
                   </tr></thead>
                   <tbody id="movieListBody">
-                    <tr><td colspan="11"><div class="empty-note">No movies imported yet</div></td></tr>
+                    <tr><td colspan="13"><div class="empty-note">No movies imported yet</div></td></tr>
                   </tbody>
                 </table>
               </div>
               <div class="asset-toolbar">
                 <button class="small" id="movieImportOpenBtn">Import</button>
-                <button class="small" disabled title="Not implemented yet.">Remove</button>
-                <button class="small" disabled title="Not implemented yet.">Remove All</button>
+                <button class="small" id="movieRemoveBtn" disabled title="Select one or more movies first.">Remove</button>
+                <button class="small" id="movieRemoveAllBtn" disabled title="No movies in this group yet.">Remove All</button>
                 <button class="small" disabled title="Not implemented yet.">Rename</button>
-                <button class="small" disabled title="Not implemented yet.">Add To Group</button>
+                <button class="small" id="movieAddToGroupBtn" disabled title="Select one or more movies first.">Add To Group</button>
                 <button class="small" disabled title="No image viewer in this reference app.">Display</button>
               </div>
             </div>
@@ -592,6 +596,7 @@ From branch : <span id="versionBranch">—</span></p>
               <div class="details-item"><span class="details-key">Voltage</span><span class="details-val" id="dMovieVoltage">—</span></div>
               <div class="details-item"><span class="details-key">Cs</span><span class="details-val" id="dMovieCs">—</span></div>
               <div class="details-item"><span class="details-key">Exp. Per Frame</span><span class="details-val" id="dMovieExpFrame">—</span></div>
+              <div class="details-item details-item-wide"><span class="details-key">Filename</span><span class="details-val" id="dMovieFilename">—</span></div>
             </div>
           </div>
 
@@ -903,11 +908,12 @@ From branch : <span id="versionBranch">—</span></p>
    "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
    "previewDesc","jobSummaryBody",
    "importFields","importBtn","importNote","movieListBody","movieGroupList","movieImportOpenBtn",
+   "movieSelectAllCheckbox","movieGroupAddBtn","movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
    "assetpageMovies","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
-   "dMovieName","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
+   "dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
    "stageInventoryBody","runProfile",
@@ -934,7 +940,8 @@ From branch : <span id="versionBranch">—</span></p>
     logTimer: null,
     assetTab: "movies",
     selectedGroupId: 0,
-    selectedMovieId: null
+    selectedMovieId: null,
+    selectedMovieIds: new Set()
   };
 
   // ---------- rail navigation ----------
@@ -1903,12 +1910,14 @@ From branch : <span id="versionBranch">—</span></p>
   function renderMovieList(movies){
     state.movies = movies;
     state.selectedMovieId = null;
+    state.selectedMovieIds = new Set();
     updateMovieDetails(null);
+    updateBulkActionButtons();
     els.movieListBody.innerHTML = "";
     if (!movies.length){
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 11;
+      td.colSpan = 13;
       var box = document.createElement("div");
       box.className = "empty-note";
       box.textContent = "No movies in this group";
@@ -1921,8 +1930,10 @@ From branch : <span id="versionBranch">—</span></p>
       var tr = document.createElement("tr");
       tr.className = "clickable";
       tr.dataset.movieId = m.MOVIE_ASSET_ID;
-      tr.innerHTML = "<td>" + m.MOVIE_ASSET_ID + "</td>" +
+      tr.innerHTML = "<td class='check-col'><input type='checkbox' class='movie-check'></td>" +
+        "<td>" + m.MOVIE_ASSET_ID + "</td>" +
         "<td>" + (m.NAME || "") + "</td>" +
+        "<td>" + (m.FILENAME || "—") + "</td>" +
         "<td class='num'>" + fmtNum(m.X_SIZE) + "</td>" +
         "<td class='num'>" + fmtNum(m.Y_SIZE) + "</td>" +
         "<td class='num'>" + fmtNum(m.NUMBER_OF_FRAMES) + "</td>" +
@@ -1933,6 +1944,9 @@ From branch : <span id="versionBranch">—</span></p>
         "<td>" + (m.DARK_FILENAME || "—") + "</td>" +
         "<td>" + (m.GAIN_FILENAME || "—") + "</td>";
       tr.addEventListener("click", function(){ selectMovie(m.MOVIE_ASSET_ID); });
+      var checkbox = tr.querySelector(".movie-check");
+      checkbox.addEventListener("click", function(e){ e.stopPropagation(); });
+      checkbox.addEventListener("change", function(){ toggleMovieChecked(m.MOVIE_ASSET_ID, checkbox.checked); });
       els.movieListBody.appendChild(tr);
     });
   }
@@ -1946,8 +1960,119 @@ From branch : <span id="versionBranch">—</span></p>
     updateMovieDetails(movie || null);
   }
 
+  // ---------- movie multi-select (for Remove / Add To Group) ----------
+  function toggleMovieChecked(movieId, checked){
+    if (checked) state.selectedMovieIds.add(movieId);
+    else state.selectedMovieIds.delete(movieId);
+    updateBulkActionButtons();
+  }
+
+  function updateBulkActionButtons(){
+    var count = state.selectedMovieIds.size;
+    var isAllMovies = state.selectedGroupId === 0;
+    var removeVerb = isAllMovies ? "Delete" : "Remove";
+    var removeAllSuffix = isAllMovies ? " from the project." : " from this group (they'll stay in All Movies).";
+    els.movieRemoveBtn.disabled = count === 0;
+    els.movieRemoveBtn.title = count === 0 ? "Select one or more movies first." : removeVerb + " " + count + " selected movie" + (count === 1 ? "" : "s") + removeAllSuffix;
+    els.movieAddToGroupBtn.disabled = count === 0;
+    els.movieAddToGroupBtn.title = count === 0 ? "Select one or more movies first." : "Add " + count + " selected movie" + (count === 1 ? "" : "s") + " to a group.";
+    var total = (state.movies || []).length;
+    els.movieSelectAllCheckbox.disabled = total === 0;
+    els.movieSelectAllCheckbox.checked = total > 0 && count === total;
+    els.movieSelectAllCheckbox.indeterminate = count > 0 && count < total;
+    els.movieRemoveAllBtn.disabled = total === 0;
+    els.movieRemoveAllBtn.title = total === 0 ? "No movies in this group yet." : removeVerb + " all " + total + " movies" + removeAllSuffix;
+  }
+
+  els.movieSelectAllCheckbox.addEventListener("change", function(){
+    var checked = els.movieSelectAllCheckbox.checked;
+    state.selectedMovieIds = new Set(checked ? (state.movies || []).map(function(m){ return m.MOVIE_ASSET_ID; }) : []);
+    els.movieListBody.querySelectorAll(".movie-check").forEach(function(cb){ cb.checked = checked; });
+    updateBulkActionButtons();
+  });
+
+  // Removing from All Movies (the master list) deletes the movie from the
+  // project entirely; removing from any other group just unlinks it from
+  // that group -- it stays in All Movies and any other group it's in.
+  function removeMovies(movieIds){
+    if (!movieIds.length || !state.projectId) return;
+    var url = state.selectedGroupId === 0
+      ? projectApiUrl("/movies/delete")
+      : projectApiUrl("/movie-groups/" + state.selectedGroupId + "/remove-movies");
+    apiFetch(url, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({movie_ids: movieIds})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      loadMovieGroups();
+      loadMovies();
+    }).catch(function(err){
+      alert("Could not remove movies: " + err.message);
+    });
+  }
+
+  els.movieRemoveBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedMovieIds);
+    if (!ids.length) return;
+    var msg = state.selectedGroupId === 0
+      ? "Permanently delete " + ids.length + " selected movie" + (ids.length === 1 ? "" : "s") + " from the project? This cannot be undone."
+      : "Remove " + ids.length + " selected movie" + (ids.length === 1 ? "" : "s") + " from this group? They'll stay in All Movies.";
+    if (!confirm(msg)) return;
+    removeMovies(ids);
+  });
+
+  els.movieRemoveAllBtn.addEventListener("click", function(){
+    var ids = (state.movies || []).map(function(m){ return m.MOVIE_ASSET_ID; });
+    if (!ids.length) return;
+    var msg = state.selectedGroupId === 0
+      ? "Permanently delete all " + ids.length + " movies in the project? This cannot be undone."
+      : "Remove all " + ids.length + " movies from this group? They'll stay in All Movies.";
+    if (!confirm(msg)) return;
+    removeMovies(ids);
+  });
+
+  els.movieAddToGroupBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedMovieIds);
+    if (!ids.length || !state.projectId) return;
+    var groupName = prompt("Add " + ids.length + " selected movie" + (ids.length === 1 ? "" : "s") + " to group (existing or new name):");
+    groupName = groupName ? groupName.trim() : "";
+    if (!groupName) return;
+    apiFetch(projectApiUrl("/movies/add-to-group"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({movie_ids: ids, group_name: groupName})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(result){
+      loadMovieGroups();
+      alert((result.created ? 'Created group "' : 'Added to group "') + result.group_name + '".');
+    }).catch(function(err){
+      alert("Could not add to group: " + err.message);
+    });
+  });
+
+  els.movieGroupAddBtn.addEventListener("click", function(){
+    if (!state.projectId) return;
+    var groupName = prompt("New group name:");
+    groupName = groupName ? groupName.trim() : "";
+    if (!groupName) return;
+    apiFetch(projectApiUrl("/movie-groups"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: groupName})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(result){
+      state.selectedGroupId = result.group_id;
+      loadMovieGroups();
+      loadMovies();
+    }).catch(function(err){
+      alert("Could not create group: " + err.message);
+    });
+  });
+
   function updateMovieDetails(m){
     els.dMovieName.textContent = m ? (m.NAME || "—") : "—";
+    els.dMovieFilename.textContent = m ? (m.FILENAME || "—") : "—";
     els.dMovieId.textContent = m ? m.MOVIE_ASSET_ID : "—";
     els.dMovieXSize.textContent = m ? fmtNum(m.X_SIZE) : "—";
     els.dMovieYSize.textContent = m ? fmtNum(m.Y_SIZE) : "—";

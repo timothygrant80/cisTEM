@@ -66,8 +66,6 @@ def _git(args):
         return None
     return result.stdout.strip() or None
 
-SYNTHETIC_MOVIE_COUNT = 12
-
 # Live-only state that can't be persisted: a running job's subprocess handle
 # and a fast in-process cancel flag. Durable status/progress/log lives in
 # each project's SQLite file (see db.py) so it survives across requests and
@@ -454,6 +452,36 @@ def browse_filesystem():
     })
 
 
+@app.route("/api/check-paths", methods=["POST"])
+@auth.login_required
+def check_paths():
+    """Resolves a glob and checks individual files exist, so the Import Movies
+    dialog can keep its Import button disabled until everything it needs is
+    actually there (the reference dialog can check locally; this one has to
+    ask, since the paths are on the server). Same filesystem visibility
+    /api/browse already offers an authenticated user -- no new reach.
+    """
+    body = request.get_json(force=True, silent=True) or {}
+    result = {}
+
+    input_glob = (body.get("glob") or "").strip()
+    if input_glob:
+        matches = [p for p in glob_module.glob(input_glob) if Path(p).is_file()]
+        result["glob_match_count"] = len(matches)
+        result["glob_has_eer"] = any(p.lower().endswith(".eer") for p in matches)
+    else:
+        result["glob_match_count"] = 0
+        result["glob_has_eer"] = False
+
+    files = {}
+    for raw in body.get("files") or []:
+        path = (raw or "").strip()
+        if path:
+            files[path] = Path(path).expanduser().is_file()
+    result["files"] = files
+    return jsonify(result)
+
+
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
@@ -645,19 +673,39 @@ def import_movies(project_id):
     if eer_super_res_factor is not None:
         eer_super_res_factor = int(eer_super_res_factor)
 
-    matched = sorted(glob_module.glob(input_glob)) if input_glob else []
-    synthetic = False
+    # Mirrors the reference dialog's CheckImportButtonStatus(), which keeps
+    # its Import button disabled until the same conditions hold. The dialog
+    # enforces these live so this should never fire, but a request can also
+    # arrive from something other than that dialog.
+    errors = []
+    if not input_glob:
+        errors.append("movie files path is required")
+    for label, value in (
+        ("voltage", voltage_kv),
+        ("spherical aberration (Cs)", cs_mm),
+        ("pixel size", pixel_size_a),
+        ("dose per frame", dose_per_frame),
+    ):
+        if value is None or value == "":
+            errors.append("{} is required".format(label))
+    if apply_gain and not gain_ref:
+        errors.append("gain reference is required when applying gain correction")
+    if apply_dark and not dark_ref:
+        errors.append("dark reference is required when applying dark correction")
+    for label, path in (("gain reference", gain_ref), ("dark reference", dark_ref)):
+        if path and not Path(path).expanduser().is_file():
+            errors.append("{} not found: {}".format(label, path))
+    if resample_movies:
+        if not desired_pixel_size_a:
+            errors.append("desired pixel size is required when resampling")
+        elif pixel_size_a and desired_pixel_size_a <= pixel_size_a:
+            errors.append("desired pixel size must be larger than the current pixel size")
+    if errors:
+        return jsonify({"error": "; ".join(errors)}), 400
+
+    matched = sorted(p for p in glob_module.glob(input_glob) if Path(p).is_file())
     if not matched:
-        # No real files found (expected on a demo machine with no data on
-        # hand) -- fabricate plausible movies, same spirit as _run_simulated().
-        # Match the requested extension (e.g. a glob ending in *.eer) so the
-        # EER path can be exercised without real data too.
-        synthetic = True
-        requested_ext = "tif"
-        stem, dot, ext = input_glob.rpartition(".")
-        if dot and ext and "*" not in ext and "/" not in ext:
-            requested_ext = ext
-        matched = ["sim_movie_{:04d}.{}".format(i + 1, requested_ext) for i in range(SYNTHETIC_MOVIE_COUNT)]
+        return jsonify({"error": "no files match that path: {}".format(input_glob)}), 400
 
     # Like the reference dialog's CheckForEERFiles(), decide from the actual
     # resolved files -- not just the client's glob-based guess -- whether
@@ -678,9 +726,11 @@ def import_movies(project_id):
         movie_ids = []
         for path in matched:
             name = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-            x_size = 4096 if synthetic else None
-            y_size = 4096 if synthetic else None
-            n_frames = 40 if synthetic else None
+            # Left NULL: reading real dimensions/frame counts means parsing
+            # MRC/TIFF/EER headers, which this reference server doesn't do.
+            x_size = None
+            y_size = None
+            n_frames = None
             cur = conn.execute(
                 "INSERT INTO MOVIE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, X_SIZE, Y_SIZE, NUMBER_OF_FRAMES, "
@@ -717,10 +767,7 @@ def import_movies(project_id):
         )
     conn.close()
 
-    return jsonify({
-        "synthetic": synthetic,
-        "movie_count": len(movie_ids),
-    }), 201
+    return jsonify({"movie_count": len(movie_ids)}), 201
 
 
 @app.route("/api/projects/<project_id>/movie-groups", methods=["POST"])

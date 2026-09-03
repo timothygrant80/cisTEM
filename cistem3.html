@@ -246,6 +246,9 @@ button.link:hover{background:none;text-decoration:underline;}
 #expertFields{border-top:1px dashed var(--border);padding-top:12px;margin-top:2px;}
 .submit-row{margin-top:6px;}
 .form-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.5;}
+.validation-note{font-weight:600;}
+.validation-note.blocked{color:var(--critical);}
+.validation-note.ready{color:var(--success);}
 
 /* ---------- Actions: job summary preview ---------- */
 .actions-preview{font-size:12px;}
@@ -768,8 +771,9 @@ From branch : <span id="versionBranch">—</span></p>
   <div class="modal-body">
     <p class="page-sub" style="margin:0 0 12px;">Microscope metadata is set once per import batch and stored with each movie — job forms below reference it instead of asking again.</p>
     <div id="importFields"></div>
+    <p class="form-note validation-note" id="importValidationNote"></p>
     <div class="submit-row">
-      <button class="primary" id="importBtn">Import</button>
+      <button class="primary" id="importBtn" disabled>Import</button>
     </div>
     <p class="form-note" id="importNote"></p>
   </div>
@@ -915,7 +919,7 @@ From branch : <span id="versionBranch">—</span></p>
    "settingsConnStatus","settingsConnDot","settingsConnLabel",
    "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
    "previewDesc","jobSummaryBody",
-   "importFields","importBtn","importNote","movieListBody","movieGroupList","movieImportOpenBtn",
+   "importFields","importBtn","importNote","importValidationNote","movieListBody","movieGroupList","movieImportOpenBtn",
    "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn",
    "movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
@@ -1004,8 +1008,10 @@ From branch : <span id="versionBranch">—</span></p>
   function openImportModal(){
     els.importModal.classList.add("open");
     els.importScrim.classList.add("open");
+    els.importNote.textContent = "";
     var glob = els.importFields.querySelector('[data-key="input_glob"]');
     if (glob) glob.focus();
+    scheduleImportPathCheck();
   }
   function closeImportModal(){
     els.importModal.classList.remove("open");
@@ -1842,6 +1848,117 @@ From branch : <span id="versionBranch">—</span></p>
     else input.value = value;
   }
 
+  // ---------- Import Movies validation ----------
+  // Mirrors CheckImportButtonStatus() in the reference dialog: Import stays
+  // disabled until every required field is filled and every path referenced
+  // actually exists. The reference dialog can stat files directly; here the
+  // paths are on the server, so existence comes from /api/check-paths,
+  // debounced so typing a path doesn't fire a request per keystroke.
+  var PATH_FIELD_KEYS = ["input_glob", "gain_ref", "dark_ref", "apply_gain", "apply_dark"];
+  var REQUIRED_NUMERIC_FIELDS = [
+    ["voltage_kv", "voltage"],
+    ["cs_mm", "spherical aberration (Cs)"],
+    ["pixel_size_a", "pixel size"],
+    ["dose_per_frame", "dose per frame"]
+  ];
+  var importPaths = {seq: 0, glob: null, globCount: 0, files: {}};
+  var importCheckTimer = null;
+
+  function importFieldValue(key){
+    var el = els.importFields.querySelector('[data-key="' + key + '"]');
+    if (!el) return "";
+    if (el.type === "checkbox") return el.checked;
+    return (el.value || "").trim();
+  }
+
+  function scheduleImportPathCheck(){
+    if (importCheckTimer) clearTimeout(importCheckTimer);
+    importCheckTimer = setTimeout(runImportPathCheck, 300);
+    validateImportForm();
+  }
+
+  function runImportPathCheck(){
+    var glob = importFieldValue("input_glob");
+    var wanted = [];
+    if (importFieldValue("apply_gain") && importFieldValue("gain_ref")) wanted.push(importFieldValue("gain_ref"));
+    if (importFieldValue("apply_dark") && importFieldValue("dark_ref")) wanted.push(importFieldValue("dark_ref"));
+    if (!glob && !wanted.length){
+      importPaths.glob = null; importPaths.globCount = 0; importPaths.files = {};
+      validateImportForm();
+      return;
+    }
+    // Stamp each request so a slow earlier reply can't overwrite a newer one.
+    var seq = ++importPaths.seq;
+    apiFetch(apiUrl("/check-paths"), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({glob: glob, files: wanted})
+    }).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (seq !== importPaths.seq) return;
+      importPaths.glob = glob;
+      importPaths.globCount = d.glob_match_count || 0;
+      importPaths.files = d.files || {};
+      validateImportForm();
+    }).catch(function(){
+      if (seq !== importPaths.seq) return;
+      validateImportForm();
+    });
+  }
+
+  function importFormProblems(){
+    var problems = [];
+    var glob = importFieldValue("input_glob");
+    if (!glob) problems.push("choose the movie files to import");
+    else if (importPaths.glob !== glob) problems.push("checking that path…");
+    else if (!importPaths.globCount) problems.push("no files match that path");
+
+    REQUIRED_NUMERIC_FIELDS.forEach(function(f){
+      if (!importFieldValue(f[0])) problems.push(f[1] + " is required");
+    });
+
+    [["apply_gain", "gain_ref", "gain reference"], ["apply_dark", "dark_ref", "dark reference"]].forEach(function(f){
+      if (!importFieldValue(f[0])) return;
+      var path = importFieldValue(f[1]);
+      if (!path) problems.push(f[2] + " is required");
+      else if (importPaths.files[path] === undefined) problems.push("checking the " + f[2] + "…");
+      else if (!importPaths.files[path]) problems.push(f[2] + " not found");
+    });
+
+    if (importFieldValue("resample_movies")){
+      var desired = importFieldValue("desired_pixel_size_a");
+      var current = importFieldValue("pixel_size_a");
+      if (!desired) problems.push("desired pixel size is required");
+      else if (current && Number(desired) <= Number(current)) problems.push("desired pixel size must be larger than the current pixel size");
+    }
+    return problems;
+  }
+
+  function validateImportForm(){
+    var problems = importFormProblems();
+    var ok = problems.length === 0;
+    els.importBtn.disabled = !ok;
+    els.importBtn.title = ok ? "" : problems.join("; ");
+    var msg = ok
+      ? importPaths.globCount + " file" + (importPaths.globCount === 1 ? "" : "s") + " match — ready to import."
+      : problems[0].charAt(0).toUpperCase() + problems[0].slice(1);
+    els.importValidationNote.textContent = msg;
+    els.importValidationNote.className = "form-note validation-note " + (ok ? "ready" : "blocked");
+    return ok;
+  }
+
+  els.importFields.addEventListener("input", function(e){
+    var key = e.target && e.target.dataset ? e.target.dataset.key : null;
+    if (key && PATH_FIELD_KEYS.indexOf(key) !== -1) scheduleImportPathCheck();
+    else validateImportForm();
+  });
+  els.importFields.addEventListener("change", function(e){
+    var key = e.target && e.target.dataset ? e.target.dataset.key : null;
+    if (key && PATH_FIELD_KEYS.indexOf(key) !== -1) scheduleImportPathCheck();
+    else validateImportForm();
+  });
+
   function loadImportDefaults(){
     if (!state.projectId) return;
     apiFetch(projectApiUrl("/movies/import-defaults")).then(function(r){
@@ -1864,23 +1981,16 @@ From branch : <span id="versionBranch">—</span></p>
       if (d.EER_SUPER_RES_FACTOR != null) setImportFieldValue("eer_super_res_factor", String(d.EER_SUPER_RES_FACTOR));
       syncConditionalFields(els.importFields, IMPORT_FIELDS);
       updateEerFieldState();
+      scheduleImportPathCheck();
     }).catch(function(){});
   }
 
   els.importBtn.addEventListener("click", function(){
-    if (!state.projectId){ alert("Open a project first."); return; }
+    // The button is disabled unless validateImportForm() passes, so this is
+    // just a guard against a stale click landing mid-revalidation.
+    if (!state.projectId || !validateImportForm()) return;
     var body = {};
     els.importFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
-    if (!body.input_glob){ alert("Enter a path or glob for movie files."); return; }
-    if (body.apply_gain && !body.gain_ref){ alert("Enter a gain reference path, or untick Apply gain correction."); return; }
-    if (body.apply_dark && !body.dark_ref){ alert("Enter a dark reference path, or untick Apply dark correction."); return; }
-    if (body.resample_movies){
-      if (!body.desired_pixel_size_a){ alert("Enter a desired pixel size, or untick Resample movies."); return; }
-      if (body.pixel_size_a && body.desired_pixel_size_a <= body.pixel_size_a){
-        alert("Desired pixel size must be larger than the current pixel size (resampling only bins down).");
-        return;
-      }
-    }
     if (!body.apply_gain) body.gain_ref = null;
     if (!body.apply_dark) body.dark_ref = null;
     els.importBtn.disabled = true;
@@ -1891,9 +2001,7 @@ From branch : <span id="versionBranch">—</span></p>
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.json();
     }).then(function(result){
-      els.importNote.textContent = result.synthetic
-        ? "No files matched that path, so " + result.movie_count + " placeholder movies were added to All Movies so you can exercise the flow without real data."
-        : "Imported " + result.movie_count + " movies into All Movies.";
+      els.importNote.textContent = "Imported " + result.movie_count + " movies into All Movies.";
       state.selectedGroupId = 0;
       loadMovieGroups();
       loadMovies();
@@ -1901,8 +2009,8 @@ From branch : <span id="versionBranch">—</span></p>
     }).catch(function(err){
       alert("Import failed: " + err.message);
     }).finally(function(){
-      els.importBtn.disabled = false;
       els.importBtn.textContent = "Import";
+      validateImportForm();
     });
   });
 

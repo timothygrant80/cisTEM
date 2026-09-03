@@ -29,7 +29,7 @@ This serves the API at `http://localhost:8000/api`, and also serves the page its
 1. **Log in** as `admin` with the password from the console/credentials file.
 2. **Manage Users** (admin-only panel on the home screen) — create a real account for yourself (and anyone else) with a role of `user` or `admin`. There's no self-registration; only an admin can create accounts.
 3. **Create a project** — give it a name and hit Create. You're taken into the app, scoped to that project — and to you: other non-admin users won't see it.
-4. **Assets tab → Import Movies** — enter a path/glob for movie files plus microscope metadata (voltage, Cs, pixel size, dose/frame). If nothing matches (no real data on this machine), it fabricates ~12 placeholder movies so you can exercise the whole flow anyway.
+4. **Assets tab → Import Movies** — pick a path/glob for movie files (there's a **Browse…** button that lists the API server's own filesystem) plus microscope metadata (voltage, Cs, pixel size, dose/frame). Import stays disabled until everything required is filled in and every path actually exists, so you'll need some real movie files on the machine running the server.
 5. **Actions tab → Align Movies** — pick the movie group you just imported (metadata comes from the import, not retyped here), set an output directory, and Run. Since no real binaries are configured yet, it runs in simulation mode: progresses through a fake sequence and lands on `completed` with plausible placeholder numbers.
 6. **Results tab** — watch the queue, open a job's log, cancel a running one.
 7. **Close Project** (top right) returns you to the home screen — project data persists (it's a real SQLite file), so reopening it later shows the same movies and job history, even after restarting `cistem_server.py`. Your login persists too (a token in `localStorage`), so reloading the page skips straight back to the project picker.
@@ -92,7 +92,8 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/movies` | List imported movies |
 | `GET` | `/projects/:id/movie-groups` | List movie groups with member counts |
 | `GET` | `/projects/:id/movies/import-defaults` | Last-used import form values |
-| `POST` | `/projects/:id/movies/import` | Import movies. Body: `{input_glob, group_name, voltage_kv, cs_mm, pixel_size_a, dose_per_frame, gain_ref, dark_ref}` |
+| `POST` | `/projects/:id/movies/import` | Import movies into "All Movies". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, dose_per_frame, protein_is_white, apply_gain, gain_ref, apply_dark, dark_ref, resample_movies, desired_pixel_size_a, eer_frames_per_image, eer_super_res_factor}`. `400`s unless the required fields are set, referenced paths exist, and the glob matches at least one file. |
+| `POST` | `/check-paths` | Body: `{glob, files: [...]}` → `{glob_match_count, glob_has_eer, files: {path: bool}}`, for the import dialog's live validation |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "name", "params": {...} }` → returns the created `Job` |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |

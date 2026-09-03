@@ -367,9 +367,9 @@ def login_route():
 
 @app.route("/api/auth/logout", methods=["POST"])
 def logout_route():
-    header = request.headers.get("Authorization", "")
-    if header.lower().startswith("bearer "):
-        auth.revoke_session(header[7:].strip())
+    token = auth.get_bearer_token()
+    if token:
+        auth.revoke_session(token)
     return jsonify({"ok": True})
 
 
@@ -377,6 +377,22 @@ def logout_route():
 @auth.login_required
 def me_route():
     return jsonify({"user": g.current_user})
+
+
+@app.route("/api/auth/change-password", methods=["POST"])
+@auth.login_required
+def change_password_route():
+    body = request.get_json(force=True, silent=True) or {}
+    if not auth.verify_password(g.current_user["id"], body.get("current_password")):
+        return jsonify({"error": "current password is incorrect"}), 400
+    try:
+        auth.set_password(g.current_user["id"], body.get("new_password"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    # Keep the session that made this request alive; sign the account out
+    # everywhere else, same idea as "log out other devices" after a change.
+    auth.revoke_user_sessions(g.current_user["id"], keep_token=auth.get_bearer_token())
+    return jsonify({"ok": True})
 
 
 @app.route("/api/users", methods=["GET"])
@@ -397,6 +413,20 @@ def create_user_route():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(user), 201
+
+
+@app.route("/api/users/<int:user_id>/reset-password", methods=["POST"])
+@auth.admin_required
+def reset_password_route(user_id):
+    body = request.get_json(force=True, silent=True) or {}
+    try:
+        auth.set_password(user_id, body.get("new_password"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    # No session of the target user's to preserve -- an admin-driven reset
+    # signs them out everywhere, forcing a fresh login with the new password.
+    auth.revoke_user_sessions(user_id)
+    return jsonify({"ok": True})
 
 
 # ---------------------------------------------------------------------------

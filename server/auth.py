@@ -218,11 +218,58 @@ def validate_token(token):
     return _public_user(row)
 
 
-def get_current_user():
+def get_bearer_token():
     header = request.headers.get("Authorization", "")
     if not header.lower().startswith("bearer "):
         return None
-    return validate_token(header[7:].strip())
+    return header[7:].strip()
+
+
+def get_current_user():
+    token = get_bearer_token()
+    return validate_token(token) if token else None
+
+
+# ---------------------------------------------------------------------------
+# Password change / reset
+# ---------------------------------------------------------------------------
+
+def verify_password(user_id, password):
+    conn = get_conn()
+    row = conn.execute("SELECT PASSWORD_HASH FROM USERS WHERE USER_ID=?", (user_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return False
+    return check_password_hash(row["PASSWORD_HASH"], password or "")
+
+
+def set_password(user_id, new_password):
+    if not new_password or len(new_password) < 8:
+        raise ValueError("password must be at least 8 characters")
+    conn = get_conn()
+    with conn:
+        cur = conn.execute(
+            "UPDATE USERS SET PASSWORD_HASH=? WHERE USER_ID=?",
+            (generate_password_hash(new_password), user_id),
+        )
+    found = cur.rowcount > 0
+    conn.close()
+    if not found:
+        raise ValueError("user not found")
+
+
+def revoke_user_sessions(user_id, keep_token=None):
+    """Invalidate a user's other sessions after their password changes --
+    self-service change keeps the session that made the request alive
+    (keep_token); an admin-driven reset has no session of the target
+    user's to keep, so it clears all of them."""
+    conn = get_conn()
+    with conn:
+        if keep_token:
+            conn.execute("DELETE FROM SESSIONS WHERE USER_ID=? AND TOKEN<>?", (user_id, keep_token))
+        else:
+            conn.execute("DELETE FROM SESSIONS WHERE USER_ID=?", (user_id,))
+    conn.close()
 
 
 # ---------------------------------------------------------------------------

@@ -39,6 +39,13 @@
 }
 
 *{box-sizing:border-box;}
+/* Belt-and-suspenders: the browser's own [hidden]{display:none} default is
+   an author-overridable UA rule, so any element with hidden plus a class
+   that sets its own `display` (flex/grid/etc.) silently ignores `hidden`
+   unless something re-asserts none. One global !important rule here beats
+   patching .foo[hidden]{display:none} onto every such class one at a time
+   as new ones turn up (already bit .app and .home before this). */
+[hidden]{display:none !important;}
 html,body{height:100%;}
 body{
   margin:0;background:var(--page-bg);color:var(--text);
@@ -48,7 +55,6 @@ button,input,select{font-family:var(--font-ui);}
 
 /* ---------- app shell ---------- */
 .app{display:flex;height:100vh;}
-.app[hidden]{display:none;}
 
 .railnav{
   width:84px;flex-shrink:0;background:var(--chrome);border-right:1px solid var(--border-strong);
@@ -89,7 +95,6 @@ button,input,select{font-family:var(--font-ui);}
 
 .pagearea{flex:1;overflow-y:auto;padding:18px 22px 40px;}
 .tabpage{max-width:980px;}
-.tabpage[hidden]{display:none;}
 
 .page-heading{font-size:14.5px;font-weight:700;margin:0 0 3px;}
 .page-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 16px;max-width:70ch;}
@@ -155,7 +160,6 @@ button.link:hover{background:none;text-decoration:underline;}
 
 /* ---------- Home (project picker) ---------- */
 .home{min-height:100vh;display:flex;justify-content:center;padding:52px 20px;background:var(--page-bg);}
-.home[hidden]{display:none;}
 .home-inner{width:100%;max-width:560px;}
 .home-logo{display:block;width:100%;height:auto;margin:0 auto 14px;}
 .home-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 18px;}
@@ -298,8 +302,25 @@ td.mono{font-family:var(--font-mono);}
     <div class="groupbox" id="homeUserStrip" hidden>
       <div class="settings-row" style="align-items:center;">
         <p class="settings-note" style="margin:0;">Logged in as <strong id="homeUserLabel"></strong> <span id="homeUserRole"></span></p>
+        <button class="small" id="changePasswordToggleBtn">Change Password</button>
         <button class="small" id="logoutBtn">Log Out</button>
       </div>
+      <div class="settings-row" id="changePasswordForm" hidden style="margin-top:12px;">
+        <div class="field">
+          <label for="currentPassword">Current password</label>
+          <input type="password" id="currentPassword" autocomplete="current-password" />
+        </div>
+        <div class="field">
+          <label for="newPassword">New password</label>
+          <input type="password" id="newPassword" placeholder="min. 8 characters" autocomplete="new-password" />
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Confirm new password</label>
+          <input type="password" id="confirmPassword" autocomplete="new-password" />
+        </div>
+        <button class="primary" id="savePasswordBtn">Save</button>
+      </div>
+      <p class="settings-note" id="changePasswordNote"></p>
     </div>
 
     <div id="homeProjectPanels" hidden>
@@ -327,7 +348,7 @@ td.mono{font-family:var(--font-mono);}
       <div class="groupbox" id="homeManageUsers" hidden>
         <span class="groupbox-label">Manage Users</span>
         <table class="stage-inventory">
-          <thead><tr><th>Username</th><th>Display Name</th><th>Role</th></tr></thead>
+          <thead><tr><th>Username</th><th>Display Name</th><th>Role</th><th>New Password</th><th></th></tr></thead>
           <tbody id="userListBody"></tbody>
         </table>
         <div class="settings-row" style="margin-top:12px;">
@@ -651,6 +672,8 @@ td.mono{font-family:var(--font-mono);}
    "homeConnectedLabel",
    "homeLoginBox","loginUsername","loginPassword","loginBtn","loginError",
    "homeUserStrip","homeUserLabel","homeUserRole","logoutBtn",
+   "changePasswordToggleBtn","changePasswordForm","currentPassword","newPassword","confirmPassword",
+   "savePasswordBtn","changePasswordNote",
    "homeProjectPanels","projectOwnerHeader",
    "homeManageUsers","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
@@ -1093,6 +1116,38 @@ td.mono{font-family:var(--font-mono);}
   }
   els.logoutBtn.addEventListener("click", doLogout);
 
+  // ---------- change own password ----------
+  els.changePasswordToggleBtn.addEventListener("click", function(){
+    els.changePasswordForm.hidden = !els.changePasswordForm.hidden;
+    els.changePasswordNote.textContent = "";
+  });
+
+  els.savePasswordBtn.addEventListener("click", function(){
+    var current = els.currentPassword.value;
+    var next = els.newPassword.value;
+    var confirm = els.confirmPassword.value;
+    if (!current || !next){ els.changePasswordNote.textContent = "Enter your current and new password."; return; }
+    if (next !== confirm){ els.changePasswordNote.textContent = "New passwords don't match."; return; }
+    els.savePasswordBtn.disabled = true;
+    apiFetch(apiUrl("/auth/change-password"), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({current_password: current, new_password: next})
+    }).then(function(r){
+      return r.json().then(function(data){ return {ok: r.ok, data: data}; });
+    }).then(function(res){
+      if (!res.ok) throw new Error((res.data && res.data.error) || "Could not change password");
+      els.currentPassword.value = "";
+      els.newPassword.value = "";
+      els.confirmPassword.value = "";
+      els.changePasswordForm.hidden = true;
+      els.changePasswordNote.textContent = "Password changed.";
+    }).catch(function(err){
+      els.changePasswordNote.textContent = err.message;
+    }).finally(function(){
+      els.savePasswordBtn.disabled = false;
+    });
+  });
+
   // ---------- manage users (admin only) ----------
   function loadUsers(){
     apiFetch(apiUrl("/users")).then(function(r){
@@ -1108,6 +1163,41 @@ td.mono{font-family:var(--font-mono);}
     users.forEach(function(u){
       var tr = document.createElement("tr");
       tr.innerHTML = "<td>" + u.username + "</td><td>" + (u.display_name || "") + "</td><td>" + u.role + "</td>";
+
+      var tdPw = document.createElement("td");
+      var pwInput = document.createElement("input");
+      pwInput.type = "password";
+      pwInput.placeholder = "min. 8 characters";
+      pwInput.style.width = "140px";
+      tdPw.appendChild(pwInput);
+      tr.appendChild(tdPw);
+
+      var tdAction = document.createElement("td");
+      var resetBtn = document.createElement("button");
+      resetBtn.className = "small";
+      resetBtn.textContent = "Reset";
+      resetBtn.addEventListener("click", function(){
+        var pw = pwInput.value;
+        if (!pw){ alert("Enter a new password first."); return; }
+        resetBtn.disabled = true;
+        apiFetch(apiUrl("/users/" + u.id + "/reset-password"), {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({new_password: pw})
+        }).then(function(r){
+          return r.json().then(function(data){ return {ok: r.ok, data: data}; });
+        }).then(function(res){
+          if (!res.ok) throw new Error((res.data && res.data.error) || "Could not reset password");
+          pwInput.value = "";
+          alert('Password reset for "' + u.username + '". They will need to log in again.');
+        }).catch(function(err){
+          alert("Could not reset password: " + err.message);
+        }).finally(function(){
+          resetBtn.disabled = false;
+        });
+      });
+      tdAction.appendChild(resetBtn);
+      tr.appendChild(tdAction);
+
       els.userListBody.appendChild(tr);
     });
   }

@@ -2,7 +2,7 @@
 User accounts, login, and access control for the cisTEM3 API.
 
 Bearer-token auth, not cookies: the API runs with wide-open CORS
-(Access-Control-Allow-Origin: *) so job_runner.html can be opened as a
+(Access-Control-Allow-Origin: *) so cistem3.html can be opened as a
 local file or served from any port -- cookie-based sessions need
 credentials:'include' plus a non-wildcard origin, which doesn't fit that.
 A token in an Authorization header sidesteps it entirely and has no CSRF

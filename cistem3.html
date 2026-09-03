@@ -160,6 +160,37 @@ button.link:hover{background:none;text-decoration:underline;}
 .stage-inventory tbody tr.clickable{cursor:pointer;}
 .stage-inventory tbody tr.clickable:hover td{background:var(--accent-soft);}
 
+/* ---------- Assets: sub-tabs ---------- */
+#page-assets{max-width:1300px;}
+.asset-subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border-strong);margin-bottom:16px;}
+.asset-subtab-btn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:8px 16px;border:1px solid transparent;border-bottom:none;border-radius:2px 2px 0 0;
+  background:none;color:var(--text-secondary);
+}
+.asset-subtab-btn svg{width:22px;height:22px;}
+.asset-subtab-btn span{font-size:11px;font-weight:600;white-space:nowrap;}
+.asset-subtab-btn:hover{background:var(--surface-sunken);}
+.asset-subtab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
+
+.assets-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;}
+.group-list{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto;border:1px solid var(--border);}
+.group-list li{padding:7px 10px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-bottom:1px solid var(--border);}
+.group-list li:last-child{border-bottom:none;}
+.group-list li:hover{background:var(--surface-sunken);}
+.group-list li.selected{background:var(--accent);color:#fff;}
+.asset-toolbar{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+
+.details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 24px;margin-top:2px;}
+.details-item{display:flex;justify-content:space-between;gap:8px;font-size:12px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+.details-key{font-weight:600;color:var(--text-tertiary);}
+.details-val{font-family:var(--font-mono);color:var(--text);}
+
+@media (max-width:900px){
+  .assets-layout{grid-template-columns:1fr;}
+  .details-grid{grid-template-columns:repeat(2,1fr);}
+}
+
 /* ---------- Home (project picker) ---------- */
 .home{min-height:100vh;display:flex;justify-content:center;padding:52px 20px;background:var(--page-bg);}
 .home-inner{width:100%;max-width:560px;}
@@ -420,34 +451,118 @@ From branch : <span id="versionBranch">—</span></p>
       <!-- ASSETS -->
       <section class="tabpage" id="page-assets">
         <h2 class="page-heading">Assets</h2>
-        <p class="page-sub">Everything this project knows about: imported movies, movie groups, and jobs submitted so far.</p>
+        <p class="page-sub">Everything this project knows about, grouped by asset type.</p>
 
-        <div class="groupbox">
-          <span class="groupbox-label">Import Movies</span>
-          <p class="page-sub" style="margin:0 0 12px;">Microscope metadata is set once per import batch and stored with each movie — job forms below reference it instead of asking again.</p>
-          <div id="importFields"></div>
-          <div class="submit-row">
-            <button class="primary" id="importBtn">Import</button>
+        <div class="asset-subtabs" id="assetSubtabs">
+          <button class="asset-subtab-btn" data-asset-tab="movies">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.1" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none"/></svg>
+            <span>Movies</span>
+          </button>
+          <button class="asset-subtab-btn" data-asset-tab="images">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1.3"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17l5-5 3.5 3.5L16 12l4 4"/></svg>
+            <span>Images</span>
+          </button>
+          <button class="asset-subtab-btn" data-asset-tab="particles">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="1.3"/><circle cx="8" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="16.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12.5" cy="11.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+            <span>Particle Positions</span>
+          </button>
+          <button class="asset-subtab-btn" data-asset-tab="volumes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.4v9.2L12 21l-8-4.4V7.4L12 3z"/><path d="M4 7.4L12 11.8l8-4.4M12 11.8V21"/></svg>
+            <span>3D Volumes</span>
+          </button>
+          <button class="asset-subtab-btn" data-asset-tab="refine">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.2v9.6L12 21l-8-4.2V7.2L12 3z"/><path d="M4 7.2L12 11l8-3.8M12 11v10M8 5.1l8 4.2"/></svg>
+            <span>Refine Pkgs.</span>
+          </button>
+        </div>
+
+        <!-- MOVIES -->
+        <div class="asset-subpage" id="assetpageMovies">
+          <div class="assets-layout">
+            <div class="groupbox">
+              <span class="groupbox-label">Groups</span>
+              <ul class="group-list" id="movieGroupList"></ul>
+              <div class="asset-toolbar">
+                <button class="small" disabled title="Not implemented yet -- groups are created automatically at import time, one per import batch.">Add</button>
+                <button class="small" disabled title="Not implemented yet -- groups are created automatically at import time, one per import batch.">Remove</button>
+                <button class="small" disabled title="Not implemented yet -- groups are created automatically at import time, one per import batch.">Invert</button>
+              </div>
+            </div>
+
+            <div class="groupbox">
+              <span class="groupbox-label">Movies</span>
+              <div class="table-scroll">
+                <table class="queue">
+                  <thead><tr>
+                    <th>I.D.</th><th>Name</th><th class="num">X Size</th><th class="num">Y Size</th>
+                    <th class="num">No. frames</th><th class="num">Pixel size</th><th class="num">Exp. per frame</th>
+                    <th class="num">Cs</th><th class="num">Voltage</th><th>Dark filename</th><th>Gain filename</th>
+                  </tr></thead>
+                  <tbody id="movieListBody">
+                    <tr><td colspan="11"><div class="empty-note">No movies imported yet</div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="asset-toolbar">
+                <button class="small" id="movieImportScrollBtn">Import</button>
+                <button class="small" disabled title="Not implemented yet.">Remove</button>
+                <button class="small" disabled title="Not implemented yet.">Remove All</button>
+                <button class="small" disabled title="Not implemented yet.">Rename</button>
+                <button class="small" disabled title="Not implemented yet.">Add To Group</button>
+                <button class="small" disabled title="No image viewer in this reference app.">Display</button>
+              </div>
+            </div>
           </div>
-          <p class="form-note" id="importNote"></p>
+
+          <div class="groupbox" style="margin-top:16px;">
+            <span class="groupbox-label">Selected Movie</span>
+            <div class="details-grid">
+              <div class="details-item"><span class="details-key">Name</span><span class="details-val" id="dMovieName">—</span></div>
+              <div class="details-item"><span class="details-key">No. Frames</span><span class="details-val" id="dMovieFrames">—</span></div>
+              <div class="details-item"><span class="details-key">Pixel Size</span><span class="details-val" id="dMoviePixelSize">—</span></div>
+              <div class="details-item"><span class="details-key">I.D.</span><span class="details-val" id="dMovieId">—</span></div>
+              <div class="details-item"><span class="details-key">Y Size</span><span class="details-val" id="dMovieYSize">—</span></div>
+              <div class="details-item"><span class="details-key">Total Exp.</span><span class="details-val" id="dMovieTotalExp">—</span></div>
+              <div class="details-item"><span class="details-key">X Size</span><span class="details-val" id="dMovieXSize">—</span></div>
+              <div class="details-item"><span class="details-key">Voltage</span><span class="details-val" id="dMovieVoltage">—</span></div>
+              <div class="details-item"><span class="details-key">Cs</span><span class="details-val" id="dMovieCs">—</span></div>
+              <div class="details-item"><span class="details-key">Exp. Per Frame</span><span class="details-val" id="dMovieExpFrame">—</span></div>
+            </div>
+          </div>
+
+          <div class="groupbox" id="importMoviesBox">
+            <span class="groupbox-label">Import Movies</span>
+            <p class="page-sub" style="margin:0 0 12px;">Microscope metadata is set once per import batch and stored with each movie — job forms below reference it instead of asking again.</p>
+            <div id="importFields"></div>
+            <div class="submit-row">
+              <button class="primary" id="importBtn">Import</button>
+            </div>
+            <p class="form-note" id="importNote"></p>
+          </div>
         </div>
 
-        <div class="groupbox">
-          <span class="groupbox-label">Imported Movies</span>
-          <table class="stage-inventory">
-            <thead><tr><th>Name</th><th class="num">Voltage (kV)</th><th class="num">Pixel size (Å/px)</th><th class="num">Dose/frame</th></tr></thead>
-            <tbody id="movieListBody">
-              <tr><td colspan="4"><div class="empty-note">No movies imported yet</div></td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="groupbox">
-          <span class="groupbox-label">Movie Groups</span>
-          <table class="stage-inventory">
-            <thead><tr><th>Group</th><th class="num">Movies</th></tr></thead>
-            <tbody id="movieGroupListBody"></tbody>
-          </table>
+        <!-- IMAGES / PARTICLE POSITIONS / 3D VOLUMES / REFINE PKGS: no backend data model yet -->
+        <div class="asset-subpage" id="assetpagePlaceholder" hidden>
+          <div class="assets-layout">
+            <div class="groupbox">
+              <span class="groupbox-label">Groups</span>
+              <ul class="group-list"><li class="selected" id="placeholderGroupLabel">All (0)</li></ul>
+              <div class="asset-toolbar">
+                <button class="small" disabled title="Not implemented yet.">Add</button>
+                <button class="small" disabled title="Not implemented yet.">Remove</button>
+                <button class="small" disabled title="Not implemented yet.">Invert</button>
+              </div>
+            </div>
+            <div class="groupbox">
+              <span class="groupbox-label" id="placeholderPanelLabel">Images</span>
+              <div class="empty-note" id="placeholderNote">Not wired up yet<span class="hint">Only movie assets are backed by real project data so far.</span></div>
+              <div class="asset-toolbar">
+                <button class="small" disabled title="Not implemented yet.">Import</button>
+                <button class="small" disabled title="Not implemented yet.">Remove</button>
+                <button class="small" disabled title="Not implemented yet.">Remove All</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="groupbox">
@@ -688,7 +803,11 @@ From branch : <span id="versionBranch">—</span></p>
    "settingsConnStatus","settingsConnDot","settingsConnLabel",
    "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
    "previewDesc","jobSummaryBody",
-   "importFields","importBtn","importNote","movieListBody","movieGroupListBody",
+   "importFields","importBtn","importNote","movieListBody","movieGroupList","movieImportScrollBtn",
+   "importMoviesBox","assetpageMovies","assetpagePlaceholder","placeholderPanelLabel",
+   "placeholderGroupLabel","placeholderNote",
+   "dMovieName","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
+   "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
    "stageInventoryBody","runProfile",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
@@ -711,7 +830,10 @@ From branch : <span id="versionBranch">—</span></p>
     currentStage: STAGE_ORDER[0],
     expertOpen: false,
     pollTimer: null,
-    logTimer: null
+    logTimer: null,
+    assetTab: "movies",
+    selectedGroupId: 0,
+    selectedMovieId: null
   };
 
   // ---------- rail navigation ----------
@@ -730,6 +852,41 @@ From branch : <span id="versionBranch">—</span></p>
     btn.addEventListener("click", function(){ showTab(btn.dataset.tab); });
   });
   showTab("assets");
+
+  // ---------- assets sub-tabs ----------
+  // Movies is the only asset type backed by real project data (see CLAUDE.md's
+  // "Scope note"). The other four share one placeholder shell rather than
+  // faking import/list UI for a data model that doesn't exist yet.
+  var ASSET_PLACEHOLDER_INFO = {
+    images: {label: "Images", groupLabel: "All Images (0)"},
+    particles: {label: "Particle Positions", groupLabel: "All Particle Positions (0)"},
+    volumes: {label: "3D Volumes", groupLabel: "All Volumes (0)"},
+    refine: {label: "Refine Pkgs.", groupLabel: "All Refinement Packages (0)"}
+  };
+  var assetSubtabBtns = document.querySelectorAll(".asset-subtab-btn");
+  function showAssetTab(name){
+    state.assetTab = name;
+    assetSubtabBtns.forEach(function(btn){ btn.classList.toggle("active", btn.dataset.assetTab === name); });
+    els.assetpageMovies.hidden = name !== "movies";
+    els.assetpagePlaceholder.hidden = name === "movies";
+    if (name !== "movies"){
+      var info = ASSET_PLACEHOLDER_INFO[name];
+      els.placeholderPanelLabel.textContent = info.label;
+      els.placeholderGroupLabel.textContent = info.groupLabel;
+      els.placeholderNote.innerHTML = info.label + " assets aren't wired up yet" +
+        '<span class="hint">Only movie assets are backed by real project data so far — see CLAUDE.md’s "Scope note".</span>';
+    }
+  }
+  assetSubtabBtns.forEach(function(btn){
+    btn.addEventListener("click", function(){ showAssetTab(btn.dataset.assetTab); });
+  });
+  showAssetTab("movies");
+
+  els.movieImportScrollBtn.addEventListener("click", function(){
+    els.importMoviesBox.scrollIntoView({behavior: "smooth", block: "start"});
+    var glob = els.importFields.querySelector('[data-key="input_glob"]');
+    if (glob) glob.focus();
+  });
 
   // ---------- home screen / project switching ----------
   function showScreen(name){
@@ -1043,7 +1200,7 @@ From branch : <span id="versionBranch">—</span></p>
   autoConnect();
 
   // Populates the commit/branch line under the logo from the server's own
-  // git checkout (see /api/version in app.py). Best-effort: any field the
+  // git checkout (see /api/version in cistem_server.py). Best-effort: any field the
   // server couldn't determine (not a git checkout, git missing, ...) is left
   // as the placeholder rather than shown as an error -- this is decoration,
   // not something worth alarming a viewer over.
@@ -1259,9 +1416,11 @@ From branch : <span id="versionBranch">—</span></p>
     showScreen("app");
     showTab("assets");
     renderParamFields();
+    state.selectedGroupId = 0;
+    state.selectedMovieId = null;
     loadImportDefaults();
-    loadMovies();
     loadMovieGroups();
+    loadMovies();
     startPolling();
     fetchJobs();
   }
@@ -1426,8 +1585,9 @@ From branch : <span id="versionBranch">—</span></p>
       els.importNote.textContent = result.synthetic
         ? "No files matched that path, so " + result.movie_count + ' placeholder movies were created for "' + result.group_name + '" so you can exercise the flow without real data.'
         : "Imported " + result.movie_count + ' movies into "' + result.group_name + '".';
-      loadMovies();
+      state.selectedGroupId = result.movie_group_id;
       loadMovieGroups();
+      loadMovies();
       populateDynamicFields(STAGES.motion_correction.fields);
     }).catch(function(err){
       alert("Import failed: " + err.message);
@@ -1439,21 +1599,26 @@ From branch : <span id="versionBranch">—</span></p>
 
   function loadMovies(){
     if (!state.projectId) return;
-    apiFetch(projectApiUrl("/movies")).then(function(r){
+    apiFetch(projectApiUrl("/movies?group_id=" + state.selectedGroupId)).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){ renderMovieList((data && data.movies) || []); }).catch(function(){});
   }
 
+  function fmtNum(v){ return v != null ? v : "—"; }
+
   function renderMovieList(movies){
+    state.movies = movies;
+    state.selectedMovieId = null;
+    updateMovieDetails(null);
     els.movieListBody.innerHTML = "";
     if (!movies.length){
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 4;
+      td.colSpan = 11;
       var box = document.createElement("div");
       box.className = "empty-note";
-      box.textContent = "No movies imported yet";
+      box.textContent = "No movies in this group";
       td.appendChild(box);
       tr.appendChild(td);
       els.movieListBody.appendChild(tr);
@@ -1461,12 +1626,45 @@ From branch : <span id="versionBranch">—</span></p>
     }
     movies.forEach(function(m){
       var tr = document.createElement("tr");
-      tr.innerHTML = "<td>" + (m.NAME || "") + "</td>" +
-        "<td class='num'>" + (m.VOLTAGE != null ? m.VOLTAGE : "—") + "</td>" +
-        "<td class='num'>" + (m.PIXEL_SIZE != null ? m.PIXEL_SIZE : "—") + "</td>" +
-        "<td class='num'>" + (m.DOSE_PER_FRAME != null ? m.DOSE_PER_FRAME : "—") + "</td>";
+      tr.className = "clickable";
+      tr.dataset.movieId = m.MOVIE_ASSET_ID;
+      tr.innerHTML = "<td>" + m.MOVIE_ASSET_ID + "</td>" +
+        "<td>" + (m.NAME || "") + "</td>" +
+        "<td class='num'>" + fmtNum(m.X_SIZE) + "</td>" +
+        "<td class='num'>" + fmtNum(m.Y_SIZE) + "</td>" +
+        "<td class='num'>" + fmtNum(m.NUMBER_OF_FRAMES) + "</td>" +
+        "<td class='num'>" + fmtNum(m.PIXEL_SIZE) + "</td>" +
+        "<td class='num'>" + fmtNum(m.DOSE_PER_FRAME) + "</td>" +
+        "<td class='num'>" + fmtNum(m.SPHERICAL_ABERRATION) + "</td>" +
+        "<td class='num'>" + fmtNum(m.VOLTAGE) + "</td>" +
+        "<td>" + (m.DARK_FILENAME || "—") + "</td>" +
+        "<td>" + (m.GAIN_FILENAME || "—") + "</td>";
+      tr.addEventListener("click", function(){ selectMovie(m.MOVIE_ASSET_ID); });
       els.movieListBody.appendChild(tr);
     });
+  }
+
+  function selectMovie(movieId){
+    state.selectedMovieId = movieId;
+    els.movieListBody.querySelectorAll("tr").forEach(function(tr){
+      tr.classList.toggle("selected", Number(tr.dataset.movieId) === movieId);
+    });
+    var movie = (state.movies || []).filter(function(m){ return m.MOVIE_ASSET_ID === movieId; })[0];
+    updateMovieDetails(movie || null);
+  }
+
+  function updateMovieDetails(m){
+    els.dMovieName.textContent = m ? (m.NAME || "—") : "—";
+    els.dMovieId.textContent = m ? m.MOVIE_ASSET_ID : "—";
+    els.dMovieXSize.textContent = m ? fmtNum(m.X_SIZE) : "—";
+    els.dMovieYSize.textContent = m ? fmtNum(m.Y_SIZE) : "—";
+    els.dMovieFrames.textContent = m ? fmtNum(m.NUMBER_OF_FRAMES) : "—";
+    els.dMoviePixelSize.textContent = m ? fmtNum(m.PIXEL_SIZE) : "—";
+    els.dMovieExpFrame.textContent = m ? fmtNum(m.DOSE_PER_FRAME) : "—";
+    els.dMovieTotalExp.textContent = (m && m.DOSE_PER_FRAME != null && m.NUMBER_OF_FRAMES != null)
+      ? (m.DOSE_PER_FRAME * m.NUMBER_OF_FRAMES).toFixed(2) : "—";
+    els.dMovieVoltage.textContent = m ? fmtNum(m.VOLTAGE) : "—";
+    els.dMovieCs.textContent = m ? fmtNum(m.SPHERICAL_ABERRATION) : "—";
   }
 
   function loadMovieGroups(){
@@ -1478,12 +1676,27 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   function renderMovieGroupList(groups){
-    els.movieGroupListBody.innerHTML = "";
+    state.movieGroups = groups;
+    els.movieGroupList.innerHTML = "";
+    if (!groups.some(function(g){ return g.group_id === state.selectedGroupId; })){
+      state.selectedGroupId = 0;
+    }
     groups.forEach(function(g){
-      var tr = document.createElement("tr");
-      tr.innerHTML = "<td>" + g.group_name + "</td><td class='num'>" + g.movie_count + "</td>";
-      els.movieGroupListBody.appendChild(tr);
+      var li = document.createElement("li");
+      li.textContent = g.group_name + " (" + g.movie_count + ")";
+      li.dataset.groupId = g.group_id;
+      li.classList.toggle("selected", g.group_id === state.selectedGroupId);
+      li.addEventListener("click", function(){ selectMovieGroup(g.group_id); });
+      els.movieGroupList.appendChild(li);
     });
+  }
+
+  function selectMovieGroup(groupId){
+    state.selectedGroupId = groupId;
+    els.movieGroupList.querySelectorAll("li").forEach(function(li){
+      li.classList.toggle("selected", Number(li.dataset.groupId) === groupId);
+    });
+    loadMovies();
   }
 
   // ---------- submit ----------

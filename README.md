@@ -4,27 +4,27 @@ A local, project-based job-submission UI for a single-particle cryo-EM processin
 
 Two pieces:
 
-- **`job_runner.html`** — a standalone page you open in your own browser. On load it auto-connects to the API address in `config.js` (`http://localhost:8000/api` by default) — success shows a login screen, failure shows an error screen with a Retry button. Once logged in you create or open a **project**; once one's open it submits jobs and polls status against that same API, scoped to that project and to you. It makes no network calls anywhere else.
+- **`cistem3.html`** — a standalone page you open in your own browser. On load it auto-connects to the API address in `config.js` (`http://localhost:8000/api` by default) — success shows a login screen, failure shows an error screen with a Retry button. Once logged in you create or open a **project**; once one's open it submits jobs and polls status against that same API, scoped to that project and to you. It makes no network calls anywhere else.
 - **`config.js`** — the one file to edit if your API isn't at `localhost:8000`. A single `window.CRYOEM_CONFIG = { apiBase: "..." }`; reload the page after changing it.
-- **`server/app.py`** + **`server/db.py`** + **`server/auth.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`) plus a global `server/data/auth.db` for user accounts and sessions. Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
+- **`server/cistem_server.py`** + **`server/db.py`** + **`server/auth.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`) plus a global `server/data/auth.db` for user accounts and sessions. Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
 
 `reference/dashboard.html` is an earlier static mockup with richer diagnostic charts (throughput, defocus histogram, FSC curve) — a design reference, not wired to the job runner.
 
 ## Why a local file instead of a hosted link
 
-The page needs to call an API on your own network (cryoSPARC, a Slurm cluster, a lab script) — a page hosted on claude.ai is sandboxed and can't reach arbitrary private servers. Running `job_runner.html` locally sidesteps that: it's an ordinary page, so it can call whatever your browser can reach.
+The page needs to call an API on your own network (cryoSPARC, a Slurm cluster, a lab script) — a page hosted on claude.ai is sandboxed and can't reach arbitrary private servers. Running `cistem3.html` locally sidesteps that: it's an ordinary page, so it can call whatever your browser can reach.
 
 ## Quick start (try it with the reference server)
 
 ```bash
 cd server
 pip install -r requirements.txt
-python app.py
+python cistem_server.py
 ```
 
-This serves the API at `http://localhost:8000/api`. On first run, since there are no users yet, it auto-creates an admin account and prints its password to the console (also written once to `server/data/admin_credentials.txt`) — copy that password before it scrolls away.
+This serves the API at `http://localhost:8000/api`, and also serves the page itself — open `http://localhost:8000/` in a browser and you're there, no separate step needed. On first run, since there are no users yet, it auto-creates an admin account and prints its password to the console (also written once to `server/data/admin_credentials.txt`) — copy that password before it scrolls away.
 
-Then open `job_runner.html` (double-click it, or `open job_runner.html`). It connects to `http://localhost:8000/api` automatically — if your API is somewhere else, edit `config.js` first (see above) and reload.
+(You can still open `cistem3.html` directly instead — double-click it, or `open cistem3.html` — it connects to `http://localhost:8000/api` automatically either way; if your API is somewhere else, edit `config.js` first (see above) and reload.)
 
 1. **Log in** as `admin` with the password from the console/credentials file.
 2. **Manage Users** (admin-only panel on the home screen) — create a real account for yourself (and anyone else) with a role of `user` or `admin`. There's no self-registration; only an admin can create accounts.
@@ -32,13 +32,13 @@ Then open `job_runner.html` (double-click it, or `open job_runner.html`). It con
 4. **Assets tab → Import Movies** — enter a path/glob for movie files plus microscope metadata (voltage, Cs, pixel size, dose/frame). If nothing matches (no real data on this machine), it fabricates ~12 placeholder movies so you can exercise the whole flow anyway.
 5. **Actions tab → Align Movies** — pick the movie group you just imported (metadata comes from the import, not retyped here), set an output directory, and Run. Since no real binaries are configured yet, it runs in simulation mode: progresses through a fake sequence and lands on `completed` with plausible placeholder numbers.
 6. **Results tab** — watch the queue, open a job's log, cancel a running one.
-7. **Close Project** (top right) returns you to the home screen — project data persists (it's a real SQLite file), so reopening it later shows the same movies and job history, even after restarting `app.py`. Your login persists too (a token in `localStorage`), so reloading the page skips straight back to the project picker.
+7. **Close Project** (top right) returns you to the home screen — project data persists (it's a real SQLite file), so reopening it later shows the same movies and job history, even after restarting `cistem_server.py`. Your login persists too (a token in `localStorage`), so reloading the page skips straight back to the project picker.
 
-If your browser blocks `fetch` from a `file://` page, serve the folder instead: `python -m http.server 8080` from this directory, then open `http://localhost:8080/job_runner.html`.
+If your browser blocks `fetch` from a `file://` page, open `http://localhost:8000/` instead (the reference server already serves the page — see above), or serve the folder yourself with `python -m http.server 8080` from this directory and open `http://localhost:8080/cistem3.html`.
 
 ## Wiring in your real pipeline
 
-Open `server/app.py` and fill in `STAGE_COMMANDS` — one command template per stage, using `{param_key}` placeholders filled from the job's submitted parameters. For stages still using freeform typed params (`ctf_estimation`, `particle_picking`, `class2d`, `refine3d`) this is a direct 1:1 mapping, e.g.:
+Open `server/cistem_server.py` and fill in `STAGE_COMMANDS` — one command template per stage, using `{param_key}` placeholders filled from the job's submitted parameters. For stages still using freeform typed params (`ctf_estimation`, `particle_picking`, `class2d`, `refine3d`) this is a direct 1:1 mapping, e.g.:
 
 ```python
 "ctf_estimation": {
@@ -55,14 +55,14 @@ Open `server/app.py` and fill in `STAGE_COMMANDS` — one command template per s
 
 Any stage left as `"command": None`, or whose `binary` isn't found on `PATH`, keeps running in simulation mode — so you can wire stages up one at a time.
 
-If you're driving **cryoSPARC** or **Slurm** instead of calling binaries directly, replace the body of `_run_real()` in `app.py` with calls to cryoSPARC's JSON API or `slurmrestd`, keeping the same job bookkeeping (status, progress, log, cancel) around it. The front end doesn't need to change either way — it only knows the HTTP contract below.
+If you're driving **cryoSPARC** or **Slurm** instead of calling binaries directly, replace the body of `_run_real()` in `cistem_server.py` with calls to cryoSPARC's JSON API or `slurmrestd`, keeping the same job bookkeeping (status, progress, log, cancel) around it. The front end doesn't need to change either way — it only knows the HTTP contract below.
 
 ## Projects
 
 Each project is a self-contained SQLite file (schema in `server/db.py`), modeled on a real cisTEM project database's table/column names wherever this app stores the same kind of data — `MASTER_SETTINGS`, `MOVIE_ASSETS`, `MOVIE_ALIGNMENT_LIST`, `RUN_PROFILES`, and so on. This means:
 
 - Microscope/movie metadata is entered once at import time and referenced by jobs afterward, instead of retyped into every job form.
-- A project survives restarting `app.py` — it's a file on disk, not an in-memory store.
+- A project survives restarting `cistem_server.py` — it's a file on disk, not an in-memory store.
 - Switching projects (Close Project → open a different one) is just pointing subsequent requests at a different file; nothing bleeds between projects.
 
 Only `motion_correction` is wired to real project data end-to-end right now. The other four stages are project-scoped (their job history lands in the right project) but still use typed/freeform params and don't read from or write to their own result tables yet (`ESTIMATED_CTF_PARAMETERS`, `PARTICLE_PICKING_LIST`, `CLASSIFICATION_LIST`, `REFINEMENT_LIST` — schema's there, just unused). See `CLAUDE.md` for the reasoning and what "wiring one up" would involve.
@@ -71,11 +71,11 @@ Only `motion_correction` is wired to real project data end-to-end right now. The
 
 Two roles: `user` (sees and manages only the projects they created) and `admin` (sees and can open/delete *every* project, and is the only role that can create new accounts). There's no public self-registration — an admin creates every account, from the home screen's Manage Users panel or `POST /users`.
 
-Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/login` and stored client-side in `localStorage`, not a cookie — this keeps it compatible with the API's wide-open CORS (`Access-Control-Allow-Origin: *`, which can't be combined with cookie credentials) and means it works the same whether `job_runner.html` is opened as a file or served. Tokens are tracked server-side (`server/auth.py`'s `SESSIONS` table) so logout genuinely revokes them, unlike a stateless JWT. See `server/auth.py`'s module docstring for more (session expiry, the login-timing-attack guard, the bootstrap-admin process).
+Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/login` and stored client-side in `localStorage`, not a cookie — this keeps it compatible with the API's wide-open CORS (`Access-Control-Allow-Origin: *`, which can't be combined with cookie credentials) and means it works the same whether `cistem3.html` is opened as a file or served. Tokens are tracked server-side (`server/auth.py`'s `SESSIONS` table) so logout genuinely revokes them, unlike a stateless JWT. See `server/auth.py`'s module docstring for more (session expiry, the login-timing-attack guard, the bootstrap-admin process).
 
 ## The HTTP contract
 
-`job_runner.html` only ever calls these, against whatever base URL you give it. Everything except `/health`, `/auth/login`, and `/auth/logout` requires a valid `Authorization: Bearer <token>` header (a `401` otherwise); everything under `/projects/:id/...` additionally requires that you own that project or are an admin (a `403` otherwise, `404` if the project doesn't exist at all):
+`cistem3.html` only ever calls these, against whatever base URL you give it. Everything except `/health`, `/auth/login`, and `/auth/logout` requires a valid `Authorization: Bearer <token>` header (a `401` otherwise); everything under `/projects/:id/...` additionally requires that you own that project or are an admin (a `403` otherwise, `404` if the project doesn't exist at all):
 
 | Method | Path | Purpose |
 |---|---|---|

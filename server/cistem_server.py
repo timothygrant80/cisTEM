@@ -1,5 +1,5 @@
 """
-Reference job-queue API for the cisTEM3 page (job_runner.html).
+Reference job-queue API for the cisTEM3 page (cistem3.html).
 
 This is a STARTING POINT, not a production job scheduler. It implements the
 HTTP contract the front-end expects (see README.md), backed by one SQLite
@@ -13,10 +13,10 @@ management, status tracking, logs, cancellation) already works.
 Quick start
 -----------
     pip install -r requirements.txt
-    python app.py
+    python cistem_server.py
     # serves on http://localhost:8000, API under /api
 
-Then open job_runner.html in a browser and point "API base URL" at
+Then open cistem3.html in a browser and point "API base URL" at
 http://localhost:8000/api
 
 Security
@@ -40,7 +40,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, g, jsonify, request
+from flask import Flask, abort, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 import auth
@@ -241,7 +241,7 @@ def _run_simulated(project_id, job, binary):
         if binary
         else "no command configured for this stage -- simulating. "
     )
-    append_log(project_id, job["id"], note + "Edit STAGE_COMMANDS in app.py to run the real thing.")
+    append_log(project_id, job["id"], note + "Edit STAGE_COMMANDS in cistem_server.py to run the real thing.")
     steps = [10, 25, 45, 65, 85, 100]
     for pct in steps:
         _check_cancelled(job["id"])
@@ -358,6 +358,31 @@ def _recover_interrupted_jobs():
                 (now_iso(),),
             )
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Static frontend -- optional convenience so `python cistem_server.py` alone
+# is enough to try the app: open http://localhost:8000/ instead of finding
+# and double-clicking cistem3.html yourself. cistem3.html still works fine
+# opened directly (file://) or served by anything else; this just adds one
+# more way to reach it. Only this explicit allowlist of sibling files is
+# served, never an arbitrary path under REPO_ROOT -- that would expose
+# server/data/auth.db and the rest of the repo.
+# ---------------------------------------------------------------------------
+
+STATIC_FILES = {"cistem3.html", "config.js", "logo.png"}
+
+
+@app.route("/")
+def index():
+    return send_from_directory(REPO_ROOT, "cistem3.html")
+
+
+@app.route("/<path:filename>")
+def static_file(filename):
+    if filename not in STATIC_FILES:
+        abort(404)
+    return send_from_directory(REPO_ROOT, filename)
 
 
 # ---------------------------------------------------------------------------
@@ -503,8 +528,17 @@ def delete_project_route(project_id):
 @app.route("/api/projects/<project_id>/movies", methods=["GET"])
 @auth.project_access_required
 def list_movies(project_id):
+    group_id = request.args.get("group_id", type=int)
     conn = db.get_conn(project_id)
-    rows = conn.execute("SELECT * FROM MOVIE_ASSETS ORDER BY MOVIE_ASSET_ID").fetchall()
+    if group_id is None:
+        rows = conn.execute("SELECT * FROM MOVIE_ASSETS ORDER BY MOVIE_ASSET_ID").fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT a.* FROM MOVIE_ASSETS a "
+            "JOIN MOVIE_GROUP_MEMBERS m ON m.MOVIE_ASSET_ID = a.MOVIE_ASSET_ID "
+            "WHERE m.GROUP_ID = ? ORDER BY a.MOVIE_ASSET_ID",
+            (group_id,),
+        ).fetchall()
     conn.close()
     return jsonify({"movies": [dict(r) for r in rows]})
 

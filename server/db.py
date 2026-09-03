@@ -168,7 +168,7 @@ CREATE INDEX IF NOT EXISTS idx_image_assets_parent_movie ON IMAGE_ASSETS(PARENT_
 """
 
 # (profile_name, manager_run_command) -- matches the run-profile options
-# job_runner.html has always hardcoded client-side (see <select id="runProfile">).
+# cistem3.html has always hardcoded client-side (see <select id="runProfile">).
 RUN_PROFILE_SEED = [
     "Local (single-threaded)",
     "Local (multi-threaded)",

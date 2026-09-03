@@ -92,8 +92,8 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/movies` | List imported movies |
 | `GET` | `/projects/:id/movie-groups` | List movie groups with member counts |
 | `GET` | `/projects/:id/movies/import-defaults` | Last-used import form values |
-| `POST` | `/projects/:id/movies/import` | Import movies into "All Movies". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, dose_per_frame, protein_is_white, apply_gain, gain_ref, apply_dark, dark_ref, resample_movies, desired_pixel_size_a, eer_frames_per_image, eer_super_res_factor}`. `400`s unless the required fields are set, referenced paths exist, and the glob matches at least one file. |
-| `POST` | `/check-paths` | Body: `{glob, files: [...]}` → `{glob_match_count, glob_has_eer, files: {path: bool}}`, for the import dialog's live validation |
+| `POST` | `/projects/:id/movies/import` | Import movies into "All Movies". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, dose_per_frame, protein_is_white, apply_gain, gain_ref, apply_dark, dark_ref, resample_movies, desired_pixel_size_a, eer_frames_per_image, eer_super_res_factor}`. `400`s unless the required fields are set, referenced paths exist, and the glob matches at least one file not already imported. Files already in the project are skipped (returns `{movie_count, skipped_count}`). |
+| `POST` | `/projects/:id/movies/check-import` | Body: `{glob, files: [...]}` → `{glob_match_count, new_count, already_imported_count, glob_has_eer, files: {path: bool}}`, for the import dialog's live validation |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "name", "params": {...} }` → returns the created `Job` |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |

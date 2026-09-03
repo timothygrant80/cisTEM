@@ -452,36 +452,6 @@ def browse_filesystem():
     })
 
 
-@app.route("/api/check-paths", methods=["POST"])
-@auth.login_required
-def check_paths():
-    """Resolves a glob and checks individual files exist, so the Import Movies
-    dialog can keep its Import button disabled until everything it needs is
-    actually there (the reference dialog can check locally; this one has to
-    ask, since the paths are on the server). Same filesystem visibility
-    /api/browse already offers an authenticated user -- no new reach.
-    """
-    body = request.get_json(force=True, silent=True) or {}
-    result = {}
-
-    input_glob = (body.get("glob") or "").strip()
-    if input_glob:
-        matches = [p for p in glob_module.glob(input_glob) if Path(p).is_file()]
-        result["glob_match_count"] = len(matches)
-        result["glob_has_eer"] = any(p.lower().endswith(".eer") for p in matches)
-    else:
-        result["glob_match_count"] = 0
-        result["glob_has_eer"] = False
-
-    files = {}
-    for raw in body.get("files") or []:
-        path = (raw or "").strip()
-        if path:
-            files[path] = Path(path).expanduser().is_file()
-    result["files"] = files
-    return jsonify(result)
-
-
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
@@ -601,6 +571,66 @@ def delete_project_route(project_id):
 # Movie import routes (project-scoped)
 # ---------------------------------------------------------------------------
 
+def _canonical_path(path):
+    """One spelling per file, so the same movie reached by a different route
+    (relative vs absolute, a symlinked share, a trailing /./) is recognised as
+    already imported rather than added twice."""
+    try:
+        return str(Path(path).expanduser().resolve())
+    except OSError:
+        return str(Path(path).expanduser())
+
+
+def _imported_movie_paths(conn):
+    """Canonical paths of every movie already in this project, for the
+    already-an-asset check (cf. IsFileAnAsset() in the reference dialog).
+    Rows imported before paths were canonicalised are folded in too."""
+    rows = conn.execute("SELECT FILENAME FROM MOVIE_ASSETS WHERE FILENAME IS NOT NULL").fetchall()
+    return {_canonical_path(r["FILENAME"]) for r in rows}
+
+
+def _partition_matches(conn, input_glob):
+    """Splits the glob's matches into ones not yet imported and ones already
+    present, both in sorted canonical form."""
+    already = _imported_movie_paths(conn)
+    matched = {_canonical_path(p) for p in glob_module.glob(input_glob) if Path(p).is_file()}
+    return sorted(matched - already), sorted(matched & already)
+
+
+@app.route("/api/projects/<project_id>/movies/check-import", methods=["POST"])
+@auth.project_access_required
+def check_import(project_id):
+    """Resolves a glob, checks the gain/dark references exist, and reports how
+    many matches are already imported, so the Import Movies dialog can keep
+    its Import button disabled until there's something new to import. The
+    reference dialog can stat files and consult its own asset list locally;
+    both live on the server here, so the dialog has to ask. Exposes no more
+    of the filesystem than /api/browse already does.
+    """
+    body = request.get_json(force=True, silent=True) or {}
+    input_glob = (body.get("glob") or "").strip()
+
+    new_paths, duplicate_paths = [], []
+    if input_glob:
+        conn = db.get_conn(project_id)
+        new_paths, duplicate_paths = _partition_matches(conn, input_glob)
+        conn.close()
+
+    files = {}
+    for raw in body.get("files") or []:
+        path = (raw or "").strip()
+        if path:
+            files[path] = Path(path).expanduser().is_file()
+
+    return jsonify({
+        "glob_match_count": len(new_paths) + len(duplicate_paths),
+        "new_count": len(new_paths),
+        "already_imported_count": len(duplicate_paths),
+        "glob_has_eer": any(p.lower().endswith(".eer") for p in new_paths + duplicate_paths),
+        "files": files,
+    })
+
+
 @app.route("/api/projects/<project_id>/movies", methods=["GET"])
 @auth.project_access_required
 def list_movies(project_id):
@@ -703,9 +733,20 @@ def import_movies(project_id):
     if errors:
         return jsonify({"error": "; ".join(errors)}), 400
 
-    matched = sorted(p for p in glob_module.glob(input_glob) if Path(p).is_file())
-    if not matched:
+    conn = db.get_conn(project_id)
+    # Files already in this project are skipped rather than added twice --
+    # the same call IsFileAnAsset() makes in the reference dialog.
+    matched, already_imported = _partition_matches(conn, input_glob)
+    if not matched and not already_imported:
+        conn.close()
         return jsonify({"error": "no files match that path: {}".format(input_glob)}), 400
+    if not matched:
+        conn.close()
+        return jsonify({
+            "error": "all {} matching file{} already imported".format(
+                len(already_imported), "" if len(already_imported) == 1 else "s are"
+            )
+        }), 400
 
     # Like the reference dialog's CheckForEERFiles(), decide from the actual
     # resolved files -- not just the client's glob-based guess -- whether
@@ -721,7 +762,6 @@ def import_movies(project_id):
     # Imports land in the All Movies group (id 0) only -- organizing movies
     # into other groups is a separate, not-yet-built feature (see the
     # disabled Add/Remove/Invert buttons on the Groups panel).
-    conn = db.get_conn(project_id)
     with conn:
         movie_ids = []
         for path in matched:
@@ -767,7 +807,10 @@ def import_movies(project_id):
         )
     conn.close()
 
-    return jsonify({"movie_count": len(movie_ids)}), 201
+    return jsonify({
+        "movie_count": len(movie_ids),
+        "skipped_count": len(already_imported),
+    }), 201
 
 
 @app.route("/api/projects/<project_id>/movie-groups", methods=["POST"])

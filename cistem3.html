@@ -1852,8 +1852,10 @@ From branch : <span id="versionBranch">—</span></p>
   // Mirrors CheckImportButtonStatus() in the reference dialog: Import stays
   // disabled until every required field is filled and every path referenced
   // actually exists. The reference dialog can stat files directly; here the
-  // paths are on the server, so existence comes from /api/check-paths,
-  // debounced so typing a path doesn't fire a request per keystroke.
+  // paths (and the project's existing movies) are on the server, so both
+  // existence and the already-imported count come from
+  // /movies/check-import, debounced so typing a path doesn't fire a request
+  // per keystroke.
   var PATH_FIELD_KEYS = ["input_glob", "gain_ref", "dark_ref", "apply_gain", "apply_dark"];
   var REQUIRED_NUMERIC_FIELDS = [
     ["voltage_kv", "voltage"],
@@ -1861,7 +1863,7 @@ From branch : <span id="versionBranch">—</span></p>
     ["pixel_size_a", "pixel size"],
     ["dose_per_frame", "dose per frame"]
   ];
-  var importPaths = {seq: 0, glob: null, globCount: 0, files: {}};
+  var importPaths = {seq: 0, glob: null, globCount: 0, newCount: 0, dupCount: 0, files: {}};
   var importCheckTimer = null;
 
   function importFieldValue(key){
@@ -1883,13 +1885,14 @@ From branch : <span id="versionBranch">—</span></p>
     if (importFieldValue("apply_gain") && importFieldValue("gain_ref")) wanted.push(importFieldValue("gain_ref"));
     if (importFieldValue("apply_dark") && importFieldValue("dark_ref")) wanted.push(importFieldValue("dark_ref"));
     if (!glob && !wanted.length){
-      importPaths.glob = null; importPaths.globCount = 0; importPaths.files = {};
+      importPaths.glob = null; importPaths.globCount = 0;
+      importPaths.newCount = 0; importPaths.dupCount = 0; importPaths.files = {};
       validateImportForm();
       return;
     }
     // Stamp each request so a slow earlier reply can't overwrite a newer one.
     var seq = ++importPaths.seq;
-    apiFetch(apiUrl("/check-paths"), {
+    apiFetch(projectApiUrl("/movies/check-import"), {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({glob: glob, files: wanted})
     }).then(function(r){
@@ -1899,6 +1902,8 @@ From branch : <span id="versionBranch">—</span></p>
       if (seq !== importPaths.seq) return;
       importPaths.glob = glob;
       importPaths.globCount = d.glob_match_count || 0;
+      importPaths.newCount = d.new_count || 0;
+      importPaths.dupCount = d.already_imported_count || 0;
       importPaths.files = d.files || {};
       validateImportForm();
     }).catch(function(){
@@ -1913,6 +1918,11 @@ From branch : <span id="versionBranch">—</span></p>
     if (!glob) problems.push("choose the movie files to import");
     else if (importPaths.glob !== glob) problems.push("checking that path…");
     else if (!importPaths.globCount) problems.push("no files match that path");
+    else if (!importPaths.newCount){
+      problems.push(importPaths.dupCount === 1
+        ? "that file is already imported"
+        : "all " + importPaths.dupCount + " matching files are already imported");
+    }
 
     REQUIRED_NUMERIC_FIELDS.forEach(function(f){
       if (!importFieldValue(f[0])) problems.push(f[1] + " is required");
@@ -1940,9 +1950,14 @@ From branch : <span id="versionBranch">—</span></p>
     var ok = problems.length === 0;
     els.importBtn.disabled = !ok;
     els.importBtn.title = ok ? "" : problems.join("; ");
-    var msg = ok
-      ? importPaths.globCount + " file" + (importPaths.globCount === 1 ? "" : "s") + " match — ready to import."
-      : problems[0].charAt(0).toUpperCase() + problems[0].slice(1);
+    var msg;
+    if (!ok){
+      msg = problems[0].charAt(0).toUpperCase() + problems[0].slice(1);
+    } else {
+      msg = importPaths.newCount + " new file" + (importPaths.newCount === 1 ? "" : "s") + " to import";
+      if (importPaths.dupCount) msg += " (" + importPaths.dupCount + " already imported, will be skipped)";
+      msg += ".";
+    }
     els.importValidationNote.textContent = msg;
     els.importValidationNote.className = "form-note validation-note " + (ok ? "ready" : "blocked");
     return ok;
@@ -2001,7 +2016,8 @@ From branch : <span id="versionBranch">—</span></p>
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.json();
     }).then(function(result){
-      els.importNote.textContent = "Imported " + result.movie_count + " movies into All Movies.";
+      els.importNote.textContent = "Imported " + result.movie_count + " movie" + (result.movie_count === 1 ? "" : "s") + " into All Movies."
+        + (result.skipped_count ? " Skipped " + result.skipped_count + " already imported." : "");
       state.selectedGroupId = 0;
       loadMovieGroups();
       loadMovies();
@@ -2010,7 +2026,10 @@ From branch : <span id="versionBranch">—</span></p>
       alert("Import failed: " + err.message);
     }).finally(function(){
       els.importBtn.textContent = "Import";
-      validateImportForm();
+      // Re-run the preflight: whatever just imported now counts as a
+      // duplicate, so the button should fall back to disabled.
+      importPaths.glob = null;
+      scheduleImportPathCheck();
     });
   });
 

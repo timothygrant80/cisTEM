@@ -2135,9 +2135,10 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   // ---------- movie preview (the Display button) ----------
-  // MRC and TIFF render; EER needs Thermo's electron-event decoder, so it
-  // stays disabled with a tooltip saying so. Kept in step with
-  // PREVIEWABLE_EXTENSIONS in preview.py, which is what actually enforces it.
+  // MRC and TIFF render. EER is deliberately not previewable (see
+  // preview.py) -- it still imports normally, it just has no preview -- so
+  // Display stays disabled for it, with a tooltip saying which formats work.
+  // Kept in step with PREVIEWABLE_EXTENSIONS in preview.py, which enforces it.
   var PREVIEWABLE_RE = /\.(mrcs?|tiff?)$/i;
   var previewObjectUrl = null;
 
@@ -2151,7 +2152,7 @@ From branch : <span id="versionBranch">—</span></p>
     els.movieDisplayBtn.disabled = !previewable;
     els.movieDisplayBtn.title = previewable
       ? "Show " + (movie.NAME || "this movie") + " (frames summed)."
-      : "Preview isn't supported for this file type yet — MRC and TIFF only for now.";
+      : "Preview is available for MRC and TIFF movies only.";
   }
 
   function releasePreviewUrl(){

@@ -6,11 +6,13 @@ counting-mode data is almost pure shot noise -- at the doses these are taken
 at, one frame of the sample MRC here is visually indistinguishable from
 static -- so the sum is the only thing worth looking at without alignment.
 
-MRC/MRCS and TIFF (including BigTIFF) are supported. EER is not: it uses
-Thermo's electron-event encoding, which is a decoder of its own, and a single
-EER frame holds ~0.008 e/pixel so a useful image means decoding most of the
-file. `can_preview()` is what the API and the Display button both use to tell
-what's renderable.
+MRC/MRCS and TIFF (including BigTIFF) are supported. EER is deliberately
+out of scope and there is no plan to add it: it uses Thermo's electron-event
+encoding, which is a decoder of its own, and a single EER frame holds ~0.008
+e/pixel, so a useful image would mean decoding most of the file. EER movies
+still import and read their headers normally -- it's only the preview that
+they don't get. `can_preview()` is what the API and the Display button both
+use to tell what's renderable.
 
 MRC is read directly -- it's raw pixels after a fixed header. TIFF goes
 through Pillow, which decodes LZW in C: the same movie takes ~7s that way
@@ -61,7 +63,7 @@ class PreviewError(Exception):
 
 
 def can_preview(path):
-    """Whether this file's format is one we can render yet."""
+    """Whether this file's format is one we render. EER deliberately isn't."""
     return Path(path).suffix.lower() in PREVIEWABLE_EXTENSIONS
 
 
@@ -177,7 +179,7 @@ def render_movie_preview(path, max_frames=None):
     """
     suffix = Path(path).suffix.lower()
     if suffix not in PREVIEWABLE_EXTENSIONS:
-        raise PreviewError("no preview for {} files yet".format(suffix or "these"))
+        raise PreviewError("previews aren't supported for {} files".format(suffix or "these"))
     if max_frames is None:
         max_frames = MAX_PREVIEW_FRAMES
     try:

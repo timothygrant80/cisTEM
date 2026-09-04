@@ -673,7 +673,7 @@ def movie_preview(project_id, movie_id):
         return jsonify({"error": "movie file is missing: {}".format(path)}), 404
     if not preview.can_preview(path):
         return jsonify({
-            "error": "no preview for {} files yet".format(Path(path).suffix.lower() or "these")
+            "error": "previews aren't supported for {} files".format(Path(path).suffix.lower() or "these")
         }), 415
 
     stat = Path(path).stat()

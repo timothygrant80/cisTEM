@@ -90,6 +90,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id` | One project's summary |
 | `DELETE` | `/projects/:id` | Delete a project permanently (removes its `.db` file) |
 | `GET` | `/projects/:id/movies` | List imported movies |
+| `POST` | `/projects/:id/movie-groups/:gid/invert` | Invert a group against All Movies (self-reversing; `400` for All Movies) |
 | `GET` | `/projects/:id/movies/:id/preview.png` | Summed-frame PNG preview (MRC and TIFF; EER has no preview, `415`) |
 | `GET` | `/projects/:id/movie-groups` | List movie groups with member counts |
 | `GET` | `/projects/:id/movies/import-defaults` | Last-used import form values |

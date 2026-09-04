@@ -51,6 +51,7 @@ Everything except `/health`, `/auth/login`, and `/auth/logout` requires auth (se
 | `POST` | `/projects` | any user | Body `{ "name" }` → creates a project owned by the caller |
 | `GET` | `/projects/:id` | owner or admin | One project's summary |
 | `DELETE` | `/projects/:id` | owner or admin | Deletes a project (and its `.db` file) permanently |
+| `POST` | `/projects/:id/movie-groups/:gid/invert` | owner or admin | Replaces the group's membership with its complement against All Movies, so it then holds exactly the movies it didn't. Self-reversing. Refused for group 0 (`400`) — All Movies is the master list and its complement is empty. |
 | `GET` | `/projects/:id/movies/:id/preview.png` | owner or admin | Summed-frame PNG for the Display button. `415` for formats with no renderer (EER), `404` if the file has gone missing, `422` if it won't render. ETagged on the file's mtime+size, so reopening is a `304`. |
 | `GET` | `/projects/:id/movies` | owner or admin | Imported `MOVIE_ASSETS` rows |
 | `GET` | `/projects/:id/movie-groups` | owner or admin | Movie groups + member counts (feeds the Align Movies picker) |

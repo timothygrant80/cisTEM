@@ -972,6 +972,46 @@ def delete_movie_group(project_id, group_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/projects/<project_id>/movie-groups/<int:group_id>/invert", methods=["POST"])
+@auth.project_access_required
+def invert_movie_group(project_id, group_id):
+    """Replaces the group's membership with its complement against All Movies:
+    afterwards it holds exactly the movies it didn't hold before.
+
+    Refused for group 0 for the same reason rename and delete are -- All
+    Movies is the master list, and its complement is the empty set, which
+    would read as "this project has no movies".
+    """
+    if group_id == ALL_MOVIES_GROUP_ID:
+        return jsonify({"error": "the All Movies group cannot be inverted"}), 400
+
+    conn = db.get_conn(project_id)
+    row = conn.execute(
+        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,)
+    ).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such group"}), 404
+
+    with conn:
+        before = {
+            r["MOVIE_ASSET_ID"] for r in conn.execute(
+                "SELECT MOVIE_ASSET_ID FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ?", (group_id,)
+            )
+        }
+        every = {
+            r["MOVIE_ASSET_ID"] for r in conn.execute("SELECT MOVIE_ASSET_ID FROM MOVIE_ASSETS")
+        }
+        after = every - before
+        conn.execute("DELETE FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ?", (group_id,))
+        conn.executemany(
+            "INSERT INTO MOVIE_GROUP_MEMBERS(GROUP_ID, MOVIE_ASSET_ID) VALUES (?, ?)",
+            [(group_id, movie_id) for movie_id in sorted(after)],
+        )
+    conn.close()
+    return jsonify({"was": len(before), "now": len(after)})
+
+
 @app.route("/api/projects/<project_id>/movies/delete", methods=["POST"])
 @auth.project_access_required
 def delete_movies(project_id):

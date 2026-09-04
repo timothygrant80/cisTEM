@@ -572,7 +572,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small" id="movieGroupAddBtn">Add</button>
                 <button class="small" id="movieGroupRenameBtn" disabled title="Select a group other than All Movies first.">Rename</button>
                 <button class="small" id="movieGroupRemoveBtn" disabled title="Select a group other than All Movies first.">Remove</button>
-                <button class="small" disabled title="Not implemented yet -- inverting a group's selection is coming as its own feature.">Invert</button>
+                <button class="small" id="movieGroupInvertBtn" disabled title="Select a group other than All Movies first.">Invert</button>
               </div>
             </div>
 
@@ -943,7 +943,7 @@ From branch : <span id="versionBranch">—</span></p>
    "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
    "previewDesc","jobSummaryBody",
    "importFields","importBtn","importNote","importValidationNote","movieListBody","movieGroupList","movieImportOpenBtn",
-   "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn",
+   "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn","movieGroupInvertBtn",
    "movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
@@ -2335,13 +2335,22 @@ From branch : <span id="versionBranch">—</span></p>
     return g ? g.group_name : "";
   }
 
+  function selectedGroupCount(){
+    var g = (state.movieGroups || []).filter(function(x){ return x.group_id === state.selectedGroupId; })[0];
+    return g ? g.movie_count : 0;
+  }
+
   function updateGroupActionButtons(){
     var isAllMovies = state.selectedGroupId === 0;
-    var reason = "The All Movies group can't be renamed or removed.";
+    var reason = "The All Movies group can't be renamed, removed or inverted.";
     els.movieGroupRenameBtn.disabled = isAllMovies;
     els.movieGroupRenameBtn.title = isAllMovies ? reason : 'Rename "' + selectedGroupName() + '".';
     els.movieGroupRemoveBtn.disabled = isAllMovies;
     els.movieGroupRemoveBtn.title = isAllMovies ? reason : 'Remove the group "' + selectedGroupName() + '" (its movies stay in All Movies).';
+    els.movieGroupInvertBtn.disabled = isAllMovies;
+    els.movieGroupInvertBtn.title = isAllMovies
+      ? reason
+      : 'Invert "' + selectedGroupName() + '" — it will hold the movies it doesn\'t hold now.';
   }
 
   els.movieGroupRenameBtn.addEventListener("click", function(){
@@ -2375,6 +2384,27 @@ From branch : <span id="versionBranch">—</span></p>
       loadMovies();
     }).catch(function(err){
       alert("Could not remove group: " + err.message);
+    });
+  });
+
+  els.movieGroupInvertBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedGroupId === 0) return;
+    var name = selectedGroupName();
+    var was = selectedGroupCount();
+    var allMovies = (state.movieGroups || []).filter(function(g){ return g.group_id === 0; })[0];
+    var willBe = (allMovies ? allMovies.movie_count : 0) - was;
+    if (!confirm('Invert "' + name + '"? It holds ' + was + ' movie' + (was === 1 ? "" : "s")
+        + ' now and will hold the other ' + willBe + '. Inverting again puts it back.')) return;
+    apiFetch(projectApiUrl("/movie-groups/" + state.selectedGroupId + "/invert"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      loadMovieGroups();
+      loadMovies();
+    }).catch(function(err){
+      alert("Could not invert group: " + err.message);
     });
   });
 

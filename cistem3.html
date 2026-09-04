@@ -161,18 +161,23 @@ button.link:hover{background:none;text-decoration:underline;}
 .stage-inventory tbody tr.clickable{cursor:pointer;}
 .stage-inventory tbody tr.clickable:hover td{background:var(--accent-soft);}
 
-/* ---------- Assets: sub-tabs ---------- */
+/* ---------- Sub-tabs (Assets asset types, Actions stages) ---------- */
+/* One component, two users: the Assets tab picks an asset type with it and
+   the Actions tab picks a stage. Scope any querySelectorAll on .subtab-btn to
+   its own bar (#assetSubtabs / #stageTabs) -- the two are on the same page
+   object, just never visible at once. */
 #page-assets{max-width:1300px;}
-.asset-subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border-strong);margin-bottom:16px;}
-.asset-subtab-btn{
+#page-actions{max-width:1150px;}
+.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border-strong);margin-bottom:16px;}
+.subtab-btn{
   display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:8px 16px;border:1px solid transparent;border-bottom:none;border-radius:2px 2px 0 0;
   background:none;color:var(--text-secondary);
 }
-.asset-subtab-btn svg{width:22px;height:22px;}
-.asset-subtab-btn span{font-size:11px;font-weight:600;white-space:nowrap;}
-.asset-subtab-btn:hover{background:var(--surface-sunken);}
-.asset-subtab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
+.subtab-btn svg{width:22px;height:22px;}
+.subtab-btn span{font-size:11px;font-weight:600;white-space:nowrap;}
+.subtab-btn:hover{background:var(--surface-sunken);}
+.subtab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
 
 /* minmax(0,1fr), not plain 1fr: a 1fr track's automatic minimum is the item's
    min-content width, and the movies table's nowrap columns (long file paths in
@@ -224,17 +229,11 @@ button.link:hover{background:none;text-decoration:underline;}
 .home-link:hover{color:var(--accent-strong);}
 
 /* ---------- Actions ---------- */
-.actions-layout{display:grid;grid-template-columns:200px 1fr 250px;gap:16px;align-items:start;}
-.stage-list{padding:8px;}
-.stage-list ul{list-style:none;margin:0;padding:0;}
-.stage-list li{
-  padding:8px 10px;border-radius:2px;font-size:12.5px;font-weight:600;color:var(--text-secondary);
-  cursor:pointer;margin-bottom:2px;border:1px solid transparent;
-}
-.stage-list li:hover{background:var(--surface-sunken);}
-.stage-list li.active{background:var(--accent-soft);color:var(--accent-strong);border-color:var(--accent);}
-.stage-list li .stage-key{display:block;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);font-weight:400;margin-top:1px;}
-.stage-list li.active .stage-key{color:var(--accent);}
+/* minmax(0,1fr) rather than 1fr for the form column, same reason as
+   .assets-layout below: a 1fr track floors at its content's min-content
+   width, and a long path in a text input would push the Job Summary column
+   off the page instead of the input scrolling. */
+.actions-layout{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:16px;align-items:start;}
 
 .field-group-label{
   font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;
@@ -260,8 +259,8 @@ button.link:hover{background:none;text-decoration:underline;}
 .summary-val.empty{color:var(--text-tertiary);font-style:italic;font-family:var(--font-ui);}
 
 @media (max-width:980px){
-  .actions-layout{grid-template-columns:200px 1fr;}
-  .actions-preview{grid-column:1 / -1;}
+  .actions-layout{grid-template-columns:minmax(0,1fr);}
+  .actions-preview{grid-column:auto;}
 }
 
 /* ---------- Results ---------- */
@@ -367,8 +366,6 @@ td.mono{font-family:var(--font-mono);}
 .field-row input{flex:1;}
 
 @media (max-width:760px){
-  .actions-layout{grid-template-columns:1fr;}
-  .actions-preview{grid-column:auto;}
   .asset-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
@@ -539,24 +536,24 @@ From branch : <span id="versionBranch">—</span></p>
         <h2 class="page-heading">Assets</h2>
         <p class="page-sub">Everything this project knows about, grouped by asset type.</p>
 
-        <div class="asset-subtabs" id="assetSubtabs">
-          <button class="asset-subtab-btn" data-asset-tab="movies">
+        <div class="subtabs" id="assetSubtabs">
+          <button class="subtab-btn" data-asset-tab="movies">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.1" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none"/></svg>
             <span>Movies</span>
           </button>
-          <button class="asset-subtab-btn" data-asset-tab="images">
+          <button class="subtab-btn" data-asset-tab="images">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1.3"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17l5-5 3.5 3.5L16 12l4 4"/></svg>
             <span>Images</span>
           </button>
-          <button class="asset-subtab-btn" data-asset-tab="particles">
+          <button class="subtab-btn" data-asset-tab="particles">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="1.3"/><circle cx="8" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="16.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12.5" cy="11.5" r="1.5" fill="currentColor" stroke="none"/></svg>
             <span>Particle Positions</span>
           </button>
-          <button class="asset-subtab-btn" data-asset-tab="volumes">
+          <button class="subtab-btn" data-asset-tab="volumes">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.4v9.2L12 21l-8-4.4V7.4L12 3z"/><path d="M4 7.4L12 11.8l8-4.4M12 11.8V21"/></svg>
             <span>3D Volumes</span>
           </button>
-          <button class="asset-subtab-btn" data-asset-tab="refine">
+          <button class="subtab-btn" data-asset-tab="refine">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.2v9.6L12 21l-8-4.2V7.2L12 3z"/><path d="M4 7.2L12 11l8-3.8M12 11v10M8 5.1l8 4.2"/></svg>
             <span>Refine Pkgs.</span>
           </button>
@@ -718,12 +715,9 @@ From branch : <span id="versionBranch">—</span></p>
         <h2 class="page-heading">Actions</h2>
         <p class="page-sub">Pick a processing step and submit it to the connected pipeline.</p>
 
-        <div class="actions-layout">
-          <div class="groupbox stage-list">
-            <span class="groupbox-label">Available Actions</span>
-            <ul id="stageList"></ul>
-          </div>
+        <div class="subtabs" id="stageTabs"></div>
 
+        <div class="actions-layout">
           <div class="groupbox">
             <span class="groupbox-label" id="actionFormLabel">Align Movies</span>
 
@@ -1024,7 +1018,7 @@ From branch : <span id="versionBranch">—</span></p>
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
    "apiBase","connectBtn","topConnStatus","topConnDot","topConnLabel","topSub",
    "settingsConnStatus","settingsConnDot","settingsConnLabel",
-   "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
+   "stageTabs","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
    "previewDesc","jobSummaryBody",
    "importFields","importBtn","importNote","importValidationNote","movieListBody","movieGroupList","movieImportOpenBtn",
    "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn","movieGroupInvertBtn",
@@ -1105,7 +1099,7 @@ From branch : <span id="versionBranch">—</span></p>
     volumes: {label: "3D Volumes", groupLabel: "All Volumes (0)"},
     refine: {label: "Refine Pkgs.", groupLabel: "All Refinement Packages (0)"}
   };
-  var assetSubtabBtns = document.querySelectorAll(".asset-subtab-btn");
+  var assetSubtabBtns = document.querySelectorAll("#assetSubtabs .subtab-btn");
   function showAssetTab(name){
     state.assetTab = name;
     assetSubtabBtns.forEach(function(btn){ btn.classList.toggle("active", btn.dataset.assetTab === name); });
@@ -1239,20 +1233,48 @@ From branch : <span id="versionBranch">—</span></p>
     if (name === "home" && state.connected) loadProjectList();
   }
 
-  // ---------- action stage list ----------
+  // ---------- action stage tabs ----------
+  // One icon per stage, drawn in the same 24x24 line style as the Assets
+  // sub-tab icons so the two bars read as the same control. Kept out of
+  // STAGES, which is about what a stage *submits*, not how it's drawn --
+  // the Assets bar's equivalents are likewise plain markup, not data.
+  var STAGE_ICONS = {
+    // A drift track with an arrowhead: what motion correction measures, and
+    // what its result plot looks like.
+    motion_correction: '<path d="M4 19c3.5-1 3-7 6.5-8.5S17 12 20 5.5"/><path d="M16.8 6.4L20 5.5l-.7 3.3"/>',
+    // Thon rings.
+    ctf_estimation: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="9"/>',
+    // Particles found in a micrograph. Deliberately echoes the Particle
+    // Positions asset icon -- this is the step that produces those -- but
+    // outlined rather than filled, and only two of them, so it stays legible
+    // at 22px.
+    particle_picking: '<rect x="3.5" y="3.5" width="17" height="17" rx="1.3"/><circle cx="9" cy="9.5" r="2.2"/><circle cx="15.5" cy="15" r="2.2"/>',
+    // A montage of class averages.
+    class2d: '<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1"/><rect x="13" y="13" width="7.5" height="7.5" rx="1"/>',
+    // A sphere with meridians -- a reconstruction being oriented. Distinct
+    // on purpose from the cube the 3D Volumes asset tab uses.
+    refine3d: '<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/><path d="M3.5 12h17"/>'
+  };
+  var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">';
+
   STAGE_ORDER.forEach(function(key){
-    var li = document.createElement("li");
-    li.dataset.stage = key;
-    li.innerHTML = STAGES[key].label + '<span class="stage-key">' + key + "</span>";
-    li.addEventListener("click", function(){ selectStage(key); });
-    els.stageList.appendChild(li);
+    var btn = document.createElement("button");
+    btn.className = "subtab-btn";
+    btn.dataset.stage = key;
+    // The stage's own description, the same text the Job Summary panel
+    // shows once it's selected -- so the bar explains itself on hover.
+    btn.title = STAGES[key].description || "";
+    btn.innerHTML = SVG_OPEN + (STAGE_ICONS[key] || "") + "</svg><span></span>";
+    btn.querySelector("span").textContent = STAGES[key].label;
+    btn.addEventListener("click", function(){ selectStage(key); });
+    els.stageTabs.appendChild(btn);
   });
 
   function selectStage(key){
     state.currentStage = key;
     state.expertOpen = false;
-    els.stageList.querySelectorAll("li").forEach(function(li){
-      li.classList.toggle("active", li.dataset.stage === key);
+    els.stageTabs.querySelectorAll(".subtab-btn").forEach(function(btn){
+      btn.classList.toggle("active", btn.dataset.stage === key);
     });
     els.actionFormLabel.textContent = STAGES[key].label;
     els.previewDesc.textContent = STAGES[key].description || "";
@@ -1413,6 +1435,7 @@ From branch : <span id="versionBranch">—</span></p>
   function renderJobSummary(){
     var stage = STAGES[state.currentStage];
     els.jobSummaryBody.innerHTML = "";
+    els.jobSummaryBody.appendChild(summaryRow("Stage", state.currentStage));
     els.jobSummaryBody.appendChild(summaryRow("Job name", els.jobName.value.trim()));
     stage.fields.forEach(function(f){
       var input = els.paramFields.querySelector('[data-key="' + f.key + '"]');

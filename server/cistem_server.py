@@ -1460,6 +1460,28 @@ def add_images_to_group(project_id):
 # ---------------------------------------------------------------------------
 # Job routes (project-scoped)
 # ---------------------------------------------------------------------------
+# Run profiles (project-scoped)
+# ---------------------------------------------------------------------------
+
+@app.route("/api/projects/<project_id>/run-profiles", methods=["GET"])
+@auth.project_access_required
+def list_run_profiles(project_id):
+    """The project's RUN_PROFILES rows, for the Run Profile picker each job
+    panel carries (cf. RunProfileComboBox in cisTEM's AlignMoviesPanel, filled
+    from run_profiles_panel). db.py seeds the same three profiles into every
+    project; nothing edits them yet, so this is read-only for now.
+    """
+    conn = db.get_conn(project_id)
+    rows = conn.execute(
+        "SELECT RUN_PROFILE_ID as run_profile_id, PROFILE_NAME as profile_name, "
+        "MANAGER_RUN_COMMAND as manager_run_command "
+        "FROM RUN_PROFILES ORDER BY RUN_PROFILE_ID"
+    ).fetchall()
+    conn.close()
+    return jsonify({"run_profiles": [dict(r) for r in rows]})
+
+
+# ---------------------------------------------------------------------------
 
 @app.route("/api/projects/<project_id>/jobs", methods=["GET"])
 @auth.project_access_required

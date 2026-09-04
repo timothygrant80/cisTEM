@@ -103,6 +103,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/images/import` | Import micrographs into "All Images". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, protein_is_white}` — no dose, gain/dark or EER fields, since an image is already averaged. `400`s unless voltage/Cs/pixel size are set and the glob matches at least one not-already-imported MRC/TIFF file (`.eer` never matches). Returns `{image_count, skipped_count, failed}`. |
 | `POST` | `/projects/:id/images/check-import` | Same shape as the movie version, for the Import Images dialog's live validation |
 | `POST` | `/projects/:id/image-groups/:gid/invert` | Invert a group against All Images (self-reversing; `400` for All Images) |
+| `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command}, ...] }` — fills the Run Profile picker on the Actions tab |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "name", "params": {...} }` → returns the created `Job` |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |

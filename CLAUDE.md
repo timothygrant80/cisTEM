@@ -68,12 +68,12 @@ Everything except `/health`, `/auth/login`, and `/auth/logout` requires auth (se
 | `POST` | `/projects/:id/images/check-import` | owner or admin | The image counterpart of `/movies/check-import`, backing the Import Images dialog's live validation |
 | `POST` | `/projects/:id/image-groups/:gid/invert` | owner or admin | Complement against All Images. Refused for group 0, same as movies. |
 | `GET` | `/projects/:id/jobs` | owner or admin | `{ "jobs": [Job, ...] }` |
-| `POST` | `/projects/:id/jobs` | owner or admin | Body `{ "stage", "name", "params": {...} }` → creates a `Job`. For `motion_correction`, `params` must include `movie_group_id` (not a glob) instead of the metadata fields now sourced from `MOVIE_ASSETS`. |
+| `POST` | `/projects/:id/jobs` | owner or admin | Body `{ "stage", "params": {...} }` → creates a `Job`. The server assigns `number` (`MAX(JOB_NUMBER) + 1`, per project) and `name` (`Job 3`); neither is in the body. For `motion_correction`, `params` must include `movie_group_id` (not a glob) instead of the metadata fields now sourced from `MOVIE_ASSETS`, and carries no output path — completed jobs write to `<project dir>/Assets/Images/`. |
 | `GET` | `/projects/:id/jobs/:id/log` | owner or admin | `{ "log": "plain text, newline separated" }` |
 | `GET` | `/projects/:id/run-profiles` | owner or admin | The project's `RUN_PROFILES` rows, for the Run Profile picker each job panel carries. Read-only — nothing edits profiles yet. |
 | `POST` | `/projects/:id/jobs/:id/cancel` | owner or admin | Best-effort cancel → returns the updated `Job` |
 
-`Job`: `{ id, stage, name, params, status: queued|running|completed|failed|cancelled, progress, created_at, started_at, finished_at, error, metrics }`.
+`Job`: `{ id, stage, number, name, params, status: queued|running|completed|failed|cancelled, progress, created_at, started_at, finished_at, error, metrics }`.
 
 Stages (keys are fixed and referenced from both the frontend `STAGES` object and the backend `STAGE_COMMANDS` dict — keep them in sync if you rename anything):
 `motion_correction`, `ctf_estimation`, `particle_picking`, `class2d`, `refine3d`.

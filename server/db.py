@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS REFINEMENT_LIST(
 CREATE TABLE IF NOT EXISTS JOBS(
   JOB_ID TEXT PRIMARY KEY,
   STAGE TEXT NOT NULL, NAME TEXT, PARAMS_JSON TEXT,
+  JOB_NUMBER INTEGER,
   STATUS TEXT NOT NULL DEFAULT 'queued', PROGRESS INTEGER NOT NULL DEFAULT 0,
   CREATED_AT TEXT, STARTED_AT TEXT, FINISHED_AT TEXT, ERROR TEXT, METRICS_JSON TEXT,
   CANCEL_REQUESTED INTEGER NOT NULL DEFAULT 0,
@@ -222,6 +223,7 @@ def project_exists(project_id):
 _ALTER_STATEMENTS = [
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USER_ID INTEGER",
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USERNAME TEXT",
+    "ALTER TABLE JOBS ADD COLUMN JOB_NUMBER INTEGER",
 ]
 
 # Rows every project must have, seeded here rather than in create_project()
@@ -240,6 +242,14 @@ _SEED_STATEMENTS = [
     "INSERT OR IGNORE INTO IMAGE_IMPORT_DEFAULTS(NUMBER) VALUES (1)",
     "INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) "
     "SELECT 0, IMAGE_ASSET_ID FROM IMAGE_ASSETS",
+    # Number the jobs that predate JOB_NUMBER, oldest first, so a project's
+    # numbering is continuous rather than restarting at 1 alongside them.
+    # Touches only NULL rows, so it stops being a no-op the moment it has
+    # run once. Their NAME is left alone -- those were typed by hand, back
+    # when the submit form asked for one.
+    "UPDATE JOBS SET JOB_NUMBER = ("
+    "  SELECT COUNT(*) FROM JOBS older WHERE older.CREATED_AT <= JOBS.CREATED_AT"
+    ") WHERE JOB_NUMBER IS NULL",
 ]
 
 

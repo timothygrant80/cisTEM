@@ -105,7 +105,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/image-groups/:gid/invert` | Invert a group against All Images (self-reversing; `400` for All Images) |
 | `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command}, ...] }` — fills the Run Profile picker on the Actions tab |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
-| `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "name", "params": {...} }` → returns the created `Job` |
+| `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below) |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
 | `POST` | `/projects/:id/jobs/:id/cancel` | Best-effort cancel → returns the updated `Job` |
 
@@ -117,8 +117,9 @@ Movies and images share one implementation on the server (`AssetKind` in `cistem
 {
   "id": "a1b2c3d4e5",
   "stage": "motion_correction",
-  "name": "grid1_session_001",
-  "params": { "movie_group_id": 1, "output_dir": "...", "...": "...", "run_profile": "local_single" },
+  "number": 3,
+  "name": "Job 3",
+  "params": { "movie_group_id": 1, "...": "...", "run_profile": "local_single" },
   "status": "queued | running | completed | failed | cancelled",
   "progress": 0,
   "created_at": "2026-09-01T14:03:00+00:00",
@@ -130,6 +131,8 @@ Movies and images share one implementation on the server (`AssetKind` in `cistem
 ```
 
 Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `refine3d` ("Refine 3D").
+
+`number` is per-project and assigned on creation (`MAX(JOB_NUMBER) + 1`), and `name` is just `Job <number>` — the submit form asks for neither, the same way cisTEM doesn't. Output paths are the server's too: a completed Align Movies job writes its aligned sums to `<project dir>/Assets/Images/<movie>_aligned.mrc`, mirroring cisTEM's own project layout, so no job parameter names a directory.
 
 Point the page at any server that implements this contract — the reference Flask app is one option, not a requirement. A different backend just needs to keep the same project/job bookkeeping shape around it.
 

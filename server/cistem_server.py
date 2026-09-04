@@ -107,6 +107,7 @@ def _row_to_job(row):
     return {
         "id": row["JOB_ID"],
         "stage": row["STAGE"],
+        "number": row["JOB_NUMBER"],
         "name": row["NAME"],
         "params": json.loads(row["PARAMS_JSON"]) if row["PARAMS_JSON"] else {},
         "status": row["STATUS"],
@@ -277,7 +278,10 @@ def _write_motion_correction_results(project_id, job):
     real cisTEM does in WriteResultToDataBase() once a job batch completes."""
     params = job["params"] or {}
     movie_group_id = params.get("movie_group_id")
-    output_dir = (params.get("output_dir") or "").rstrip("/")
+    # cisTEM owns its project directory and writes aligned sums into
+    # Assets/Images; so does this, rather than asking for a path on the form.
+    output_dir = db.project_dir(project_id) / "Assets" / "Images"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     conn = db.get_conn(project_id)
     with conn:
@@ -292,9 +296,7 @@ def _write_motion_correction_results(project_id, job):
         for movie in movies:
             binning = movie["OUTPUT_BINNING_FACTOR"] or 1.0
             final_pixel_size = (movie["PIXEL_SIZE"] or 0.0) * binning
-            output_file = (
-                "{}/{}_aligned.mrc".format(output_dir, movie["NAME"]) if output_dir else ""
-            )
+            output_file = str(output_dir / "{}_aligned.mrc".format(movie["NAME"]))
 
             cur = conn.execute(
                 "INSERT INTO MOVIE_ALIGNMENT_LIST("
@@ -1518,10 +1520,19 @@ def create_job(project_id):
     job_id = uuid.uuid4().hex[:10]
     conn = db.get_conn(project_id)
     with conn:
+        # The job's number and name are the server's to assign -- cisTEM
+        # numbers jobs rather than asking for a name, and the Results table
+        # already shows the stage in its own column, so "Job 3" is the whole
+        # of what a name has to carry. MAX+1 rather than COUNT+1 so a number
+        # is never reused if a job is ever deleted.
+        job_number = conn.execute(
+            "SELECT COALESCE(MAX(JOB_NUMBER), 0) + 1 FROM JOBS"
+        ).fetchone()[0]
         conn.execute(
-            "INSERT INTO JOBS(JOB_ID, STAGE, NAME, PARAMS_JSON, STATUS, PROGRESS, CREATED_AT, "
-            "MOVIE_GROUP_ID) VALUES (?, ?, ?, ?, 'queued', 0, ?, ?)",
-            (job_id, stage, body.get("name") or job_id, json.dumps(params), now_iso(), movie_group_id),
+            "INSERT INTO JOBS(JOB_ID, STAGE, JOB_NUMBER, NAME, PARAMS_JSON, STATUS, PROGRESS, "
+            "CREATED_AT, MOVIE_GROUP_ID) VALUES (?, ?, ?, ?, ?, 'queued', 0, ?, ?)",
+            (job_id, stage, job_number, "Job {}".format(job_number), json.dumps(params),
+             now_iso(), movie_group_id),
         )
     conn.close()
 

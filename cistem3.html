@@ -229,11 +229,71 @@ button.link:hover{background:none;text-decoration:underline;}
 .home-link:hover{color:var(--accent-strong);}
 
 /* ---------- Actions ---------- */
-/* minmax(0,1fr) rather than 1fr for the form column, same reason as
-   .assets-layout below: a 1fr track floors at its content's min-content
-   width, and a long path in a text input would push the Job Summary column
-   off the page instead of the input scrolling. */
-.actions-layout{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:16px;align-items:start;}
+/* An even split between the job panel and the stage's Information panel.
+   minmax(0,1fr) rather than 1fr on both, same reason as .assets-layout
+   below: a 1fr track floors at its content's min-content width, and a long
+   path in a text input would push the Information column off the page
+   instead of the input scrolling. No align-items, so the default `stretch`
+   applies and the two panels are always the same height -- whichever has
+   more in it sets the row, and the other's box grows to match rather than
+   ending short of it. The stage with no info text drops the second track
+   entirely rather than leaving a hole beside the form (see .no-info). */
+.actions-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;}
+.actions-layout.no-info{grid-template-columns:minmax(0,1fr);}
+
+/* Bounded boxes with inner scrollers, the same idiom as .assets-layout and
+   its fixed 340px -- a definite height on the layout, one grid row filling
+   it, and each panel scrolling its own content. Neither panel can then push
+   the page taller than the window, and the run bar stays pinned at the foot
+   of the form where cisTEM's StartPanel sits.
+   Clamped rather than a bare figure: the content wants more room than the
+   assets tables (an info block is ~2000px of prose, and the Align Movies
+   form with expert options open is taller still), so it takes what the
+   window allows between a 400px floor and a 600px ceiling. The ceiling is
+   the point -- filling the viewport outright makes a pair of 1300px boxes
+   with a mostly-empty form column. min-height/min-width:0 for the same
+   reason as .assets-layout: as grid/flex children the panels' automatic
+   minimum would otherwise size them to their content and defeat the inner
+   scrollers. */
+.actions-layout{height:clamp(400px, calc(100vh - 280px), 600px);grid-template-rows:minmax(0,1fr);}
+.actions-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
+.action-form-body{flex:1;min-height:0;overflow-y:auto;padding-right:8px;}
+
+/* Run profile + start button on one line at the foot of the panel, the way
+   cisTEM's StartPanel lays them out. */
+.run-bar{display:flex;align-items:flex-end;gap:12px;margin-top:16px;flex-shrink:0;}
+.run-profile-field{margin:0;flex:0 1 260px;}
+.run-bar .primary{margin-left:auto;}
+
+/* A field switched off by its governing checkbox -- cisTEM greys the label
+   with the control, so the whole row dims, not just the input. */
+.field-disabled{opacity:.45;}
+.field-disabled input,.field-disabled select{cursor:not-allowed;}
+
+/* Per-stage info text (cisTEM's InfoText), in the column beside the form --
+   cisTEM puts it to the right of the job panel too. The full SetInfo() text
+   is ~2000px of prose, so it fills the bounded panel and scrolls inside it;
+   no height cap of its own is needed, since the grid row is already the
+   height the viewport allows. */
+.info-body{flex:1;min-height:0;overflow-y:auto;padding-right:8px;}
+.info-body p{margin:0 0 10px;font-size:12.5px;line-height:1.55;color:var(--text-secondary);}
+/* A figure in the info flow. Bordered rather than floating on the panel
+   background, since these are micrographs on white and would otherwise
+   bleed into the surface; flat and square-cornered like everything else. */
+.info-figure{display:block;max-width:100%;height:auto;margin:2px 0 12px;border:1px solid var(--border);background:#fff;}
+/* cisTEM's option lists read "Label : description"; as a <dl> the label can
+   carry the emphasis without a literal colon doing the work. */
+.info-options{margin:0;}
+.info-options dt{font-size:12.5px;font-weight:700;color:var(--text);margin:12px 0 0;}
+.info-options dt:first-child{margin-top:0;}
+.info-options dd{margin:1px 0 0;font-size:12.5px;line-height:1.55;color:var(--text-secondary);}
+.info-heading{
+  font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;
+  letter-spacing:.03em;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);
+}
+.info-reference{font-size:11.5px;line-height:1.5;color:var(--text-tertiary);}
+.info-authors{color:var(--text-secondary);}
+.info-body a{color:var(--accent-strong);}
 
 .field-group-label{
   font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;
@@ -244,23 +304,20 @@ button.link:hover{background:none;text-decoration:underline;}
 .expert-toggle{margin:4px 0 12px;}
 #expertFields{border-top:1px dashed var(--border);padding-top:12px;margin-top:2px;}
 .submit-row{margin-top:6px;}
-.form-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.5;}
+.form-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.5;flex-shrink:0;}
 .validation-note{font-weight:600;}
 .validation-note.blocked{color:var(--critical);}
 .validation-note.ready{color:var(--success);}
 
-/* ---------- Actions: job summary preview ---------- */
-.actions-preview{font-size:12px;}
-.preview-desc{font-size:11.5px;color:var(--text-secondary);line-height:1.5;margin:0 0 14px;}
-.summary-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);}
-.summary-row:last-child{border-bottom:none;}
-.summary-key{font-size:11px;font-weight:600;color:var(--text-tertiary);white-space:nowrap;}
-.summary-val{font-family:var(--font-mono);font-size:11px;color:var(--text);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px;}
-.summary-val.empty{color:var(--text-tertiary);font-style:italic;font-family:var(--font-ui);}
+.form-note.blocked{color:var(--critical);font-weight:600;}
 
+/* Stacked, the two panels can't both fit the viewport, so give the page its
+   scrollbar back and cap the info text rather than letting 2000px of prose
+   run the page length. */
 @media (max-width:980px){
-  .actions-layout{grid-template-columns:minmax(0,1fr);}
-  .actions-preview{grid-column:auto;}
+  .actions-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;height:auto;}
+  .action-form-body{overflow:visible;}
+  .info-body{max-height:60vh;}
 }
 
 /* ---------- Results ---------- */
@@ -717,30 +774,36 @@ From branch : <span id="versionBranch">—</span></p>
 
         <div class="subtabs" id="stageTabs"></div>
 
-        <div class="actions-layout">
+        <div class="actions-layout" id="actionsLayout">
           <div class="groupbox">
             <span class="groupbox-label" id="actionFormLabel">Align Movies</span>
 
-            <div class="field">
-              <label for="jobName">Job name</label>
-              <input type="text" id="jobName" placeholder="e.g. grid1_session_001" />
+            <!-- The fields scroll; the run bar below stays pinned to the
+                 foot of the panel, so Start Alignment is always reachable. -->
+            <div class="action-form-body">
+              <div id="paramFields"></div>
+
+              <button class="link expert-toggle" id="expertToggle" type="button">▸ Show Expert Options</button>
+              <div id="expertFields" hidden></div>
             </div>
 
-            <div id="paramFields"></div>
-
-            <button class="link expert-toggle" id="expertToggle" type="button">▸ Show Expert Options</button>
-            <div id="expertFields" hidden></div>
-
-            <div class="submit-row">
+            <!-- cisTEM's job panels put the run profile next to the start
+                 button at the bottom of the panel itself (StartPanel in
+                 ProjectX_gui_unblur.cpp), not in a global settings page --
+                 it's a per-run choice, so it belongs with the run. -->
+            <div class="run-bar">
+              <div class="field run-profile-field">
+                <label for="runProfile">Run Profile</label>
+                <select id="runProfile"></select>
+              </div>
               <button class="primary" id="submitBtn">Run</button>
             </div>
-            <p class="form-note">Paths are passed through as typed — point them at wherever your pipeline reads and writes on the machine running the API server.</p>
+            <p class="form-note" id="submitNote">Paths are passed through as typed — point them at wherever your pipeline reads and writes on the machine running the API server.</p>
           </div>
 
-          <div class="groupbox actions-preview">
-            <span class="groupbox-label">Job Summary</span>
-            <p class="preview-desc" id="previewDesc"></p>
-            <div id="jobSummaryBody"></div>
+          <div class="groupbox stage-info" id="stageInfo" hidden>
+            <span class="groupbox-label" id="stageInfoLabel">Information</span>
+            <div class="info-body" id="stageInfoBody"></div>
           </div>
         </div>
       </section>
@@ -813,16 +876,10 @@ From branch : <span id="versionBranch">—</span></p>
         </div>
 
         <div class="groupbox">
-          <span class="groupbox-label">Run Profile</span>
-          <div class="field" style="max-width:320px;">
-            <label for="runProfile">Execution target</label>
-            <select id="runProfile">
-              <option value="local_single">Local (single-threaded)</option>
-              <option value="local_multi">Local (multi-threaded)</option>
-              <option value="cluster_slurm">Cluster (Slurm)</option>
-            </select>
-          </div>
-          <p class="settings-note">Sent along with every submitted job as <code>run_profile</code> — how your API server acts on it is up to its implementation.</p>
+          <span class="groupbox-label">Run Profiles</span>
+          <p class="settings-note">This project's run profiles, seeded when it was created. Pick one per job from the Run Profile box on the Actions tab; it's sent with the job as <code>run_profile</code> and how your API server acts on it is up to its implementation.</p>
+          <ul class="group-list" id="runProfileList"></ul>
+          <p class="settings-note">Editing profiles isn't wired up yet — cisTEM manages these on its own Run Profiles settings panel.</p>
         </div>
       </section>
 
@@ -920,30 +977,98 @@ From branch : <span id="versionBranch">—</span></p>
   "use strict";
 
   var STAGES = {
+    // Field set, labels, defaults, ranges and tooltips are taken from
+    // cisTEM's own Align Movies panel -- AlignMoviesPanel in
+    // ProjectX_gui_unblur.cpp for the widgets and their initial values,
+    // MyAlignMoviesPanel::ResetDefaults() for the defaults, and
+    // MyAlignMoviesPanel::OnUpdateUI() for which controls grey out when.
+    // `info` below is MyAlignMoviesPanel::SetInfo().
+    //
+    // The field set is cisTEM's exactly: no Output directory and no job name,
+    // because the server owns both -- results go under the project's own
+    // Assets/Images and the job is numbered on creation.
     motion_correction: {
       label: "Align Movies",
+      startLabel: "Start Alignment",
+      note: "Each aligned sum is written to the project's own Assets/Images directory and added to the image assets list.",
       description: "Aligns raw movie frames to correct for beam-induced motion, producing one averaged, motion-corrected micrograph per movie.",
       fields: [
-        {key:"movie_group_id", label:"Movie group", unit:"", type:"asset_select", group:"Input",
-         dynamicOptions:{endpoint:"/movie-groups", listKey:"movie_groups", value:"group_id", label:"group_name", countKey:"movie_count"}},
-        {key:"output_dir", label:"Output directory", unit:"", type:"text", placeholder:"/data/session01/motioncorr", group:"Output"}
+        {key:"movie_group_id", label:"Input Group", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The group of movie assets that will be aligned. For each movie in the group the output is an image representing the sum of the aligned movie, added automatically to the image assets list.",
+         dynamicOptions:{endpoint:"/movie-groups", listKey:"movie_groups", value:"group_id", label:"group_name", countKey:"movie_count"}}
       ],
       expertFields: [
-        {key:"min_shift_a", label:"Minimum Shift", unit:"Å", type:"number", step:"0.1", placeholder:"2", group:"Shifts", tooltip:"Minimum shift for first alignment round"},
-        {key:"max_shift_a", label:"Maximum Shift", unit:"Å", type:"number", step:"0.1", placeholder:"40", group:"Shifts", tooltip:"Maximum shift for each alignment round"},
-        {key:"should_dose_filter", label:"Exposure Filter Sums?", type:"checkbox", default:true, group:"Exposure Filter", tooltip:"Make a dose-weighted sum using the exposure filter"},
-        {key:"should_restore_power", label:"Restore Power?", type:"checkbox", default:true, group:"Exposure Filter", tooltip:"High-pass filter to restore noise power after exposure filtering (only used if Exposure Filter Sums is enabled)"},
-        {key:"termination_threshold_a", label:"Termination Threshold", unit:"Å", type:"number", step:"0.1", placeholder:"1", group:"Convergence", tooltip:"Iteration stops once every frame shifts less than this between rounds"},
-        {key:"max_iterations", label:"Max Iterations", unit:"", type:"number", min:1, max:50, placeholder:"10", group:"Convergence", tooltip:"Maximum number of alignment rounds before stopping"},
-        {key:"bfactor_a2", label:"B-Factor", unit:"Å²", type:"number", min:0, max:5000, placeholder:"1500", group:"Filter", tooltip:"Low-pass filter applied to the reference sum before alignment"},
-        {key:"mask_central_cross", label:"Mask Central Cross?", type:"checkbox", default:true, group:"Filter", tooltip:"Mask the central cross of the reference's Fourier transform to reduce detector-artifact influence"},
-        {key:"horizontal_mask_px", label:"Horiz. Mask", unit:"px", type:"number", min:0, max:10, placeholder:"1", group:"Filter", tooltip:"Width of the horizontal mask line (only used if Mask Central Cross is enabled)"},
-        {key:"vertical_mask_px", label:"Vert. Mask", unit:"px", type:"number", min:0, max:10, placeholder:"1", group:"Filter", tooltip:"Width of the vertical mask line (only used if Mask Central Cross is enabled)"},
-        {key:"include_all_frames", label:"Include All Frames in Sum?", type:"checkbox", default:true, group:"Final Sum", tooltip:"Untick to sum only a subset of frames"},
-        {key:"first_frame", label:"First Frame to Sum", unit:"", type:"number", min:1, max:10000, placeholder:"1", group:"Final Sum", tooltip:"First frame included in the sum (only used if Include All Frames is disabled)"},
-        {key:"last_frame", label:"Last Frame to Sum", unit:"", type:"number", min:0, max:10000, placeholder:"0", group:"Final Sum", tooltip:"Last frame included in the sum; 0 = use the last frame of the movie (only used if Include All Frames is disabled)"},
-        {key:"save_scaled_sum", label:"Also Save Scaled Sum?", type:"checkbox", default:true, group:"Final Sum", tooltip:"Write a scaled copy of the sum to disk for faster display later"}
-      ]
+        {key:"min_shift_a", label:"Minimum Shift", unit:"Å", type:"number", step:"0.1", default:"2", group:"Shifts", tooltip:"Minimum shift for the first alignment round. Stops frames aligning to detector artifacts reinforced in the initial reference sum; applied only in the first round and ignored after that."},
+        {key:"max_shift_a", label:"Maximum Shift", unit:"Å", type:"number", step:"0.1", default:"40", group:"Shifts", tooltip:"Maximum shift for any single alignment round. Avoids alignment to spurious noise peaks; it can still be exceeded over several successive rounds."},
+        {key:"should_dose_filter", label:"Exposure Filter Sums?", type:"checkbox", default:true, group:"Exposure Filter", tooltip:"Calculate the aligned sums using the exposure filter of Grant and Grigorieff (2015)."},
+        {key:"should_restore_power", label:"Restore Power?", type:"checkbox", default:true, group:"Exposure Filter", tooltip:"High-pass filter the exposure-filtered sum to restore the noise power -- the denominator of Eq. 9 in Grant and Grigorieff (2015). Only used when Exposure Filter Sums is on."},
+        {key:"termination_threshold_a", label:"Termination Threshold", unit:"Å", type:"number", step:"0.1", default:"1", group:"Convergence", tooltip:"Frames are aligned iteratively until the maximum number of iterations is reached, or a round shifts every frame by less than this."},
+        {key:"max_iterations", label:"Max Iterations", unit:"", type:"number", min:1, max:50, default:"10", group:"Convergence", tooltip:"Maximum number of alignment rounds. If reached, alignment stops and the current best values are taken."},
+        {key:"bfactor_a2", label:"B-Factor", unit:"Å²", type:"number", min:0, max:5000, default:"1500", group:"Filter", tooltip:"Applied to the reference sum before alignment, to low-pass filter it and prevent alignment to spurious noise peaks and detector artifacts."},
+        {key:"mask_central_cross", label:"Mask Central Cross?", type:"checkbox", default:true, group:"Filter", tooltip:"Mask the reference's Fourier transform with a cross centred on the origin, reducing the influence of detector artifacts, which often carry considerable power along the central cross."},
+        {key:"horizontal_mask_px", label:"Horiz. Mask", unit:"px", type:"number", min:0, max:10, default:"1", group:"Filter", enabledBy:"mask_central_cross", tooltip:"Width of the horizontal line in the central cross mask. Only used if Mask Central Cross is selected."},
+        {key:"vertical_mask_px", label:"Vert. Mask", unit:"px", type:"number", min:0, max:10, default:"1", group:"Filter", enabledBy:"mask_central_cross", tooltip:"Width of the vertical line in the central cross mask. Only used if Mask Central Cross is selected."},
+        {key:"include_all_frames", label:"Include All Frames in Sum?", type:"checkbox", default:true, group:"Final Sum", tooltip:"Use every input frame in the final sum. Untick to sum a subset instead -- e.g. to ignore the first couple of frames."},
+        {key:"first_frame", label:"First Frame to Sum", unit:"", type:"number", min:1, max:10000, default:"1", group:"Final Sum", enabledByNot:"include_all_frames", tooltip:"If not summing all frames, the first frame included in the sum."},
+        {key:"last_frame", label:"Last Frame to Sum", unit:"", type:"number", min:0, max:10000, default:"1", group:"Final Sum", enabledByNot:"include_all_frames", tooltip:"If not summing all frames, the last frame included in the sum. 0 uses the last frame of the movie."},
+        {key:"save_scaled_sum", label:"Also Save Scaled Sum?", type:"checkbox", default:true, group:"Final Sum", tooltip:"Write a scaled copy of the sum to disk, to display faster later in the project."}
+      ],
+      info: {
+        title: "Movie Alignment",
+        // Entries are rendered in order, and are one of: a string (a
+        // paragraph), {image, alt} (a figure -- a relative path, same
+        // reasoning as logo.png: a sibling file, not an inlined data URI),
+        // {heading} (a section rule, same look as References), or {options}
+        // (cisTEM's "Label : description" list, as a <dl>). The option text
+        // deliberately repeats what the controls' own tooltips say, exactly
+        // as cisTEM's SetInfo() does -- the info panel is meant to be
+        // readable start to finish without hovering anything.
+        body: [
+          "Physical drift and beam induced motion (Brilot et al., 2012; Campbell et al., 2012; Li et al., 2013; Scheres, 2014) of the specimen leads to a degradation of information within images, and will ultimately limit the resolution of any reconstruction. Aligning a movie prior to calculating the sum will prevent a large amount of this degradation and lead to better data. This panel therefore attempts to align movies based on the Unblur algorithm described in (Grant and Grigorieff, 2015).",
+          {image: "movie-alignment-example.png",
+           alt: "The same field of rotavirus VP6 particles before and after movie alignment: the unaligned sum on the left is blurred, the aligned sum on the right resolves the capsid lattice."},
+          "Additionally an exposure weighted sum can be calculated which attempts to maximize the signal-to-noise ratio in the final sums by taking into account the radiation damage the sample has suffered as the movie progresses. This exposure weighting is described in (Grant and Grigorieff, 2015).",
+          {heading: "Program Options"},
+          {options: [
+            ["Input Group", "The group of movie assets that will be aligned.  For each movie within the group, the output will be an image representing the sum of the aligned movie.  This movie will be automatically added to the image assets list."],
+            ["Run Profile", "The selected run profile will be used to run the job.  The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Minimum Shift", "This is the minimum shift that can be applied during the initial refinement stage.  Its purpose is to prevent images aligning to detector artifacts that may be reinforced in the initial sum which is used as the first reference. It is applied only during the first alignment round, and is ignored after that."],
+            ["Maximum Shift", "This is the maximum shift that can be applied in any single alignment round. Its purpose is to avoid alignment to spurious noise peaks by not considering unreasonably large shifts.  This limit is applied during every alignment round, but only for that round, such that it can be exceeded over a number of successive rounds."],
+            ["Exposure Filter Sums?", "If selected the resulting aligned movie sums will be calculated using the exposure filter as described in Grant and Grigorieff (2015)."],
+            ["Restore Power?", "If selected, and the exposure filter is used to calculate the sum then the sum will be high pass filtered to restore the noise power.  This is essentially the denominator of Eq. 9 in Grant and Grigorieff (2015)."],
+            ["Termination Threshold", "The frames will be iteratively aligned until either the maximum number of iterations is reached, or if after an alignment round every frame was shifted by less than this threshold."],
+            ["Max Iterations", "The maximum number of iterations that can be run for the movie alignment. If reached, the alignment will stop and the current best values will be taken."],
+            ["B-Factor", "This B-Factor is applied to the reference sum prior to alignment.  It is intended to low-pass filter the images in order to prevent alignment to spurious noise peaks and detector artifacts."],
+            ["Mask Central Cross?", "If selected, the Fourier transform of the reference will be masked by a cross centered on the origin of the transform. This is intended to reduce the influence of detector artifacts which often have considerable power along the central cross."],
+            ["Horizontal Mask", "The width of the horizontal line in the central cross mask. It is only used if Mask Central Cross is selected."],
+            ["Vertical Mask", "The width of the vertical line in the central cross mask. It is only used if Mask Central Cross is selected."],
+            ["Include All Frames in Sum?", "If selected, all of the input frames will be used to create the final sum.  If you wish to specify a subset (e.g. to ignore the first couple of frames), untick this option."],
+            ["First Frame to Sum", "If not summing all frames then this is the first frame that will be included in the sum."],
+            ["Last Frame to Sum", "If not summing all frames then this is the last frame that will be included in the sum. Entering 0 will use the last frame of the movie."],
+            ["Also Save Scaled Sum?", "If selected a scaled version of the sum will be written to disk to use for faster display later in the project."]
+          ]}
+        ],
+        references: [
+          {authors:"Brilot, A.F., Chen, J.Z., Cheng, A., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Henderson, R., Grigorieff, N.",
+           text:"2012. Beam-induced motion of vitrified specimen on holey carbon film. J. Struct. Biol. 177, 630–637.",
+           doi:"10.1016/j.jsb.2012.02.003"},
+          {authors:"Campbell, M.G., Cheng, A., Brilot, A.F., Moeller, A., Lyumkis, D., Veesler, D., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Grigorieff, N.",
+           text:"2012. Movies of ice-embedded particles enhance resolution in electron cryo-microscopy. Structure 20, 1823–8.",
+           doi:"10.1016/j.str.2012.08.026"},
+          {authors:"Li, X., Mooney, P., Zheng, S., Booth, C.R., Braunfeld, M.B., Gubbens, S., Agard, D.A., Cheng, Y.",
+           text:"2013. Electron counting and beam-induced motion correction enable near-atomic-resolution single-particle cryo-EM. Nat. Methods 10, 584–90.",
+           doi:"10.1038/nmeth.2472"},
+          {authors:"Scheres, S.H.",
+           text:"2014. Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665.",
+           doi:"10.7554/eLife.03665"},
+          {authors:"Grant, T., Grigorieff, N.",
+           text:"2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980.",
+           doi:"10.7554/eLife.06980"}
+        ]
+      }
     },
     ctf_estimation: {
       label: "Find CTF",
@@ -1018,8 +1143,7 @@ From branch : <span id="versionBranch">—</span></p>
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
    "apiBase","connectBtn","topConnStatus","topConnDot","topConnLabel","topSub",
    "settingsConnStatus","settingsConnDot","settingsConnLabel",
-   "stageTabs","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
-   "previewDesc","jobSummaryBody",
+   "stageTabs","actionFormLabel","paramFields","expertToggle","expertFields","submitBtn",
    "importFields","importBtn","importNote","importValidationNote","movieListBody","movieGroupList","movieImportOpenBtn",
    "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn","movieGroupInvertBtn",
    "movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
@@ -1040,7 +1164,8 @@ From branch : <span id="versionBranch">—</span></p>
    "dImageName","dImageFilename","dImageId","dImageParentId","dImageAlignmentId",
    "dImageXSize","dImageYSize","dImagePixelSize","dImageVoltage","dImageCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
-   "stageInventoryBody","runProfile",
+   "stageInventoryBody","runProfile","runProfileList","submitNote",
+   "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
   ].forEach(function(id){ els[id] = document.getElementById(id); });
 
@@ -1050,7 +1175,8 @@ From branch : <span id="versionBranch">—</span></p>
     apiBase: (window.CRYOEM_CONFIG && window.CRYOEM_CONFIG.apiBase) || "http://localhost:8000/api",
     authToken: localStorage.getItem("cryoem_auth_token") || null,
     currentUser: null,
-    runProfile: localStorage.getItem("cryoem_run_profile") || "local_single",
+    runProfile: localStorage.getItem("cryoem_run_profile") || null,
+    runProfiles: [],
     connected: false,
     screen: "connecting",
     projectId: null,
@@ -1261,8 +1387,8 @@ From branch : <span id="versionBranch">—</span></p>
     var btn = document.createElement("button");
     btn.className = "subtab-btn";
     btn.dataset.stage = key;
-    // The stage's own description, the same text the Job Summary panel
-    // shows once it's selected -- so the bar explains itself on hover.
+    // The stage's own one-line description, so the bar explains itself on
+    // hover without the label having to carry it.
     btn.title = STAGES[key].description || "";
     btn.innerHTML = SVG_OPEN + (STAGE_ICONS[key] || "") + "</svg><span></span>";
     btn.querySelector("span").textContent = STAGES[key].label;
@@ -1277,7 +1403,6 @@ From branch : <span id="versionBranch">—</span></p>
       btn.classList.toggle("active", btn.dataset.stage === key);
     });
     els.actionFormLabel.textContent = STAGES[key].label;
-    els.previewDesc.textContent = STAGES[key].description || "";
     renderParamFields();
   }
 
@@ -1318,6 +1443,7 @@ From branch : <span id="versionBranch">—</span></p>
       if (f.min !== undefined) input.min = f.min;
       if (f.max !== undefined) input.max = f.max;
       if (f.placeholder) input.placeholder = f.placeholder;
+      if (f.default !== undefined) input.value = f.default;
     }
     input.dataset.key = f.key;
     if (f.type === "checkbox"){
@@ -1345,23 +1471,92 @@ From branch : <span id="versionBranch">—</span></p>
     });
   }
 
-  function fieldDisplayValue(input){
-    if (!input) return "";
-    if (input.type === "checkbox") return input.checked ? "Yes" : "No";
-    if (input.tagName === "SELECT"){
-      return input.selectedIndex >= 0 ? input.options[input.selectedIndex].text : "";
-    }
-    return input.value.trim();
-  }
-
   function renderParamFields(){
     var stage = STAGES[state.currentStage];
     renderGroupedFields(els.paramFields, stage.fields);
     renderGroupedFields(els.expertFields, stage.expertFields);
+    // Both sets are rebuilt from scratch here, so the conditional wiring has
+    // to be reattached each time rather than set up once at load.
+    wireConditionalFields(els.paramFields, stage.fields);
+    wireConditionalFields(els.expertFields, stage.expertFields);
     els.expertFields.hidden = !state.expertOpen;
     els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
+    els.submitBtn.textContent = stage.startLabel || "Run";
+    renderStageInfo(stage);
     populateDynamicFields(stage.fields);
-    renderJobSummary();
+    updateStartButton();
+  }
+
+  // ---------- stage info panel ----------
+  // cisTEM gives every job panel an InfoText area describing what the stage
+  // does and citing the papers behind it (MyAlignMoviesPanel::SetInfo()).
+  // Stages without an `info` block hide the panel rather than show an empty
+  // one -- only Align Movies has had its text brought across so far -- and
+  // the layout collapses to one column so the form gets the whole width.
+  function infoHeading(text){
+    var heading = document.createElement("div");
+    heading.className = "info-heading";
+    heading.textContent = text;
+    return heading;
+  }
+
+  function renderStageInfo(stage){
+    var info = stage.info;
+    els.stageInfo.hidden = !info;
+    els.actionsLayout.classList.toggle("no-info", !info);
+    if (!info) return;
+    els.stageInfoLabel.textContent = info.title || stage.label;
+    els.stageInfoBody.innerHTML = "";
+    (info.body || []).forEach(function(item){
+      if (typeof item === "string"){
+        var p = document.createElement("p");
+        p.textContent = item;
+        els.stageInfoBody.appendChild(p);
+        return;
+      }
+      if (item.image){
+        var img = document.createElement("img");
+        img.className = "info-figure";
+        img.src = item.image;
+        img.alt = item.alt || "";
+        els.stageInfoBody.appendChild(img);
+        return;
+      }
+      if (item.heading){
+        els.stageInfoBody.appendChild(infoHeading(item.heading));
+        return;
+      }
+      var dl = document.createElement("dl");
+      dl.className = "info-options";
+      item.options.forEach(function(pair){
+        var dt = document.createElement("dt");
+        dt.textContent = pair[0];
+        var dd = document.createElement("dd");
+        dd.textContent = pair[1];
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+      els.stageInfoBody.appendChild(dl);
+    });
+    if ((info.references || []).length){
+      els.stageInfoBody.appendChild(infoHeading("References"));
+      info.references.forEach(function(ref){
+        var p = document.createElement("p");
+        p.className = "info-reference";
+        var authors = document.createElement("span");
+        authors.className = "info-authors";
+        authors.textContent = ref.authors + ", ";
+        p.appendChild(authors);
+        p.appendChild(document.createTextNode(ref.text + " "));
+        var link = document.createElement("a");
+        link.href = "https://doi.org/" + ref.doi;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "doi:" + ref.doi;
+        p.appendChild(link);
+        els.stageInfoBody.appendChild(p);
+      });
+    }
   }
 
   function populateDynamicFields(fields){
@@ -1375,7 +1570,7 @@ From branch : <span id="versionBranch">—</span></p>
         var noProjectOpt = document.createElement("option");
         noProjectOpt.textContent = "Open a project first";
         input.appendChild(noProjectOpt);
-        renderJobSummary();
+        updateStartButton();
         return;
       }
       apiFetch(projectApiUrl(f.dynamicOptions.endpoint)).then(function(r){
@@ -1389,23 +1584,24 @@ From branch : <span id="versionBranch">—</span></p>
           var emptyOpt = document.createElement("option");
           emptyOpt.textContent = "No movie groups yet — import movies first";
           input.appendChild(emptyOpt);
-          renderJobSummary();
+          updateStartButton();
           return;
         }
         input.disabled = false;
         rows.forEach(function(row){
           var opt = document.createElement("option");
           opt.value = row[f.dynamicOptions.value];
+          opt.dataset.count = row[f.dynamicOptions.countKey];
           opt.textContent = row[f.dynamicOptions.label] + " (" + row[f.dynamicOptions.countKey] + " movies)";
           input.appendChild(opt);
         });
-        renderJobSummary();
+        updateStartButton();
       }).catch(function(){
         input.innerHTML = "";
         var errOpt = document.createElement("option");
         errOpt.textContent = "Could not load";
         input.appendChild(errOpt);
-        renderJobSummary();
+        updateStartButton();
       });
     });
   }
@@ -1414,55 +1610,68 @@ From branch : <span id="versionBranch">—</span></p>
     state.expertOpen = !state.expertOpen;
     els.expertFields.hidden = !state.expertOpen;
     els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
-    renderJobSummary();
   });
-
-  // ---------- job summary preview ----------
-  function summaryRow(key, val){
-    var row = document.createElement("div");
-    row.className = "summary-row";
-    var k = document.createElement("span");
-    k.className = "summary-key";
-    k.textContent = key;
-    var v = document.createElement("span");
-    v.className = "summary-val" + (val ? "" : " empty");
-    v.textContent = val || "not set";
-    row.appendChild(k);
-    row.appendChild(v);
-    return row;
-  }
-
-  function renderJobSummary(){
-    var stage = STAGES[state.currentStage];
-    els.jobSummaryBody.innerHTML = "";
-    els.jobSummaryBody.appendChild(summaryRow("Stage", state.currentStage));
-    els.jobSummaryBody.appendChild(summaryRow("Job name", els.jobName.value.trim()));
-    stage.fields.forEach(function(f){
-      var input = els.paramFields.querySelector('[data-key="' + f.key + '"]');
-      els.jobSummaryBody.appendChild(summaryRow(f.label, fieldDisplayValue(input)));
-    });
-    if (state.expertOpen){
-      stage.expertFields.forEach(function(f){
-        var input = els.expertFields.querySelector('[data-key="' + f.key + '"]');
-        els.jobSummaryBody.appendChild(summaryRow(f.label, fieldDisplayValue(input)));
-      });
-    }
-    els.jobSummaryBody.appendChild(summaryRow("Run profile", els.runProfile.options[els.runProfile.selectedIndex].text));
-  }
-  els.paramFields.addEventListener("input", renderJobSummary);
-  els.paramFields.addEventListener("change", renderJobSummary);
-  els.expertFields.addEventListener("input", renderJobSummary);
-  els.expertFields.addEventListener("change", renderJobSummary);
-  els.jobName.addEventListener("input", renderJobSummary);
 
   selectStage(state.currentStage);
 
   // ---------- run profile ----------
-  els.runProfile.value = state.runProfile;
+  // ---------- run profiles ----------
+  // Filled from the project's own RUN_PROFILES rows, the way cisTEM's
+  // RunProfileComboBox is filled from the run profiles panel. The last
+  // choice is remembered by name across projects, since every project is
+  // seeded with the same three.
+  function loadRunProfiles(){
+    if (!state.projectId){
+      els.runProfile.innerHTML = "";
+      var none = document.createElement("option");
+      none.textContent = "Open a project first";
+      els.runProfile.appendChild(none);
+      els.runProfile.disabled = true;
+      return;
+    }
+    apiFetch(projectApiUrl("/run-profiles")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      var rows = (data && data.run_profiles) || [];
+      state.runProfiles = rows;
+      els.runProfile.innerHTML = "";
+      els.runProfileList.innerHTML = "";
+      if (!rows.length){
+        var empty = document.createElement("option");
+        empty.textContent = "No run profiles";
+        els.runProfile.appendChild(empty);
+        els.runProfile.disabled = true;
+        updateStartButton();
+        return;
+      }
+      els.runProfile.disabled = false;
+      rows.forEach(function(row){
+        var opt = document.createElement("option");
+        opt.value = row.profile_name;
+        opt.textContent = row.profile_name;
+        els.runProfile.appendChild(opt);
+        var li = document.createElement("li");
+        li.textContent = row.profile_name;
+        els.runProfileList.appendChild(li);
+      });
+      var remembered = rows.filter(function(r){ return r.profile_name === state.runProfile; })[0];
+      els.runProfile.value = remembered ? remembered.profile_name : rows[0].profile_name;
+      state.runProfile = els.runProfile.value;
+      updateStartButton();
+    }).catch(function(){
+      els.runProfile.innerHTML = "";
+      var err = document.createElement("option");
+      err.textContent = "Could not load";
+      els.runProfile.appendChild(err);
+      els.runProfile.disabled = true;
+      updateStartButton();
+    });
+  }
+
   els.runProfile.addEventListener("change", function(){
     state.runProfile = els.runProfile.value;
     localStorage.setItem("cryoem_run_profile", state.runProfile);
-    renderJobSummary();
   });
 
   // ---------- connection ----------
@@ -1490,6 +1699,8 @@ From branch : <span id="versionBranch">—</span></p>
         lbl.textContent = label || (ok ? "Connected" : "Not connected");
     });
     updateTopSub();
+    // Losing the connection is one of the reasons the start button greys out.
+    updateStartButton();
   }
 
   function apiUrl(path){ return state.apiBase + path; }
@@ -1791,6 +2002,7 @@ From branch : <span id="versionBranch">—</span></p>
     loadImageImportDefaults();
     loadImageGroups();
     loadImages();
+    loadRunProfiles();
     startPolling();
     fetchJobs();
   }
@@ -1802,6 +2014,8 @@ From branch : <span id="versionBranch">—</span></p>
     state.projectName = null;
     state.jobs = [];
     state.selectedJobId = null;
+    state.runProfiles = [];
+    loadRunProfiles();
     updateTopSub();
     showScreen("home");
   }
@@ -1988,18 +2202,30 @@ From branch : <span id="versionBranch">—</span></p>
   // enabledBy points to is checked -- e.g. Gain reference until Apply gain
   // correction is ticked, matching GainFilePicker->Enable(...) in the
   // reference dialog.
+  // A field with `enabledBy` is live only while that checkbox is ticked;
+  // `enabledByNot` is the same thing inverted. The dependent input and its
+  // whole .field wrapper are marked, so the label greys out with the control
+  // the way Enable(false) greys both in the reference panels.
+  function conditionalGovernor(f){ return f.enabledBy || f.enabledByNot; }
+
   function syncConditionalFields(container, fields){
     fields.forEach(function(f){
-      if (!f.enabledBy) return;
+      var governorKey = conditionalGovernor(f);
+      if (!governorKey) return;
       var dependent = container.querySelector('[data-key="' + f.key + '"]');
-      var governor = container.querySelector('[data-key="' + f.enabledBy + '"]');
-      if (dependent && governor) dependent.disabled = !governor.checked;
+      var governor = container.querySelector('[data-key="' + governorKey + '"]');
+      if (!dependent || !governor) return;
+      var on = f.enabledByNot ? !governor.checked : governor.checked;
+      dependent.disabled = !on;
+      var wrap = dependent.closest(".field");
+      if (wrap) wrap.classList.toggle("field-disabled", !on);
     });
   }
   function wireConditionalFields(container, fields){
     fields.forEach(function(f){
-      if (!f.enabledBy) return;
-      var governor = container.querySelector('[data-key="' + f.enabledBy + '"]');
+      var governorKey = conditionalGovernor(f);
+      if (!governorKey) return;
+      var governor = container.querySelector('[data-key="' + governorKey + '"]');
       if (governor) governor.addEventListener("change", function(){ syncConditionalFields(container, fields); });
     });
     syncConditionalFields(container, fields);
@@ -3162,6 +3388,42 @@ From branch : <span id="versionBranch">—</span></p>
     loadImages();
   }
 
+  // ---------- start button gating ----------
+  // Mirrors MyAlignMoviesPanel::OnUpdateUI(): the start button is live only
+  // when the selected group has members and a run profile exists. The
+  // tooltip says which condition is missing, since a silently dead button is
+  // the thing that makes a form feel broken.
+  function selectedGroupCount(){
+    var select = els.paramFields.querySelector("select[data-key$='_group_id']");
+    if (!select) return null;  // this stage doesn't pick a group
+    var opt = select.options[select.selectedIndex];
+    if (!opt || opt.dataset.count === undefined) return 0;
+    return Number(opt.dataset.count);
+  }
+
+  function updateStartButton(){
+    var stage = STAGES[state.currentStage];
+    var reason = null;
+    if (!state.connected) reason = "Connect to a pipeline API first (Settings tab).";
+    else if (!state.projectId) reason = "Open a project first.";
+    else if (!state.runProfiles || !state.runProfiles.length) reason = "This project has no run profiles.";
+    else {
+      var count = selectedGroupCount();
+      if (count === 0) reason = "The selected group has no movies in it — import some on the Assets tab.";
+    }
+    els.submitBtn.disabled = !!reason;
+    els.submitBtn.title = reason || "";
+    els.submitNote.classList.toggle("blocked", !!reason);
+    // The default note is about typed paths, which only the stages that still
+    // have freeform path fields have; a stage that sources its input from an
+    // asset group and writes to the project directory says where its results
+    // land instead.
+    els.submitNote.textContent = reason || stage.note
+      || "Paths are passed through as typed — point them at wherever your pipeline reads and writes on the machine running the API server.";
+  }
+
+  els.paramFields.addEventListener("change", updateStartButton);
+
   // ---------- submit ----------
   els.submitBtn.addEventListener("click", function(){
     if (!state.connected){ alert("Connect to a pipeline API first (Settings tab)."); return; }
@@ -3171,7 +3433,8 @@ From branch : <span id="versionBranch">—</span></p>
     els.expertFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
     params.run_profile = state.runProfile;
 
-    var body = { stage: state.currentStage, name: els.jobName.value.trim() || (STAGES[state.currentStage].label + " job"), params: params };
+    // No name: the server assigns the job number (see create_job).
+    var body = { stage: state.currentStage, params: params };
     els.submitBtn.disabled = true;
     els.submitBtn.textContent = "Submitting…";
     apiFetch(projectApiUrl("/jobs"), {
@@ -3180,7 +3443,6 @@ From branch : <span id="versionBranch">—</span></p>
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(){
-      els.jobName.value = "";
       fetchJobs();
       showTab("results");
     }).catch(function(err){

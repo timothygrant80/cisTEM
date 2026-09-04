@@ -379,7 +379,7 @@ def _recover_interrupted_jobs():
 # server/data/auth.db and the rest of the repo.
 # ---------------------------------------------------------------------------
 
-STATIC_FILES = {"cistem3.html", "config.js", "logo.png"}
+STATIC_FILES = {"cistem3.html", "config.js", "logo.png", "movie-alignment-example.png"}
 
 
 @app.route("/")
@@ -1460,8 +1460,6 @@ def add_images_to_group(project_id):
 
 
 # ---------------------------------------------------------------------------
-# Job routes (project-scoped)
-# ---------------------------------------------------------------------------
 # Run profiles (project-scoped)
 # ---------------------------------------------------------------------------
 
@@ -1483,6 +1481,8 @@ def list_run_profiles(project_id):
     return jsonify({"run_profiles": [dict(r) for r in rows]})
 
 
+# ---------------------------------------------------------------------------
+# Job routes (project-scoped)
 # ---------------------------------------------------------------------------
 
 @app.route("/api/projects/<project_id>/jobs", methods=["GET"])

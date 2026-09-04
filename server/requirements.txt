@@ -1,5 +1,8 @@
 flask>=3.0
 flask-cors>=4.0
-# Only needed for the movie preview renderer (server/preview.py) -- summing
-# and rescaling frames in pure Python takes seconds per image instead of ms.
+# Both only needed by the movie preview renderer (server/preview.py):
+#   numpy   -- summing/rescaling frames in pure Python takes seconds, not ms
+#   pillow  -- decodes TIFF (LZW) in C; a hand-written Python LZW decoder
+#              renders the same movie in ~4min instead of ~7s
 numpy>=1.24
+pillow>=10.0

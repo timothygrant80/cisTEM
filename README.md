@@ -90,7 +90,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id` | One project's summary |
 | `DELETE` | `/projects/:id` | Delete a project permanently (removes its `.db` file) |
 | `GET` | `/projects/:id/movies` | List imported movies |
-| `GET` | `/projects/:id/movies/:id/preview.png` | Summed-frame PNG preview (MRC only so far; `415` otherwise) |
+| `GET` | `/projects/:id/movies/:id/preview.png` | Summed-frame PNG preview (MRC and TIFF; `415` for EER) |
 | `GET` | `/projects/:id/movie-groups` | List movie groups with member counts |
 | `GET` | `/projects/:id/movies/import-defaults` | Last-used import form values |
 | `POST` | `/projects/:id/movies/import` | Import movies into "All Movies". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, dose_per_frame, protein_is_white, apply_gain, gain_ref, apply_dark, dark_ref, resample_movies, desired_pixel_size_a, eer_frames_per_image, eer_super_res_factor}`. `400`s unless the required fields are set, referenced paths exist, and the glob matches at least one file not already imported. Files already in the project are skipped. Dimensions and frame count are read from each file's header; `skip_full_check` skips the (expensive) TIFF/EER frame count. Returns `{movie_count, skipped_count, failed}`. |

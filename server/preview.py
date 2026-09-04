@@ -6,13 +6,22 @@ counting-mode data is almost pure shot noise -- at the doses these are taken
 at, one frame of the sample MRC here is visually indistinguishable from
 static -- so the sum is the only thing worth looking at without alignment.
 
-Only MRC/MRCS is supported so far. TIFF needs an LZW decoder and EER needs
-Thermo's electron-event decoder; both are real work, and `can_preview()` is
-what the API and the Display button use to tell the difference.
+MRC/MRCS and TIFF (including BigTIFF) are supported. EER is not: it uses
+Thermo's electron-event encoding, which is a decoder of its own, and a single
+EER frame holds ~0.008 e/pixel so a useful image means decoding most of the
+file. `can_preview()` is what the API and the Display button both use to tell
+what's renderable.
 
-PNG is written with stdlib zlib (it's a handful of CRC'd chunks), so Pillow
-isn't needed. numpy is, though -- summing and rescaling frames pixel by pixel
-in pure Python takes seconds per preview, versus milliseconds here.
+MRC is read directly -- it's raw pixels after a fixed header. TIFF goes
+through Pillow, which decodes LZW in C: the same movie takes ~7s that way
+versus ~4min through a hand-written Python LZW decoder, and Pillow also
+covers the TIFF variants (predictors, deflate, tiling, 16-bit) that such a
+decoder would not. numpy does the summing and rescaling.
+
+Note this is the *preview* path, used on demand. Header reading
+(imageheaders.py) stays dependency-free because it runs on every import.
+
+PNG is written with stdlib zlib -- it's a handful of CRC'd chunks.
 """
 
 import struct
@@ -20,6 +29,7 @@ import zlib
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
 # Longest edge of the rendered preview. Big enough to see particles, small
 # enough that the PNG stays a few hundred KB.
@@ -27,8 +37,14 @@ MAX_PREVIEW_EDGE = 1024
 # Contrast range, as percentiles. Cryo-EM frames have outliers (hot pixels,
 # ice) that would otherwise flatten everything else to mid-grey.
 CLIP_PERCENTILES = (0.5, 99.5)
+# Bounds the worst case on a movie with an unusual number of frames. Typical
+# movies (50-100 frames) are unaffected; when it does bite, the caller reports
+# how many frames were actually summed rather than pretending it was all.
+MAX_PREVIEW_FRAMES = 200
 
-PREVIEWABLE_EXTENSIONS = {".mrc", ".mrcs"}
+MRC_PREVIEW_EXTENSIONS = {".mrc", ".mrcs"}
+TIFF_PREVIEW_EXTENSIONS = {".tif", ".tiff"}
+PREVIEWABLE_EXTENSIONS = MRC_PREVIEW_EXTENSIONS | TIFF_PREVIEW_EXTENSIONS
 
 # MRC mode -> numpy dtype. Complex modes (3, 4) aren't images to display.
 MRC_MODES = {
@@ -78,7 +94,35 @@ def _sum_mrc(path, max_frames=None):
                 # Truncated file: keep what we managed to read rather than fail.
                 break
             accumulator += raw.astype(np.float32)
-    return accumulator.reshape(ny, nx), frames
+    return accumulator.reshape(ny, nx), frames, nz
+
+
+def _sum_tiff(path, max_frames=None):
+    """Sums the pages of a TIFF/BigTIFF stack into one float32 image.
+
+    Pillow handles the compression (LZW here) and the BigTIFF offsets; each
+    page is added straight into the accumulator so only one decoded frame is
+    held at a time.
+    """
+    with Image.open(path) as im:
+        available = getattr(im, "n_frames", 1)
+        frames = available if max_frames is None else min(available, max_frames)
+        accumulator = None
+        for index in range(frames):
+            im.seek(index)
+            page = np.asarray(im, dtype=np.float32)
+            if page.ndim == 3:
+                # Shouldn't happen for detector data, but average any channels
+                # rather than failing outright.
+                page = page.mean(axis=2)
+            if accumulator is None:
+                accumulator = np.zeros(page.shape, dtype=np.float32)
+            elif page.shape != accumulator.shape:
+                break  # ragged stack: keep what lined up
+            accumulator += page
+    if accumulator is None:
+        raise PreviewError("TIFF contains no readable pages")
+    return accumulator, frames, available
 
 
 def _bin_image(image):
@@ -127,16 +171,20 @@ def _encode_png(gray):
 
 
 def render_movie_preview(path, max_frames=None):
-    """Returns (png_bytes, {width, height, frames_summed}) for one movie.
+    """Returns (png_bytes, {width, height, frames_summed, frames_total}).
 
     Raises PreviewError for anything we can't render.
     """
-    if not can_preview(path):
-        raise PreviewError(
-            "no preview for {} files yet".format(Path(path).suffix.lower() or "these")
-        )
+    suffix = Path(path).suffix.lower()
+    if suffix not in PREVIEWABLE_EXTENSIONS:
+        raise PreviewError("no preview for {} files yet".format(suffix or "these"))
+    if max_frames is None:
+        max_frames = MAX_PREVIEW_FRAMES
     try:
-        summed, frames = _sum_mrc(path, max_frames=max_frames)
+        if suffix in MRC_PREVIEW_EXTENSIONS:
+            summed, frames, total = _sum_mrc(path, max_frames=max_frames)
+        else:
+            summed, frames, total = _sum_tiff(path, max_frames=max_frames)
         binned = _bin_image(summed)
         gray = _to_grayscale_bytes(binned)
         png = _encode_png(gray)
@@ -146,4 +194,9 @@ def render_movie_preview(path, max_frames=None):
         raise PreviewError("could not read file: {}".format(exc))
     except Exception as exc:  # noqa: BLE001 - a bad file shouldn't 500
         raise PreviewError("could not render preview: {}".format(exc))
-    return png, {"width": gray.shape[1], "height": gray.shape[0], "frames_summed": frames}
+    return png, {
+        "width": gray.shape[1],
+        "height": gray.shape[0],
+        "frames_summed": frames,
+        "frames_total": total,
+    }

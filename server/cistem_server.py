@@ -690,6 +690,7 @@ def movie_preview(project_id, movie_id):
     response.headers["ETag"] = etag
     response.headers["Cache-Control"] = "private, max-age=3600"
     response.headers["X-Preview-Frames-Summed"] = str(meta["frames_summed"])
+    response.headers["X-Preview-Frames-Total"] = str(meta["frames_total"])
     return response
 
 

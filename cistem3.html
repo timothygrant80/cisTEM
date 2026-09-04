@@ -2135,9 +2135,10 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   // ---------- movie preview (the Display button) ----------
-  // Only MRC renders so far; TIFF needs an LZW decoder and EER needs Thermo's
-  // electron-event decoder, so those stay disabled with a tooltip saying so.
-  var PREVIEWABLE_RE = /\.mrcs?$/i;
+  // MRC and TIFF render; EER needs Thermo's electron-event decoder, so it
+  // stays disabled with a tooltip saying so. Kept in step with
+  // PREVIEWABLE_EXTENSIONS in preview.py, which is what actually enforces it.
+  var PREVIEWABLE_RE = /\.(mrcs?|tiff?)$/i;
   var previewObjectUrl = null;
 
   function updateDisplayButton(movie){
@@ -2150,7 +2151,7 @@ From branch : <span id="versionBranch">—</span></p>
     els.movieDisplayBtn.disabled = !previewable;
     els.movieDisplayBtn.title = previewable
       ? "Show " + (movie.NAME || "this movie") + " (frames summed)."
-      : "Preview isn't supported for this file type yet — MRC only for now.";
+      : "Preview isn't supported for this file type yet — MRC and TIFF only for now.";
   }
 
   function releasePreviewUrl(){
@@ -2164,7 +2165,7 @@ From branch : <span id="versionBranch">—</span></p>
     els.previewModal.classList.add("open");
     els.previewScrim.classList.add("open");
     els.previewTitle.textContent = movie.NAME || "Movie";
-    els.previewStatus.textContent = "Rendering…";
+    els.previewStatus.textContent = "Rendering… summing frames, which takes a few seconds for a large movie.";
     els.previewStatus.hidden = false;
     els.previewImg.hidden = true;
     els.previewNote.textContent = "";
@@ -2179,15 +2180,22 @@ From branch : <span id="versionBranch">—</span></p>
         });
       }
       var summed = r.headers.get("X-Preview-Frames-Summed");
-      return r.blob().then(function(blob){ return {blob: blob, summed: summed}; });
+      var total = r.headers.get("X-Preview-Frames-Total");
+      return r.blob().then(function(blob){ return {blob: blob, summed: summed, total: total}; });
     }).then(function(result){
       previewObjectUrl = URL.createObjectURL(result.blob);
       els.previewImg.src = previewObjectUrl;
       els.previewImg.hidden = false;
       els.previewStatus.hidden = true;
-      els.previewNote.textContent = result.summed
-        ? "Sum of " + result.summed + " frames. A single frame of counting-mode data is mostly shot noise, so the sum is what's shown."
-        : "";
+      var note = "";
+      if (result.summed){
+        var capped = result.total && Number(result.total) > Number(result.summed);
+        note = capped
+          ? "Sum of the first " + result.summed + " of " + result.total + " frames."
+          : "Sum of " + result.summed + " frames.";
+        note += " A single frame of counting-mode data is mostly shot noise, so the sum is what's shown.";
+      }
+      els.previewNote.textContent = note;
     }).catch(function(err){
       els.previewStatus.textContent = "Could not render preview: " + err.message;
       els.previewStatus.hidden = false;

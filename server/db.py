@@ -75,6 +75,26 @@ CREATE TABLE IF NOT EXISTS IMAGE_ASSETS(
   SPHERICAL_ABERRATION REAL, PROTEIN_IS_WHITE INTEGER
 );
 
+-- Columns match cisTEM's own CreateImageImportDefaultsTable() exactly: an
+-- image import asks for voltage/Cs/pixel size/contrast and nothing else --
+-- no dose, no gain/dark, no EER, since none of those describe an already
+-- averaged micrograph. Cf. MOVIE_IMPORT_DEFAULTS above.
+CREATE TABLE IF NOT EXISTS IMAGE_IMPORT_DEFAULTS(
+  NUMBER INTEGER PRIMARY KEY, VOLTAGE REAL, SPHERICAL_ABERRATION REAL, PIXEL_SIZE REAL,
+  PROTEIN_IS_WHITE INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS IMAGE_GROUP_LIST(
+  GROUP_ID INTEGER PRIMARY KEY, GROUP_NAME TEXT, LIST_ID INTEGER
+);
+
+-- Same deviation from real cisTEM as MOVIE_GROUP_MEMBERS (see module
+-- docstring): one junction table instead of a numbered table per group.
+CREATE TABLE IF NOT EXISTS IMAGE_GROUP_MEMBERS(
+  GROUP_ID INTEGER NOT NULL, IMAGE_ASSET_ID INTEGER NOT NULL,
+  PRIMARY KEY(GROUP_ID, IMAGE_ASSET_ID)
+);
+
 -- ALIGNMENT_JOB_ID is TEXT here (real cisTEM: INTEGER) to match this app's
 -- existing job-id shape (uuid4().hex[:10]) instead of inventing a parallel
 -- integer id scheme.
@@ -165,6 +185,7 @@ CREATE TABLE IF NOT EXISTS JOB_LOG_LINES(
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON JOBS(STATUS);
 CREATE INDEX IF NOT EXISTS idx_movie_alignment_movie ON MOVIE_ALIGNMENT_LIST(MOVIE_ASSET_ID);
 CREATE INDEX IF NOT EXISTS idx_image_assets_parent_movie ON IMAGE_ASSETS(PARENT_MOVIE_ID);
+CREATE INDEX IF NOT EXISTS idx_image_group_members_asset ON IMAGE_GROUP_MEMBERS(IMAGE_ASSET_ID);
 """
 
 # (profile_name, manager_run_command) -- matches the run-profile options
@@ -203,6 +224,24 @@ _ALTER_STATEMENTS = [
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USERNAME TEXT",
 ]
 
+# Rows every project must have, seeded here rather than in create_project()
+# so that projects created before image assets existed get them too. All
+# three are INSERT OR IGNORE / idempotent, so re-running them on every open
+# is a no-op once they've landed.
+#
+# The last one backfills All Images membership: IMAGE_ASSETS rows predate
+# IMAGE_GROUP_MEMBERS -- every completed Align Movies job has been writing
+# them since long before images had groups -- so the master list has to
+# adopt whatever it finds rather than assume every row was inserted through
+# the image import route. Cheap at this scale (a project's images number in
+# the thousands at most) and self-healing.
+_SEED_STATEMENTS = [
+    "INSERT OR IGNORE INTO IMAGE_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (0, 'All Images', 0)",
+    "INSERT OR IGNORE INTO IMAGE_IMPORT_DEFAULTS(NUMBER) VALUES (1)",
+    "INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) "
+    "SELECT 0, IMAGE_ASSET_ID FROM IMAGE_ASSETS",
+]
+
 
 def get_conn(project_id):
     """Open a fresh connection scoped to one project, schema guaranteed present."""
@@ -217,6 +256,9 @@ def get_conn(project_id):
             conn.execute(stmt)
         except sqlite3.OperationalError:
             pass  # column already exists
+    with conn:
+        for stmt in _SEED_STATEMENTS:
+            conn.execute(stmt)
     return conn
 
 

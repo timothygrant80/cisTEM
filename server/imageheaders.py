@@ -182,6 +182,24 @@ def _to_rendered_eer(raw, super_res_factor, frames_per_image):
     return rendered
 
 
+def read_image_header(path):
+    """Returns {x_size, y_size} for one already-averaged image (micrograph).
+
+    No frame count: an image asset is a single 2D micrograph, so there is
+    nothing to count and never a reason to walk a TIFF's IFD chain. EER is
+    rejected outright rather than parsed -- it is a raw movie container by
+    construction, so an .eer file here is a mistake worth reporting, not a
+    single image.
+
+    Raises HeaderError if the file can't be read or doesn't parse.
+    """
+    suffix = Path(path).suffix.lower()
+    if suffix in EER_EXTENSIONS:
+        raise HeaderError("EER files are movies, not images")
+    header = read_movie_header(path, count_frames=False)
+    return {"x_size": header["x_size"], "y_size": header["y_size"]}
+
+
 def read_movie_header(path, count_frames=True, eer_super_res_factor=1, eer_frames_per_image=1):
     """Returns {x_size, y_size, number_of_frames} for one movie file, picking
     the parser by extension. number_of_frames is None when it wasn't counted.

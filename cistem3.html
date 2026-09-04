@@ -621,7 +621,73 @@ From branch : <span id="versionBranch">—</span></p>
 
         </div>
 
-        <!-- IMAGES / PARTICLE POSITIONS / 3D VOLUMES / REFINE PKGS: no backend data model yet -->
+        <!-- IMAGES -->
+        <!-- Deliberately the same shape as MOVIES above, minus the columns a
+             single averaged micrograph has no answer for (no frame count, no
+             per-frame exposure, no gain/dark reference) and plus the two that
+             say where it came from: Parent I.D. and Align. I.D., which point
+             back at the movie and the alignment that produced it. Column set
+             and the Selected Image fields follow cisTEM's own
+             MyImageAssetPanel (FillAssetSpecificContentsList / UpdateInfo). -->
+        <div class="asset-subpage" id="assetpageImages" hidden>
+          <div class="assets-layout">
+            <div class="groupbox">
+              <span class="groupbox-label">Groups</span>
+              <ul class="group-list" id="imageGroupList"></ul>
+              <div class="asset-toolbar">
+                <button class="small" id="imageGroupAddBtn">Add</button>
+                <button class="small" id="imageGroupRenameBtn" disabled title="Select a group other than All Images first.">Rename</button>
+                <button class="small" id="imageGroupRemoveBtn" disabled title="Select a group other than All Images first.">Remove</button>
+                <button class="small" id="imageGroupInvertBtn" disabled title="Select a group other than All Images first.">Invert</button>
+              </div>
+            </div>
+
+            <div class="groupbox">
+              <span class="groupbox-label">Images</span>
+              <div class="table-scroll">
+                <table class="queue">
+                  <thead><tr>
+                    <th class="check-col"><input type="checkbox" id="imageSelectAllCheckbox" title="Select all"></th>
+                    <th>I.D.</th><th>Name</th><th>Filename</th><th class="num">Parent I.D.</th>
+                    <th class="num">Align. I.D.</th><th class="num">X Size</th><th class="num">Y Size</th>
+                    <th class="num">Pixel size</th><th class="num">Cs</th><th class="num">Voltage</th>
+                    <th>Protein is white?</th>
+                  </tr></thead>
+                  <tbody id="imageListBody">
+                    <tr><td colspan="12"><div class="empty-note">No images yet</div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="asset-toolbar">
+                <button class="small" id="imageImportOpenBtn">Import</button>
+                <button class="small" id="imageRemoveBtn" disabled title="Select one or more images first.">Remove</button>
+                <button class="small" id="imageRemoveAllBtn" disabled title="No images in this group yet.">Remove All</button>
+                <button class="small" disabled title="Not implemented yet.">Rename</button>
+                <button class="small" id="imageAddToGroupBtn" disabled title="Select one or more images first.">Add To Group</button>
+                <button class="small" id="imageDisplayBtn" disabled title="Select an image first.">Display</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="groupbox" style="margin-top:16px;">
+            <span class="groupbox-label">Selected Image</span>
+            <div class="details-grid">
+              <div class="details-item"><span class="details-key">Name</span><span class="details-val" id="dImageName">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Parent Movie I.D.</span><span class="details-val" id="dImageParentId">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">X Size</span><span class="details-val" id="dImageXSize">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">I.D.</span><span class="details-val" id="dImageId">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Movie Alignment I.D.</span><span class="details-val" id="dImageAlignmentId">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Y Size</span><span class="details-val" id="dImageYSize">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Pixel Size</span><span class="details-val" id="dImagePixelSize">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Voltage</span><span class="details-val" id="dImageVoltage">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Cs</span><span class="details-val" id="dImageCs">&mdash;</span></div>
+              <div class="details-item details-item-wide"><span class="details-key">Filename</span><span class="details-val" id="dImageFilename">&mdash;</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- PARTICLE POSITIONS / 3D VOLUMES / REFINE PKGS: no backend data model yet -->
         <div class="asset-subpage" id="assetpagePlaceholder" hidden>
           <div class="assets-layout">
             <div class="groupbox">
@@ -787,14 +853,32 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
 </div>
 
+<div class="scrim" id="importImagesScrim"></div>
+<div class="modal" id="importImagesModal">
+  <div class="modal-head">
+    <div class="modal-title">Import Images</div>
+    <button class="log-close" id="importImagesModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">For micrographs that were already averaged elsewhere &mdash; images produced by Align Movies in this project arrive on their own.</p>
+    <div id="importImagesFields"></div>
+    <p class="form-note validation-note" id="importImagesValidationNote"></p>
+    <div class="submit-row">
+      <button class="primary" id="importImagesBtn" disabled>Import</button>
+    </div>
+    <p class="form-note" id="importImagesNote"></p>
+  </div>
+</div>
+
 <!-- Browses the filesystem of the machine running the API server (not the
      browser's) -- that's deliberate, since that's where a glob typed by hand
-     into Movie files would be resolved too. Opens on top of the already-open
-     Import Movies modal, hence the higher z-index (see .browse-modal CSS). -->
+     into Movie files or Image files would be resolved too. Opens on top of
+     the already-open Import modal, hence the higher z-index (see
+     .browse-modal CSS). -->
 <div class="scrim browse-scrim" id="browseScrim"></div>
 <div class="modal browse-modal" id="browseModal">
   <div class="modal-head">
-    <div class="modal-title">Choose Movie Files</div>
+    <div class="modal-title" id="browseTitle">Choose Movie Files</div>
     <button class="log-close" id="browseModalClose" aria-label="Close">&times;</button>
   </div>
   <div class="modal-body">
@@ -803,7 +887,7 @@ From branch : <span id="versionBranch">—</span></p>
       <span class="browse-path" id="browsePath"></span>
     </div>
     <ul class="browse-list" id="browseList"></ul>
-    <p class="form-note">Click a folder to open it, or a movie file to match every file of that type in its folder.</p>
+    <p class="form-note" id="browseNote">Click a folder to open it, or a movie file to match every file of that type in its folder.</p>
   </div>
 </div>
 
@@ -947,12 +1031,20 @@ From branch : <span id="versionBranch">—</span></p>
    "movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
+   "browseTitle","browseNote",
    "movieDisplayBtn","previewScrim","previewModal","previewModalClose","previewTitle",
    "previewStage","previewStatus","previewImg","previewNote",
-   "assetpageMovies","assetpagePlaceholder","placeholderPanelLabel",
+   "assetpageMovies","assetpageImages","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
    "dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
+   "importImagesScrim","importImagesModal","importImagesModalClose","importImagesFields",
+   "importImagesBtn","importImagesNote","importImagesValidationNote",
+   "imageListBody","imageGroupList","imageImportOpenBtn","imageSelectAllCheckbox",
+   "imageGroupAddBtn","imageGroupRenameBtn","imageGroupRemoveBtn","imageGroupInvertBtn",
+   "imageRemoveBtn","imageRemoveAllBtn","imageAddToGroupBtn","imageDisplayBtn",
+   "dImageName","dImageFilename","dImageId","dImageParentId","dImageAlignmentId",
+   "dImageXSize","dImageYSize","dImagePixelSize","dImageVoltage","dImageCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
    "stageInventoryBody","runProfile",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
@@ -979,7 +1071,10 @@ From branch : <span id="versionBranch">—</span></p>
     assetTab: "movies",
     selectedGroupId: 0,
     selectedMovieId: null,
-    selectedMovieIds: new Set()
+    selectedMovieIds: new Set(),
+    selectedImageGroupId: 0,
+    selectedImageId: null,
+    selectedImageIds: new Set()
   };
 
   // ---------- rail navigation ----------
@@ -1001,11 +1096,11 @@ From branch : <span id="versionBranch">—</span></p>
   showTab("assets");
 
   // ---------- assets sub-tabs ----------
-  // Movies is the only asset type backed by real project data (see CLAUDE.md's
-  // "Scope note"). The other four share one placeholder shell rather than
+  // Movies and Images are backed by real project data (see CLAUDE.md's
+  // "Scope note"). The other three share one placeholder shell rather than
   // faking import/list UI for a data model that doesn't exist yet.
+  var REAL_ASSET_TABS = {movies: "assetpageMovies", images: "assetpageImages"};
   var ASSET_PLACEHOLDER_INFO = {
-    images: {label: "Images", groupLabel: "All Images (0)"},
     particles: {label: "Particle Positions", groupLabel: "All Particle Positions (0)"},
     volumes: {label: "3D Volumes", groupLabel: "All Volumes (0)"},
     refine: {label: "Refine Pkgs.", groupLabel: "All Refinement Packages (0)"}
@@ -1014,14 +1109,16 @@ From branch : <span id="versionBranch">—</span></p>
   function showAssetTab(name){
     state.assetTab = name;
     assetSubtabBtns.forEach(function(btn){ btn.classList.toggle("active", btn.dataset.assetTab === name); });
-    els.assetpageMovies.hidden = name !== "movies";
-    els.assetpagePlaceholder.hidden = name === "movies";
-    if (name !== "movies"){
-      var info = ASSET_PLACEHOLDER_INFO[name];
+    Object.keys(REAL_ASSET_TABS).forEach(function(key){
+      els[REAL_ASSET_TABS[key]].hidden = key !== name;
+    });
+    var info = ASSET_PLACEHOLDER_INFO[name];
+    els.assetpagePlaceholder.hidden = !info;
+    if (info){
       els.placeholderPanelLabel.textContent = info.label;
       els.placeholderGroupLabel.textContent = info.groupLabel;
       els.placeholderNote.innerHTML = info.label + " assets aren't wired up yet" +
-        '<span class="hint">Only movie assets are backed by real project data so far — see CLAUDE.md’s "Scope note".</span>';
+        '<span class="hint">Only movie and image assets are backed by real project data so far — see CLAUDE.md’s "Scope note".</span>';
     }
   }
   assetSubtabBtns.forEach(function(btn){
@@ -1055,11 +1152,19 @@ From branch : <span id="versionBranch">—</span></p>
   var FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-11z"/></svg>';
   var FILE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14.5 3v4.5H19"/></svg>';
   var browseParent = null;
+  // Which Import dialog's glob field the picker is filling in, and which file
+  // types to list -- set by openBrowseModal(), since Movies and Images share
+  // this one modal.
+  var browseTarget = null;
 
-  function openBrowseModal(){
+  function openBrowseModal(target){
+    browseTarget = target;
+    els.browseTitle.textContent = "Choose " + target.noun.charAt(0).toUpperCase() + target.noun.slice(1) + " Files";
+    els.browseNote.textContent = "Click a folder to open it, or " + target.article + " " + target.noun
+      + " file to match every file of that type in its folder.";
     els.browseModal.classList.add("open");
     els.browseScrim.classList.add("open");
-    var glob = els.importFields.querySelector('[data-key="input_glob"]').value.trim();
+    var glob = target.input.value.trim();
     var startDir = glob ? glob.replace(/[^/\\]*$/, "").replace(/[/\\]+$/, "") : "";
     loadBrowseDir(startDir || null);
   }
@@ -1069,7 +1174,10 @@ From branch : <span id="versionBranch">—</span></p>
   }
   function loadBrowseDir(path){
     els.browseList.innerHTML = '<li class="browse-empty" style="display:block;">Loading…</li>';
-    var url = apiUrl("/browse") + (path ? "?path=" + encodeURIComponent(path) : "");
+    var query = [];
+    if (path) query.push("path=" + encodeURIComponent(path));
+    if (browseTarget) query.push("types=" + encodeURIComponent(browseTarget.types));
+    var url = apiUrl("/browse") + (query.length ? "?" + query.join("&") : "");
     apiFetch(url).then(function(r){
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.json();
@@ -1091,7 +1199,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (!d.directories.length && !d.files.length){
       var empty = document.createElement("li");
       empty.className = "browse-empty";
-      empty.textContent = "No subfolders or movie files here";
+      empty.textContent = "No subfolders or " + (browseTarget ? browseTarget.noun : "movie") + " files here";
       els.browseList.appendChild(empty);
       return;
     }
@@ -1109,7 +1217,7 @@ From branch : <span id="versionBranch">—</span></p>
       li.querySelector("span").textContent = name;
       li.addEventListener("click", function(){
         var ext = name.slice(name.lastIndexOf("."));
-        var glob = els.importFields.querySelector('[data-key="input_glob"]');
+        var glob = browseTarget.input;
         glob.value = d.path + "/*" + ext;
         glob.dispatchEvent(new Event("input", {bubbles: true}));
         closeBrowseModal();
@@ -1649,11 +1757,17 @@ From branch : <span id="versionBranch">—</span></p>
     showScreen("app");
     showTab("assets");
     renderParamFields();
+    showAssetTab("movies");
     state.selectedGroupId = 0;
     state.selectedMovieId = null;
+    state.selectedImageGroupId = 0;
+    state.selectedImageId = null;
     loadImportDefaults();
     loadMovieGroups();
     loadMovies();
+    loadImageImportDefaults();
+    loadImageGroups();
+    loadImages();
     startPolling();
     fetchJobs();
   }
@@ -1816,7 +1930,9 @@ From branch : <span id="versionBranch">—</span></p>
     browseBtn.type = "button";
     browseBtn.className = "small";
     browseBtn.textContent = "Browse…";
-    browseBtn.addEventListener("click", openBrowseModal);
+    browseBtn.addEventListener("click", function(){
+      openBrowseModal({input: globInput, noun: "movie", article: "a", types: "movie"});
+    });
     row.appendChild(browseBtn);
   })();
 
@@ -2162,11 +2278,15 @@ From branch : <span id="versionBranch">—</span></p>
     }
   }
 
-  function openPreviewModal(movie){
+  // Shared by the Movies and Images panels. `descriptor` is {title, path,
+  // status}: the heading, the preview endpoint under the project, and the
+  // "rendering..." line, which differs because a movie preview has frames to
+  // sum and an image doesn't.
+  function openPreviewModal(descriptor){
     els.previewModal.classList.add("open");
     els.previewScrim.classList.add("open");
-    els.previewTitle.textContent = movie.NAME || "Movie";
-    els.previewStatus.textContent = "Rendering… summing frames, which takes a few seconds for a large movie.";
+    els.previewTitle.textContent = descriptor.title;
+    els.previewStatus.textContent = descriptor.status;
     els.previewStatus.hidden = false;
     els.previewImg.hidden = true;
     els.previewNote.textContent = "";
@@ -2174,7 +2294,7 @@ From branch : <span id="versionBranch">—</span></p>
 
     // An <img src> can't carry the Authorization header this API needs, so
     // the PNG is fetched through apiFetch and shown from a blob URL.
-    apiFetch(projectApiUrl("/movies/" + movie.MOVIE_ASSET_ID + "/preview.png")).then(function(r){
+    apiFetch(projectApiUrl(descriptor.path)).then(function(r){
       if (!r.ok){
         return r.json().catch(function(){ return {}; }).then(function(d){
           throw new Error((d && d.error) || ("HTTP " + r.status));
@@ -2188,6 +2308,8 @@ From branch : <span id="versionBranch">—</span></p>
       els.previewImg.src = previewObjectUrl;
       els.previewImg.hidden = false;
       els.previewStatus.hidden = true;
+      // Only the movie preview sends these -- an image is one exposure, so
+      // there is nothing to say about how many frames went into it.
       var note = "";
       if (result.summed){
         var capped = result.total && Number(result.total) > Number(result.summed);
@@ -2213,7 +2335,12 @@ From branch : <span id="versionBranch">—</span></p>
 
   els.movieDisplayBtn.addEventListener("click", function(){
     var movie = (state.movies || []).filter(function(m){ return m.MOVIE_ASSET_ID === state.selectedMovieId; })[0];
-    if (movie) openPreviewModal(movie);
+    if (!movie) return;
+    openPreviewModal({
+      title: movie.NAME || "Movie",
+      path: "/movies/" + movie.MOVIE_ASSET_ID + "/preview.png",
+      status: "Rendering… summing frames, which takes a few seconds for a large movie."
+    });
   });
   els.previewModalClose.addEventListener("click", closePreviewModal);
   els.previewScrim.addEventListener("click", closePreviewModal);
@@ -2455,6 +2582,561 @@ From branch : <span id="versionBranch">—</span></p>
     });
     updateGroupActionButtons();
     loadMovies();
+  }
+
+  // ================= IMAGES =================
+  // The same panel as Movies above, against /images and /image-groups. It is
+  // deliberately a parallel block rather than a shared generic one, the same
+  // way cisTEM keeps MyMovieAssetPanel and MyImageAssetPanel as separate
+  // classes: what they share is on the server (see AssetKind there), and what
+  // is left here is exactly the per-kind part -- which columns exist, which
+  // metadata an import asks for, and what the Display button is showing.
+
+  // ---------- import images ----------
+  // Mirrors cisTEM's own MyImageImportDialog: voltage, Cs, pixel size and
+  // contrast, and nothing else. No dose (an image is one already-averaged
+  // exposure, so there are no per-frame numbers to record), no frame count,
+  // no gain/dark reference and no EER sampling -- all four describe raw
+  // movies, and by the time a micrograph exists they have already been
+  // applied. Also dropped: cisTEM's "save scaled sum" checkbox, which
+  // pre-renders a small copy into the project's Scaled/ directory; the
+  // Display button here renders on demand server-side instead (preview.py),
+  // so there is nothing to pre-bake.
+  var IMAGE_IMPORT_FIELDS = [
+    {key:"input_glob", label:"Image files", unit:"", type:"text", placeholder:"/data/session01/micrographs/*.mrc", group:"Input"},
+
+    {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300", group:"Microscope"},
+    {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7", group:"Microscope"},
+    {key:"pixel_size_a", label:"Pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"0.83", group:"Microscope"},
+    {key:"protein_is_white", label:"Images have inverted contrast (protein is white)", type:"checkbox", group:"Microscope"}
+  ];
+  renderGroupedFields(els.importImagesFields, IMAGE_IMPORT_FIELDS);
+
+  (function(){
+    var globInput = els.importImagesFields.querySelector('[data-key="input_glob"]');
+    var row = document.createElement("div");
+    row.className = "field-row";
+    globInput.parentNode.insertBefore(row, globInput);
+    row.appendChild(globInput);
+    var browseBtn = document.createElement("button");
+    browseBtn.type = "button";
+    browseBtn.className = "small";
+    browseBtn.textContent = "Browse…";
+    browseBtn.addEventListener("click", function(){
+      openBrowseModal({input: globInput, noun: "image", article: "an", types: "image"});
+    });
+    row.appendChild(browseBtn);
+  })();
+
+  function openImportImagesModal(){
+    els.importImagesModal.classList.add("open");
+    els.importImagesScrim.classList.add("open");
+    els.importImagesNote.textContent = "";
+    var glob = els.importImagesFields.querySelector('[data-key="input_glob"]');
+    if (glob) glob.focus();
+    scheduleImageImportCheck();
+  }
+  function closeImportImagesModal(){
+    els.importImagesModal.classList.remove("open");
+    els.importImagesScrim.classList.remove("open");
+  }
+  els.imageImportOpenBtn.addEventListener("click", openImportImagesModal);
+  els.importImagesModalClose.addEventListener("click", closeImportImagesModal);
+  els.importImagesScrim.addEventListener("click", closeImportImagesModal);
+
+  // ---------- Import Images validation ----------
+  // Mirrors CheckImportButtonStatus() in MyImageImportDialog.cpp: Import stays
+  // disabled until files are chosen and voltage / Cs / pixel size are all
+  // filled in. As with movies, the glob is resolved server-side (see
+  // /images/check-import), debounced so typing a path doesn't fire a request
+  // per keystroke.
+  var IMAGE_REQUIRED_NUMERIC_FIELDS = [
+    ["voltage_kv", "voltage"],
+    ["cs_mm", "spherical aberration (Cs)"],
+    ["pixel_size_a", "pixel size"]
+  ];
+  var imageImportPaths = {seq: 0, glob: null, globCount: 0, newCount: 0, dupCount: 0};
+  var imageImportCheckTimer = null;
+
+  function imageImportFieldValue(key){
+    var el = els.importImagesFields.querySelector('[data-key="' + key + '"]');
+    if (!el) return "";
+    if (el.type === "checkbox") return el.checked;
+    return (el.value || "").trim();
+  }
+
+  function setImageImportFieldValue(key, value){
+    if (value === null || value === undefined) return;
+    var input = els.importImagesFields.querySelector('[data-key="' + key + '"]');
+    if (!input) return;
+    if (input.type === "checkbox") input.checked = !!value;
+    else input.value = value;
+  }
+
+  function scheduleImageImportCheck(){
+    if (imageImportCheckTimer) clearTimeout(imageImportCheckTimer);
+    imageImportCheckTimer = setTimeout(runImageImportCheck, 300);
+    validateImageImportForm();
+  }
+
+  function runImageImportCheck(){
+    var glob = imageImportFieldValue("input_glob");
+    if (!glob || !state.projectId){
+      imageImportPaths.glob = null; imageImportPaths.globCount = 0;
+      imageImportPaths.newCount = 0; imageImportPaths.dupCount = 0;
+      validateImageImportForm();
+      return;
+    }
+    // Stamp each request so a slow earlier reply can't overwrite a newer one.
+    var seq = ++imageImportPaths.seq;
+    apiFetch(projectApiUrl("/images/check-import"), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({glob: glob, files: []})
+    }).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (seq !== imageImportPaths.seq) return;
+      imageImportPaths.glob = glob;
+      imageImportPaths.globCount = d.glob_match_count || 0;
+      imageImportPaths.newCount = d.new_count || 0;
+      imageImportPaths.dupCount = d.already_imported_count || 0;
+      validateImageImportForm();
+    }).catch(function(){
+      if (seq !== imageImportPaths.seq) return;
+      validateImageImportForm();
+    });
+  }
+
+  function imageImportFormProblems(){
+    var problems = [];
+    var glob = imageImportFieldValue("input_glob");
+    if (!glob) problems.push("choose the image files to import");
+    else if (imageImportPaths.glob !== glob) problems.push("checking that path…");
+    else if (!imageImportPaths.globCount) problems.push("no images match that path");
+    else if (!imageImportPaths.newCount){
+      problems.push(imageImportPaths.dupCount === 1
+        ? "that file is already imported"
+        : "all " + imageImportPaths.dupCount + " matching files are already imported");
+    }
+    IMAGE_REQUIRED_NUMERIC_FIELDS.forEach(function(f){
+      if (!imageImportFieldValue(f[0])) problems.push(f[1] + " is required");
+    });
+    return problems;
+  }
+
+  function validateImageImportForm(){
+    var problems = imageImportFormProblems();
+    var ok = problems.length === 0;
+    els.importImagesBtn.disabled = !ok;
+    els.importImagesBtn.title = ok ? "" : problems.join("; ");
+    var msg;
+    if (!ok){
+      msg = problems[0].charAt(0).toUpperCase() + problems[0].slice(1);
+    } else {
+      msg = imageImportPaths.newCount + " new file" + (imageImportPaths.newCount === 1 ? "" : "s") + " to import";
+      if (imageImportPaths.dupCount) msg += " (" + imageImportPaths.dupCount + " already imported, will be skipped)";
+      msg += ".";
+    }
+    els.importImagesValidationNote.textContent = msg;
+    els.importImagesValidationNote.className = "form-note validation-note " + (ok ? "ready" : "blocked");
+    return ok;
+  }
+
+  els.importImagesFields.addEventListener("input", function(e){
+    var key = e.target && e.target.dataset ? e.target.dataset.key : null;
+    if (key === "input_glob") scheduleImageImportCheck();
+    else validateImageImportForm();
+  });
+  els.importImagesFields.addEventListener("change", function(e){
+    var key = e.target && e.target.dataset ? e.target.dataset.key : null;
+    if (key === "input_glob") scheduleImageImportCheck();
+    else validateImageImportForm();
+  });
+
+  function loadImageImportDefaults(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/images/import-defaults")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (!d) return;
+      setImageImportFieldValue("voltage_kv", d.VOLTAGE);
+      setImageImportFieldValue("cs_mm", d.SPHERICAL_ABERRATION);
+      setImageImportFieldValue("pixel_size_a", d.PIXEL_SIZE);
+      setImageImportFieldValue("protein_is_white", d.PROTEIN_IS_WHITE);
+      scheduleImageImportCheck();
+    }).catch(function(){});
+  }
+
+  els.importImagesBtn.addEventListener("click", function(){
+    // The button is disabled unless validateImageImportForm() passes, so this
+    // is just a guard against a stale click landing mid-revalidation.
+    if (!state.projectId || !validateImageImportForm()) return;
+    var body = {};
+    els.importImagesFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
+    els.importImagesBtn.disabled = true;
+    els.importImagesBtn.textContent = "Importing…";
+    apiFetch(projectApiUrl("/images/import"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(result){
+      var msg = "Imported " + result.image_count + " image" + (result.image_count === 1 ? "" : "s") + " into All Images."
+        + (result.skipped_count ? " Skipped " + result.skipped_count + " already imported." : "");
+      var failed = result.failed || [];
+      if (failed.length){
+        msg += " " + failed.length + " could not be read: "
+          + failed.slice(0, 3).map(function(f){ return f.path.split("/").pop() + " (" + f.reason + ")"; }).join(", ")
+          + (failed.length > 3 ? ", …" : "") + ".";
+      }
+      els.importImagesNote.textContent = msg;
+      state.selectedImageGroupId = 0;
+      loadImageGroups();
+      loadImages();
+    }).catch(function(err){
+      alert("Import failed: " + err.message);
+    }).finally(function(){
+      els.importImagesBtn.textContent = "Import";
+      // Re-run the preflight: whatever just imported now counts as a
+      // duplicate, so the button should fall back to disabled.
+      imageImportPaths.glob = null;
+      scheduleImageImportCheck();
+    });
+  });
+
+  // ---------- image list ----------
+  function loadImages(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/images?group_id=" + state.selectedImageGroupId)).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){ renderImageList((data && data.images) || []); }).catch(function(){});
+  }
+
+  // PARENT_MOVIE_ID and ALIGNMENT_ID are -1 on an imported image -- cisTEM's
+  // sentinel for "no parent in this project" (see AddNextImageAsset). It
+  // reads as a value rather than an absence, so show the same em dash an
+  // empty column gets.
+  function fmtAssetRef(v){ return (v == null || v < 0) ? "—" : v; }
+
+  function renderImageList(images){
+    state.images = images;
+    state.selectedImageId = null;
+    state.selectedImageIds = new Set();
+    updateImageDetails(null);
+    updateImageDisplayButton(null);
+    updateImageBulkActionButtons();
+    els.imageListBody.innerHTML = "";
+    if (!images.length){
+      var tr = document.createElement("tr");
+      var td = document.createElement("td");
+      td.colSpan = 12;
+      var box = document.createElement("div");
+      box.className = "empty-note";
+      box.textContent = "No images in this group";
+      var hint = document.createElement("span");
+      hint.className = "hint";
+      hint.textContent = "Import micrographs aligned elsewhere, or run Align Movies — its output lands here.";
+      box.appendChild(hint);
+      td.appendChild(box);
+      tr.appendChild(td);
+      els.imageListBody.appendChild(tr);
+      return;
+    }
+    images.forEach(function(m){
+      var tr = document.createElement("tr");
+      tr.className = "clickable";
+      tr.dataset.imageId = m.IMAGE_ASSET_ID;
+      tr.innerHTML = "<td class='check-col'><input type='checkbox' class='image-check'></td>" +
+        "<td>" + m.IMAGE_ASSET_ID + "</td>" +
+        "<td>" + (m.NAME || "") + "</td>" +
+        "<td>" + (m.FILENAME || "—") + "</td>" +
+        "<td class='num'>" + fmtAssetRef(m.PARENT_MOVIE_ID) + "</td>" +
+        "<td class='num'>" + fmtAssetRef(m.ALIGNMENT_ID) + "</td>" +
+        "<td class='num'>" + fmtNum(m.X_SIZE) + "</td>" +
+        "<td class='num'>" + fmtNum(m.Y_SIZE) + "</td>" +
+        "<td class='num'>" + fmtNum(m.PIXEL_SIZE) + "</td>" +
+        "<td class='num'>" + fmtNum(m.SPHERICAL_ABERRATION) + "</td>" +
+        "<td class='num'>" + fmtNum(m.VOLTAGE) + "</td>" +
+        "<td>" + (m.PROTEIN_IS_WHITE ? "Yes" : "No") + "</td>";
+      tr.addEventListener("click", function(){ selectImage(m.IMAGE_ASSET_ID); });
+      var checkbox = tr.querySelector(".image-check");
+      checkbox.addEventListener("click", function(e){ e.stopPropagation(); });
+      checkbox.addEventListener("change", function(){ toggleImageChecked(m.IMAGE_ASSET_ID, checkbox.checked); });
+      els.imageListBody.appendChild(tr);
+    });
+  }
+
+  function selectImage(imageId){
+    state.selectedImageId = imageId;
+    els.imageListBody.querySelectorAll("tr").forEach(function(tr){
+      tr.classList.toggle("selected", Number(tr.dataset.imageId) === imageId);
+    });
+    var image = (state.images || []).filter(function(m){ return m.IMAGE_ASSET_ID === imageId; })[0];
+    updateImageDetails(image || null);
+    updateImageDisplayButton(image || null);
+  }
+
+  function updateImageDetails(m){
+    els.dImageName.textContent = m ? (m.NAME || "—") : "—";
+    els.dImageFilename.textContent = m ? (m.FILENAME || "—") : "—";
+    els.dImageId.textContent = m ? m.IMAGE_ASSET_ID : "—";
+    els.dImageParentId.textContent = m ? fmtAssetRef(m.PARENT_MOVIE_ID) : "—";
+    els.dImageAlignmentId.textContent = m ? fmtAssetRef(m.ALIGNMENT_ID) : "—";
+    els.dImageXSize.textContent = m ? fmtNum(m.X_SIZE) : "—";
+    els.dImageYSize.textContent = m ? fmtNum(m.Y_SIZE) : "—";
+    els.dImagePixelSize.textContent = m ? fmtNum(m.PIXEL_SIZE) : "—";
+    els.dImageVoltage.textContent = m ? fmtNum(m.VOLTAGE) : "—";
+    els.dImageCs.textContent = m ? fmtNum(m.SPHERICAL_ABERRATION) : "—";
+  }
+
+  // ---------- image preview (the Display button) ----------
+  function updateImageDisplayButton(image){
+    if (!image){
+      els.imageDisplayBtn.disabled = true;
+      els.imageDisplayBtn.title = "Select an image first.";
+      return;
+    }
+    var previewable = PREVIEWABLE_RE.test(image.FILENAME || "");
+    els.imageDisplayBtn.disabled = !previewable;
+    els.imageDisplayBtn.title = previewable
+      ? "Show " + (image.NAME || "this image") + "."
+      : "Preview is available for MRC and TIFF images only.";
+  }
+
+  els.imageDisplayBtn.addEventListener("click", function(){
+    var image = (state.images || []).filter(function(m){ return m.IMAGE_ASSET_ID === state.selectedImageId; })[0];
+    if (!image) return;
+    openPreviewModal({
+      title: image.NAME || "Image",
+      path: "/images/" + image.IMAGE_ASSET_ID + "/preview.png",
+      status: "Rendering…"
+    });
+  });
+
+  // ---------- image multi-select (for Remove / Add To Group) ----------
+  function toggleImageChecked(imageId, checked){
+    if (checked) state.selectedImageIds.add(imageId);
+    else state.selectedImageIds.delete(imageId);
+    updateImageBulkActionButtons();
+  }
+
+  function updateImageBulkActionButtons(){
+    var count = state.selectedImageIds.size;
+    var isAllImages = state.selectedImageGroupId === 0;
+    var removeVerb = isAllImages ? "Delete" : "Remove";
+    var removeAllSuffix = isAllImages ? " from the project." : " from this group (they'll stay in All Images).";
+    els.imageRemoveBtn.disabled = count === 0;
+    els.imageRemoveBtn.title = count === 0 ? "Select one or more images first." : removeVerb + " " + count + " selected image" + (count === 1 ? "" : "s") + removeAllSuffix;
+    els.imageAddToGroupBtn.disabled = count === 0;
+    els.imageAddToGroupBtn.title = count === 0 ? "Select one or more images first." : "Add " + count + " selected image" + (count === 1 ? "" : "s") + " to a group.";
+    var total = (state.images || []).length;
+    els.imageSelectAllCheckbox.disabled = total === 0;
+    els.imageSelectAllCheckbox.checked = total > 0 && count === total;
+    els.imageSelectAllCheckbox.indeterminate = count > 0 && count < total;
+    els.imageRemoveAllBtn.disabled = total === 0;
+    els.imageRemoveAllBtn.title = total === 0 ? "No images in this group yet." : removeVerb + " all " + total + " images" + removeAllSuffix;
+  }
+
+  els.imageSelectAllCheckbox.addEventListener("change", function(){
+    var checked = els.imageSelectAllCheckbox.checked;
+    state.selectedImageIds = new Set(checked ? (state.images || []).map(function(m){ return m.IMAGE_ASSET_ID; }) : []);
+    els.imageListBody.querySelectorAll(".image-check").forEach(function(cb){ cb.checked = checked; });
+    updateImageBulkActionButtons();
+  });
+
+  // Removing from All Images (the master list) deletes the image from the
+  // project entirely; removing from any other group just unlinks it from that
+  // group. Note that deleting an image produced by Align Movies only drops
+  // the asset row -- the alignment it came from stays, and re-running the job
+  // would produce it again. Same scope as the movie panel's Remove.
+  function removeImages(imageIds){
+    if (!imageIds.length || !state.projectId) return;
+    var url = state.selectedImageGroupId === 0
+      ? projectApiUrl("/images/delete")
+      : projectApiUrl("/image-groups/" + state.selectedImageGroupId + "/remove-images");
+    apiFetch(url, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({image_ids: imageIds})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      loadImageGroups();
+      loadImages();
+    }).catch(function(err){
+      alert("Could not remove images: " + err.message);
+    });
+  }
+
+  els.imageRemoveBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedImageIds);
+    if (!ids.length) return;
+    var message = state.selectedImageGroupId === 0
+      ? "Permanently delete " + ids.length + " selected image" + (ids.length === 1 ? "" : "s") + " from the project? This cannot be undone."
+      : "Remove " + ids.length + " selected image" + (ids.length === 1 ? "" : "s") + " from this group? They'll stay in All Images.";
+    if (!confirm(message)) return;
+    removeImages(ids);
+  });
+
+  els.imageRemoveAllBtn.addEventListener("click", function(){
+    var ids = (state.images || []).map(function(m){ return m.IMAGE_ASSET_ID; });
+    if (!ids.length) return;
+    var message = state.selectedImageGroupId === 0
+      ? "Permanently delete all " + ids.length + " images in the project? This cannot be undone."
+      : "Remove all " + ids.length + " images from this group? They'll stay in All Images.";
+    if (!confirm(message)) return;
+    removeImages(ids);
+  });
+
+  els.imageAddToGroupBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedImageIds);
+    if (!ids.length || !state.projectId) return;
+    var groupName = prompt("Add " + ids.length + " selected image" + (ids.length === 1 ? "" : "s") + " to group (existing or new name):");
+    if (groupName === null) return;
+    if (!groupName.trim()) return;
+    apiFetch(projectApiUrl("/images/add-to-group"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({image_ids: ids, group_name: groupName})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      loadImageGroups();
+    }).catch(function(err){
+      alert("Could not add to group: " + err.message);
+    });
+  });
+
+  // ---------- image groups ----------
+  els.imageGroupAddBtn.addEventListener("click", function(){
+    if (!state.projectId) return;
+    var groupName = prompt("New image group name:");
+    if (groupName === null) return;
+    if (!groupName.trim()) return;
+    apiFetch(projectApiUrl("/image-groups"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: groupName})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(g){
+      state.selectedImageGroupId = g.group_id;
+      loadImageGroups();
+      loadImages();
+    }).catch(function(err){
+      alert("Could not create group: " + err.message);
+    });
+  });
+
+  function selectedImageGroupName(){
+    var g = (state.imageGroups || []).filter(function(x){ return x.group_id === state.selectedImageGroupId; })[0];
+    return g ? g.group_name : "this group";
+  }
+
+  function selectedImageGroupCount(){
+    var g = (state.imageGroups || []).filter(function(x){ return x.group_id === state.selectedImageGroupId; })[0];
+    return g ? g.image_count : 0;
+  }
+
+  function updateImageGroupActionButtons(){
+    var isAllImages = state.selectedImageGroupId === 0;
+    var reason = "The All Images group can't be renamed, removed or inverted.";
+    els.imageGroupRenameBtn.disabled = isAllImages;
+    els.imageGroupRenameBtn.title = isAllImages ? reason : 'Rename "' + selectedImageGroupName() + '".';
+    els.imageGroupRemoveBtn.disabled = isAllImages;
+    els.imageGroupRemoveBtn.title = isAllImages ? reason : 'Remove the group "' + selectedImageGroupName() + '" (its images stay in All Images).';
+    els.imageGroupInvertBtn.disabled = isAllImages;
+    els.imageGroupInvertBtn.title = isAllImages
+      ? reason
+      : 'Invert "' + selectedImageGroupName() + '" — it will hold the images it doesn\'t hold now.';
+  }
+
+  els.imageGroupRenameBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedImageGroupId === 0) return;
+    var groupName = prompt('Rename "' + selectedImageGroupName() + '" to:', selectedImageGroupName());
+    if (groupName === null) return;
+    if (!groupName.trim()) return;
+    apiFetch(projectApiUrl("/image-groups/" + state.selectedImageGroupId), {
+      method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: groupName})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      loadImageGroups();
+    }).catch(function(err){
+      alert("Could not rename group: " + err.message);
+    });
+  });
+
+  els.imageGroupRemoveBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedImageGroupId === 0) return;
+    var name = selectedImageGroupName();
+    if (!confirm('Remove the group "' + name + '"? Its images stay in All Images.')) return;
+    apiFetch(projectApiUrl("/image-groups/" + state.selectedImageGroupId), {method: "DELETE"}).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      state.selectedImageGroupId = 0;
+      loadImageGroups();
+      loadImages();
+    }).catch(function(err){
+      alert("Could not remove group: " + err.message);
+    });
+  });
+
+  els.imageGroupInvertBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedImageGroupId === 0) return;
+    var name = selectedImageGroupName();
+    var was = selectedImageGroupCount();
+    var allImages = (state.imageGroups || []).filter(function(g){ return g.group_id === 0; })[0];
+    var willBe = (allImages ? allImages.image_count : 0) - was;
+    if (!confirm('Invert "' + name + '"? It holds ' + was + ' image' + (was === 1 ? "" : "s")
+      + ' now and will hold the other ' + willBe + '.')) return;
+    apiFetch(projectApiUrl("/image-groups/" + state.selectedImageGroupId + "/invert"), {
+      method: "POST", headers: {"Content-Type": "application/json"}
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      loadImageGroups();
+      loadImages();
+    }).catch(function(err){
+      alert("Could not invert group: " + err.message);
+    });
+  });
+
+  function loadImageGroups(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/image-groups")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){ renderImageGroupList((data && data.image_groups) || []); }).catch(function(){});
+  }
+
+  function renderImageGroupList(groups){
+    state.imageGroups = groups;
+    els.imageGroupList.innerHTML = "";
+    if (!groups.some(function(g){ return g.group_id === state.selectedImageGroupId; })){
+      state.selectedImageGroupId = 0;
+    }
+    groups.forEach(function(g){
+      var li = document.createElement("li");
+      li.textContent = g.group_name + " (" + g.image_count + ")";
+      li.dataset.groupId = g.group_id;
+      li.classList.toggle("selected", g.group_id === state.selectedImageGroupId);
+      li.addEventListener("click", function(){ selectImageGroup(g.group_id); });
+      els.imageGroupList.appendChild(li);
+    });
+    updateImageGroupActionButtons();
+  }
+
+  function selectImageGroup(groupId){
+    state.selectedImageGroupId = groupId;
+    els.imageGroupList.querySelectorAll("li").forEach(function(li){
+      li.classList.toggle("selected", Number(li.dataset.groupId) === groupId);
+    });
+    updateImageGroupActionButtons();
+    loadImages();
   }
 
   // ---------- submit ----------

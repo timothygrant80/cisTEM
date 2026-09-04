@@ -172,6 +172,20 @@ def _encode_png(gray):
     )
 
 
+def render_image_preview(path):
+    """Returns (png_bytes, {width, height}) for an already-averaged image.
+
+    Same binning and contrast stretch as a movie preview, but reading only
+    the first slice: an image asset is a single micrograph, and where the
+    file does happen to hold more than one section (an .mrcs that was
+    imported as an image), section 1 is the one the asset refers to --
+    POSITION_IN_STACK is 1 for every imported image. Summing them the way a
+    movie preview does would blur unrelated exposures together.
+    """
+    png, meta = render_movie_preview(path, max_frames=1)
+    return png, {"width": meta["width"], "height": meta["height"]}
+
+
 def render_movie_preview(path, max_frames=None):
     """Returns (png_bytes, {width, height, frames_summed, frames_total}).
 

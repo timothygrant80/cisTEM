@@ -321,7 +321,7 @@ def _write_motion_correction_results(project_id, job):
             )
             alignment_id = cur.lastrowid
 
-            conn.execute(
+            cur = conn.execute(
                 "INSERT INTO IMAGE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "
                 "X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) "
@@ -331,6 +331,13 @@ def _write_motion_correction_results(project_id, job):
                     movie["X_SIZE"], movie["Y_SIZE"], final_pixel_size, movie["VOLTAGE"],
                     movie["SPHERICAL_ABERRATION"], movie["PROTEIN_IS_WHITE"],
                 ),
+            )
+            # An aligned micrograph is an image asset like any other, so it
+            # joins All Images here rather than waiting for db.py's backfill
+            # to notice it on the next connection.
+            conn.execute(
+                "INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) VALUES (0, ?)",
+                (cur.lastrowid,),
             )
 
         conn.execute(
@@ -407,18 +414,24 @@ def version_route():
 
 
 MOVIE_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff", ".eer"}
+# What each Import dialog's "Browse..." picker will show. Images never
+# include .eer -- see IMAGE_IMPORT_EXTENSIONS, which the import route
+# enforces on the resolved files regardless of what the picker offered.
+BROWSABLE_EXTENSIONS = {"movie": MOVIE_EXTENSIONS, "image": {".mrc", ".mrcs", ".tif", ".tiff"}}
 
 
 @app.route("/api/browse")
 @auth.login_required
 def browse_filesystem():
-    """Lists one directory on this server's own filesystem, for the Movie
-    files "Browse..." picker on the Import Movies dialog. Deliberately the
-    server's filesystem, not the browser's: a hand-typed glob in that same
-    field is already resolved against this machine (see import_movies()), so
-    this is just a friendlier way to fill it in -- not a new capability an
-    authenticated user didn't already have.
+    """Lists one directory on this server's own filesystem, for the "Browse..."
+    picker on the Import Movies and Import Images dialogs. `types` (movie /
+    image) picks which extensions are listed; anything else falls back to
+    movies. Deliberately the server's filesystem, not the browser's: a
+    hand-typed glob in that same field is already resolved against this
+    machine (see import_movies()), so this is just a friendlier way to fill
+    it in -- not a new capability an authenticated user didn't already have.
     """
+    extensions = BROWSABLE_EXTENSIONS.get(request.args.get("types"), MOVIE_EXTENSIONS)
     raw_path = request.args.get("path") or str(Path.home())
     path = Path(raw_path).expanduser()
     if not path.is_dir():
@@ -439,7 +452,7 @@ def browse_filesystem():
             continue
         if is_dir:
             directories.append(entry.name)
-        elif entry.suffix.lower() in MOVIE_EXTENSIONS:
+        elif entry.suffix.lower() in extensions:
             files.append(entry.name)
     directories.sort(key=str.lower)
     files.sort(key=str.lower)
@@ -570,11 +583,69 @@ def delete_project_route(project_id):
 
 
 # ---------------------------------------------------------------------------
-# Movie import routes (project-scoped)
+# Asset routes (project-scoped)
+#
+# Movies and images are the same object with different metadata: a named file
+# on disk, in one master group plus any number of user-made groups, listed /
+# grouped / removed identically. So everything that doesn't depend on *which*
+# metadata a kind carries -- grouping, membership, deletion, the
+# already-imported check -- is written once against an AssetKind and shared,
+# the way cisTEM hangs MyMovieAssetPanel and MyImageAssetPanel off a common
+# MyAssetPanelParent. Only import and preview stay per-kind, because that is
+# exactly where the two genuinely differ (frames, dose, gain/dark and EER are
+# movie-only; parent movie and alignment are image-only).
 # ---------------------------------------------------------------------------
 
+class AssetKind:
+    """Table and response-key names for one kind of asset."""
+
+    def __init__(self, noun, asset_table, id_column, group_table, member_table, all_group_name):
+        self.noun = noun  # "movie" / "image"
+        self.plural = noun + "s"
+        self.asset_table = asset_table
+        self.id_column = id_column
+        self.group_table = group_table
+        self.member_table = member_table
+        self.all_group_name = all_group_name
+
+    # Response keys, kept in the shape the frontend already reads:
+    # {"movies": [...]}, {"movie_groups": [...]}, {"movie_count": n}, and
+    # {"movie_ids": [...]} on the way in.
+    @property
+    def list_key(self):
+        return self.plural
+
+    @property
+    def groups_key(self):
+        return self.noun + "_groups"
+
+    @property
+    def count_key(self):
+        return self.noun + "_count"
+
+    @property
+    def ids_key(self):
+        return self.noun + "_ids"
+
+
+MOVIE_KIND = AssetKind("movie", "MOVIE_ASSETS", "MOVIE_ASSET_ID",
+                       "MOVIE_GROUP_LIST", "MOVIE_GROUP_MEMBERS", "All Movies")
+IMAGE_KIND = AssetKind("image", "IMAGE_ASSETS", "IMAGE_ASSET_ID",
+                       "IMAGE_GROUP_LIST", "IMAGE_GROUP_MEMBERS", "All Images")
+
+# Group 0 is the master list db.py seeds into every project -- every asset is
+# a member of it, and the app treats it as the source of truth for what
+# exists. Renaming, deleting or inverting it would leave the project without
+# one, so the routes below refuse it for both kinds.
+ALL_GROUP_ID = 0
+
+# Images are 2D micrographs, so unlike movies they are never EER: an EER file
+# is a raw movie container by construction. Cf. imageheaders.read_image_header().
+IMAGE_IMPORT_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff"}
+
+
 def _canonical_path(path):
-    """One spelling per file, so the same movie reached by a different route
+    """One spelling per file, so the same file reached by a different route
     (relative vs absolute, a symlinked share, a trailing /./) is recognised as
     already imported rather than added twice."""
     try:
@@ -583,31 +654,39 @@ def _canonical_path(path):
         return str(Path(path).expanduser())
 
 
-def _imported_movie_paths(conn):
-    """Canonical paths of every movie already in this project, for the
-    already-an-asset check (cf. IsFileAnAsset() in the reference dialog).
+def _imported_paths(conn, kind):
+    """Canonical paths of every asset of this kind already in the project, for
+    the already-an-asset check (cf. IsFileAnAsset() in the reference dialogs).
     Rows imported before paths were canonicalised are folded in too."""
-    rows = conn.execute("SELECT FILENAME FROM MOVIE_ASSETS WHERE FILENAME IS NOT NULL").fetchall()
+    rows = conn.execute(
+        "SELECT FILENAME FROM {} WHERE FILENAME IS NOT NULL".format(kind.asset_table)
+    ).fetchall()
     return {_canonical_path(r["FILENAME"]) for r in rows}
 
 
-def _partition_matches(conn, input_glob):
+def _partition_matches(conn, kind, input_glob, allowed_extensions=None):
     """Splits the glob's matches into ones not yet imported and ones already
-    present, both in sorted canonical form."""
-    already = _imported_movie_paths(conn)
-    matched = {_canonical_path(p) for p in glob_module.glob(input_glob) if Path(p).is_file()}
+    present, both in sorted canonical form. allowed_extensions, when given,
+    drops matches of any other type -- the image import uses it so a
+    directory-wide glob can't pull an EER movie in as a micrograph."""
+    already = _imported_paths(conn, kind)
+    matched = set()
+    for path in glob_module.glob(input_glob):
+        if not Path(path).is_file():
+            continue
+        if allowed_extensions is not None and Path(path).suffix.lower() not in allowed_extensions:
+            continue
+        matched.add(_canonical_path(path))
     return sorted(matched - already), sorted(matched & already)
 
 
-@app.route("/api/projects/<project_id>/movies/check-import", methods=["POST"])
-@auth.project_access_required
-def check_import(project_id):
-    """Resolves a glob, checks the gain/dark references exist, and reports how
-    many matches are already imported, so the Import Movies dialog can keep
-    its Import button disabled until there's something new to import. The
-    reference dialog can stat files and consult its own asset list locally;
-    both live on the server here, so the dialog has to ask. Exposes no more
-    of the filesystem than /api/browse already does.
+def _check_import(project_id, kind, allowed_extensions=None):
+    """Resolves a glob, checks any referenced files exist, and reports how many
+    matches are already imported, so an Import dialog can keep its Import
+    button disabled until there's something new to import. The reference
+    dialogs can stat files and consult their own asset list locally; both live
+    on the server here, so the dialog has to ask. Exposes no more of the
+    filesystem than /api/browse already does.
     """
     body = request.get_json(force=True, silent=True) or {}
     input_glob = (body.get("glob") or "").strip()
@@ -615,7 +694,9 @@ def check_import(project_id):
     new_paths, duplicate_paths = [], []
     if input_glob:
         conn = db.get_conn(project_id)
-        new_paths, duplicate_paths = _partition_matches(conn, input_glob)
+        new_paths, duplicate_paths = _partition_matches(
+            conn, kind, input_glob, allowed_extensions=allowed_extensions
+        )
         conn.close()
 
     files = {}
@@ -633,84 +714,352 @@ def check_import(project_id):
     })
 
 
-@app.route("/api/projects/<project_id>/movies", methods=["GET"])
-@auth.project_access_required
-def list_movies(project_id):
+def _list_assets(project_id, kind):
     group_id = request.args.get("group_id", type=int)
     conn = db.get_conn(project_id)
     if group_id is None:
-        rows = conn.execute("SELECT * FROM MOVIE_ASSETS ORDER BY MOVIE_ASSET_ID").fetchall()
+        rows = conn.execute(
+            "SELECT * FROM {t} ORDER BY {id}".format(t=kind.asset_table, id=kind.id_column)
+        ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT a.* FROM MOVIE_ASSETS a "
-            "JOIN MOVIE_GROUP_MEMBERS m ON m.MOVIE_ASSET_ID = a.MOVIE_ASSET_ID "
-            "WHERE m.GROUP_ID = ? ORDER BY a.MOVIE_ASSET_ID",
+            "SELECT a.* FROM {t} a JOIN {m} m ON m.{id} = a.{id} "
+            "WHERE m.GROUP_ID = ? ORDER BY a.{id}".format(
+                t=kind.asset_table, m=kind.member_table, id=kind.id_column
+            ),
             (group_id,),
         ).fetchall()
     conn.close()
-    return jsonify({"movies": [dict(r) for r in rows]})
+    return jsonify({kind.list_key: [dict(r) for r in rows]})
 
 
-@app.route("/api/projects/<project_id>/movies/<int:movie_id>/preview.png", methods=["GET"])
-@auth.project_access_required
-def movie_preview(project_id, movie_id):
-    """Renders the movie's summed frames as a PNG for the Display button.
+def _list_groups(project_id, kind):
+    conn = db.get_conn(project_id)
+    rows = conn.execute(
+        "SELECT g.GROUP_ID as group_id, g.GROUP_NAME as group_name, "
+        "COUNT(m.{id}) as {count} "
+        "FROM {g} g LEFT JOIN {m} m ON m.GROUP_ID = g.GROUP_ID "
+        "GROUP BY g.GROUP_ID ORDER BY g.GROUP_ID".format(
+            id=kind.id_column, count=kind.count_key, g=kind.group_table, m=kind.member_table
+        )
+    ).fetchall()
+    conn.close()
+    return jsonify({kind.groups_key: [dict(r) for r in rows]})
+
+
+def _create_group(project_id, kind):
+    body = request.get_json(force=True, silent=True) or {}
+    group_name = (body.get("group_name") or "").strip()
+    if not group_name:
+        return jsonify({"error": "group_name is required"}), 400
+
+    conn = db.get_conn(project_id)
+    existing = conn.execute(
+        "SELECT GROUP_ID FROM {} WHERE LOWER(GROUP_NAME) = LOWER(?)".format(kind.group_table),
+        (group_name,),
+    ).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({"error": 'a group named "{}" already exists'.format(group_name)}), 400
+    with conn:
+        cur = conn.execute(
+            "INSERT INTO {}(GROUP_NAME, LIST_ID) VALUES (?, 0)".format(kind.group_table),
+            (group_name,),
+        )
+        group_id = cur.lastrowid
+    conn.close()
+    return jsonify({"group_id": group_id, "group_name": group_name}), 201
+
+
+def _rename_group(project_id, kind, group_id):
+    if group_id == ALL_GROUP_ID:
+        return jsonify({"error": "the {} group cannot be renamed".format(kind.all_group_name)}), 400
+    body = request.get_json(force=True, silent=True) or {}
+    group_name = (body.get("group_name") or "").strip()
+    if not group_name:
+        return jsonify({"error": "group_name is required"}), 400
+
+    conn = db.get_conn(project_id)
+    row = conn.execute(
+        "SELECT GROUP_ID FROM {} WHERE GROUP_ID = ?".format(kind.group_table), (group_id,)
+    ).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such group"}), 404
+    clash = conn.execute(
+        "SELECT GROUP_ID FROM {} WHERE LOWER(GROUP_NAME) = LOWER(?) AND GROUP_ID != ?".format(
+            kind.group_table
+        ),
+        (group_name, group_id),
+    ).fetchone()
+    if clash:
+        conn.close()
+        return jsonify({"error": 'a group named "{}" already exists'.format(group_name)}), 400
+    with conn:
+        conn.execute(
+            "UPDATE {} SET GROUP_NAME = ? WHERE GROUP_ID = ?".format(kind.group_table),
+            (group_name, group_id),
+        )
+    conn.close()
+    return jsonify({"group_id": group_id, "group_name": group_name})
+
+
+def _delete_group(project_id, kind, group_id):
+    # Drops the group and its memberships only -- the assets themselves stay
+    # in the project (they're still in the master group), the same distinction
+    # the per-asset Remove makes between a group and the master list.
+    if group_id == ALL_GROUP_ID:
+        return jsonify({"error": "the {} group cannot be deleted".format(kind.all_group_name)}), 400
+
+    conn = db.get_conn(project_id)
+    row = conn.execute(
+        "SELECT GROUP_ID FROM {} WHERE GROUP_ID = ?".format(kind.group_table), (group_id,)
+    ).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such group"}), 404
+    with conn:
+        conn.execute("DELETE FROM {} WHERE GROUP_ID = ?".format(kind.member_table), (group_id,))
+        conn.execute("DELETE FROM {} WHERE GROUP_ID = ?".format(kind.group_table), (group_id,))
+    conn.close()
+    return jsonify({"ok": True})
+
+
+def _invert_group(project_id, kind, group_id):
+    """Replaces the group's membership with its complement against the master
+    group: afterwards it holds exactly the assets it didn't hold before.
+
+    Refused for group 0 for the same reason rename and delete are -- it is the
+    master list, and its complement is the empty set, which would read as
+    "this project has nothing in it".
+    """
+    if group_id == ALL_GROUP_ID:
+        return jsonify({"error": "the {} group cannot be inverted".format(kind.all_group_name)}), 400
+
+    conn = db.get_conn(project_id)
+    row = conn.execute(
+        "SELECT GROUP_ID FROM {} WHERE GROUP_ID = ?".format(kind.group_table), (group_id,)
+    ).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such group"}), 404
+
+    with conn:
+        before = {
+            r[kind.id_column] for r in conn.execute(
+                "SELECT {id} FROM {m} WHERE GROUP_ID = ?".format(
+                    id=kind.id_column, m=kind.member_table
+                ),
+                (group_id,),
+            )
+        }
+        every = {
+            r[kind.id_column] for r in conn.execute(
+                "SELECT {id} FROM {t}".format(id=kind.id_column, t=kind.asset_table)
+            )
+        }
+        after = every - before
+        conn.execute("DELETE FROM {} WHERE GROUP_ID = ?".format(kind.member_table), (group_id,))
+        conn.executemany(
+            "INSERT INTO {m}(GROUP_ID, {id}) VALUES (?, ?)".format(
+                m=kind.member_table, id=kind.id_column
+            ),
+            [(group_id, asset_id) for asset_id in sorted(after)],
+        )
+    conn.close()
+    return jsonify({"was": len(before), "now": len(after)})
+
+
+def _requested_asset_ids(kind):
+    body = request.get_json(force=True, silent=True) or {}
+    return body.get(kind.ids_key) or []
+
+
+def _delete_assets(project_id, kind):
+    # A straightforward delete -- doesn't cascade-clean any downstream results
+    # (e.g. the MOVIE_ALIGNMENT_LIST/IMAGE_ASSETS rows a completed Align
+    # Movies job may already have written for these movies, or the images
+    # those rows point at), matching this app's existing scope: only Align
+    # Movies is wired to real project data end-to-end, and nothing here
+    # reconciles derived results either.
+    asset_ids = _requested_asset_ids(kind)
+    if not asset_ids:
+        return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
+
+    conn = db.get_conn(project_id)
+    with conn:
+        placeholders = ",".join("?" * len(asset_ids))
+        conn.execute(
+            "DELETE FROM {m} WHERE {id} IN ({p})".format(
+                m=kind.member_table, id=kind.id_column, p=placeholders
+            ),
+            asset_ids,
+        )
+        cur = conn.execute(
+            "DELETE FROM {t} WHERE {id} IN ({p})".format(
+                t=kind.asset_table, id=kind.id_column, p=placeholders
+            ),
+            asset_ids,
+        )
+        deleted = cur.rowcount
+    conn.close()
+    return jsonify({"deleted": deleted})
+
+
+def _remove_from_group(project_id, kind, group_id):
+    # Unlinks assets from this one group only -- they stay in the master group
+    # (and any other group they're a member of), unlike the delete route.
+    # "Remove" while viewing the master group means removing the asset from
+    # the project entirely, since that's the master list; that's what the
+    # delete route is for, so group 0 isn't handled here.
+    if group_id == ALL_GROUP_ID:
+        return jsonify({
+            "error": "group 0 is {} -- use the delete route to remove {} from the project".format(
+                kind.all_group_name, kind.plural
+            )
+        }), 400
+    asset_ids = _requested_asset_ids(kind)
+    if not asset_ids:
+        return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
+
+    conn = db.get_conn(project_id)
+    with conn:
+        placeholders = ",".join("?" * len(asset_ids))
+        cur = conn.execute(
+            "DELETE FROM {m} WHERE GROUP_ID = ? AND {id} IN ({p})".format(
+                m=kind.member_table, id=kind.id_column, p=placeholders
+            ),
+            [group_id] + asset_ids,
+        )
+        removed = cur.rowcount
+    conn.close()
+    return jsonify({"removed": removed})
+
+
+def _add_to_group(project_id, kind):
+    body = request.get_json(force=True, silent=True) or {}
+    asset_ids = body.get(kind.ids_key) or []
+    group_name = (body.get("group_name") or "").strip()
+    if not asset_ids:
+        return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
+    if not group_name:
+        return jsonify({"error": "group_name is required"}), 400
+
+    conn = db.get_conn(project_id)
+    with conn:
+        row = conn.execute(
+            "SELECT GROUP_ID FROM {} WHERE LOWER(GROUP_NAME) = LOWER(?)".format(kind.group_table),
+            (group_name,),
+        ).fetchone()
+        if row:
+            group_id = row["GROUP_ID"]
+            created = False
+        else:
+            cur = conn.execute(
+                "INSERT INTO {}(GROUP_NAME, LIST_ID) VALUES (?, 0)".format(kind.group_table),
+                (group_name,),
+            )
+            group_id = cur.lastrowid
+            created = True
+
+        for asset_id in asset_ids:
+            conn.execute(
+                "INSERT OR IGNORE INTO {m}(GROUP_ID, {id}) VALUES (?, ?)".format(
+                    m=kind.member_table, id=kind.id_column
+                ),
+                (group_id, asset_id),
+            )
+    conn.close()
+    return jsonify({"group_id": group_id, "group_name": group_name, "created": created})
+
+
+def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
+    """Shared plumbing for the Display button: look the asset up, check the
+    file is there and renderable, and serve the PNG with an ETag on the
+    file's mtime+size so reopening it is a 304.
 
     Rendering takes ~100ms for a 300MB stack, so it's done inline rather than
     as a background job -- but it's deterministic for a given file, so the
-    response is cached and revalidated against the file's mtime and size.
+    response is cached and revalidated rather than re-rendered.
     """
     conn = db.get_conn(project_id)
     row = conn.execute(
-        "SELECT NAME, FILENAME FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID = ?", (movie_id,)
+        "SELECT NAME, FILENAME FROM {t} WHERE {id} = ?".format(
+            t=kind.asset_table, id=kind.id_column
+        ),
+        (asset_id,),
     ).fetchone()
     conn.close()
     if row is None:
-        return jsonify({"error": "no such movie"}), 404
+        return jsonify({"error": "no such {}".format(kind.noun)}), 404
 
     path = row["FILENAME"]
     if not path or not Path(path).is_file():
-        return jsonify({"error": "movie file is missing: {}".format(path)}), 404
+        return jsonify({"error": "{} file is missing: {}".format(kind.noun, path)}), 404
     if not preview.can_preview(path):
         return jsonify({
-            "error": "previews aren't supported for {} files".format(Path(path).suffix.lower() or "these")
+            "error": "previews aren't supported for {} files".format(
+                Path(path).suffix.lower() or "these"
+            )
         }), 415
 
     stat = Path(path).stat()
-    etag = '"{}-{}-{}"'.format(movie_id, int(stat.st_mtime), stat.st_size)
+    etag = '"{}-{}-{}-{}"'.format(kind.noun, asset_id, int(stat.st_mtime), stat.st_size)
     if request.headers.get("If-None-Match") == etag:
         return "", 304
 
     try:
-        png, meta = preview.render_movie_preview(path)
+        png, meta = render(path)
     except preview.PreviewError as exc:
         return jsonify({"error": str(exc)}), 422
 
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
     response.headers["Cache-Control"] = "private, max-age=3600"
-    response.headers["X-Preview-Frames-Summed"] = str(meta["frames_summed"])
-    response.headers["X-Preview-Frames-Total"] = str(meta["frames_total"])
+    for header, value in (extra_headers or {}).items():
+        response.headers[header] = str(meta[value])
     return response
+
+
+# ---------------------------------------------------------------------------
+# Movie routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/projects/<project_id>/movies/check-import", methods=["POST"])
+@auth.project_access_required
+def check_movie_import(project_id):
+    return _check_import(project_id, MOVIE_KIND)
+
+
+@app.route("/api/projects/<project_id>/movies", methods=["GET"])
+@auth.project_access_required
+def list_movies(project_id):
+    return _list_assets(project_id, MOVIE_KIND)
+
+
+@app.route("/api/projects/<project_id>/movies/<int:movie_id>/preview.png", methods=["GET"])
+@auth.project_access_required
+def movie_preview(project_id, movie_id):
+    """The movie's frames, summed. A single frame of counting-mode data is
+    essentially shot noise, so only the sum is worth looking at."""
+    return _preview_response(
+        project_id, MOVIE_KIND, movie_id, preview.render_movie_preview,
+        extra_headers={
+            "X-Preview-Frames-Summed": "frames_summed",
+            "X-Preview-Frames-Total": "frames_total",
+        },
+    )
 
 
 @app.route("/api/projects/<project_id>/movie-groups", methods=["GET"])
 @auth.project_access_required
 def list_movie_groups(project_id):
-    conn = db.get_conn(project_id)
-    rows = conn.execute(
-        "SELECT g.GROUP_ID as group_id, g.GROUP_NAME as group_name, "
-        "COUNT(m.MOVIE_ASSET_ID) as movie_count "
-        "FROM MOVIE_GROUP_LIST g LEFT JOIN MOVIE_GROUP_MEMBERS m ON m.GROUP_ID = g.GROUP_ID "
-        "GROUP BY g.GROUP_ID ORDER BY g.GROUP_ID"
-    ).fetchall()
-    conn.close()
-    return jsonify({"movie_groups": [dict(r) for r in rows]})
+    return _list_groups(project_id, MOVIE_KIND)
 
 
 @app.route("/api/projects/<project_id>/movies/import-defaults", methods=["GET"])
 @auth.project_access_required
-def get_import_defaults(project_id):
+def get_movie_import_defaults(project_id):
     conn = db.get_conn(project_id)
     row = conn.execute("SELECT * FROM MOVIE_IMPORT_DEFAULTS WHERE NUMBER=1").fetchone()
     conn.close()
@@ -787,7 +1136,7 @@ def import_movies(project_id):
     conn = db.get_conn(project_id)
     # Files already in this project are skipped rather than added twice --
     # the same call IsFileAnAsset() makes in the reference dialog.
-    matched, already_imported = _partition_matches(conn, input_glob)
+    matched, already_imported = _partition_matches(conn, MOVIE_KIND, input_glob)
     if not matched and not already_imported:
         conn.close()
         return jsonify({"error": "no files match that path: {}".format(input_glob)}), 400
@@ -811,8 +1160,7 @@ def import_movies(project_id):
     asset_eer_super_res_factor = eer_super_res_factor if is_eer_import else None
 
     # Imports land in the All Movies group (id 0) only -- organizing movies
-    # into other groups is a separate, not-yet-built feature (see the
-    # disabled Add/Remove/Invert buttons on the Groups panel).
+    # into other groups is what Add To Group is for, after the fact.
     with conn:
         movie_ids = []
         failed = []
@@ -889,218 +1237,224 @@ def import_movies(project_id):
 @app.route("/api/projects/<project_id>/movie-groups", methods=["POST"])
 @auth.project_access_required
 def create_movie_group(project_id):
-    body = request.get_json(force=True, silent=True) or {}
-    group_name = (body.get("group_name") or "").strip()
-    if not group_name:
-        return jsonify({"error": "group_name is required"}), 400
-
-    conn = db.get_conn(project_id)
-    existing = conn.execute(
-        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE LOWER(GROUP_NAME) = LOWER(?)", (group_name,)
-    ).fetchone()
-    if existing:
-        conn.close()
-        return jsonify({"error": 'a group named "{}" already exists'.format(group_name)}), 400
-    with conn:
-        cur = conn.execute(
-            "INSERT INTO MOVIE_GROUP_LIST(GROUP_NAME, LIST_ID) VALUES (?, 0)", (group_name,)
-        )
-        group_id = cur.lastrowid
-    conn.close()
-    return jsonify({"group_id": group_id, "group_name": group_name}), 201
-
-
-# Group 0 is the "All Movies" master list db.py seeds into every project --
-# every movie is a member of it, and the app treats it as the source of
-# truth for what exists. Renaming or deleting it would leave the project
-# without one, so both routes below refuse it.
-ALL_MOVIES_GROUP_ID = 0
+    return _create_group(project_id, MOVIE_KIND)
 
 
 @app.route("/api/projects/<project_id>/movie-groups/<int:group_id>", methods=["PATCH"])
 @auth.project_access_required
 def rename_movie_group(project_id, group_id):
-    if group_id == ALL_MOVIES_GROUP_ID:
-        return jsonify({"error": "the All Movies group cannot be renamed"}), 400
-    body = request.get_json(force=True, silent=True) or {}
-    group_name = (body.get("group_name") or "").strip()
-    if not group_name:
-        return jsonify({"error": "group_name is required"}), 400
-
-    conn = db.get_conn(project_id)
-    row = conn.execute(
-        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,)
-    ).fetchone()
-    if row is None:
-        conn.close()
-        return jsonify({"error": "no such group"}), 404
-    clash = conn.execute(
-        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE LOWER(GROUP_NAME) = LOWER(?) AND GROUP_ID != ?",
-        (group_name, group_id),
-    ).fetchone()
-    if clash:
-        conn.close()
-        return jsonify({"error": 'a group named "{}" already exists'.format(group_name)}), 400
-    with conn:
-        conn.execute(
-            "UPDATE MOVIE_GROUP_LIST SET GROUP_NAME = ? WHERE GROUP_ID = ?", (group_name, group_id)
-        )
-    conn.close()
-    return jsonify({"group_id": group_id, "group_name": group_name})
+    return _rename_group(project_id, MOVIE_KIND, group_id)
 
 
 @app.route("/api/projects/<project_id>/movie-groups/<int:group_id>", methods=["DELETE"])
 @auth.project_access_required
 def delete_movie_group(project_id, group_id):
-    # Drops the group and its memberships only -- the movies themselves stay
-    # in the project (they're still in All Movies), same distinction the
-    # per-movie Remove makes between a group and the master list.
-    if group_id == ALL_MOVIES_GROUP_ID:
-        return jsonify({"error": "the All Movies group cannot be deleted"}), 400
-
-    conn = db.get_conn(project_id)
-    row = conn.execute(
-        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,)
-    ).fetchone()
-    if row is None:
-        conn.close()
-        return jsonify({"error": "no such group"}), 404
-    with conn:
-        conn.execute("DELETE FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ?", (group_id,))
-        conn.execute("DELETE FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,))
-    conn.close()
-    return jsonify({"ok": True})
+    return _delete_group(project_id, MOVIE_KIND, group_id)
 
 
 @app.route("/api/projects/<project_id>/movie-groups/<int:group_id>/invert", methods=["POST"])
 @auth.project_access_required
 def invert_movie_group(project_id, group_id):
-    """Replaces the group's membership with its complement against All Movies:
-    afterwards it holds exactly the movies it didn't hold before.
-
-    Refused for group 0 for the same reason rename and delete are -- All
-    Movies is the master list, and its complement is the empty set, which
-    would read as "this project has no movies".
-    """
-    if group_id == ALL_MOVIES_GROUP_ID:
-        return jsonify({"error": "the All Movies group cannot be inverted"}), 400
-
-    conn = db.get_conn(project_id)
-    row = conn.execute(
-        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,)
-    ).fetchone()
-    if row is None:
-        conn.close()
-        return jsonify({"error": "no such group"}), 404
-
-    with conn:
-        before = {
-            r["MOVIE_ASSET_ID"] for r in conn.execute(
-                "SELECT MOVIE_ASSET_ID FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ?", (group_id,)
-            )
-        }
-        every = {
-            r["MOVIE_ASSET_ID"] for r in conn.execute("SELECT MOVIE_ASSET_ID FROM MOVIE_ASSETS")
-        }
-        after = every - before
-        conn.execute("DELETE FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ?", (group_id,))
-        conn.executemany(
-            "INSERT INTO MOVIE_GROUP_MEMBERS(GROUP_ID, MOVIE_ASSET_ID) VALUES (?, ?)",
-            [(group_id, movie_id) for movie_id in sorted(after)],
-        )
-    conn.close()
-    return jsonify({"was": len(before), "now": len(after)})
+    return _invert_group(project_id, MOVIE_KIND, group_id)
 
 
 @app.route("/api/projects/<project_id>/movies/delete", methods=["POST"])
 @auth.project_access_required
 def delete_movies(project_id):
-    # A straightforward delete -- doesn't cascade-clean any downstream
-    # results (e.g. MOVIE_ALIGNMENT_LIST/IMAGE_ASSETS rows) a completed
-    # Align Movies job may have already written for these movies, matching
-    # this app's existing scope (only Align Movies is wired to real project
-    # data end-to-end; nothing here reconciles derived results either).
-    body = request.get_json(force=True, silent=True) or {}
-    movie_ids = body.get("movie_ids") or []
-    if not movie_ids:
-        return jsonify({"error": "movie_ids is required"}), 400
-
-    conn = db.get_conn(project_id)
-    with conn:
-        placeholders = ",".join("?" * len(movie_ids))
-        conn.execute(
-            "DELETE FROM MOVIE_GROUP_MEMBERS WHERE MOVIE_ASSET_ID IN ({})".format(placeholders),
-            movie_ids,
-        )
-        cur = conn.execute(
-            "DELETE FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID IN ({})".format(placeholders),
-            movie_ids,
-        )
-        deleted = cur.rowcount
-    conn.close()
-    return jsonify({"deleted": deleted})
+    return _delete_assets(project_id, MOVIE_KIND)
 
 
 @app.route("/api/projects/<project_id>/movie-groups/<int:group_id>/remove-movies", methods=["POST"])
 @auth.project_access_required
 def remove_movies_from_group(project_id, group_id):
-    # Unlinks movies from this one group only -- they stay in All Movies
-    # (and any other group they're a member of), unlike /movies/delete.
-    # "Remove" while viewing All Movies means removing the movie from the
-    # project entirely, since that's the master list; that's what
-    # /movies/delete is for, so group 0 isn't handled here.
-    if group_id == 0:
-        return jsonify({"error": "group 0 is All Movies -- use /movies/delete to remove movies from the project"}), 400
-    body = request.get_json(force=True, silent=True) or {}
-    movie_ids = body.get("movie_ids") or []
-    if not movie_ids:
-        return jsonify({"error": "movie_ids is required"}), 400
-
-    conn = db.get_conn(project_id)
-    with conn:
-        placeholders = ",".join("?" * len(movie_ids))
-        cur = conn.execute(
-            "DELETE FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ? AND MOVIE_ASSET_ID IN ({})".format(placeholders),
-            [group_id] + movie_ids,
-        )
-        removed = cur.rowcount
-    conn.close()
-    return jsonify({"removed": removed})
+    return _remove_from_group(project_id, MOVIE_KIND, group_id)
 
 
 @app.route("/api/projects/<project_id>/movies/add-to-group", methods=["POST"])
 @auth.project_access_required
 def add_movies_to_group(project_id):
+    return _add_to_group(project_id, MOVIE_KIND)
+
+
+# ---------------------------------------------------------------------------
+# Image routes
+#
+# An image asset is one already-averaged micrograph -- either produced by
+# Align Movies (which writes IMAGE_ASSETS rows with a parent movie and an
+# alignment id) or imported here from micrographs aligned elsewhere. Both
+# kinds live in the same table and the same All Images group, which is why
+# the import route below leaves PARENT_MOVIE_ID/ALIGNMENT_ID at -1 rather
+# than NULL: that's the sentinel cisTEM's own AddNextImageAsset() uses for
+# "imported, no parent in this project".
+# ---------------------------------------------------------------------------
+
+@app.route("/api/projects/<project_id>/images/check-import", methods=["POST"])
+@auth.project_access_required
+def check_image_import(project_id):
+    return _check_import(project_id, IMAGE_KIND, allowed_extensions=IMAGE_IMPORT_EXTENSIONS)
+
+
+@app.route("/api/projects/<project_id>/images", methods=["GET"])
+@auth.project_access_required
+def list_images(project_id):
+    return _list_assets(project_id, IMAGE_KIND)
+
+
+@app.route("/api/projects/<project_id>/images/<int:image_id>/preview.png", methods=["GET"])
+@auth.project_access_required
+def image_preview(project_id, image_id):
+    """One micrograph, rendered as-is -- nothing to sum, unlike a movie."""
+    return _preview_response(project_id, IMAGE_KIND, image_id, preview.render_image_preview)
+
+
+@app.route("/api/projects/<project_id>/image-groups", methods=["GET"])
+@auth.project_access_required
+def list_image_groups(project_id):
+    return _list_groups(project_id, IMAGE_KIND)
+
+
+@app.route("/api/projects/<project_id>/images/import-defaults", methods=["GET"])
+@auth.project_access_required
+def get_image_import_defaults(project_id):
+    conn = db.get_conn(project_id)
+    row = conn.execute("SELECT * FROM IMAGE_IMPORT_DEFAULTS WHERE NUMBER=1").fetchone()
+    conn.close()
+    return jsonify(dict(row) if row else {})
+
+
+@app.route("/api/projects/<project_id>/images/import", methods=["POST"])
+@auth.project_access_required
+def import_images(project_id):
+    """Imports micrographs as image assets.
+
+    Deliberately much shorter than import_movies(): an image is already
+    averaged, so there are no frames to count, no dose to record, no gain or
+    dark reference to apply and no EER sampling to resolve -- exactly the
+    difference between cisTEM's own MyImageImportDialog and
+    MyMovieImportDialog, whose field set is voltage / Cs / pixel size /
+    contrast and nothing more.
+    """
     body = request.get_json(force=True, silent=True) or {}
-    movie_ids = body.get("movie_ids") or []
-    group_name = (body.get("group_name") or "").strip()
-    if not movie_ids:
-        return jsonify({"error": "movie_ids is required"}), 400
-    if not group_name:
-        return jsonify({"error": "group_name is required"}), 400
+
+    input_glob = (body.get("input_glob") or "").strip()
+    voltage_kv = body.get("voltage_kv")
+    cs_mm = body.get("cs_mm")
+    pixel_size_a = body.get("pixel_size_a")
+    protein_is_white = bool(body.get("protein_is_white"))
+
+    # Mirrors CheckImportButtonStatus() in MyImageImportDialog.cpp: files
+    # chosen, and voltage/pixel size/Cs all non-empty.
+    errors = []
+    if not input_glob:
+        errors.append("image files path is required")
+    for label, value in (
+        ("voltage", voltage_kv),
+        ("spherical aberration (Cs)", cs_mm),
+        ("pixel size", pixel_size_a),
+    ):
+        if value is None or value == "":
+            errors.append("{} is required".format(label))
+    if errors:
+        return jsonify({"error": "; ".join(errors)}), 400
 
     conn = db.get_conn(project_id)
-    with conn:
-        row = conn.execute(
-            "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE LOWER(GROUP_NAME) = LOWER(?)", (group_name,)
-        ).fetchone()
-        if row:
-            group_id = row["GROUP_ID"]
-            created = False
-        else:
-            cur = conn.execute(
-                "INSERT INTO MOVIE_GROUP_LIST(GROUP_NAME, LIST_ID) VALUES (?, 0)", (group_name,)
+    matched, already_imported = _partition_matches(
+        conn, IMAGE_KIND, input_glob, allowed_extensions=IMAGE_IMPORT_EXTENSIONS
+    )
+    if not matched and not already_imported:
+        conn.close()
+        return jsonify({"error": "no files match that path: {}".format(input_glob)}), 400
+    if not matched:
+        conn.close()
+        return jsonify({
+            "error": "all {} matching file{} already imported".format(
+                len(already_imported), "" if len(already_imported) == 1 else "s are"
             )
-            group_id = cur.lastrowid
-            created = True
+        }), 400
 
-        for movie_id in movie_ids:
-            conn.execute(
-                "INSERT OR IGNORE INTO MOVIE_GROUP_MEMBERS(GROUP_ID, MOVIE_ASSET_ID) VALUES (?, ?)",
-                (group_id, movie_id),
+    with conn:
+        image_ids = []
+        failed = []
+        for path in matched:
+            name = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+            try:
+                header = imageheaders.read_image_header(path)
+            except imageheaders.HeaderError as exc:
+                failed.append({"path": path, "reason": str(exc)})
+                continue
+            cur = conn.execute(
+                "INSERT INTO IMAGE_ASSETS("
+                "NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "
+                "CTF_ESTIMATION_ID, X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, "
+                "SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    name, path, 1, -1, -1, -1,
+                    header["x_size"], header["y_size"], pixel_size_a, voltage_kv,
+                    cs_mm, int(protein_is_white),
+                ),
             )
+            image_id = cur.lastrowid
+            image_ids.append(image_id)
+            conn.execute(
+                "INSERT INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) VALUES (0, ?)",
+                (image_id,),
+            )
+
+        conn.execute(
+            "UPDATE IMAGE_IMPORT_DEFAULTS SET VOLTAGE=?, SPHERICAL_ABERRATION=?, PIXEL_SIZE=?, "
+            "PROTEIN_IS_WHITE=? WHERE NUMBER=1",
+            (voltage_kv, cs_mm, pixel_size_a, int(protein_is_white)),
+        )
     conn.close()
-    return jsonify({"group_id": group_id, "group_name": group_name, "created": created})
+
+    return jsonify({
+        "image_count": len(image_ids),
+        "skipped_count": len(already_imported),
+        "failed": failed,
+    }), 201
+
+
+@app.route("/api/projects/<project_id>/image-groups", methods=["POST"])
+@auth.project_access_required
+def create_image_group(project_id):
+    return _create_group(project_id, IMAGE_KIND)
+
+
+@app.route("/api/projects/<project_id>/image-groups/<int:group_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_image_group(project_id, group_id):
+    return _rename_group(project_id, IMAGE_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/image-groups/<int:group_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_image_group(project_id, group_id):
+    return _delete_group(project_id, IMAGE_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/image-groups/<int:group_id>/invert", methods=["POST"])
+@auth.project_access_required
+def invert_image_group(project_id, group_id):
+    return _invert_group(project_id, IMAGE_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/images/delete", methods=["POST"])
+@auth.project_access_required
+def delete_images(project_id):
+    return _delete_assets(project_id, IMAGE_KIND)
+
+
+@app.route("/api/projects/<project_id>/image-groups/<int:group_id>/remove-images", methods=["POST"])
+@auth.project_access_required
+def remove_images_from_group(project_id, group_id):
+    return _remove_from_group(project_id, IMAGE_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/images/add-to-group", methods=["POST"])
+@auth.project_access_required
+def add_images_to_group(project_id):
+    return _add_to_group(project_id, IMAGE_KIND)
 
 
 # ---------------------------------------------------------------------------

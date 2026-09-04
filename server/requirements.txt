@@ -1,2 +1,5 @@
 flask>=3.0
 flask-cors>=4.0
+# Only needed for the movie preview renderer (server/preview.py) -- summing
+# and rescaling frames in pure Python takes seconds per image instead of ms.
+numpy>=1.24

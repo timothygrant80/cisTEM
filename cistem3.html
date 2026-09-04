@@ -340,6 +340,14 @@ td.mono{font-family:var(--font-mono);}
 .browse-scrim{z-index:22;}
 .modal.browse-modal{z-index:23;}
 
+/* The preview is a picture, so it gets more room than the form modals. */
+.modal.preview-modal{width:min(900px,94vw);}
+.preview-stage{
+  display:flex;align-items:center;justify-content:center;min-height:220px;
+  background:var(--surface-sunken);border:1px solid var(--border);
+}
+.preview-stage img{display:block;max-width:100%;height:auto;}
+
 .browse-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .browse-path{
   font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);
@@ -589,7 +597,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small" id="movieRemoveAllBtn" disabled title="No movies in this group yet.">Remove All</button>
                 <button class="small" disabled title="Not implemented yet.">Rename</button>
                 <button class="small" id="movieAddToGroupBtn" disabled title="Select one or more movies first.">Add To Group</button>
-                <button class="small" disabled title="No image viewer in this reference app.">Display</button>
+                <button class="small" id="movieDisplayBtn" disabled title="Select a movie first.">Display</button>
               </div>
             </div>
           </div>
@@ -799,6 +807,21 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
 </div>
 
+<div class="scrim" id="previewScrim"></div>
+<div class="modal preview-modal" id="previewModal">
+  <div class="modal-head">
+    <div class="modal-title" id="previewTitle">Movie</div>
+    <button class="log-close" id="previewModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="preview-stage" id="previewStage">
+      <p class="form-note" id="previewStatus">Rendering…</p>
+      <img id="previewImg" alt="" hidden>
+    </div>
+    <p class="form-note" id="previewNote"></p>
+  </div>
+</div>
+
 <div class="scrim" id="scrim"></div>
 <div class="log-drawer" id="logDrawer">
   <div class="log-head">
@@ -924,6 +947,8 @@ From branch : <span id="versionBranch">—</span></p>
    "movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
+   "movieDisplayBtn","previewScrim","previewModal","previewModalClose","previewTitle",
+   "previewStage","previewStatus","previewImg","previewNote",
    "assetpageMovies","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
    "dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
@@ -2059,6 +2084,7 @@ From branch : <span id="versionBranch">—</span></p>
     state.selectedMovieId = null;
     state.selectedMovieIds = new Set();
     updateMovieDetails(null);
+    updateDisplayButton(null);
     updateBulkActionButtons();
     els.movieListBody.innerHTML = "";
     if (!movies.length){
@@ -2105,7 +2131,83 @@ From branch : <span id="versionBranch">—</span></p>
     });
     var movie = (state.movies || []).filter(function(m){ return m.MOVIE_ASSET_ID === movieId; })[0];
     updateMovieDetails(movie || null);
+    updateDisplayButton(movie || null);
   }
+
+  // ---------- movie preview (the Display button) ----------
+  // Only MRC renders so far; TIFF needs an LZW decoder and EER needs Thermo's
+  // electron-event decoder, so those stay disabled with a tooltip saying so.
+  var PREVIEWABLE_RE = /\.mrcs?$/i;
+  var previewObjectUrl = null;
+
+  function updateDisplayButton(movie){
+    if (!movie){
+      els.movieDisplayBtn.disabled = true;
+      els.movieDisplayBtn.title = "Select a movie first.";
+      return;
+    }
+    var previewable = PREVIEWABLE_RE.test(movie.FILENAME || "");
+    els.movieDisplayBtn.disabled = !previewable;
+    els.movieDisplayBtn.title = previewable
+      ? "Show " + (movie.NAME || "this movie") + " (frames summed)."
+      : "Preview isn't supported for this file type yet — MRC only for now.";
+  }
+
+  function releasePreviewUrl(){
+    if (previewObjectUrl){
+      URL.revokeObjectURL(previewObjectUrl);
+      previewObjectUrl = null;
+    }
+  }
+
+  function openPreviewModal(movie){
+    els.previewModal.classList.add("open");
+    els.previewScrim.classList.add("open");
+    els.previewTitle.textContent = movie.NAME || "Movie";
+    els.previewStatus.textContent = "Rendering…";
+    els.previewStatus.hidden = false;
+    els.previewImg.hidden = true;
+    els.previewNote.textContent = "";
+    releasePreviewUrl();
+
+    // An <img src> can't carry the Authorization header this API needs, so
+    // the PNG is fetched through apiFetch and shown from a blob URL.
+    apiFetch(projectApiUrl("/movies/" + movie.MOVIE_ASSET_ID + "/preview.png")).then(function(r){
+      if (!r.ok){
+        return r.json().catch(function(){ return {}; }).then(function(d){
+          throw new Error((d && d.error) || ("HTTP " + r.status));
+        });
+      }
+      var summed = r.headers.get("X-Preview-Frames-Summed");
+      return r.blob().then(function(blob){ return {blob: blob, summed: summed}; });
+    }).then(function(result){
+      previewObjectUrl = URL.createObjectURL(result.blob);
+      els.previewImg.src = previewObjectUrl;
+      els.previewImg.hidden = false;
+      els.previewStatus.hidden = true;
+      els.previewNote.textContent = result.summed
+        ? "Sum of " + result.summed + " frames. A single frame of counting-mode data is mostly shot noise, so the sum is what's shown."
+        : "";
+    }).catch(function(err){
+      els.previewStatus.textContent = "Could not render preview: " + err.message;
+      els.previewStatus.hidden = false;
+    });
+  }
+
+  function closePreviewModal(){
+    els.previewModal.classList.remove("open");
+    els.previewScrim.classList.remove("open");
+    els.previewImg.removeAttribute("src");
+    els.previewImg.hidden = true;
+    releasePreviewUrl();
+  }
+
+  els.movieDisplayBtn.addEventListener("click", function(){
+    var movie = (state.movies || []).filter(function(m){ return m.MOVIE_ASSET_ID === state.selectedMovieId; })[0];
+    if (movie) openPreviewModal(movie);
+  });
+  els.previewModalClose.addEventListener("click", closePreviewModal);
+  els.previewScrim.addEventListener("click", closePreviewModal);
 
   // ---------- movie multi-select (for Remove / Add To Group) ----------
   function toggleMovieChecked(movieId, checked){

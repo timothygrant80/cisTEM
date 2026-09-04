@@ -46,6 +46,7 @@ from flask_cors import CORS
 import auth
 import db
 import imageheaders
+import preview
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
@@ -648,6 +649,48 @@ def list_movies(project_id):
         ).fetchall()
     conn.close()
     return jsonify({"movies": [dict(r) for r in rows]})
+
+
+@app.route("/api/projects/<project_id>/movies/<int:movie_id>/preview.png", methods=["GET"])
+@auth.project_access_required
+def movie_preview(project_id, movie_id):
+    """Renders the movie's summed frames as a PNG for the Display button.
+
+    Rendering takes ~100ms for a 300MB stack, so it's done inline rather than
+    as a background job -- but it's deterministic for a given file, so the
+    response is cached and revalidated against the file's mtime and size.
+    """
+    conn = db.get_conn(project_id)
+    row = conn.execute(
+        "SELECT NAME, FILENAME FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID = ?", (movie_id,)
+    ).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such movie"}), 404
+
+    path = row["FILENAME"]
+    if not path or not Path(path).is_file():
+        return jsonify({"error": "movie file is missing: {}".format(path)}), 404
+    if not preview.can_preview(path):
+        return jsonify({
+            "error": "no preview for {} files yet".format(Path(path).suffix.lower() or "these")
+        }), 415
+
+    stat = Path(path).stat()
+    etag = '"{}-{}-{}"'.format(movie_id, int(stat.st_mtime), stat.st_size)
+    if request.headers.get("If-None-Match") == etag:
+        return "", 304
+
+    try:
+        png, meta = preview.render_movie_preview(path)
+    except preview.PreviewError as exc:
+        return jsonify({"error": str(exc)}), 422
+
+    response = app.response_class(png, mimetype="image/png")
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "private, max-age=3600"
+    response.headers["X-Preview-Frames-Summed"] = str(meta["frames_summed"])
+    return response
 
 
 @app.route("/api/projects/<project_id>/movie-groups", methods=["GET"])

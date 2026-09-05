@@ -2,7 +2,16 @@
  * cistem_job_controller -- the per-job controller that speaks cisTEM Job
  * Protocol v1 to a job server and the legacy socket protocol to the workers.
  *
- *     cistem_job_controller <hosts> <port> <token> [--reconnect-window S]
+ *     cistem_job_controller <hosts> <port> <token> [--reconnect-window S] [--worker-timeout S]
+ *
+ * --worker-timeout (default 300 s) is how long to wait for the *first* worker
+ * to connect after the run commands are launched. The legacy controller waits
+ * forever, so a run command that silently fails (executable not on PATH on the
+ * remote host, a rejected sbatch) leaves a job "running" until someone notices.
+ * Once any worker has connected the timeout is off: the rest may be queued in
+ * a scheduler, and the master dispatches to whoever is there. Set it in the
+ * run profile's manager command, e.g. "$command --worker-timeout 3600", when
+ * a cluster queue can legitimately take longer than the default.
  *
  * This is guix_job_control.cpp with its GUI-facing half replaced. Everything
  * on the worker side is unchanged and still comes from SocketCommunicator:
@@ -57,6 +66,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <atomic>
 
 #include "../../core/core_headers.h"
 #include "../../core/socket_codes.h"
@@ -204,6 +214,10 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     long          server_port;
     wxString      token;
     double        reconnect_window_seconds;
+    double        worker_timeout_seconds;
+    // 0 = not waiting; otherwise the NowMs() by which the first worker must
+    // have connected. Written on the main thread, polled by the link thread.
+    std::atomic<long> worker_connect_deadline_ms;
 
     // ---- link to the server (guarded by link_mutex) ----
     wxMutex            link_mutex;
@@ -275,6 +289,8 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     void HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes);
 
     void LaunchWorkers( );
+    void CheckWorkerTimeout( );   // link thread: poll the deadline
+    void WorkerTimeoutExpired( ); // main thread: fail the job
     void KillWorkers( );
     // Safe from any thread: schedules the real shutdown on the main thread.
     void Shutdown(int exit_code, bool kill_workers = false);
@@ -443,6 +459,7 @@ class ServerLinkThread : public wxThread {
             bool lost       = false;
 
             while ( ! lost ) {
+                app->CheckWorkerTimeout( );
                 wxUint8                    kind = 0;
                 std::vector<unsigned char> payload;
                 ReadStatus                 status = ReadFrame(sock, kind, payload);
@@ -588,6 +605,8 @@ IMPLEMENT_APP(JobControllerApp)
 JobControllerApp::JobControllerApp( ) {
     server_port                         = 0;
     reconnect_window_seconds            = 600.0;
+    worker_timeout_seconds              = 300.0;
+    worker_connect_deadline_ms          = 0;
     server_socket                       = NULL;
     our_seq                             = 0;
     last_server_seq                     = 0;
@@ -626,6 +645,7 @@ void JobControllerApp::OnEventLoopEnter(wxEventLoopBase* loop) {
             {wxCMD_LINE_PARAM, NULL, NULL, "port", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_OPTION_MANDATORY},
             {wxCMD_LINE_PARAM, NULL, NULL, "token", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY},
             {wxCMD_LINE_OPTION, NULL, "reconnect-window", "seconds to keep trying to reach the server", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_PARAM_OPTIONAL},
+            {wxCMD_LINE_OPTION, NULL, "worker-timeout", "seconds to wait for the first worker to connect (0 = forever)", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_PARAM_OPTIONAL},
             {wxCMD_LINE_SWITCH, NULL, "verbose", "print protocol traffic to stderr", wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL},
             {wxCMD_LINE_NONE}};
 
@@ -648,6 +668,9 @@ void JobControllerApp::OnEventLoopEnter(wxEventLoopBase* loop) {
     long window;
     if ( command_line_parser.Found("reconnect-window", &window) )
         reconnect_window_seconds = double(window);
+    long worker_timeout;
+    if ( command_line_parser.Found("worker-timeout", &worker_timeout) )
+        worker_timeout_seconds = double(worker_timeout);
 
     // The legacy worker protocol identifies connections by a 16-byte job
     // code. Derive one from the token so it is per job and unguessable
@@ -979,6 +1002,8 @@ void JobControllerApp::LaunchWorkers( ) {
 
     SendLog("info", wxString::Format("Launching %i worker process(es) for %s", ExpectedWorkers( ), current_job_package.my_profile.executable_name));
     SendWorkers( );
+    if ( worker_timeout_seconds > 0 )
+        worker_connect_deadline_ms = NowMs( ) + long(worker_timeout_seconds * 1000.0);
 
     LaunchJobThread* launch_thread = new LaunchJobThread(this, current_job_package.my_profile, ip_address_string, my_port_string, current_job_code, current_job_package.number_of_jobs);
     if ( launch_thread->Run( ) != wxTHREAD_NO_ERROR ) {
@@ -986,6 +1011,26 @@ void JobControllerApp::LaunchWorkers( ) {
         SendLog("error", "could not start the worker launch thread");
         SendJobDone("failed", 0, "could not start the worker launch thread");
     }
+}
+
+void JobControllerApp::CheckWorkerTimeout( ) {
+    long deadline = worker_connect_deadline_ms.load( );
+    if ( deadline != 0 && NowMs( ) > deadline ) {
+        worker_connect_deadline_ms = 0; // fire once
+        CallAfter(std::bind(&JobControllerApp::WorkerTimeoutExpired, this));
+    }
+}
+
+void JobControllerApp::WorkerTimeoutExpired( ) {
+    if ( have_assigned_master || cancel_in_progress || job_done_seq >= 0 )
+        return;
+    wxString why = wxString::Format(
+            "no worker process connected within %.0f s of launching the run commands -- check that '%s' is on the PATH "
+            "where they run, and that the commands themselves succeed (their output is in this job's controller log)",
+            worker_timeout_seconds, current_job_package.my_profile.executable_name);
+    SendLog("error", why);
+    KillWorkers( );
+    SendJobDone("failed", 0, why);
 }
 
 void JobControllerApp::KillWorkers( ) {
@@ -1018,6 +1063,7 @@ void JobControllerApp::HandleNewSocketConnection(wxSocketBase* new_connection, u
         new_connection->Destroy( );
     }
     else if ( ! have_assigned_master ) {
+        worker_connect_deadline_ms = 0; // somebody made it; the rest may still be queued
         master_socket        = new_connection;
         have_assigned_master = true;
         WriteToSocket(new_connection, socket_you_are_the_master, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);

@@ -270,6 +270,16 @@ button.link:hover{background:none;text-decoration:underline;}
 /* Run profile + start button on one line at the foot of the panel, the way
    cisTEM's StartPanel lays them out. */
 .run-bar{display:flex;align-items:flex-end;gap:12px;margin-top:16px;flex-shrink:0;}
+.progress-panel{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-shrink:0;}
+.progress-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.progress-track-wide{flex:1;width:auto;height:15px;}
+.progress-pct{font-size:12px;color:var(--text-secondary);min-width:38px;text-align:right;}
+.progress-time{font-size:12px;color:var(--text-secondary);}
+.progress-spacer{flex:1;}
+.run-view .run-body{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;}
+.run-view .ctf-result,.run-view .pick-result{grid-template-columns:1fr;}
+.run-view .pick-numbers,.run-view .ctf-numbers{grid-template-columns:repeat(2,1fr);}
+.form-disabled{opacity:.55;}
 .run-profile-field{margin:0;flex:0 1 260px;}
 .run-bar .primary{margin-left:auto;}
 
@@ -1046,12 +1056,33 @@ From branch : <span id="versionBranch">—</span></p>
               <button class="primary" id="submitBtn">Run</button>
             </div>
             <p class="form-note" id="submitNote">Paths are passed through as typed — point them at wherever your pipeline reads and writes on the machine running the API server.</p>
+            <!-- cisTEM's ProgressPanel: while a job started from this panel
+                 runs, the start button gives way to its progress bar, time
+                 remaining and Terminate; when it is done, Finish hands the
+                 panel back. The job's latest result is drawn on the right. -->
+            <div class="progress-panel" id="progressPanel" hidden>
+              <div class="progress-row">
+                <div class="progress-track progress-track-wide"><div class="progress-fill" id="progressFill"></div></div>
+                <span class="progress-pct mono" id="progressPct">0%</span>
+              </div>
+              <div class="progress-row">
+                <span class="progress-time mono" id="progressTime">Time Remaining : ???h:??m:??s</span>
+                <span class="progress-spacer"></span>
+                <button class="small danger" id="terminateBtn">Terminate Job</button>
+                <button class="small primary" id="finishBtn" hidden>Finish</button>
+              </div>
+              <p class="form-note" id="progressNote"></p>
+            </div>
           </div>
 
           <div class="groupbox stage-info" id="stageInfo" hidden>
             <span class="groupbox-label" id="stageInfoLabel">Information</span>
             <div class="info-body" id="stageInfoBody"></div>
             <div class="info-body preview-view" id="previewView" hidden></div>
+            <div class="info-body run-view" id="runView" hidden>
+              <div class="empty-note" id="runEmpty">Waiting for the first result\u2026</div>
+              <div class="live-body run-body" id="runBody" hidden></div>
+            </div>
           </div>
         </div>
       </section>
@@ -1610,7 +1641,7 @@ From branch : <span id="versionBranch">—</span></p>
    "rpCommandsBody","rpCmdAddBtn","rpCmdEditBtn","rpCmdRemoveBtn","rpSaveBtn",
    "rpCmdScrim","rpCmdModal","rpCmdModalClose","rpCmdCommand","rpCmdCopies","rpCmdThreads","rpCmdDelay",
    "rpCmdOverride","rpCmdOverridden","rpCmdError","rpCmdOkBtn","rpCmdCancelBtn",
-   "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody","previewBar","previewImage","previewBtn","previewAuto","previewStatus","previewView","previewInfoBtn",
+   "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody","progressPanel","progressFill","progressPct","progressTime","terminateBtn","finishBtn","progressNote","runView","runEmpty","runBody","previewBar","previewImage","previewBtn","previewAuto","previewStatus","previewView","previewInfoBtn",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
   ].forEach(function(id){ els[id] = document.getElementById(id); });
 
@@ -1922,7 +1953,7 @@ From branch : <span id="versionBranch">—</span></p>
     var stage = STAGES[state.currentStage];
     renderGroupedFields(els.paramFields, stage.fields);
     renderGroupedFields(els.expertFields, stage.expertFields);
-    if (typeof resetPreviewForStage === "function") setTimeout(resetPreviewForStage, 0);
+    if (typeof resetPreviewForStage === "function") setTimeout(function(){ resetPreviewForStage(); restorePanelRun(); }, 0);
     // Both sets are rebuilt from scratch here, so the conditional wiring has
     // to be reattached each time rather than set up once at load.
     wireConditionalFields(els.paramFields, stage.fields);
@@ -3412,7 +3443,7 @@ From branch : <span id="versionBranch">—</span></p>
     state.projectName = null;
     state.jobs = [];
     state.jobsSeen = false;
-    state.selectedJobId = null; live.jobId = null; els.livePanel.hidden = true;
+    state.selectedJobId = null; live.stop(); els.livePanel.hidden = true; panelRunReset();
     updateTopSub();
     showScreen("home");
   }
@@ -4836,6 +4867,7 @@ From branch : <span id="versionBranch">—</span></p>
     var reason = null;
     if (!state.connected) reason = "Connect to a pipeline API first.";
     else if (!state.projectId) reason = "Open a project first.";
+    else if (state.panelJobs && state.panelJobs[state.currentStage]) reason = "A job from this panel is still being followed \u2014 click Finish first.";
     else if (!state.runProfiles || !state.runProfiles.length) reason = "No run profiles are defined \u2014 an administrator adds them on the home page.";
     else {
       var count = selectedGroupCount();
@@ -4870,6 +4902,7 @@ From branch : <span id="versionBranch">—</span></p>
   function previewSupported(){ return !!(STAGES[state.currentStage] && STAGES[state.currentStage].preview); }
   function previewReleaseUrls(){ pv.urls.forEach(function(u){ URL.revokeObjectURL(u); }); pv.urls = []; }
   function previewShowInfo(showInfo){
+    if (!els.runView.hidden) return; // a running job owns the panel
     pv.shown = !showInfo;
     els.stageInfoBody.hidden = !showInfo;
     els.previewView.hidden = showInfo;
@@ -4969,15 +5002,123 @@ From branch : <span id="versionBranch">—</span></p>
     }).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(){
+    }).then(function(job){
+      // cisTEM stays on the panel: the progress bar and the latest result
+      // take over until Finish. The Jobs tab still lists it.
+      state.panelJobs[state.currentStage] = job.id;
       fetchJobs();
-      showTab("jobs");
+      showPanelRun(job);
     }).catch(function(err){
       alert("Job submission failed: " + err.message);
     }).finally(function(){
       els.submitBtn.disabled = false;
-      els.submitBtn.textContent = "Run";
+      els.submitBtn.textContent = STAGES[state.currentStage].startLabel || "Run";
     });
+  });
+
+  // ---------- the run view (cisTEM's ProgressPanel) ----------
+  // One job per stage panel, remembered in state.panelJobs; a page reload
+  // adopts a still-running job of the stage from the job list. While it
+  // runs the form is greyed and Terminate is offered; when it ends, the
+  // bar says All Done (or why not) and Finish hands the panel back.
+  state.panelJobs = {};
+  var panelLive = makeLiveFollower({
+    body: els.runBody, empty: els.runEmpty,
+    isVisible: function(){ return !pages.actions.hidden && !els.runView.hidden; },
+    onMeta: function(data, job){ renderPanelProgress(job, data); }
+  });
+  function panelJob(){ var id = state.panelJobs[state.currentStage]; return id ? state.jobs.find(function(j){ return j.id === id; }) : null; }
+  function setFormEnabled(enabled){
+    [els.paramFields, els.expertFields, els.previewBar].forEach(function(box){
+      box.querySelectorAll("input, select, button").forEach(function(el){
+        if (!enabled){ el.dataset.wasDisabled = el.disabled ? "1" : ""; el.disabled = true; }
+        else if (el.dataset.wasDisabled !== undefined){ el.disabled = el.dataset.wasDisabled === "1"; delete el.dataset.wasDisabled; }
+      });
+      box.classList.toggle("form-disabled", !enabled);
+    });
+    els.runProfile.disabled = !enabled;
+    if (enabled){
+      var stage = STAGES[state.currentStage];
+      syncConditionalFields(els.paramFields, stage.fields); syncConditionalFields(els.expertFields, stage.expertFields || []);
+    }
+  }
+  function showPanelRun(job){
+    setFormEnabled(false);
+    els.submitBtn.parentElement.hidden = true;
+    els.submitNote.hidden = true;
+    els.progressPanel.hidden = false;
+    els.finishBtn.hidden = true; els.terminateBtn.hidden = false;
+    els.stageInfoBody.hidden = true; els.previewView.hidden = true; els.runView.hidden = false;
+    els.previewInfoBtn.hidden = true;
+    els.stageInfoLabel.textContent = (job.name || job.id) + " \u2014 " + STAGES[job.stage].label;
+    renderPanelProgress(job, null);
+    panelLive.follow(job.id);
+  }
+  function panelRunReset(){
+    panelLive.stop();
+    state.panelJobs = {};
+    hidePanelRun();
+  }
+  function hidePanelRun(){
+    els.progressPanel.hidden = true;
+    els.submitBtn.parentElement.hidden = false;
+    els.submitNote.hidden = false;
+    els.runView.hidden = true; els.runBody.innerHTML = ""; els.runEmpty.hidden = false;
+    setFormEnabled(true);
+    previewShowInfo(true);
+    updateStartButton();
+  }
+  function renderPanelProgress(job, data){
+    if (!job) return;
+    var pct = job.progress != null ? job.progress : 0;
+    var done = TERMINAL_STATUSES[job.status];
+    if (job.status === "completed") pct = 100;
+    els.progressFill.style.width = pct + "%";
+    els.progressFill.className = "progress-fill " + job.status;
+    els.progressPct.textContent = pct + "%";
+    if (done){
+      var took = job.started_at && job.finished_at ? fmtDuration((new Date(job.finished_at) - new Date(job.started_at)) / 1000) : null;
+      els.progressTime.textContent = job.status === "completed" ? "All Done!" + (took ? " (" + took + ")" : "")
+        : job.status === "cancelled" ? "Time Remaining : Terminated" : "Failed" + (job.error ? " \u2014 " + job.error : "");
+      els.terminateBtn.hidden = true; els.finishBtn.hidden = false;
+      els.progressNote.textContent = job.status === "completed" ? "The results are on the Results tab; Finish returns this panel to its form." : "Finish returns this panel to its form.";
+    } else {
+      var eta = estimateRemaining(job);
+      var connected = data && data.task_count != null ? (data.done_count || 0) + " / " + data.task_count + " finished \u00b7 " : "";
+      els.progressTime.textContent = connected + "Time Remaining : " + (eta == null ? "???h:??m:??s" : fmtDuration(eta));
+      els.terminateBtn.hidden = false; els.finishBtn.hidden = true;
+      els.progressNote.textContent = job.status === "queued" ? "Waiting for the job controller and its workers to connect." : "";
+    }
+  }
+  // Called from every job poll: keep the bar current, and adopt a running
+  // job of a stage whose panel isn't following one yet (a reload, or a job
+  // started from another tab).
+  function panelRunTick(){
+    state.jobs.forEach(function(j){
+      if (!TERMINAL_STATUSES[j.status] && !state.panelJobs[j.stage]) state.panelJobs[j.stage] = j.id;
+    });
+    var job = panelJob();
+    if (!job) return;
+    if (els.progressPanel.hidden) showPanelRun(job);
+    else renderPanelProgress(job, panelLive.lastData);
+    panelLive.tick();
+  }
+  function restorePanelRun(){
+    var job = panelJob();
+    if (job) showPanelRun(job); else hidePanelRun();
+  }
+  els.terminateBtn.addEventListener("click", function(){
+    var job = panelJob();
+    if (!job || !confirm("Terminate " + (job.name || job.id) + "? Results already received are kept.")) return;
+    apiFetch(projectApiUrl("/jobs/" + job.id + "/cancel"), {method: "POST"}).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      fetchJobs();
+    }).catch(function(err){ alert("Could not terminate the job: " + err.message); });
+  });
+  els.finishBtn.addEventListener("click", function(){
+    delete state.panelJobs[state.currentStage];
+    panelLive.stop();
+    hidePanelRun();
   });
 
   function collectParams(){
@@ -5049,6 +5190,7 @@ From branch : <span id="versionBranch">—</span></p>
       renderStageInventory();
       if (state.logJobId) refreshLogMeta();
       if (state.selectedJobId) liveFetch();
+      panelRunTick();
       refreshAssetsForFinishedJobs(previous, firstLoad);
     }).catch(function(){
       setConnected(false, "Lost connection");
@@ -5240,76 +5382,110 @@ From branch : <span id="versionBranch">—</span></p>
   // drawn no sooner than LIVE_MIN_INTERVAL_MS after the last redraw; when a
   // job has finished, its last result is shown at once.
   var LIVE_MIN_INTERVAL_MS = 10000;
-  var live = { jobId: null, shownTask: null, shownAt: 0, pending: null, timer: null, urls: [], inflight: false, viewStage: null, render: null };
 
+  // A follower polls one job's latest result (through fetchJobs's tick) and
+  // draws it with the stage's LIVE_VIEWS renderer, redrawing at most every
+  // LIVE_MIN_INTERVAL_MS; a finished job's last result is drawn at once.
+  // Two of them exist: the Jobs tab's Latest Result panel and the Actions
+  // panel's run view.
+  function makeLiveFollower(opts){
+    var f = { jobId: null, shownTask: null, shownAt: 0, pending: null, timer: null, urls: [], inflight: false, viewStage: null, render: null, lastData: null };
+    function releaseUrls(){ f.urls.forEach(function(u){ URL.revokeObjectURL(u); }); f.urls = []; }
+    function job(){ return state.jobs.find(function(j){ return j.id === f.jobId; }); }
+    f.follow = function(jobId){
+      f.jobId = jobId; f.shownTask = null; f.shownAt = 0; f.pending = null; f.viewStage = null; f.render = null; f.lastData = null;
+      if (f.timer){ clearTimeout(f.timer); f.timer = null; }
+      releaseUrls();
+      opts.body.hidden = true; opts.body.innerHTML = "";
+      opts.empty.hidden = false; opts.empty.textContent = "Loading\u2026";
+      if (opts.onMeta) opts.onMeta(null, job());
+      f.tick();
+    };
+    f.stop = function(){
+      f.jobId = null;
+      if (f.timer){ clearTimeout(f.timer); f.timer = null; }
+      releaseUrls();
+    };
+    f.tick = function(){
+      if (!f.jobId || !state.connected || !state.projectId || f.inflight) return;
+      if (opts.isVisible && !opts.isVisible()) return; // nobody is looking; the next poll catches up
+      var jobId = f.jobId;
+      f.inflight = true;
+      apiFetch(projectApiUrl("/jobs/" + jobId + "/latest-result")).then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function(data){
+        f.inflight = false;
+        if (jobId !== f.jobId) return;
+        f.lastData = data;
+        if (opts.onMeta) opts.onMeta(data, job());
+        if (!data.result){
+          if (f.shownTask == null){
+            opts.body.hidden = true; opts.empty.hidden = false;
+            opts.empty.textContent = data.reason || "No result yet";
+          }
+          return;
+        }
+        if (data.result.task_index === f.shownTask) return;
+        var finished = TERMINAL_STATUSES[data.status];
+        var wait = f.shownAt + LIVE_MIN_INTERVAL_MS - Date.now();
+        if (finished || f.shownTask == null || wait <= 0){ show(data.result); return; }
+        // Too soon: hold the newest result and draw it when the interval is up.
+        f.pending = data.result;
+        if (!f.timer) f.timer = setTimeout(function(){
+          f.timer = null;
+          if (f.pending && f.jobId === jobId){ show(f.pending); f.pending = null; }
+        }, wait);
+      }).catch(function(){ f.inflight = false; });
+    };
+    function show(result){
+      f.shownTask = result.task_index; f.shownAt = Date.now();
+      releaseUrls();
+      opts.empty.hidden = true; opts.body.hidden = false;
+      var j = job();
+      var stageKey = j ? j.stage : null;
+      if (f.viewStage !== stageKey || !f.render){
+        opts.body.innerHTML = "";
+        f.viewStage = stageKey;
+        f.render = LIVE_VIEWS[stageKey] ? LIVE_VIEWS[stageKey](opts.body) : null;
+      }
+      if (!f.render){ opts.body.textContent = "No live view for this stage."; return; }
+      f.render(result, "/jobs/" + f.jobId + "/tasks/" + result.task_index + "/", f.urls);
+    }
+    return f;
+  }
+
+  // ---- the Jobs tab's Latest Result panel ----
+  var live = makeLiveFollower({
+    body: els.liveBody, empty: els.liveEmpty,
+    isVisible: function(){ return !pages.jobs.hidden; },
+    onMeta: function(data, job){
+      els.liveLabel.textContent = "Latest Result" + (job ? " \u2014 " + (job.name || job.id) : "");
+      if (!data){ els.liveMeta.textContent = job ? job.status : ""; return; }
+      var parts = [];
+      if (data.task_count != null) parts.push((data.done_count || 0) + " of " + data.task_count + " finished");
+      parts.push(data.status);
+      if (data.result && !TERMINAL_STATUSES[data.status]) parts.push("redraws at most every " + Math.round(LIVE_MIN_INTERVAL_MS / 1000) + " s");
+      if (TERMINAL_STATUSES[data.status] && data.result) parts.push("final results are on the Results tab");
+      els.liveMeta.textContent = parts.join(" \u00b7 ");
+    }
+  });
   function selectJob(jobId){
     if (state.selectedJobId === jobId) return;
     state.selectedJobId = jobId;
-    live.jobId = jobId; live.shownTask = null; live.shownAt = 0; live.pending = null; live.viewStage = null; live.render = null;
-    if (live.timer){ clearTimeout(live.timer); live.timer = null; }
-    liveReleaseUrls();
     renderQueue();
     els.livePanel.hidden = false;
-    els.liveBody.hidden = true;
-    els.liveEmpty.hidden = false;
-    els.liveEmpty.textContent = "Loading\u2026";
-    liveRenderMeta(null);
-    liveFetch();
+    live.follow(jobId);
     els.livePanel.scrollIntoView({block: "nearest", behavior: "smooth"});
   }
   function closeLive(){
-    state.selectedJobId = null; live.jobId = null;
-    if (live.timer){ clearTimeout(live.timer); live.timer = null; }
-    liveReleaseUrls();
+    state.selectedJobId = null;
+    live.stop();
     els.livePanel.hidden = true;
     renderQueue();
   }
-  function liveReleaseUrls(){ live.urls.forEach(function(u){ URL.revokeObjectURL(u); }); live.urls = []; }
+  function liveFetch(){ live.tick(); }
   function selectedJob(){ return state.jobs.find(function(j){ return j.id === state.selectedJobId; }); }
-
-  function liveFetch(){
-    if (!live.jobId || !state.connected || !state.projectId || live.inflight) return;
-    if (pages.jobs.hidden) return; // nobody is looking; the next poll after the tab opens catches up
-    var jobId = live.jobId;
-    live.inflight = true;
-    apiFetch(projectApiUrl("/jobs/" + jobId + "/latest-result")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){
-      live.inflight = false;
-      if (jobId !== live.jobId) return;
-      liveRenderMeta(data);
-      if (!data.result){
-        if (live.shownTask == null){
-          els.liveBody.hidden = true; els.liveEmpty.hidden = false;
-          els.liveEmpty.textContent = data.reason || "No result yet";
-        }
-        return;
-      }
-      if (data.result.task_index === live.shownTask) return;
-      var finished = TERMINAL_STATUSES[data.status];
-      var wait = live.shownAt + LIVE_MIN_INTERVAL_MS - Date.now();
-      if (finished || live.shownTask == null || wait <= 0){ liveShow(data.result); return; }
-      // Too soon: hold the newest result and draw it when the interval is up.
-      live.pending = data.result;
-      if (!live.timer) live.timer = setTimeout(function(){
-        live.timer = null;
-        if (live.pending && live.jobId === jobId){ liveShow(live.pending); live.pending = null; }
-      }, wait);
-    }).catch(function(){ live.inflight = false; });
-  }
-
-  function liveRenderMeta(data){
-    var job = selectedJob();
-    els.liveLabel.textContent = "Latest Result" + (job ? " \u2014 " + (job.name || job.id) : "");
-    if (!data){ els.liveMeta.textContent = job ? job.status : ""; return; }
-    var parts = [];
-    if (data.task_count != null) parts.push((data.done_count || 0) + " of " + data.task_count + " finished");
-    parts.push(data.status);
-    if (data.result && !TERMINAL_STATUSES[data.status]) parts.push("redraws at most every " + Math.round(LIVE_MIN_INTERVAL_MS / 1000) + " s");
-    if (TERMINAL_STATUSES[data.status] && data.result) parts.push("final results are on the Results tab");
-    els.liveMeta.textContent = parts.join(" \u00b7 ");
-  }
 
   // What each stage's live result looks like -- the same views the Results
   // tab uses, fed from the task's own files (pictures are fetched from
@@ -5348,21 +5524,6 @@ From branch : <span id="versionBranch">—</span></p>
       };
     }
   };
-  function liveShow(result){
-    live.shownTask = result.task_index; live.shownAt = Date.now();
-    liveReleaseUrls();
-    els.liveEmpty.hidden = true; els.liveBody.hidden = false;
-    var job = selectedJob();
-    var stageKey = job ? job.stage : null;
-    if (live.viewStage !== stageKey || !live.render){
-      els.liveBody.innerHTML = "";
-      live.viewStage = stageKey;
-      live.render = LIVE_VIEWS[stageKey] ? LIVE_VIEWS[stageKey](els.liveBody) : null;
-    }
-    if (!live.render){ els.liveBody.textContent = "No live view for this stage."; return; }
-    live.render(result, "/jobs/" + live.jobId + "/tasks/" + result.task_index + "/", live.urls);
-  }
-
   els.liveCloseBtn.addEventListener("click", closeLive);
   els.liveLogBtn.addEventListener("click", function(){ if (state.selectedJobId) openLog(state.selectedJobId); });
 

@@ -2071,6 +2071,73 @@ def get_log(project_id, job_id):
     return jsonify({"log": "\n".join(l["LINE"] for l in lines)})
 
 
+def _latest_task(conn, job_id, task_index=None):
+    if task_index is not None:
+        return conn.execute("SELECT * FROM JOB_TASKS WHERE JOB_ID=? AND TASK_INDEX=?", (job_id, task_index)).fetchone()
+    return conn.execute(
+        "SELECT * FROM JOB_TASKS WHERE JOB_ID=? AND STATUS='ok' AND RESULT_JSON IS NOT NULL "
+        "ORDER BY FINISHED_AT DESC, TASK_INDEX DESC LIMIT 1", (job_id,)).fetchone()
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/latest-result")
+@auth.project_access_required
+def get_latest_result(project_id, job_id):
+    """The most recently finished task's result, as the stage's adapter
+    presents it -- what cisTEM's job panel draws while a job runs. The
+    page polls this for the job selected on the Jobs tab and decides for
+    itself how often to redraw; `task_index` lets it tell a new result
+    from the one it is already showing. A job with no adapter (a simulated
+    one) or no finished task yet returns `result: null` with the reason."""
+    row = _fetch_job_row(project_id, job_id)
+    if row is None:
+        return jsonify({"error": "not found"}), 404
+    adapter = stages.ADAPTERS.get(row["STAGE"])
+    out = {"job_id": job_id, "status": row["STATUS"], "progress": row["PROGRESS"], "result": None}
+    if adapter is None or not hasattr(adapter, "live_result"):
+        out["reason"] = "This stage has no live results (it runs in simulation)."
+        return jsonify(out)
+    sent_tasks = json.loads(row["TASKS_JSON"]) if row["TASKS_JSON"] else []
+    conn = db.get_conn(project_id)
+    try:
+        out["task_count"] = len(sent_tasks)
+        out["done_count"] = conn.execute(
+            "SELECT COUNT(*) FROM JOB_TASKS WHERE JOB_ID=? AND STATUS IN ('ok','failed')", (job_id,)).fetchone()[0]
+        task_row = _latest_task(conn, job_id)
+        task = next((t for t in sent_tasks if t["index"] == task_row["TASK_INDEX"]), None) if task_row else None
+        if task is None:
+            out["reason"] = "No movie has finished yet." if row["STATUS"] in ("queued", "running") else "This job recorded no results."
+            return jsonify(out)
+        result = adapter.live_result(conn, task, task_row)
+        if result is None:
+            out["reason"] = "The latest finished task returned no usable result."
+            return jsonify(out)
+        result["task_index"] = task_row["TASK_INDEX"]
+        result["finished_at"] = task_row["FINISHED_AT"]
+        out["result"] = result
+        return jsonify(out)
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/tasks/<int:task_index>/<any(sum, spectrum):which>.png")
+@auth.project_access_required
+def task_result_preview(project_id, job_id, task_index, which):
+    """PNG of one task's aligned sum or spectrum, from the file names the
+    task was sent with -- available as soon as the worker has written them,
+    before the job finishes and the alignment routes know about them."""
+    row = _fetch_job_row(project_id, job_id)
+    if row is None:
+        return jsonify({"error": "not found"}), 404
+    adapter = stages.ADAPTERS.get(row["STAGE"])
+    sent_tasks = json.loads(row["TASKS_JSON"]) if row["TASKS_JSON"] else []
+    task = next((t for t in sent_tasks if t["index"] == task_index), None)
+    if adapter is None or not hasattr(adapter, "live_result_files") or task is None:
+        return jsonify({"error": "no such task"}), 404
+    path = adapter.live_result_files(task).get(which)
+    return _file_preview_response(path, "task-{}-{}-{}".format(which, job_id, task_index),
+                                  "aligned sum" if which == "sum" else "amplitude spectrum")
+
+
 @app.route("/api/projects/<project_id>/jobs/<job_id>/cancel", methods=["POST"])
 @auth.project_access_required
 def cancel_job(project_id, job_id):

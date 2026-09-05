@@ -404,6 +404,20 @@ td.mono{font-family:var(--font-mono);}
   .results-layout > .groupbox.ra-right{height:auto;}
 }
 
+/* ---------- Jobs: latest result of the selected job ---------- */
+.queue-scroll{max-height:340px;overflow-y:auto;}
+.live-plot-title-name{text-transform:none;letter-spacing:0;color:var(--text-secondary);font-weight:600;margin-left:6px;}
+.live-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;}
+.live-meta{font-size:12px;color:var(--text-secondary);}
+.live-meta .mono{font-family:var(--font-mono);color:var(--text-tertiary);}
+.live-actions{display:flex;gap:8px;flex-shrink:0;}
+.live-body{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start;}
+.live-plot-col{min-width:0;}
+@media (max-width:1100px){
+  .live-body{grid-template-columns:1fr 1fr;}
+  .live-plot-col{grid-column:1 / -1;}
+}
+
 /* ---------- Settings: run profiles (cisTEM's RunProfilesPanel) ----------
    Same bounded two-column idiom as .assets-layout: profile list + button
    column on the left, the commands panel on the right, a fixed height with
@@ -1001,7 +1015,7 @@ From branch : <span id="versionBranch">—</span></p>
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
           <div>
             <h2 class="page-heading">Jobs</h2>
-            <p class="page-sub">Every job this project has run &mdash; queued, running and finished. Click a row for its log.</p>
+            <p class="page-sub">Every job this project has run &mdash; queued, running and finished. Click a row to follow its latest result as it runs; Log opens its output.</p>
           </div>
           <button class="small" id="refreshBtn">Refresh</button>
         </div>
@@ -1018,7 +1032,7 @@ From branch : <span id="versionBranch">—</span></p>
         </div>
 
         <div class="groupbox" style="padding:10px;">
-          <div class="table-scroll">
+          <div class="table-scroll queue-scroll">
             <table class="queue">
               <thead>
                 <tr><th>Job</th><th>Stage</th><th>Status</th><th>Progress</th><th>Submitted</th><th></th></tr>
@@ -1027,6 +1041,39 @@ From branch : <span id="versionBranch">—</span></p>
                 <tr><td colspan="6"><div class="empty-note">Not connected to a pipeline API<span class="hint">The page connects on load to the address in config.js.</span></div></td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- What cisTEM's job panel draws while a job runs (ProcessResult():
+             the newest movie's drift plot, aligned sum and spectrum), shown
+             here for whichever job is selected in the table, so several
+             running jobs can be followed one at a time. -->
+        <div class="groupbox live-panel" id="livePanel" hidden>
+          <span class="groupbox-label" id="liveLabel">Latest Result</span>
+          <div class="live-head">
+            <div class="live-meta" id="liveMeta"></div>
+            <div class="live-actions">
+              <button class="small" id="liveLogBtn">Log</button>
+              <button class="small" id="liveCloseBtn" title="Stop following this job">Close</button>
+            </div>
+          </div>
+          <div class="empty-note" id="liveEmpty">No result yet</div>
+          <div class="live-body" id="liveBody" hidden>
+            <div class="live-plot-col">
+              <div class="ra-plot-head">
+                <span class="ra-plot-title" id="livePlotTitle">Drift</span>
+                <span class="ra-legend"><span class="ra-swatch ra-swatch-x"></span>X shift <span class="ra-swatch ra-swatch-y"></span>Y shift</span>
+              </div>
+              <svg class="ra-plot" id="livePlot" viewBox="0 0 640 240" role="img" aria-label="Frame shift against accumulated exposure"></svg>
+            </div>
+            <figure class="ra-figure">
+              <div class="ra-figure-frame"><img id="liveSumImg" alt="Aligned sum" hidden /><span class="ra-figure-status" id="liveSumStatus">Loading&hellip;</span></div>
+              <figcaption>Aligned sum</figcaption>
+            </figure>
+            <figure class="ra-figure">
+              <div class="ra-figure-frame"><img id="liveSpectrumImg" alt="Amplitude spectrum" hidden /><span class="ra-figure-status" id="liveSpectrumStatus">Loading&hellip;</span></div>
+              <figcaption>Amplitude spectrum <span class="ra-nyquist" id="liveNyquist"></span></figcaption>
+            </figure>
           </div>
         </div>
 
@@ -1419,6 +1466,8 @@ From branch : <span id="versionBranch">—</span></p>
    "dImageName","dImageFilename","dImageId","dImageParentId","dImageAlignmentId",
    "dImageXSize","dImageYSize","dImagePixelSize","dImageVoltage","dImageCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
+   "livePanel","liveLabel","liveMeta","liveLogBtn","liveCloseBtn","liveEmpty","liveBody","livePlotTitle","livePlot",
+   "liveSumImg","liveSumStatus","liveSpectrumImg","liveSpectrumStatus","liveNyquist",
    "stageInventoryBody","runProfile","submitNote",
    "rpList","rpAddBtn","rpRenameBtn","rpRemoveBtn","rpDuplicateBtn","rpImportBtn","rpExportBtn","rpImportFile",
    "rpCommandsPanel","rpCommandsLabel","rpTotal","rpManager","rpManagerError",
@@ -1444,7 +1493,8 @@ From branch : <span id="versionBranch">—</span></p>
     projectName: null,
     lastProjectId: localStorage.getItem("cryoem_last_project_id") || null,
     jobs: [],
-    selectedJobId: null,
+    selectedJobId: null,   // the row selected on the Jobs tab; drives the Latest Result panel
+    logJobId: null,        // the job whose log drawer is open
     currentStage: STAGE_ORDER[0],
     expertOpen: false,
     pollTimer: null,
@@ -1996,7 +2046,8 @@ From branch : <span id="versionBranch">—</span></p>
     });
   }
 
-  function raLoadFigure(img, status, path, exists, what){
+  function raLoadFigure(img, status, path, exists, what, urls){
+    urls = urls || ra.urls;
     if (!exists){
       status.hidden = false;
       status.textContent = "The " + what + " file isn\u2019t on disk" + (what === "spectrum" ? " (simulated jobs don\u2019t write one)." : ".");
@@ -2008,7 +2059,7 @@ From branch : <span id="versionBranch">—</span></p>
       return r.blob();
     }).then(function(blob){
       var url = URL.createObjectURL(blob);
-      ra.urls.push(url);
+      urls.push(url);
       img.src = url; img.hidden = false; status.hidden = true;
     }).catch(function(err){
       status.hidden = false; status.textContent = "Could not render the " + what + ": " + err.message; img.hidden = true;
@@ -2050,11 +2101,11 @@ From branch : <span id="versionBranch">—</span></p>
     var norm = raw / mag;
     return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
   }
-  function raDrawPlot(a){
-    var svg = els.raPlot;
+  function raDrawPlot(a){ drawDriftPlot(els.raPlot, a.shifts, a.exposure_per_frame); }
+  function drawDriftPlot(svg, shifts, exposure_per_frame){
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     var W = 640, H = 240, L = 52, R = 14, T = 12, B = 34;
-    var shifts = a.shifts || [];
+    shifts = shifts || [];
     var NS = "http://www.w3.org/2000/svg";
     function el(tag, attrs, text){
       var n = document.createElementNS(NS, tag);
@@ -2066,7 +2117,7 @@ From branch : <span id="versionBranch">—</span></p>
       el("text", {x: W / 2, y: H / 2, "text-anchor": "middle", "class": "axis-label"}, "No per-frame shifts were recorded for this alignment.");
       return;
     }
-    var dose = a.exposure_per_frame || 1;
+    var dose = exposure_per_frame || 1;
     var xs = shifts.map(function(s){ return dose * (s.frame - 1); });
     var ys = shifts.map(function(s){ return s.x; }).concat(shifts.map(function(s){ return s.y; }));
     var xMax = Math.max.apply(null, xs), xMin = 0;
@@ -2789,7 +2840,7 @@ From branch : <span id="versionBranch">—</span></p>
     state.projectName = null;
     state.jobs = [];
     state.jobsSeen = false;
-    state.selectedJobId = null;
+    state.selectedJobId = null; live.jobId = null; els.livePanel.hidden = true;
     state.runProfiles = [];
     loadRunProfiles();
     updateTopSub();
@@ -4312,7 +4363,8 @@ From branch : <span id="versionBranch">—</span></p>
       renderQueue();
       renderSummary();
       renderStageInventory();
-      if (state.selectedJobId) refreshLogMeta();
+      if (state.logJobId) refreshLogMeta();
+      if (state.selectedJobId) liveFetch();
       refreshAssetsForFinishedJobs(previous, firstLoad);
     }).catch(function(){
       setConnected(false, "Lost connection");
@@ -4384,7 +4436,7 @@ From branch : <span id="versionBranch">—</span></p>
     sorted.forEach(function(job){
       var tr = document.createElement("tr");
       tr.className = "clickable" + (job.id === state.selectedJobId ? " selected" : "");
-      tr.addEventListener("click", function(){ openLog(job.id); });
+      tr.addEventListener("click", function(){ selectJob(job.id); });
 
       var tdName = document.createElement("td");
       var nameDiv = document.createElement("div");
@@ -4441,10 +4493,108 @@ From branch : <span id="versionBranch">—</span></p>
     return "";
   }
 
+  // ---------- latest result of the selected job ----------
+  // MyAlignMoviesPanel::ProcessResult(): as each movie's result arrives the
+  // panel redraws the drift plot, sum and spectrum for it -- rate-limited,
+  // so a fast job doesn't flicker through every movie. Here the poll asks
+  // for the newest finished task of the selected job, and a new one is
+  // drawn no sooner than LIVE_MIN_INTERVAL_MS after the last redraw; when a
+  // job has finished, its last result is shown at once.
+  var LIVE_MIN_INTERVAL_MS = 10000;
+  var live = { jobId: null, shownTask: null, shownAt: 0, pending: null, timer: null, urls: [], inflight: false };
+
+  function selectJob(jobId){
+    if (state.selectedJobId === jobId) return;
+    state.selectedJobId = jobId;
+    live.jobId = jobId; live.shownTask = null; live.shownAt = 0; live.pending = null;
+    if (live.timer){ clearTimeout(live.timer); live.timer = null; }
+    liveReleaseUrls();
+    renderQueue();
+    els.livePanel.hidden = false;
+    els.liveBody.hidden = true;
+    els.liveEmpty.hidden = false;
+    els.liveEmpty.textContent = "Loading\u2026";
+    liveRenderMeta(null);
+    liveFetch();
+    els.livePanel.scrollIntoView({block: "nearest", behavior: "smooth"});
+  }
+  function closeLive(){
+    state.selectedJobId = null; live.jobId = null;
+    if (live.timer){ clearTimeout(live.timer); live.timer = null; }
+    liveReleaseUrls();
+    els.livePanel.hidden = true;
+    renderQueue();
+  }
+  function liveReleaseUrls(){ live.urls.forEach(function(u){ URL.revokeObjectURL(u); }); live.urls = []; }
+  function selectedJob(){ return state.jobs.find(function(j){ return j.id === state.selectedJobId; }); }
+
+  function liveFetch(){
+    if (!live.jobId || !state.connected || !state.projectId || live.inflight) return;
+    if (pages.jobs.hidden) return; // nobody is looking; the next poll after the tab opens catches up
+    var jobId = live.jobId;
+    live.inflight = true;
+    apiFetch(projectApiUrl("/jobs/" + jobId + "/latest-result")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      live.inflight = false;
+      if (jobId !== live.jobId) return;
+      liveRenderMeta(data);
+      if (!data.result){
+        if (live.shownTask == null){
+          els.liveBody.hidden = true; els.liveEmpty.hidden = false;
+          els.liveEmpty.textContent = data.reason || "No result yet";
+        }
+        return;
+      }
+      if (data.result.task_index === live.shownTask) return;
+      var finished = TERMINAL_STATUSES[data.status];
+      var wait = live.shownAt + LIVE_MIN_INTERVAL_MS - Date.now();
+      if (finished || live.shownTask == null || wait <= 0){ liveShow(data.result); return; }
+      // Too soon: hold the newest result and draw it when the interval is up.
+      live.pending = data.result;
+      if (!live.timer) live.timer = setTimeout(function(){
+        live.timer = null;
+        if (live.pending && live.jobId === jobId){ liveShow(live.pending); live.pending = null; }
+      }, wait);
+    }).catch(function(){ live.inflight = false; });
+  }
+
+  function liveRenderMeta(data){
+    var job = selectedJob();
+    els.liveLabel.textContent = "Latest Result" + (job ? " \u2014 " + (job.name || job.id) : "");
+    if (!data){ els.liveMeta.textContent = job ? job.status : ""; return; }
+    var parts = [];
+    if (data.task_count != null) parts.push((data.done_count || 0) + " of " + data.task_count + " movies finished");
+    parts.push(data.status);
+    if (data.result && !TERMINAL_STATUSES[data.status]) parts.push("redraws at most every " + Math.round(LIVE_MIN_INTERVAL_MS / 1000) + " s");
+    if (TERMINAL_STATUSES[data.status] && data.result) parts.push("final results are on the Results tab");
+    els.liveMeta.textContent = parts.join(" \u00b7 ");
+  }
+
+  function liveShow(result){
+    live.shownTask = result.task_index; live.shownAt = Date.now();
+    liveReleaseUrls();
+    els.liveEmpty.hidden = true; els.liveBody.hidden = false;
+    els.livePlotTitle.textContent = "Drift";
+    var name = document.createElement("span"); name.className = "live-plot-title-name";
+    name.textContent = result.movie_name + (result.frame_count ? " (" + result.frame_count + " frames)" : "");
+    els.livePlotTitle.appendChild(name);
+    drawDriftPlot(els.livePlot, result.shifts, result.exposure_per_frame);
+    var base = "/jobs/" + live.jobId + "/tasks/" + result.task_index + "/";
+    els.liveSumImg.hidden = true; els.liveSumStatus.hidden = false; els.liveSumStatus.textContent = "Loading\u2026";
+    els.liveSpectrumImg.hidden = true; els.liveSpectrumStatus.hidden = false; els.liveSpectrumStatus.textContent = "Loading\u2026";
+    raLoadFigure(els.liveSumImg, els.liveSumStatus, base + "sum.png", result.output_file_exists, "aligned sum", live.urls);
+    raLoadFigure(els.liveSpectrumImg, els.liveSpectrumStatus, base + "spectrum.png", result.spectrum_file_exists, "spectrum", live.urls);
+    els.liveNyquist.textContent = result.nyquist ? "(Nyquist " + result.nyquist.toFixed(2) + " \u00c5)" : "";
+  }
+
+  els.liveCloseBtn.addEventListener("click", closeLive);
+  els.liveLogBtn.addEventListener("click", function(){ if (state.selectedJobId) openLog(state.selectedJobId); });
+
   // ---------- log drawer ----------
   function openLog(jobId){
-    state.selectedJobId = jobId;
-    renderQueue();
+    state.logJobId = jobId;
     els.logDrawer.classList.add("open");
     els.scrim.classList.add("open");
     refreshLogMeta();
@@ -4458,14 +4608,13 @@ From branch : <span id="versionBranch">—</span></p>
   function closeLog(){
     els.logDrawer.classList.remove("open");
     els.scrim.classList.remove("open");
-    state.selectedJobId = null;
+    state.logJobId = null;
     if (state.logTimer) clearInterval(state.logTimer);
-    renderQueue();
   }
   els.logClose.addEventListener("click", closeLog);
   els.scrim.addEventListener("click", closeLog);
 
-  function currentJob(){ return state.jobs.find(function(j){ return j.id === state.selectedJobId; }); }
+  function currentJob(){ return state.jobs.find(function(j){ return j.id === state.logJobId; }); }
 
   function refreshLogMeta(){
     var job = currentJob();
@@ -4476,8 +4625,8 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   function fetchLog(){
-    if (!state.selectedJobId || !state.connected || !state.projectId) return;
-    apiFetch(projectApiUrl("/jobs/" + state.selectedJobId + "/log")).then(function(r){
+    if (!state.logJobId || !state.connected || !state.projectId) return;
+    apiFetch(projectApiUrl("/jobs/" + state.logJobId + "/log")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
@@ -4489,8 +4638,8 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   els.cancelJobBtn.addEventListener("click", function(){
-    if (!state.selectedJobId || !state.projectId) return;
-    apiFetch(projectApiUrl("/jobs/" + state.selectedJobId + "/cancel"), {method:"POST"}).then(function(r){
+    if (!state.logJobId || !state.projectId) return;
+    apiFetch(projectApiUrl("/jobs/" + state.logJobId + "/cancel"), {method:"POST"}).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(){

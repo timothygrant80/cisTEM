@@ -163,6 +163,44 @@ def _mag_corrected_pixel_size(pixel_size, major, minor):
     return pixel_size / ((major + minor) / 2.0)
 
 
+def live_result(conn, task, task_row):
+    """What MyAlignMoviesPanel::ProcessResult() draws for one finished task
+    while the job is still running: the per-frame shifts, the exposure axis,
+    the corrected pixel size (and so the spectrum's Nyquist), and where the
+    aligned sum and spectrum landed. Read from the sent task and its
+    JOB_TASKS row -- nothing has reached MOVIE_ALIGNMENT_LIST yet."""
+    result = json.loads(task_row["RESULT_JSON"]) if task_row["RESULT_JSON"] else None
+    data = (result or {}).get("data") if (result or {}).get("kind") == "floats" else None
+    if not data or len(data) % 2:
+        return None
+    v = _arg_values(task)
+    n = len(data) // 2
+    corrected = float(v[2]) / (float(v[20]) or 1.0)
+    if v[21]:
+        corrected = _mag_corrected_pixel_size(corrected, float(v[23]), float(v[24]))
+    movie_id = int(task_row["REF"]) if task_row["REF"] is not None else int(task["ref"])
+    movie = conn.execute("SELECT NAME FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID=?", (movie_id,)).fetchone()
+    return {
+        "movie_asset_id": movie_id,
+        "movie_name": movie["NAME"] if movie else Path(v[0]).name,
+        "exposure_per_frame": float(v[14]),
+        "pixel_size": float(v[2]),
+        "final_pixel_size": corrected,
+        "nyquist": 2.8 if corrected < 1.4 else corrected * 2.0,
+        "frame_count": n,
+        "shifts": [{"frame": i + 1, "x": float(x), "y": float(y)} for i, (x, y) in enumerate(zip(data[:n], data[n:]))],
+        "output_file": v[1],
+        "output_file_exists": os.path.isfile(v[1]),
+        "spectrum_file_exists": bool(v[25]) and os.path.isfile(v[26]),
+    }
+
+
+def live_result_files(task):
+    """The two pictures live_result() refers to, by name: for the PNG routes."""
+    v = _arg_values(task)
+    return {"sum": v[1], "spectrum": v[26] if v[25] else None}
+
+
 def finalize(conn, project_id, job, sent_tasks, task_rows, log):
     """Turn recorded task results into MOVIE_ALIGNMENT_LIST rows, per-frame
     MOVIE_ALIGNMENT_PARAMETERS_<id> tables, updated frame counts, and image

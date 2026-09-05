@@ -112,6 +112,8 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `DELETE` | `/projects/:id/run-profiles/:rid` | Remove a profile and its commands |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below). `400` if `params.run_profile` names a profile with no run commands |
+| `GET` | `/projects/:id/jobs/:id/latest-result` | Newest finished task's result for the Jobs tab's live panel (`result: null` + `reason` when there is none yet) |
+| `GET` | `/projects/:id/jobs/:id/tasks/:tidx/sum.png`, `/spectrum.png` | PNG of one task's aligned sum / spectrum, available mid-run |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
 | `POST` | `/projects/:id/jobs/:id/cancel` | Best-effort cancel → returns the updated `Job` |
 

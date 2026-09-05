@@ -286,8 +286,24 @@ STAGE_COMMANDS = {
 # Job store helpers (SQLite-backed, one project's JOBS/JOB_LOG_LINES tables)
 # ---------------------------------------------------------------------------
 
-def _row_to_job(row):
-    return {
+def _task_progress(conn, row):
+    """How far a runner-backed job has got, for the page's time-remaining
+    estimate (cisTEM's JobTracker: seconds per task so far times tasks left):
+    tasks finished out of tasks sent, and when the first and latest finished.
+    Nothing for a simulated job -- it has no tasks, only a percentage."""
+    if not row["TASKS_JSON"]:
+        return {}
+    task_count = len(json.loads(row["TASKS_JSON"]))
+    done, first, latest = conn.execute(
+        "SELECT COUNT(*), MIN(FINISHED_AT), MAX(FINISHED_AT) FROM JOB_TASKS WHERE JOB_ID=? AND STATUS IN ('ok','failed')",
+        (row["JOB_ID"],)).fetchone()
+    return {"task_count": task_count, "tasks_done": done, "first_task_finished_at": first, "last_task_finished_at": latest}
+
+
+def _row_to_job(row, conn=None):
+    """`conn`, when given, adds the task counts a running job's time-remaining
+    estimate needs; the single-job routes don't bother."""
+    return dict({
         "id": row["JOB_ID"],
         "stage": row["STAGE"],
         "number": row["JOB_NUMBER"],
@@ -300,7 +316,7 @@ def _row_to_job(row):
         "finished_at": row["FINISHED_AT"],
         "error": row["ERROR"],
         "metrics": json.loads(row["METRICS_JSON"]) if row["METRICS_JSON"] else {},
-    }
+    }, **(_task_progress(conn, row) if conn is not None and row["STATUS"] in ("queued", "running") else {}))
 
 
 def _fetch_job_row(project_id, job_id):
@@ -1939,8 +1955,9 @@ def delete_run_profile(project_id, run_profile_id):
 def list_jobs(project_id):
     conn = db.get_conn(project_id)
     rows = conn.execute("SELECT * FROM JOBS ORDER BY CREATED_AT").fetchall()
+    jobs = [_row_to_job(r, conn) for r in rows]
     conn.close()
-    return jsonify({"jobs": [_row_to_job(r) for r in rows]})
+    return jsonify({"jobs": jobs})
 
 
 @app.route("/api/projects/<project_id>/jobs", methods=["POST"])

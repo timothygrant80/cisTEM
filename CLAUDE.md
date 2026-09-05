@@ -89,7 +89,7 @@ Everything except `/health`, `/auth/login`, and `/auth/logout` requires auth (se
 | `GET` | `/projects/:id/jobs/:id/tasks/:tidx/sum.png`, `.../spectrum.png` | owner or admin | PNG of one task's aligned sum / spectrum, from the file names in the sent task (adapter `live_result_files()`), available as soon as the worker has written them. Same ETag/`404`/`415`/`422` behaviour as the asset previews. |
 | `POST` | `/projects/:id/jobs/:id/cancel` | owner or admin | Best-effort cancel → returns the updated `Job` |
 
-`Job`: `{ id, stage, number, name, params, status: queued|running|completed|failed|cancelled, progress, created_at, started_at, finished_at, error, metrics }`.
+`Job`: `{ id, stage, number, name, params, status: queued|running|completed|failed|cancelled, progress, created_at, started_at, finished_at, error, metrics }`. In the `GET /jobs` list, a queued or running job that went through the job runner also carries `task_count`, `tasks_done`, `first_task_finished_at` and `last_task_finished_at`, which is what the queue's time-remaining note is computed from (cisTEM's `JobTracker::ReturnRemainingTime()`: tasks left × seconds per task so far, counted from the first finish so worker start-up doesn't inflate it; "estimating…" until then, and a simulated job falls back to its percentage). Finished jobs show how long they took instead.
 
 Stages (keys are fixed and referenced from both the frontend `STAGES` object and the backend `STAGE_COMMANDS` dict — keep them in sync if you rename anything):
 `motion_correction`, `ctf_estimation`, `particle_picking`, `class2d`, `refine3d`.

@@ -357,6 +357,8 @@ td.mono{font-family:var(--font-mono);}
 .progress-fill{height:100%;background:var(--accent);}
 .progress-fill.completed{background:var(--success);}
 .progress-fill.failed{background:var(--critical);}
+.progress-eta{font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);margin-top:3px;white-space:nowrap;}
+table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 
 .empty-note{font-family:var(--font-ui);color:var(--text-tertiary);text-align:center;padding:30px 16px;font-size:12.5px;border:1px solid var(--border);background:var(--surface);}
 .empty-note .hint{display:block;font-size:11px;margin-top:4px;}
@@ -4484,6 +4486,10 @@ From branch : <span id="versionBranch">—</span></p>
       fill.style.width = (job.progress != null ? job.progress : (job.status === "completed" ? 100 : 0)) + "%";
       track.appendChild(fill);
       tdProgress.appendChild(track);
+      var eta = document.createElement("div");
+      eta.className = "progress-eta";
+      eta.textContent = progressNote(job);
+      tdProgress.appendChild(eta);
       tr.appendChild(tdProgress);
 
       var tdTime = document.createElement("td");
@@ -4501,6 +4507,49 @@ From branch : <span id="versionBranch">—</span></p>
 
       els.queueBody.appendChild(tr);
     });
+  }
+
+  // cisTEM's JobTracker::ReturnRemainingTime(): tasks left x seconds per
+  // task so far, shown as "Time Remaining : ???h:??m:??s" until the first
+  // task has finished. Tasks are counted from the first finish rather than
+  // the job start, so worker start-up doesn't inflate the per-task time;
+  // a simulated job has only a percentage, so it uses that instead. The
+  // poll every 3 s re-renders the row, which is what keeps this ticking.
+  function fmtDuration(seconds){
+    seconds = Math.max(0, Math.round(seconds));
+    var h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
+    return (h ? h + "h " : "") + (h || m ? m + "m " : "") + s + "s";
+  }
+  function estimateRemaining(job){
+    var now = Date.now();
+    if (job.task_count){
+      if (!job.tasks_done || !job.first_task_finished_at) return null;
+      var left = job.task_count - job.tasks_done;
+      if (left <= 0) return 0;
+      // Per-task time from the first finish onward; with one task done that
+      // span is zero, so fall back to the time since the job started.
+      var since = job.tasks_done > 1 ? new Date(job.first_task_finished_at).getTime() : new Date(job.started_at || job.created_at).getTime();
+      var counted = job.tasks_done > 1 ? job.tasks_done - 1 : job.tasks_done;
+      var perTask = (now - since) / counted;
+      return left * perTask / 1000;
+    }
+    if (job.progress > 0 && job.started_at){
+      var elapsed = now - new Date(job.started_at).getTime();
+      return elapsed * (100 - job.progress) / job.progress / 1000;
+    }
+    return null;
+  }
+  function progressNote(job){
+    if (job.status === "running"){
+      var eta = estimateRemaining(job);
+      var done = job.task_count ? job.tasks_done + "/" + job.task_count + " \u00b7 " : "";
+      return done + (eta == null ? "estimating\u2026" : (eta < 1 ? "finishing" : fmtDuration(eta) + " left"));
+    }
+    if (job.status === "queued") return "waiting to start";
+    if (job.status === "completed" && job.started_at && job.finished_at){
+      return "took " + fmtDuration((new Date(job.finished_at) - new Date(job.started_at)) / 1000);
+    }
+    return "";
   }
 
   function statusClass(status){

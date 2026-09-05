@@ -2378,6 +2378,8 @@ From branch : <span id="versionBranch">—</span></p>
     loadImageGroups();
     loadImages();
     loadRunProfiles();
+    state.jobs = [];
+    state.jobsSeen = false;
     startPolling();
     fetchJobs();
   }
@@ -2388,6 +2390,7 @@ From branch : <span id="versionBranch">—</span></p>
     state.projectId = null;
     state.projectName = null;
     state.jobs = [];
+    state.jobsSeen = false;
     state.selectedJobId = null;
     state.runProfiles = [];
     loadRunProfiles();
@@ -3849,17 +3852,50 @@ From branch : <span id="versionBranch">—</span></p>
     }, 3000);
   }
 
+  // What a finished job of each stage will have changed in the project, so
+  // the Assets panels can be refreshed the moment the poll sees it finish --
+  // cisTEM's WriteResultToDataBase() updates image_asset_panel as it writes,
+  // and this is the equivalent for a page that only learns of results by
+  // polling. Align Movies adds/updates image assets, adopts them into All
+  // Images, and corrects each movie's frame count.
+  var STAGE_RESULT_REFRESH = {
+    motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); }
+  };
+  var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
+
+  function refreshAssetsForFinishedJobs(previousStatuses, firstLoad){
+    // The first list after opening a project is history, not news.
+    if (firstLoad) return;
+    var stages = {};
+    state.jobs.forEach(function(j){
+      if (!TERMINAL_STATUSES[j.status]) return;
+      var was = previousStatuses[j.id];
+      // A transition this page watched, or a job it is seeing for the first
+      // time already finished -- started from another tab, or run to
+      // completion while this tab was hidden and its poll paused.
+      if (was === undefined || !TERMINAL_STATUSES[was]) stages[j.stage] = true;
+    });
+    Object.keys(stages).forEach(function(stage){
+      if (STAGE_RESULT_REFRESH[stage]) STAGE_RESULT_REFRESH[stage]();
+    });
+  }
+
   function fetchJobs(){
     if (!state.connected || !state.projectId) return;
     apiFetch(projectApiUrl("/jobs")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
+      var previous = {};
+      state.jobs.forEach(function(j){ previous[j.id] = j.status; });
+      var firstLoad = !state.jobsSeen;
+      state.jobsSeen = true;
       state.jobs = (data && data.jobs) || [];
       renderQueue();
       renderSummary();
       renderStageInventory();
       if (state.selectedJobId) refreshLogMeta();
+      refreshAssetsForFinishedJobs(previous, firstLoad);
     }).catch(function(){
       setConnected(false, "Lost connection");
     });

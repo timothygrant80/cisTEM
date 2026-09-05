@@ -433,6 +433,13 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
   .results-layout > .groupbox.ra-right{height:auto;}
 }
 
+.preview-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 2px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;}
+.preview-bar > label:first-child{font-weight:600;color:var(--text-secondary);}
+.preview-bar select{font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--border-strong);background:var(--surface);max-width:280px;}
+.preview-status{color:var(--text-tertiary);font-size:11.5px;}
+.preview-status.error{color:var(--critical);}
+.preview-view .pick-result{grid-template-columns:1fr;}
+.preview-view .pick-numbers{grid-template-columns:repeat(2,1fr);}
 .pick-result{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start;}
 .pick-frame{position:relative;border:1px solid var(--border);background:var(--surface-sunken);min-height:120px;}
 .pick-frame img{display:block;width:100%;height:auto;}
@@ -1015,6 +1022,18 @@ From branch : <span id="versionBranch">—</span></p>
               <div id="expertFields" hidden></div>
             </div>
 
+            <!-- MyFindParticlesPanel's "Select preview image" / Preview /
+                 Auto preview: the picker on one image, now, so the parameters
+                 above can be tuned before a run. Shown for stages with
+                 `preview` set; the result replaces the Information text. -->
+            <div class="preview-bar" id="previewBar" hidden>
+              <label for="previewImage">Preview image :</label>
+              <select id="previewImage"></select>
+              <button class="small" id="previewBtn">Preview</button>
+              <label class="ra-radio"><input type="checkbox" id="previewAuto" /> Auto preview</label>
+              <button class="small" id="previewInfoBtn" hidden title="Swap the panel on the right between the preview and the Information text.">Show Information</button>
+              <span class="preview-status" id="previewStatus"></span>
+            </div>
             <!-- cisTEM's job panels put the run profile next to the start
                  button at the bottom of the panel itself (StartPanel in
                  ProjectX_gui_unblur.cpp), not in a global settings page --
@@ -1032,6 +1051,7 @@ From branch : <span id="versionBranch">—</span></p>
           <div class="groupbox stage-info" id="stageInfo" hidden>
             <span class="groupbox-label" id="stageInfoLabel">Information</span>
             <div class="info-body" id="stageInfoBody"></div>
+            <div class="info-body preview-view" id="previewView" hidden></div>
           </div>
         </div>
       </section>
@@ -1451,6 +1471,7 @@ From branch : <span id="versionBranch">—</span></p>
       label: "Find Particles",
       startLabel: "Start Picking",
       requiresCtf: true,
+      preview: true,
       note: "Each image's picks are written to the project database; the picked positions become the image's particle position assets, replacing those of any earlier pick.",
       description: "Locates particles in each image by matching a soft-edged disc template with a whitening filter (Sigworth, 2004), using the image's CTF estimate.",
       fields: [
@@ -1589,7 +1610,7 @@ From branch : <span id="versionBranch">—</span></p>
    "rpCommandsBody","rpCmdAddBtn","rpCmdEditBtn","rpCmdRemoveBtn","rpSaveBtn",
    "rpCmdScrim","rpCmdModal","rpCmdModalClose","rpCmdCommand","rpCmdCopies","rpCmdThreads","rpCmdDelay",
    "rpCmdOverride","rpCmdOverridden","rpCmdError","rpCmdOkBtn","rpCmdCancelBtn",
-   "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody",
+   "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody","previewBar","previewImage","previewBtn","previewAuto","previewStatus","previewView","previewInfoBtn",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
   ].forEach(function(id){ els[id] = document.getElementById(id); });
 
@@ -1901,6 +1922,7 @@ From branch : <span id="versionBranch">—</span></p>
     var stage = STAGES[state.currentStage];
     renderGroupedFields(els.paramFields, stage.fields);
     renderGroupedFields(els.expertFields, stage.expertFields);
+    if (typeof resetPreviewForStage === "function") setTimeout(resetPreviewForStage, 0);
     // Both sets are rebuilt from scratch here, so the conditional wiring has
     // to be reattached each time rather than set up once at load.
     wireConditionalFields(els.paramFields, stage.fields);
@@ -2023,6 +2045,8 @@ From branch : <span id="versionBranch">—</span></p>
           input.appendChild(opt);
         });
         updateStartButton();
+        // The preview image list follows the group, which is only known now.
+        if (typeof loadPreviewImages === "function") loadPreviewImages();
       }).catch(function(){
         input.innerHTML = "";
         var errOpt = document.createElement("option");
@@ -4837,13 +4861,103 @@ From branch : <span id="versionBranch">—</span></p>
 
   els.paramFields.addEventListener("change", updateStartButton);
 
+  // ---------- preview (MyFindParticlesPanel: Select preview image / Preview / Auto preview) ----------
+  // POST /preview/pick runs the picker on one image with the form's current
+  // parameters; the picks are drawn where the Information text was, with a
+  // button to bring the text back. Auto preview re-runs it, debounced, on
+  // every change to a parameter or to the chosen image.
+  var pv = { view: null, urls: [], timer: null, inflight: false, pending: false, shown: false };
+  function previewSupported(){ return !!(STAGES[state.currentStage] && STAGES[state.currentStage].preview); }
+  function previewReleaseUrls(){ pv.urls.forEach(function(u){ URL.revokeObjectURL(u); }); pv.urls = []; }
+  function previewShowInfo(showInfo){
+    pv.shown = !showInfo;
+    els.stageInfoBody.hidden = !showInfo;
+    els.previewView.hidden = showInfo;
+    els.previewInfoBtn.hidden = showInfo || !pv.view;
+    els.previewInfoBtn.textContent = "Show Information";
+    if (showInfo){
+      var info = STAGES[state.currentStage].info;
+      els.stageInfoLabel.textContent = (info && info.title) || "Information";
+      if (pv.view) els.previewInfoBtn.hidden = false, els.previewInfoBtn.textContent = "Show Preview";
+    }
+  }
+  els.previewInfoBtn.addEventListener("click", function(){ previewShowInfo(pv.shown); });
+  function resetPreviewForStage(){
+    els.previewBar.hidden = !previewSupported();
+    previewReleaseUrls();
+    pv.view = null; els.previewView.innerHTML = ""; els.previewStatus.textContent = ""; els.previewStatus.classList.remove("error");
+    previewShowInfo(true);
+    if (previewSupported()) loadPreviewImages();
+  }
+  // The images of the selected group -- the choices for "Preview image".
+  function loadPreviewImages(){
+    var groupSel = els.paramFields.querySelector("select[data-key$='_group_id']");
+    var gid = groupSel && groupSel.value !== "" ? groupSel.value : null;
+    var keep = els.previewImage.value;
+    els.previewImage.innerHTML = "";
+    if (!state.projectId || gid === null || isNaN(Number(gid))){
+      var o = document.createElement("option"); o.textContent = "\u2014"; els.previewImage.appendChild(o); els.previewImage.disabled = true; return;
+    }
+    apiFetch(projectApiUrl("/images?group_id=" + Number(gid))).then(function(r){ return r.ok ? r.json() : {images: []}; }).then(function(data){
+      var rows = (data && data.images) || [];
+      els.previewImage.innerHTML = "";
+      rows.forEach(function(img){
+        var o = document.createElement("option"); o.value = img.IMAGE_ASSET_ID; o.textContent = img.NAME || ("Image " + img.IMAGE_ASSET_ID);
+        els.previewImage.appendChild(o);
+      });
+      els.previewImage.disabled = !rows.length;
+      if (keep && rows.some(function(img){ return String(img.IMAGE_ASSET_ID) === keep; })) els.previewImage.value = keep;
+    }).catch(function(){});
+  }
+  function runPreview(){
+    if (!previewSupported() || !state.projectId) return;
+    var imageId = els.previewImage.value;
+    if (!imageId || els.previewImage.disabled){ els.previewStatus.textContent = "Pick a preview image first."; return; }
+    if (pv.inflight){ pv.pending = true; return; }
+    pv.inflight = true;
+    els.previewBtn.disabled = true;
+    els.previewStatus.classList.remove("error"); els.previewStatus.textContent = "Picking\u2026";
+    apiFetch(projectApiUrl("/preview/pick"), {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({image_asset_id: Number(imageId), params: collectParams()})})
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+      .then(function(res){
+        if (!res.ok) throw new Error((res.data && res.data.error) || "preview failed");
+        var result = res.data;
+        if (!pv.view){ els.previewView.innerHTML = ""; pv.view = buildPicksResultView(els.previewView); }
+        previewReleaseUrls();
+        pv.view.loading();
+        pv.view.update(result, pv.urls, "/images/" + result.image_asset_id + "/preview.png");
+        els.stageInfoLabel.textContent = "Preview \u2014 " + result.image_name;
+        previewShowInfo(false);
+        els.previewStatus.textContent = result.pick_count + " pick" + (result.pick_count === 1 ? "" : "s") + " in " + result.elapsed_s + " s" + (result.used_scaled_image ? " (on the scaled image)" : "");
+      })
+      .catch(function(err){ els.previewStatus.classList.add("error"); els.previewStatus.textContent = err.message; })
+      .finally(function(){
+        pv.inflight = false; els.previewBtn.disabled = false;
+        if (pv.pending){ pv.pending = false; runPreview(); }
+      });
+  }
+  els.previewBtn.addEventListener("click", runPreview);
+  els.previewImage.addEventListener("change", function(){ if (els.previewAuto.checked) runPreview(); });
+  els.previewAuto.addEventListener("change", function(){ if (els.previewAuto.checked) runPreview(); });
+  function schedulePreview(){
+    if (!previewSupported() || !els.previewAuto.checked) return;
+    clearTimeout(pv.timer);
+    pv.timer = setTimeout(runPreview, 600);
+  }
+  [els.paramFields, els.expertFields].forEach(function(box){
+    box.addEventListener("input", schedulePreview);
+    box.addEventListener("change", function(e){
+      if (e.target && /_group_id$/.test(e.target.dataset.key || "")) loadPreviewImages();
+      schedulePreview();
+    });
+  });
+
   // ---------- submit ----------
   els.submitBtn.addEventListener("click", function(){
     if (!state.connected){ alert("Connect to a pipeline API first (Settings tab)."); return; }
     if (!state.projectId){ alert("Open a project first."); return; }
-    var params = {};
-    els.paramFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
-    els.expertFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
+    var params = collectParams();
     params.run_profile = state.runProfile;
 
     // No name: the server assigns the job number (see create_job).
@@ -4866,6 +4980,12 @@ From branch : <span id="versionBranch">—</span></p>
     });
   });
 
+  function collectParams(){
+    var params = {};
+    els.paramFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
+    els.expertFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
+    return params;
+  }
   function readInto(params, input){
     var v = input.value;
     if (input.type === "checkbox") v = input.checked;

@@ -2060,6 +2060,37 @@ def activate_pick(project_id, picking_id):
         conn.close()
 
 
+@app.route("/api/projects/<project_id>/preview/pick", methods=["POST"])
+@auth.project_access_required
+def preview_pick(project_id):
+    """Run the particle picker on one image with the panel's current
+    parameters and return the picks -- cisTEM's Preview / Auto preview.
+    Not a job: nothing is written to the project, and the find_particles
+    binary is run directly (it has to be on the server's PATH)."""
+    body = request.get_json(force=True, silent=True) or {}
+    image_id = body.get("image_asset_id")
+    if image_id is None:
+        return jsonify({"error": "image_asset_id is required"}), 400
+    executable = shutil.which("find_particles")
+    if not executable:
+        return jsonify({"error": "find_particles is not on the server's PATH, so there is nothing to preview with"}), 503
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            result = stages.find_particles.preview(conn, project_id, int(image_id), body.get("params") or {}, executable)
+        except LookupError as exc:
+            return jsonify({"error": str(exc)}), 404
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 409
+        except TimeoutError as exc:
+            return jsonify({"error": str(exc)}), 504
+        except RuntimeError as exc:
+            return jsonify({"error": str(exc)}), 502
+        return jsonify(result)
+    finally:
+        conn.close()
+
+
 def _file_preview_response(path, etag_key, what):
     """_preview_response for a file that isn't an asset row: the aligned sum
     or spectrum an alignment points at."""

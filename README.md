@@ -112,6 +112,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/ctf-estimates/:cid` | One estimate plus `plot` (the 1D fit curves) |
 | `POST` | `/projects/:id/ctf-estimates/:cid/activate` | Make this estimate the image's active one |
 | `GET` | `/projects/:id/ctf-estimates/:cid/diagnostic.png` | PNG of ctffind's diagnostic image |
+| `POST` | `/projects/:id/preview/pick` | Run the particle picker on one image with the given parameters, without a job → the picks |
 | `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |
 | `GET` | `/projects/:id/picks/:pid` | One picking plus `positions` (Å from the image origin) |
 | `POST` | `/projects/:id/picks/:pid/activate` | Make these picks the image's particle positions |

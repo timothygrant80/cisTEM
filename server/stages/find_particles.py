@@ -28,6 +28,10 @@ ambiguous). It is the same idea as CTF_ESTIMATION_ID, one stage later.
 
 import json
 import os
+import subprocess
+import tempfile
+import threading
+import time
 from pathlib import Path
 
 import db
@@ -92,22 +96,7 @@ def build_tasks(conn, project_id, params):
 
     out_dir = _ensure_dirs(project_id)
 
-    # The panel's controls, ResetDefaults() values when absent.
-    maximum_radius = _num(params, "maximum_radius_a", 120.0, float)
-    characteristic_radius = _num(params, "characteristic_radius_a", 80.0, float)
-    threshold = _num(params, "threshold_peak_height", 6.0, float)
-    avoid_low_variance = _flag(params, "avoid_low_variance", True)
-    low_variance_threshold = _num(params, "low_variance_threshold", -0.5, float)
-    avoid_high_variance = _flag(params, "avoid_high_variance", False)
-    high_variance_threshold = _num(params, "high_variance_threshold", 2.0, float)
-    highest_resolution = _num(params, "highest_resolution_a", 30.0, float)
-    min_edge_distance = _num(params, "min_edge_distance_px", 128, int)
-    avoid_abnormal_mean = _flag(params, "avoid_abnormal_mean", True)
-    background_boxes = _num(params, "background_boxes", 50, int)
-    algo = params.get("background_algorithm", BACKGROUND_ALGORITHMS[0])
-    background_algorithm = BACKGROUND_ALGORITHMS.index(algo) if algo in BACKGROUND_ALGORITHMS else _num(params, "background_algorithm", 0, int)
-
-    A = jp.arg
+    settings = _settings_from_params(params)
     tasks = []
     for index, image in enumerate(rows):
         asset_id = image["IMAGE_ASSET_ID"]
@@ -115,39 +104,66 @@ def build_tasks(conn, project_id, params):
         # cisTEM: <image stem>_COOS_<number of previous picks>.mrc; the
         # candidate stack itself is skipped (box size 0), as the GUI does.
         output_stack = str(out_dir / "{}_COOS_{}.mrc".format(Path(image["FILENAME"]).stem, previous))
-        args = [
-            A("text", image["FILENAME"]),                       # 0  micrograph
-            A("float", image["PIXEL_SIZE"] or 1.0),             # 1
-            A("float", image["CTF_VOLTAGE"] or image["VOLTAGE"] or 300.0),  # 2  kV
-            A("float", image["CTF_CS"] or image["SPHERICAL_ABERRATION"] or 2.7),  # 3  mm
-            A("float", image["AMPLITUDE_CONTRAST"] or 0.07),    # 4
-            A("float", image["ADDITIONAL_PHASE_SHIFT"] or 0.0),  # 5  rad
-            A("float", image["DEFOCUS1"] or 0.0),               # 6  A
-            A("float", image["DEFOCUS2"] or 0.0),               # 7  A
-            A("float", image["DEFOCUS_ANGLE"] or 0.0),          # 8  deg
-            A("bool", False),                                   # 9  already have templates -- ab initio only
-            A("text", "no_templates.mrc"),                      # 10
-            A("bool", False),                                   # 11 average templates radially
-            A("int", 1),                                        # 12 template rotations
-            A("float", characteristic_radius),                  # 13 typical radius (A)
-            A("float", maximum_radius),                         # 14 maximum radius (A)
-            A("float", highest_resolution),                     # 15
-            A("text", output_stack),                            # 16 candidate stack (not written: box size 0)
-            A("int", 0),                                        # 17 output stack box size
-            A("int", min_edge_distance),                        # 18 px
-            A("float", threshold),                              # 19 picking threshold
-            A("bool", avoid_low_variance),                      # 20
-            A("bool", avoid_high_variance),                     # 21
-            A("float", low_variance_threshold),                 # 22 FWHM
-            A("float", high_variance_threshold),                # 23 FWHM
-            A("bool", avoid_abnormal_mean),                     # 24
-            A("int", background_algorithm),                     # 25 0 lowest variance, 1 near mode
-            A("int", background_boxes),                         # 26
-            A("bool", bool(image["PROTEIN_IS_WHITE"])),         # 27
-        ]
-        assert len(args) == 28
-        tasks.append({"index": index, "ref": asset_id, "args": args})
+        tasks.append({"index": index, "ref": asset_id, "args": _image_args(image, image["FILENAME"], image["PIXEL_SIZE"] or 1.0, output_stack, settings)})
     return tasks
+
+
+def _settings_from_params(params):
+    """The panel's controls -> one dict, ResetDefaults() values when absent."""
+    algo = params.get("background_algorithm", BACKGROUND_ALGORITHMS[0])
+    restrain = _flag(params, "avoid_low_variance", True)
+    return dict(
+        maximum_radius=_num(params, "maximum_radius_a", 120.0, float),
+        characteristic_radius=_num(params, "characteristic_radius_a", 80.0, float),
+        threshold=_num(params, "threshold_peak_height", 6.0, float),
+        avoid_low_variance=restrain,
+        low_variance_threshold=_num(params, "low_variance_threshold", -0.5, float),
+        avoid_high_variance=_flag(params, "avoid_high_variance", False),
+        high_variance_threshold=_num(params, "high_variance_threshold", 2.0, float),
+        highest_resolution=_num(params, "highest_resolution_a", 30.0, float),
+        min_edge_distance=_num(params, "min_edge_distance_px", 128, int),
+        avoid_abnormal_mean=_flag(params, "avoid_abnormal_mean", True),
+        background_boxes=_num(params, "background_boxes", 50, int),
+        background_algorithm=BACKGROUND_ALGORITHMS.index(algo) if algo in BACKGROUND_ALGORITHMS else _num(params, "background_algorithm", 0, int),
+    )
+
+
+def _image_args(image, input_file, pixel_size, output_stack, st):
+    """The 28 arguments for one image (a row of IMAGE_ASSETS joined with its
+    active CTF estimate), in StartPickingClick()'s order."""
+    A = jp.arg
+    args = [
+        A("text", input_file),                              # 0  micrograph
+        A("float", pixel_size),                             # 1
+        A("float", image["CTF_VOLTAGE"] or image["VOLTAGE"] or 300.0),  # 2  kV
+        A("float", image["CTF_CS"] or image["SPHERICAL_ABERRATION"] or 2.7),  # 3  mm
+        A("float", image["AMPLITUDE_CONTRAST"] or 0.07),    # 4
+        A("float", image["ADDITIONAL_PHASE_SHIFT"] or 0.0),  # 5  rad
+        A("float", image["DEFOCUS1"] or 0.0),               # 6  A
+        A("float", image["DEFOCUS2"] or 0.0),               # 7  A
+        A("float", image["DEFOCUS_ANGLE"] or 0.0),          # 8  deg
+        A("bool", False),                                   # 9  already have templates -- ab initio only
+        A("text", "no_templates.mrc"),                      # 10
+        A("bool", False),                                   # 11 average templates radially
+        A("int", 1),                                        # 12 template rotations
+        A("float", st["characteristic_radius"]),                  # 13 typical radius (A)
+        A("float", st["maximum_radius"]),                         # 14 maximum radius (A)
+        A("float", st["highest_resolution"]),                     # 15
+        A("text", output_stack),                            # 16 candidate stack (not written: box size 0)
+        A("int", 0),                                        # 17 output stack box size
+        A("int", st["min_edge_distance"]),                        # 18 px
+        A("float", st["threshold"]),                              # 19 picking threshold
+        A("bool", st["avoid_low_variance"]),                      # 20
+        A("bool", st["avoid_high_variance"]),                     # 21
+        A("float", st["low_variance_threshold"]),                 # 22 FWHM
+        A("float", st["high_variance_threshold"]),                # 23 FWHM
+        A("bool", st["avoid_abnormal_mean"]),                     # 24
+        A("int", st["background_algorithm"]),                     # 25 0 lowest variance, 1 near mode
+        A("int", st["background_boxes"]),                         # 26
+        A("bool", bool(image["PROTEIN_IS_WHITE"])),         # 27
+    ]
+    assert len(args) == 28
+    return args
 
 
 def _arg_values(task):
@@ -306,3 +322,106 @@ def live_result(conn, task, task_row):
 def live_result_files(task):
     v = _arg_values(task)
     return {"image": v[0]}
+
+
+# ---------------------------------------------------------------------------
+# Preview: the picker on one image, now, without a job. cisTEM's panel does
+# this in-process (Preview / Auto preview) so parameters can be tuned before
+# a run; here the same find_particles binary is run directly, fed its
+# interactive prompts on stdin, and the .plt it writes when run that way is
+# read back. One at a time per server: previews are quick, and a second
+# click shouldn't start a second search.
+# ---------------------------------------------------------------------------
+
+_preview_lock = threading.Lock()
+
+
+def _yn(v):
+    return "yes" if v else "no"
+
+
+def _interactive_answers(args):
+    """The answers DoInteractiveUserInput() asks for, in its order, from the
+    same 28 arguments the socket path packs. Without templates it skips
+    the template questions, so those arguments (9-12) have no prompt."""
+    v = [a["value"] for a in args]
+    return [
+        v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8],
+        "no",                      # supply templates? -- ab initio
+        v[13], v[14], v[15], v[16], v[17], v[18], v[19],
+        _yn(v[20]), _yn(v[21]), v[22], v[23], _yn(v[24]), v[25], v[26], _yn(v[27]),
+    ]
+
+
+def preview(conn, project_id, image_id, params, executable, timeout=120.0):
+    """Pick one image with the panel's current parameters and return what
+    the Results view draws (positions in A from the image origin, y up,
+    in the full image's frame). Uses the scaled sum Align Movies wrote
+    (Assets/Images/Scaled/<same name>) when its pixel size still satisfies
+    the highest resolution asked for -- MyFindParticlesPanel's rule -- so
+    a preview takes a fraction of a second."""
+    image = conn.execute(
+        "SELECT ia.*, ce.VOLTAGE AS CTF_VOLTAGE, ce.SPHERICAL_ABERRATION AS CTF_CS, ce.AMPLITUDE_CONTRAST, ce.DEFOCUS1, "
+        "ce.DEFOCUS2, ce.DEFOCUS_ANGLE, ce.ADDITIONAL_PHASE_SHIFT, ce.ICINESS "
+        "FROM IMAGE_ASSETS ia LEFT JOIN ESTIMATED_CTF_PARAMETERS ce ON ce.CTF_ESTIMATION_ID = ia.CTF_ESTIMATION_ID "
+        "WHERE ia.IMAGE_ASSET_ID = ?", (int(image_id),)).fetchone()
+    if image is None:
+        raise LookupError("no such image asset")
+    if image["DEFOCUS1"] is None:
+        raise ValueError(CTF_REQUIRED_MESSAGE)
+    if not image["FILENAME"] or not os.path.isfile(image["FILENAME"]):
+        raise ValueError("the image file is missing: {}".format(image["FILENAME"]))
+
+    st = _settings_from_params(params)
+    pixel_size = image["PIXEL_SIZE"] or 1.0
+    x_size, y_size = image["X_SIZE"], image["Y_SIZE"]
+    input_file, input_ps, input_y, used_scaled = image["FILENAME"], pixel_size, y_size, False
+    scaled = Path(image["FILENAME"]).parent / "Scaled" / Path(image["FILENAME"]).name
+    if scaled.is_file() and x_size:
+        try:
+            from imageheaders import read_image_header
+            hdr = read_image_header(str(scaled))
+            scale = float(x_size) / float(hdr["x_size"])
+            scaled_ps = pixel_size * scale
+            if scaled_ps <= st["highest_resolution"] / 2.0:
+                input_file, input_ps, input_y, used_scaled = str(scaled), scaled_ps, hdr["y_size"], True
+                st = dict(st, min_edge_distance=max(1, int(round(st["min_edge_distance"] / scale))))
+        except Exception:  # noqa: BLE001 -- an unreadable scaled copy just means the full image is used
+            pass
+
+    started = time.time()
+    with _preview_lock, tempfile.TemporaryDirectory(prefix="pick-preview-") as tmp:
+        out_stack = os.path.join(tmp, "preview.mrc")
+        args = _image_args(image, input_file, input_ps, out_stack, st)
+        answers = "\n".join(str(a) for a in _interactive_answers(args)) + "\n"
+        try:
+            proc = subprocess.run([executable], input=answers, capture_output=True, text=True, cwd=tmp, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise TimeoutError("find_particles took longer than {:.0f} s on this image".format(timeout))
+        if proc.returncode != 0:
+            tail = (proc.stdout or "").strip().splitlines()[-3:]
+            raise RuntimeError("find_particles exited with {}: {}".format(proc.returncode, " | ".join(tail) or (proc.stderr or "").strip()[-300:]))
+        plt = os.path.join(tmp, "preview.plt")
+        positions = []
+        if os.path.isfile(plt):
+            for line in open(plt):
+                parts = line.split()
+                if len(parts) < 6 or parts[0].startswith("#"):
+                    continue
+                # The .plt has (row, column) in the *input* image's pixels,
+                # 1-based, rows counted from the top: turn that back into the
+                # socket result's convention, Angstroms from the origin, y up.
+                row_px, col_px, peak = float(parts[0]) - 1.0, float(parts[1]) - 1.0, float(parts[5])
+                positions.append({"x": col_px * input_ps, "y": (input_y - row_px) * input_ps, "peak_height": peak})
+    return {
+        "kind": "picks",
+        "image_asset_id": image["IMAGE_ASSET_ID"],
+        "image_name": image["NAME"],
+        "x_size": x_size, "y_size": y_size, "pixel_size": pixel_size,
+        "maximum_radius": st["maximum_radius"], "characteristic_radius": st["characteristic_radius"],
+        "threshold_peak_height": st["threshold"],
+        "defocus1": image["DEFOCUS1"], "defocus2": image["DEFOCUS2"], "iciness": image["ICINESS"],
+        "positions": positions, "pick_count": len(positions),
+        "used_scaled_image": used_scaled, "input_file": os.path.basename(input_file),
+        "elapsed_s": round(time.time() - started, 2),
+    }

@@ -2006,7 +2006,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   // ---------- shared drawing helpers ----------
-  function fmtNum(v, digits){ return v == null ? "—" : (digits == null ? String(v) : Number(v).toFixed(digits)); }
+  function fmtVal(v, digits){ return v == null ? "—" : (digits == null ? String(v) : Number(v).toFixed(digits)); }
   function fmtYesNo(v){ return v == null ? "—" : (v ? "Yes" : "No"); }
   function fmtWhenDate(epoch){ return epoch ? new Date(epoch * 1000).toLocaleDateString() : "—"; }
   function fmtWhenTime(epoch){ return epoch ? new Date(epoch * 1000).toLocaleTimeString() : "—"; }
@@ -2410,24 +2410,24 @@ From branch : <span id="versionBranch">—</span></p>
     emptyTitle: "No movie alignments in this project yet",
     emptyHint: "Run Align Movies from the Actions tab; each aligned movie appears here with its drift plot, aligned sum and spectrum.",
     details: [
-      {label: "Alignment ID", value: function(a){ return fmtNum(a.alignment_id) + (a.job_number ? " (Job " + a.job_number + ")" : ""); }},
+      {label: "Alignment ID", value: function(a){ return fmtVal(a.alignment_id) + (a.job_number ? " (Job " + a.job_number + ")" : ""); }},
       {label: "Date of Run", value: function(a){ return fmtWhenDate(a.datetime_of_run); }},
       {label: "Time of Run", value: function(a){ return fmtWhenTime(a.datetime_of_run); }},
-      {label: "Voltage", value: function(a){ return fmtNum(a.voltage) + (a.voltage != null ? " kV" : ""); }},
-      {label: "Pixel Size", value: function(a){ return fmtNum(a.pixel_size) + (a.pixel_size != null ? " Å" : ""); }},
-      {label: "Exp. per Frame", value: function(a){ return fmtNum(a.exposure_per_frame) + (a.exposure_per_frame != null ? " e⁻/Å²" : ""); }},
-      {label: "Pre Exp.", value: function(a){ return fmtNum(a.pre_exposure_amount) + (a.pre_exposure_amount != null ? " e⁻/Å²" : ""); }},
-      {label: "Min. Shift", value: function(a){ return fmtNum(a.min_shift) + " Å"; }},
-      {label: "Max. Shift", value: function(a){ return fmtNum(a.max_shift) + " Å"; }},
-      {label: "Term. Threshold", value: function(a){ return fmtNum(a.termination_threshold) + " Å"; }},
-      {label: "Max. Iterations", value: function(a){ return fmtNum(a.max_iterations); }},
-      {label: "B-Factor", value: function(a){ return fmtNum(a.bfactor) + " Å²"; }},
+      {label: "Voltage", value: function(a){ return fmtVal(a.voltage) + (a.voltage != null ? " kV" : ""); }},
+      {label: "Pixel Size", value: function(a){ return fmtVal(a.pixel_size) + (a.pixel_size != null ? " Å" : ""); }},
+      {label: "Exp. per Frame", value: function(a){ return fmtVal(a.exposure_per_frame) + (a.exposure_per_frame != null ? " e⁻/Å²" : ""); }},
+      {label: "Pre Exp.", value: function(a){ return fmtVal(a.pre_exposure_amount) + (a.pre_exposure_amount != null ? " e⁻/Å²" : ""); }},
+      {label: "Min. Shift", value: function(a){ return fmtVal(a.min_shift) + " Å"; }},
+      {label: "Max. Shift", value: function(a){ return fmtVal(a.max_shift) + " Å"; }},
+      {label: "Term. Threshold", value: function(a){ return fmtVal(a.termination_threshold) + " Å"; }},
+      {label: "Max. Iterations", value: function(a){ return fmtVal(a.max_iterations); }},
+      {label: "B-Factor", value: function(a){ return fmtVal(a.bfactor) + " Å²"; }},
       {label: "Exposure Filter", value: function(a){ return fmtYesNo(a.should_dose_filter); }},
       {label: "Restore Power", value: function(a){ return fmtYesNo(a.should_restore_power); }},
       {label: "Mask Central Cross", value: function(a){ return fmtYesNo(a.should_mask_central_cross); }},
-      {label: "Horiz. / Vert. Mask", value: function(a){ return fmtNum(a.horizontal_mask) + " / " + fmtNum(a.vertical_mask) + " px"; }},
-      {label: "Frames Summed", value: function(a){ return a.should_include_all_frames_in_sum ? "all" + (a.frame_count ? " (" + a.frame_count + ")" : "") : fmtNum(a.first_frame_to_sum) + " – " + (a.last_frame_to_sum ? a.last_frame_to_sum : "last"); }},
-      {label: "Final Pixel Size", value: function(a){ return fmtNum(a.final_pixel_size, 3) + (a.final_pixel_size != null ? " Å" : ""); }},
+      {label: "Horiz. / Vert. Mask", value: function(a){ return fmtVal(a.horizontal_mask) + " / " + fmtVal(a.vertical_mask) + " px"; }},
+      {label: "Frames Summed", value: function(a){ return a.should_include_all_frames_in_sum ? "all" + (a.frame_count ? " (" + a.frame_count + ")" : "") : fmtVal(a.first_frame_to_sum) + " – " + (a.last_frame_to_sum ? a.last_frame_to_sum : "last"); }},
+      {label: "Final Pixel Size", value: function(a){ return fmtVal(a.final_pixel_size, 3) + (a.final_pixel_size != null ? " Å" : ""); }},
       {label: "Output File", value: function(a){ return a.output_file || "—"; }, wide: true}
     ],
     buildResult: function(box){
@@ -2456,14 +2456,14 @@ From branch : <span id="versionBranch">—</span></p>
   var CTF_NUMBERS = [
     ["Defocus 1", function(c){ return c.defocus1 != null ? Math.round(c.defocus1) + " Å" : "—"; }],
     ["Defocus 2", function(c){ return c.defocus2 != null ? Math.round(c.defocus2) + " Å" : "—"; }],
-    ["Astig. Angle", function(c){ return fmtNum(c.defocus_angle, 2) + " °"; }],
-    ["Phase Shift", function(c){ return c.find_additional_phase_shift ? fmtNum(c.additional_phase_shift * 180 / Math.PI, 2) + " °" : "0.00 °"; }],
-    ["Score", function(c){ return fmtNum(c.score, 3); }],
-    ["Fit Res.", function(c){ return fmtNum(c.detected_ring_resolution, 2) + " Å"; }],
-    ["Alias Res.", function(c){ return c.detected_alias_resolution ? fmtNum(c.detected_alias_resolution, 2) + " Å" : "None"; }],
-    ["Iciness", function(c){ return fmtNum(c.iciness, 2); }],
-    ["Tilt Angle", function(c){ return fmtNum(c.tilt_angle, 2) + " °"; }],
-    ["Tilt Axis", function(c){ return fmtNum(c.tilt_axis, 2) + " °"; }]
+    ["Astig. Angle", function(c){ return fmtVal(c.defocus_angle, 2) + " °"; }],
+    ["Phase Shift", function(c){ return c.find_additional_phase_shift ? fmtVal(c.additional_phase_shift * 180 / Math.PI, 2) + " °" : "0.00 °"; }],
+    ["Score", function(c){ return fmtVal(c.score, 3); }],
+    ["Fit Res.", function(c){ return fmtVal(c.detected_ring_resolution, 2) + " Å"; }],
+    ["Alias Res.", function(c){ return c.detected_alias_resolution ? fmtVal(c.detected_alias_resolution, 2) + " Å" : "None"; }],
+    ["Iciness", function(c){ return fmtVal(c.iciness, 2); }],
+    ["Tilt Angle", function(c){ return fmtVal(c.tilt_angle, 2) + " °"; }],
+    ["Tilt Axis", function(c){ return fmtVal(c.tilt_axis, 2) + " °"; }]
   ];
   function buildCtfResultView(box){
     var wrap = document.createElement("div"); wrap.className = "ctf-result"; box.appendChild(wrap);
@@ -2501,23 +2501,23 @@ From branch : <span id="versionBranch">—</span></p>
     emptyTitle: "No CTF estimates in this project yet",
     emptyHint: "Run Find CTF from the Actions tab; each image appears here with its diagnostic image, 1D fit and defocus values.",
     details: [
-      {label: "Estimation ID", value: function(c){ return fmtNum(c.ctf_estimation_id) + (c.job_number ? " (Job " + c.job_number + ")" : ""); }},
+      {label: "Estimation ID", value: function(c){ return fmtVal(c.ctf_estimation_id) + (c.job_number ? " (Job " + c.job_number + ")" : ""); }},
       {label: "Date of Run", value: function(c){ return fmtWhenDate(c.datetime_of_run); }},
       {label: "Time of Run", value: function(c){ return fmtWhenTime(c.datetime_of_run); }},
-      {label: "Voltage", value: function(c){ return fmtNum(c.voltage, 2) + " kV"; }},
-      {label: "Cs", value: function(c){ return fmtNum(c.spherical_aberration, 2) + " mm"; }},
-      {label: "Pixel Size", value: function(c){ return fmtNum(c.pixel_size, 4) + " Å"; }},
-      {label: "Amplitude Contrast", value: function(c){ return fmtNum(c.amplitude_contrast, 2); }},
-      {label: "Box Size", value: function(c){ return fmtNum(c.box_size) + " px"; }},
-      {label: "Min. Res.", value: function(c){ return fmtNum(c.min_resolution, 2) + " Å"; }},
-      {label: "Max. Res.", value: function(c){ return fmtNum(c.max_resolution, 2) + " Å"; }},
-      {label: "Min. Defocus", value: function(c){ return fmtNum(c.min_defocus, 2) + " Å"; }},
-      {label: "Max. Defocus", value: function(c){ return fmtNum(c.max_defocus, 2) + " Å"; }},
-      {label: "Defocus Step", value: function(c){ return fmtNum(c.defocus_step, 2) + " Å"; }},
-      {label: "Frames Averaged", value: function(c){ return c.estimated_on_movie_frames ? fmtNum(c.number_of_frames_averaged) : "n/a"; }},
+      {label: "Voltage", value: function(c){ return fmtVal(c.voltage, 2) + " kV"; }},
+      {label: "Cs", value: function(c){ return fmtVal(c.spherical_aberration, 2) + " mm"; }},
+      {label: "Pixel Size", value: function(c){ return fmtVal(c.pixel_size, 4) + " Å"; }},
+      {label: "Amplitude Contrast", value: function(c){ return fmtVal(c.amplitude_contrast, 2); }},
+      {label: "Box Size", value: function(c){ return fmtVal(c.box_size) + " px"; }},
+      {label: "Min. Res.", value: function(c){ return fmtVal(c.min_resolution, 2) + " Å"; }},
+      {label: "Max. Res.", value: function(c){ return fmtVal(c.max_resolution, 2) + " Å"; }},
+      {label: "Min. Defocus", value: function(c){ return fmtVal(c.min_defocus, 2) + " Å"; }},
+      {label: "Max. Defocus", value: function(c){ return fmtVal(c.max_defocus, 2) + " Å"; }},
+      {label: "Defocus Step", value: function(c){ return fmtVal(c.defocus_step, 2) + " Å"; }},
+      {label: "Frames Averaged", value: function(c){ return c.estimated_on_movie_frames ? fmtVal(c.number_of_frames_averaged) : "n/a"; }},
       {label: "Large Astig. Expected", value: function(c){ return fmtYesNo(c.large_astigmatism_expected); }},
-      {label: "Restrain Astig.", value: function(c){ return c.restrain_astigmatism ? "Yes (" + fmtNum(c.tolerated_astigmatism, 2) + " Å)" : "No"; }},
-      {label: "Phase Shift Search", value: function(c){ return c.find_additional_phase_shift ? fmtNum(c.min_phase_shift * 180 / Math.PI, 1) + "° – " + fmtNum(c.max_phase_shift * 180 / Math.PI, 1) + "°, step " + fmtNum(c.phase_shift_step * 180 / Math.PI, 1) + "°" : "No"; }},
+      {label: "Restrain Astig.", value: function(c){ return c.restrain_astigmatism ? "Yes (" + fmtVal(c.tolerated_astigmatism, 2) + " Å)" : "No"; }},
+      {label: "Phase Shift Search", value: function(c){ return c.find_additional_phase_shift ? fmtVal(c.min_phase_shift * 180 / Math.PI, 1) + "° – " + fmtVal(c.max_phase_shift * 180 / Math.PI, 1) + "°, step " + fmtVal(c.phase_shift_step * 180 / Math.PI, 1) + "°" : "No"; }},
       {label: "Diagnostic File", value: function(c){ return c.output_diagnostic_file || "—"; }, wide: true}
     ],
     buildResult: buildCtfResultView
@@ -5014,7 +5014,7 @@ From branch : <span id="versionBranch">—</span></p>
     els.liveLabel.textContent = "Latest Result" + (job ? " \u2014 " + (job.name || job.id) : "");
     if (!data){ els.liveMeta.textContent = job ? job.status : ""; return; }
     var parts = [];
-    if (data.task_count != null) parts.push((data.done_count || 0) + " of " + data.task_count + " movies finished");
+    if (data.task_count != null) parts.push((data.done_count || 0) + " of " + data.task_count + " finished");
     parts.push(data.status);
     if (data.result && !TERMINAL_STATUSES[data.status]) parts.push("redraws at most every " + Math.round(LIVE_MIN_INTERVAL_MS / 1000) + " s");
     if (TERMINAL_STATUSES[data.status] && data.result) parts.push("final results are on the Results tab");

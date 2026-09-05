@@ -27,7 +27,8 @@ from pathlib import Path
 import db
 import job_protocol as jp
 
-PROGRAM = "ctffind"
+# package.program (docs/job-protocol.md section 6.2): the name workers report and the executable the run commands launch.
+PROGRAM = {"name": "ctffind", "executable": "ctffind"}
 DEV_NULL = "/dev/null"
 
 # One-dimensional smoothing cisTEM applies to the rotational average before

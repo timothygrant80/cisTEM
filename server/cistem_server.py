@@ -2312,7 +2312,7 @@ def get_latest_result(project_id, job_id):
         task_row = _latest_task(conn, job_id)
         task = next((t for t in sent_tasks if t["index"] == task_row["TASK_INDEX"]), None) if task_row else None
         if task is None:
-            out["reason"] = "No movie has finished yet." if row["STATUS"] in ("queued", "running") else "This job recorded no results."
+            out["reason"] = "Nothing has finished yet." if row["STATUS"] in ("queued", "running") else "This job recorded no results."
             return jsonify(out)
         result = adapter.live_result(conn, task, task_row)
         if result is None:

@@ -897,20 +897,7 @@ From branch : <span id="versionBranch">—</span></p>
       <!-- SETTINGS -->
       <section class="tabpage" id="page-settings" hidden>
         <h2 class="page-heading">Settings</h2>
-        <p class="page-sub">Where jobs from this page actually go.</p>
-
-        <div class="groupbox">
-          <span class="groupbox-label">Connection</span>
-          <div class="settings-row">
-            <div class="field">
-              <label for="apiBase">API base URL</label>
-              <input type="text" id="apiBase" placeholder="http://localhost:8000/api" />
-            </div>
-            <button id="connectBtn">Connect</button>
-          </div>
-          <p class="settings-note"><span class="badge" id="settingsConnStatus"><span class="dot" id="settingsConnDot"></span><span id="settingsConnLabel">Not connected</span></span></p>
-          <p class="settings-note">Requests are authenticated with your logged-in session — only point it at an API on a trusted network. See the bundled <code>server/</code> folder for a reference implementation and its contract.</p>
-        </div>
+        <p class="page-sub">Project-level settings. The API this page talks to is fixed by <code>config.js</code> and connected on load; the badge in the top bar shows its state.</p>
 
         <!-- Run Profiles: cisTEM's MyRunProfilesPanel -- a profiles list with
              its button column on the left, and on the right the selected
@@ -1260,8 +1247,7 @@ From branch : <span id="versionBranch">—</span></p>
    "homeProjectPanels","projectOwnerHeader",
    "homeManageUsers","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
-   "apiBase","connectBtn","topConnStatus","topConnDot","topConnLabel","topSub",
-   "settingsConnStatus","settingsConnDot","settingsConnLabel",
+   "topConnStatus","topConnDot","topConnLabel","topSub",
    "stageTabs","actionFormLabel","paramFields","expertToggle","expertFields","submitBtn",
    "importFields","importBtn","importNote","importValidationNote","movieListBody","movieGroupList","movieImportOpenBtn",
    "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn","movieGroupInvertBtn",
@@ -2098,12 +2084,9 @@ From branch : <span id="versionBranch">—</span></p>
   });
 
   // ---------- connection ----------
-  function normalizeBase(v){ return v.trim().replace(/\/+$/,""); }
-
-  function syncApiBaseInputs(value){
-    els.apiBase.value = value;
-  }
-
+  // The address comes from config.js and is connected on load (autoConnect
+  // below); there is no in-app way to change it, so the only connection UI
+  // is the badge in the top bar.
   function updateTopSub(){
     if (state.projectId){
       els.topSub.textContent = state.projectName + (state.connected ? "" : " — disconnected");
@@ -2114,13 +2097,9 @@ From branch : <span id="versionBranch">—</span></p>
 
   function setConnected(ok, label){
     state.connected = ok;
-    [ [els.topConnStatus, els.topConnDot, els.topConnLabel],
-      [els.settingsConnStatus, els.settingsConnDot, els.settingsConnLabel] ].forEach(function(trio){
-        var badge = trio[0], dot = trio[1], lbl = trio[2];
-        badge.className = "badge" + (ok ? " ok" : (label ? " bad" : ""));
-        dot.className = "dot" + (ok ? " pulse" : "");
-        lbl.textContent = label || (ok ? "Connected" : "Not connected");
-    });
+    els.topConnStatus.className = "badge" + (ok ? " ok" : (label ? " bad" : ""));
+    els.topConnDot.className = "dot" + (ok ? " pulse" : "");
+    els.topConnLabel.textContent = label || (ok ? "Connected" : "Not connected");
     updateTopSub();
     // Losing the connection is one of the reasons the start button greys out.
     updateStartButton();
@@ -2146,33 +2125,6 @@ From branch : <span id="versionBranch">—</span></p>
       return r;
     });
   }
-
-  // Manual reconnect from the Settings tab mid-session (e.g. the API
-  // restarted, or you want to point at a different address without
-  // reloading). Not persisted anywhere -- config.js remains the one
-  // place that controls what address the page starts with on load.
-  function testConnection(inputEl){
-    var base = normalizeBase(inputEl.value);
-    if (!base){ setConnected(false, "Enter an API base URL"); return; }
-    state.apiBase = base;
-    syncApiBaseInputs(base);
-    setConnected(false, "Connecting…");
-    fetch(apiUrl("/health")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(){
-      setConnected(true);
-      checkAuth();
-      if (state.projectId){ startPolling(); fetchJobs(); populateDynamicFields(STAGES[state.currentStage].fields); }
-    }).catch(function(){
-      setConnected(false, "Unreachable");
-      if (state.screen === "app"){
-        renderEmptyQueue("Could not reach " + base, "Check the address, and that the server allows requests from this page's origin (CORS).");
-      }
-    });
-  }
-  els.connectBtn.addEventListener("click", function(){ testConnection(els.apiBase); });
-  syncApiBaseInputs(state.apiBase);
 
   // Auto-connect on load to state.apiBase (from config.js) -- success shows
   // the home/login screen, failure shows a dedicated error screen with a

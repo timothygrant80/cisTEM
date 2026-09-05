@@ -1,4 +1,4 @@
-"""db-level tests for run profile editing, on a scratch project.
+"""db-level tests for run profile editing, on a scratch system database.
 
     python -m unittest discover -s server/tests
 """
@@ -18,15 +18,13 @@ import db  # noqa: E402
 class RunProfileEditingTests(unittest.TestCase):
     def setUp(self):
         self._root = tempfile.mkdtemp(prefix="rp-test-")
-        self._saved_root = db.PROJECTS_ROOT
-        db.PROJECTS_ROOT = pathlib.Path(self._root) / "projects"
-        db.PROJECTS_ROOT.mkdir(parents=True)
-        self.pid = db.create_project("scratch", 1, "tester")
-        self.conn = db.get_conn(self.pid)
+        self._saved_path = db.SYSTEM_DB_PATH
+        db.SYSTEM_DB_PATH = pathlib.Path(self._root) / "system.db"
+        self.conn = db.get_system_conn()
 
     def tearDown(self):
         self.conn.close()
-        db.PROJECTS_ROOT = self._saved_root
+        db.SYSTEM_DB_PATH = self._saved_path
         shutil.rmtree(self._root, ignore_errors=True)
 
     def names(self):
@@ -114,7 +112,7 @@ class RunProfileEditingTests(unittest.TestCase):
             db.update_run_profile(self.conn, pid, {"name": "x"})
         # a reopen must not resurrect it
         self.conn.close()
-        self.conn = db.get_conn(self.pid)
+        self.conn = db.get_system_conn()
         self.assertEqual(len(self.names()), 2)
 
 

@@ -33,6 +33,12 @@ import uuid
 from pathlib import Path
 
 PROJECTS_ROOT = Path(__file__).parent / "data" / "projects"
+# Run profiles describe the *machine* (how many processes, through which
+# scheduler), not any one project, so they live in one system-wide file that
+# administrators edit from the home page and every project reads. cisTEM
+# keeps them per project; that meant setting the same thing up again for
+# every project on the same box.
+SYSTEM_DB_PATH = Path(__file__).parent / "data" / "system.db"
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS MASTER_SETTINGS(
@@ -322,7 +328,6 @@ def get_conn(project_id):
     with conn:
         for stmt in _SEED_STATEMENTS:
             conn.execute(stmt)
-        _seed_run_profile_commands(conn)
         # Projects made before CREATION_DATE existed get a best guess once.
         if conn.execute("SELECT 1 FROM MASTER_SETTINGS WHERE NUMBER=1 AND CREATION_DATE IS NULL").fetchone():
             conn.execute("UPDATE MASTER_SETTINGS SET CREATION_DATE=? WHERE NUMBER=1", (_guess_creation_time(path.parent, conn),))
@@ -602,17 +607,39 @@ def create_project(name, owner_user_id, owner_username):
             "INSERT INTO MOVIE_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) "
             "VALUES (0, 'All Movies', 0)"
         )
-        # MANAGER_RUN_COMMAND is left NULL on purpose: that is the marker
-        # _seed_run_profile_commands() uses to know a profile has never been
-        # given its commands, so one code path serves new and old projects.
-        for profile_name, _manager, _commands in RUN_PROFILE_SEED:
-            conn.execute(
-                "INSERT INTO RUN_PROFILES(PROFILE_NAME, MANAGER_RUN_COMMAND) VALUES (?, NULL)",
-                (profile_name,),
-            )
-        _seed_run_profile_commands(conn)
     conn.close()
     return project_id
+
+
+_SYSTEM_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS RUN_PROFILES(
+  RUN_PROFILE_ID INTEGER PRIMARY KEY, PROFILE_NAME TEXT, MANAGER_RUN_COMMAND TEXT,
+  GUI_ADDRESS TEXT, CONTROLLER_ADDRESS TEXT, COMMANDS_ID INTEGER
+);
+"""
+
+
+def get_system_conn():
+    """The system-wide database: run profiles (see SYSTEM_DB_PATH). Seeded
+    with the same three profiles a cisTEM project starts with the first
+    time it is opened; after that, what administrators make of them. The
+    run-profile helpers below take any connection with these tables, so
+    they serve this file exactly as they used to serve a project's."""
+    SYSTEM_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(SYSTEM_DB_PATH), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
+    conn.executescript(_SYSTEM_SCHEMA_SQL)
+    with conn:
+        if conn.execute("SELECT COUNT(*) FROM RUN_PROFILES").fetchone()[0] == 0:
+            # MANAGER_RUN_COMMAND is left NULL on purpose: that is the marker
+            # _seed_run_profile_commands() uses to know a profile has never
+            # been given its commands.
+            for profile_name, _manager, _commands in RUN_PROFILE_SEED:
+                conn.execute("INSERT INTO RUN_PROFILES(PROFILE_NAME, MANAGER_RUN_COMMAND) VALUES (?, NULL)", (profile_name,))
+        _seed_run_profile_commands(conn)
+    return conn
 
 
 def get_project_summary(project_id):

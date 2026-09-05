@@ -228,6 +228,9 @@ button.link:hover{background:none;text-decoration:underline;}
 /* ---------- Home (project picker) ---------- */
 .home{min-height:100vh;display:flex;justify-content:center;padding:52px 20px;background:var(--page-bg);}
 .home-inner{width:100%;max-width:560px;}
+.home-inner.wide{max-width:1100px;} /* the admin panels (users, run profiles) need the room */
+.home-inner.wide .home-logo{max-width:560px;}
+.home-inner.wide .home-sub{text-align:center;}
 .home-logo{display:block;width:100%;height:auto;margin:0 auto 14px;}
 .home-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 18px;}
 .home-link{color:var(--accent);}
@@ -589,7 +592,7 @@ table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:
 </div>
 
 <div class="home" id="homeScreen" hidden>
-  <div class="home-inner">
+  <div class="home-inner" id="homeInner">
     <img class="home-logo" src="logo.png" alt="cisTEM3">
     <p class="home-sub" style="text-align:center;">Welcome to <i>cis</i>TEM (Computational Imaging System for Transmission Electron Microscopy)<br>
 For more information, manuals and tutorials please visit <a href="http://www.cistem.org" target="_blank" rel="noopener noreferrer" class="home-link">cistem.org</a><br>
@@ -687,6 +690,71 @@ From branch : <span id="versionBranch">—</span></p>
         </div>
         <p class="settings-note" id="createUserNote"></p>
       </div>
+
+      <!-- Run profiles are per machine, not per project: an administrator
+           primes them here once and every project's job panels pick from
+           them. cisTEM keeps this panel under each project's Settings. -->
+      <div class="groupbox" id="homeRunProfiles" hidden>
+        <span class="groupbox-label">Run Profiles</span>
+        <!-- Run Profiles: cisTEM's MyRunProfilesPanel -- a profiles list with
+             its button column on the left, and on the right the selected
+             profile's manager command, addresses and run commands. Edits to the
+             right-hand panel are buffered until Save, as in cisTEM; the
+             profile-level buttons (Add / Rename / Remove / Duplicate) act at once. -->
+        <p class="page-sub page-sub-wide" style="margin-top:2px;">How a job's processes are launched on this machine. Profiles are shared by every project and picked per job from the Run Profile box on the Actions tab; only administrators edit them. In every command, <code>$command</code> stands for the executable and its arguments; the manager command launches the job controller, and each run command launches that many copies of the program.</p>
+        <div class="profiles-layout">
+          <div class="groupbox">
+            <span class="groupbox-label">Profiles</span>
+            <ul class="group-list" id="rpList"></ul>
+            <div class="asset-toolbar">
+              <button class="small" id="rpAddBtn" title="Add cisTEM's default local profile: one copy of the program per core, plus one for the master.">Add</button>
+              <button class="small" id="rpRenameBtn" disabled>Rename</button>
+              <button class="small" id="rpRemoveBtn" disabled>Remove</button>
+              <button class="small" id="rpDuplicateBtn" disabled>Duplicate</button>
+            </div>
+            <div class="asset-toolbar rp-io">
+              <button class="small" id="rpImportBtn" title="Add profiles from a JSON file written by Export.">Import</button>
+              <button class="small" id="rpExportBtn" disabled title="Save every profile to a JSON file.">Export</button>
+              <input type="file" id="rpImportFile" accept=".json,application/json" hidden>
+            </div>
+          </div>
+
+          <div class="groupbox rp-commands-panel" id="rpCommandsPanel">
+            <span class="groupbox-label" id="rpCommandsLabel">Commands</span>
+            <div class="rp-total">Total Number of Processes : <strong id="rpTotal">&mdash;</strong></div>
+            <div class="field">
+              <label for="rpManager">Manager Command <span class="unit">&mdash; launches the job controller; must contain <code>$command</code></span></label>
+              <input type="text" id="rpManager" placeholder="$command" />
+              <span class="validation-note blocked rp-error" id="rpManagerError" hidden>Oops! - Command must contain "$command"</span>
+            </div>
+            <div class="rp-addresses">
+              <span class="rp-addr-label" title="The address the job controller dials to reach this server. Automatic sends every address this machine answers on. cisTEM calls this the GUI address.">Server Address :</span>
+              <span class="rp-addr-value" id="rpGuiAddress">Automatic</span>
+              <button class="small" id="rpGuiAutoBtn" disabled>Auto</button>
+              <button class="small" id="rpGuiSpecifyBtn">Specify</button>
+              <span class="rp-addr-label" title="The address the worker processes dial to reach the job controller. Automatic lets the controller advertise its own.">Controller Address :</span>
+              <span class="rp-addr-value" id="rpControllerAddress">Automatic</span>
+              <button class="small" id="rpControllerAutoBtn" disabled>Auto</button>
+              <button class="small" id="rpControllerSpecifyBtn">Specify</button>
+            </div>
+            <div class="table-scroll rp-table">
+              <table class="queue rp-commands-table">
+                <thead>
+                  <tr><th>Command</th><th>No. Copies</th><th>No. Threads Per Copy</th><th>Override Total No. Copies?</th><th>Overriden Total No. Copies?</th><th>Launch Delay (ms)</th></tr>
+                </thead>
+                <tbody id="rpCommandsBody"></tbody>
+              </table>
+            </div>
+            <div class="asset-toolbar rp-actions">
+              <button class="small" id="rpCmdAddBtn">Add</button>
+              <button class="small" id="rpCmdEditBtn" disabled>Edit</button>
+              <button class="small" id="rpCmdRemoveBtn" disabled>Remove</button>
+              <button class="primary small rp-save" id="rpSaveBtn" disabled>Save</button>
+            </div>
+            <p class="form-note" id="rpNote">Changes to the manager command, addresses and run commands are kept here until you click Save.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -713,10 +781,6 @@ From branch : <span id="versionBranch">—</span></p>
     <button class="rail-item" data-tab="jobs" title="Jobs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1"/><path d="M3.5 9.5h17M3.5 14.5h17"/></svg>
       <span>Jobs</span>
-    </button>
-    <button class="rail-item" data-tab="settings" title="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.4-2-3.4-2.3.8a7.5 7.5 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.5 7.5 0 0 0-2.6 1.5l-2.3-.8-2 3.4 2 1.4a7.6 7.6 0 0 0 0 3l-2 1.4 2 3.4 2.3-.8a7.5 7.5 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.5 7.5 0 0 0 2.6-1.5l2.3.8 2-3.4-2-1.4z"/></svg>
-      <span>Settings</span>
     </button>
   </nav>
 
@@ -1134,72 +1198,6 @@ From branch : <span id="versionBranch">—</span></p>
         </div>
       </section>
 
-      <!-- SETTINGS -->
-      <section class="tabpage" id="page-settings" hidden>
-        <h2 class="page-heading">Settings</h2>
-        <p class="page-sub page-sub-wide">Project-level settings. The API this page talks to is fixed by <code>config.js</code> and connected on load; the badge in the top bar shows its state.</p>
-
-        <!-- Run Profiles: cisTEM's MyRunProfilesPanel -- a profiles list with
-             its button column on the left, and on the right the selected
-             profile's manager command, addresses and run commands. Edits to the
-             right-hand panel are buffered until Save, as in cisTEM; the
-             profile-level buttons (Add / Rename / Remove / Duplicate) act at once. -->
-        <h3 class="settings-heading">Run Profiles</h3>
-        <p class="page-sub page-sub-wide">How a job's processes are launched. A profile is picked per job from the Run Profile box on the Actions tab. In every command, <code>$command</code> stands for the executable and its arguments; the manager command launches the job controller, and each run command launches that many copies of the program.</p>
-        <div class="profiles-layout">
-          <div class="groupbox">
-            <span class="groupbox-label">Profiles</span>
-            <ul class="group-list" id="rpList"></ul>
-            <div class="asset-toolbar">
-              <button class="small" id="rpAddBtn" title="Add cisTEM's default local profile: one copy of the program per core, plus one for the master.">Add</button>
-              <button class="small" id="rpRenameBtn" disabled>Rename</button>
-              <button class="small" id="rpRemoveBtn" disabled>Remove</button>
-              <button class="small" id="rpDuplicateBtn" disabled>Duplicate</button>
-            </div>
-            <div class="asset-toolbar rp-io">
-              <button class="small" id="rpImportBtn" title="Add profiles from a JSON file written by Export.">Import</button>
-              <button class="small" id="rpExportBtn" disabled title="Save every profile to a JSON file.">Export</button>
-              <input type="file" id="rpImportFile" accept=".json,application/json" hidden>
-            </div>
-          </div>
-
-          <div class="groupbox rp-commands-panel" id="rpCommandsPanel">
-            <span class="groupbox-label" id="rpCommandsLabel">Commands</span>
-            <div class="rp-total">Total Number of Processes : <strong id="rpTotal">&mdash;</strong></div>
-            <div class="field">
-              <label for="rpManager">Manager Command <span class="unit">&mdash; launches the job controller; must contain <code>$command</code></span></label>
-              <input type="text" id="rpManager" placeholder="$command" />
-              <span class="validation-note blocked rp-error" id="rpManagerError" hidden>Oops! - Command must contain "$command"</span>
-            </div>
-            <div class="rp-addresses">
-              <span class="rp-addr-label" title="The address the job controller dials to reach this server. Automatic sends every address this machine answers on. cisTEM calls this the GUI address.">Server Address :</span>
-              <span class="rp-addr-value" id="rpGuiAddress">Automatic</span>
-              <button class="small" id="rpGuiAutoBtn" disabled>Auto</button>
-              <button class="small" id="rpGuiSpecifyBtn">Specify</button>
-              <span class="rp-addr-label" title="The address the worker processes dial to reach the job controller. Automatic lets the controller advertise its own.">Controller Address :</span>
-              <span class="rp-addr-value" id="rpControllerAddress">Automatic</span>
-              <button class="small" id="rpControllerAutoBtn" disabled>Auto</button>
-              <button class="small" id="rpControllerSpecifyBtn">Specify</button>
-            </div>
-            <div class="table-scroll rp-table">
-              <table class="queue rp-commands-table">
-                <thead>
-                  <tr><th>Command</th><th>No. Copies</th><th>No. Threads Per Copy</th><th>Override Total No. Copies?</th><th>Overriden Total No. Copies?</th><th>Launch Delay (ms)</th></tr>
-                </thead>
-                <tbody id="rpCommandsBody"></tbody>
-              </table>
-            </div>
-            <div class="asset-toolbar rp-actions">
-              <button class="small" id="rpCmdAddBtn">Add</button>
-              <button class="small" id="rpCmdEditBtn" disabled>Edit</button>
-              <button class="small" id="rpCmdRemoveBtn" disabled>Remove</button>
-              <button class="primary small rp-save" id="rpSaveBtn" disabled>Save</button>
-            </div>
-            <p class="form-note" id="rpNote">Changes to the manager command, addresses and run commands are kept here until you click Save.</p>
-          </div>
-        </div>
-      </section>
-
     </div>
   </div>
 </div>
@@ -1485,7 +1483,7 @@ From branch : <span id="versionBranch">—</span></p>
    "changePasswordToggleBtn","changePasswordForm","currentPassword","newPassword","confirmPassword",
    "savePasswordBtn","changePasswordNote",
    "homeProjectPanels",
-   "homeManageUsers","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
+   "homeManageUsers","homeRunProfiles","homeInner","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
    "topConnStatus","topConnDot","topConnLabel","topSub",
    "stageTabs","actionFormLabel","paramFields","expertToggle","expertFields","submitBtn",
@@ -1562,8 +1560,7 @@ From branch : <span id="versionBranch">—</span></p>
     assets: document.getElementById("page-assets"),
     actions: document.getElementById("page-actions"),
     results: document.getElementById("page-results"),
-    jobs: document.getElementById("page-jobs"),
-    settings: document.getElementById("page-settings")
+    jobs: document.getElementById("page-jobs")
   };
   function showTab(name){
     railItems.forEach(function(btn){ btn.classList.toggle("active", btn.dataset.tab === name); });
@@ -2355,21 +2352,22 @@ From branch : <span id="versionBranch">—</span></p>
 
   // ---------- run profile ----------
   // ---------- run profiles ----------
-  // Filled from the project's own RUN_PROFILES rows, the way cisTEM's
-  // RunProfileComboBox is filled from the run profiles panel. The last
-  // choice is remembered by name across projects, since every project is
-  // seeded with the same three.
+  // Filled from the system-wide run profiles, the way cisTEM's
+  // RunProfileComboBox is filled from the run profiles panel -- except that
+  // cisTEM's are per project and these are per machine, edited by an
+  // administrator on the home page. The last choice is remembered by name.
   function loadRunProfiles(){
-    if (!state.projectId){
+    if (!state.currentUser){
       els.runProfile.innerHTML = "";
       var none = document.createElement("option");
-      none.textContent = "Open a project first";
+      none.textContent = "Log in first";
       els.runProfile.appendChild(none);
       els.runProfile.disabled = true;
+      state.runProfiles = [];
       rpSetProfiles([]);
       return;
     }
-    apiFetch(projectApiUrl("/run-profiles")).then(function(r){
+    apiFetch(apiUrl("/run-profiles")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
@@ -2421,7 +2419,7 @@ From branch : <span id="versionBranch">—</span></p>
   var rp = { profiles: [], selectedId: null, buffer: null, selectedCommand: -1, dirty: false, editingCommand: -1 };
 
   function rpFetch(path, opts){
-    return apiFetch(projectApiUrl(path), opts).then(function(r){
+    return apiFetch(apiUrl(path), opts).then(function(r){
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.status === 204 ? null : r.json();
     });
@@ -2482,8 +2480,10 @@ From branch : <span id="versionBranch">—</span></p>
     els.rpRemoveBtn.disabled = !have;
     els.rpDuplicateBtn.disabled = !have;
     els.rpExportBtn.disabled = !rp.profiles.length;
-    els.rpAddBtn.disabled = !state.projectId;
-    els.rpImportBtn.disabled = !state.projectId;
+    // The editor is only shown to administrators, on the home page: no
+    // project needs to be open to add or import a profile.
+    els.rpAddBtn.disabled = !state.currentUser;
+    els.rpImportBtn.disabled = !state.currentUser;
   }
 
   function rpRenderCommands(){
@@ -2809,6 +2809,8 @@ From branch : <span id="versionBranch">—</span></p>
     els.homeUserStrip.hidden = !loggedIn;
     els.homeProjectPanels.hidden = !loggedIn;
     els.homeManageUsers.hidden = !isAdmin;
+    els.homeRunProfiles.hidden = !isAdmin;
+    els.homeInner.classList.toggle("wide", isAdmin);
 
     if (loggedIn){
       els.homeUserLabel.textContent = state.currentUser.display_name || state.currentUser.username;
@@ -2816,6 +2818,7 @@ From branch : <span id="versionBranch">—</span></p>
       if (state.screen === "home") loadProjectList();
       if (isAdmin) loadUsers();
     }
+    loadRunProfiles();
   }
 
   function checkAuth(){
@@ -3053,8 +3056,6 @@ From branch : <span id="versionBranch">—</span></p>
     state.jobs = [];
     state.jobsSeen = false;
     state.selectedJobId = null; live.jobId = null; els.livePanel.hidden = true;
-    state.runProfiles = [];
-    loadRunProfiles();
     updateTopSub();
     showScreen("home");
   }
@@ -4465,9 +4466,9 @@ From branch : <span id="versionBranch">—</span></p>
   function updateStartButton(){
     var stage = STAGES[state.currentStage];
     var reason = null;
-    if (!state.connected) reason = "Connect to a pipeline API first (Settings tab).";
+    if (!state.connected) reason = "Connect to a pipeline API first.";
     else if (!state.projectId) reason = "Open a project first.";
-    else if (!state.runProfiles || !state.runProfiles.length) reason = "This project has no run profiles.";
+    else if (!state.runProfiles || !state.runProfiles.length) reason = "No run profiles are defined \u2014 an administrator adds them on the home page.";
     else {
       var count = selectedGroupCount();
       var profile = state.runProfiles.filter(function(p){ return p.profile_name === els.runProfile.value; })[0];

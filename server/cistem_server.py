@@ -579,13 +579,15 @@ def _recover_interrupted_jobs():
             adapter = stages.ADAPTERS.get(row["STAGE"])
             if _job_runner is not None and adapter is not None and row["JOB_TOKEN"] and row["TASKS_JSON"]:
                 params = json.loads(row["PARAMS_JSON"]) if row["PARAMS_JSON"] else {}
-                profile = db.load_run_profile_by_name(conn, params.get("run_profile")) or {
+                sys_conn = db.get_system_conn()
+                profile = db.load_run_profile_by_name(sys_conn, params.get("run_profile")) or {
                     "name": params.get("run_profile") or "?", "manager_command": "$command",
                     "controller_address": "", "run_commands": [], "total_jobs": 0}
                 spec = job_runner.JobSpec(
                     job_id, _package_job_info(project_id, row), adapter.PROGRAM, profile,
                     json.loads(row["TASKS_JSON"]), profile["manager_command"], token=row["JOB_TOKEN"],
                     controller_log=_controller_log_path(project_id, job_id))
+                sys_conn.close()
                 done = [r["TASK_INDEX"] for r in conn.execute(
                     "SELECT TASK_INDEX FROM JOB_TASKS WHERE JOB_ID=?", (job_id,)).fetchall()]
                 _db_sink.register(job_id, project_id)
@@ -1914,19 +1916,26 @@ def alignment_spectrum_preview(project_id, alignment_id):
 # Run profiles (project-scoped)
 # ---------------------------------------------------------------------------
 
-@app.route("/api/projects/<project_id>/run-profiles", methods=["GET"])
-@auth.project_access_required
-def list_run_profiles(project_id):
-    """The project's run profiles with their commands, for the Run Profile
-    picker each job panel carries (cf. RunProfileComboBox in cisTEM's
-    AlignMoviesPanel, filled from run_profiles_panel). db.py seeds the same
-    three into every project; nothing edits them yet, so this is read-only.
+# ---------------------------------------------------------------------------
+# Run profiles (system-wide). Any logged-in user reads them -- the Run
+# Profile picker on every job panel is filled from here -- and only an
+# administrator edits them, from the home page. cisTEM keeps them per
+# project (RunProfilesPanel under Settings); here they describe the machine
+# the server runs on, which is the same for every project.
+# ---------------------------------------------------------------------------
+
+@app.route("/api/run-profiles", methods=["GET"])
+@auth.login_required
+def list_run_profiles():
+    """Every run profile with its commands, for the Run Profile picker each
+    job panel carries (cf. RunProfileComboBox in cisTEM's AlignMoviesPanel,
+    filled from run_profiles_panel) and the home page's editor.
 
     `total_jobs` is what the start button gates on: a profile with no run
     commands (the seeded Slurm template) can't launch anything, and cisTEM's
     OnUpdateUI greys the button in that case rather than let the job fail.
     """
-    conn = db.get_conn(project_id)
+    conn = db.get_system_conn()
     profiles = db.load_run_profiles(conn)
     conn.close()
     return jsonify({"run_profiles": [_profile_json(p) for p in profiles]})
@@ -1956,15 +1965,15 @@ def _profile_spec_from_body(body):
     return spec
 
 
-@app.route("/api/projects/<project_id>/run-profiles", methods=["POST"])
-@auth.project_access_required
-def create_run_profile(project_id):
+@app.route("/api/run-profiles", methods=["POST"])
+@auth.admin_required
+def create_run_profile():
     """MyRunProfilesPanel's Add, Duplicate and Import in one route. An empty
     body adds cisTEM's "Default Local" profile; `copy_of` duplicates an
     existing one as "Copy of <name>"; a full profile in the body (the shape
     GET returns) imports it. Names are made unique."""
     body = request.get_json(force=True, silent=True) or {}
-    conn = db.get_conn(project_id)
+    conn = db.get_system_conn()
     try:
         if "copy_of" in body:
             source = db.load_run_profile(conn, int(body["copy_of"]))
@@ -1985,13 +1994,13 @@ def create_run_profile(project_id):
     return jsonify(_profile_json(profile)), 201
 
 
-@app.route("/api/projects/<project_id>/run-profiles/<int:run_profile_id>", methods=["PATCH"])
-@auth.project_access_required
-def update_run_profile(project_id, run_profile_id):
+@app.route("/api/run-profiles/<int:run_profile_id>", methods=["PATCH"])
+@auth.admin_required
+def update_run_profile(run_profile_id):
     """Rename, or the commands panel's Save: any of profile_name,
     manager_run_command, gui_address, controller_address, run_commands."""
     body = request.get_json(force=True, silent=True) or {}
-    conn = db.get_conn(project_id)
+    conn = db.get_system_conn()
     try:
         try:
             db.update_run_profile(conn, run_profile_id, _profile_spec_from_body(body))
@@ -2005,10 +2014,10 @@ def update_run_profile(project_id, run_profile_id):
     return jsonify(_profile_json(profile))
 
 
-@app.route("/api/projects/<project_id>/run-profiles/<int:run_profile_id>", methods=["DELETE"])
-@auth.project_access_required
-def delete_run_profile(project_id, run_profile_id):
-    conn = db.get_conn(project_id)
+@app.route("/api/run-profiles/<int:run_profile_id>", methods=["DELETE"])
+@auth.admin_required
+def delete_run_profile(run_profile_id):
+    conn = db.get_system_conn()
     try:
         deleted = db.delete_run_profile(conn, run_profile_id)
     finally:
@@ -2103,7 +2112,9 @@ def _submit_to_runner(project_id, job_id, adapter, params):
     runner, which launches the run profile's manager command."""
     conn = db.get_conn(project_id)
     try:
-        profile = db.load_run_profile_by_name(conn, params.get("run_profile"))
+        sys_conn = db.get_system_conn()
+        profile = db.load_run_profile_by_name(sys_conn, params.get("run_profile"))
+        sys_conn.close()
         if profile is None:
             error = "unknown run profile {!r}".format(params.get("run_profile"))
         elif profile["total_jobs"] == 0:

@@ -109,10 +109,8 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/alignments/:aid/activate` | Make this alignment the movie's active one (its image asset now points at it) |
 | `POST` | `/projects/:id/jobs/:id/activate-alignments` | Make one job's alignments active for every movie it aligned → `{activated, failed}` |
 | `GET` | `/projects/:id/alignments/:aid/sum.png`, `/spectrum.png` | PNG renders of the aligned sum and its amplitude spectrum |
-| `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command, gui_address, controller_address, run_commands: [...], total_jobs}, ...] }` — fills the Run Profile picker and the Settings editor; `total_jobs == 0` greys the start button |
-| `POST` | `/projects/:id/run-profiles` | Add a profile: `{}` for cisTEM's "Default Local", `{ "copy_of": id }` to duplicate, or a full profile (the `GET` shape) to import → `201` with the new profile |
-| `PATCH` | `/projects/:id/run-profiles/:rid` | Change any of `profile_name`, `manager_run_command`, `gui_address`, `controller_address`, `run_commands` (each command: `{command, copies, threads_per_copy, override_total_copies, overridden_total_copies, delay_ms}`); `400` if a command lacks `$command` |
-| `DELETE` | `/projects/:id/run-profiles/:rid` | Remove a profile and its commands |
+| `GET` | `/run-profiles` | The machine's run profiles (system-wide, any logged-in user) — feeds the Run Profile picker |
+| `POST` / `PATCH` / `DELETE` | `/run-profiles[/:rid]` | Admin only: add (empty body), duplicate (`{copy_of}`), import (full profile), edit, remove |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below). `400` if `params.run_profile` names a profile with no run commands |
 | `GET` | `/projects/:id/jobs/:id/latest-result` | Newest finished task's result for the Jobs tab's live panel (`result: null` + `reason` when there is none yet) |

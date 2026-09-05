@@ -48,6 +48,7 @@ from flask_cors import CORS
 import auth
 import db
 import job_runner
+import refinement_packages
 import stages
 import imageheaders
 import preview
@@ -1934,6 +1935,105 @@ def position_group_from_image_group(project_id):
                          [(gid, i) for i in ids])
     conn.close()
     return jsonify({"group_id": gid, "group_name": group_name, "added": len(ids)}), 201
+
+
+# ---------------------------------------------------------------------------
+# Refinement packages (MyRefinementPackageAssetPanel + MyNewRefinementPackageWizard)
+# ---------------------------------------------------------------------------
+
+@app.route("/api/projects/<project_id>/refinement-packages", methods=["GET"])
+@auth.project_access_required
+def list_refinement_packages(project_id):
+    conn = db.get_conn(project_id)
+    out = refinement_packages.list_packages(conn)
+    conn.close()
+    return jsonify({"refinement_packages": out})
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/defaults", methods=["GET"])
+@auth.project_access_required
+def refinement_package_defaults(project_id):
+    """What the wizard prefills for a particle group: the first particle's
+    image pixel size and the box size cisTEM derives from the largest
+    dimension (`?particle_group_id=&largest_dimension_a=`)."""
+    group_id = request.args.get("particle_group_id", type=int)
+    largest = request.args.get("largest_dimension_a", type=float) or 150.0
+    if group_id is None:
+        return jsonify({"error": "particle_group_id is required"}), 400
+    conn = db.get_conn(project_id)
+    out = refinement_packages.group_defaults(conn, group_id, largest)
+    out["next_name"] = "Refinement Package #{}".format(
+        conn.execute("SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) + 1 FROM REFINEMENT_PACKAGE_ASSETS").fetchone()[0])
+    out["symmetries"] = list(refinement_packages.SYMMETRIES)
+    conn.close()
+    return jsonify(out)
+
+
+@app.route("/api/projects/<project_id>/refinement-packages", methods=["POST"])
+@auth.project_access_required
+def create_refinement_package(project_id):
+    """Body {particle_group_id, name, symmetry, molecular_weight_kda,
+    largest_dimension_a, number_of_classes, box_size, output_pixel_size}:
+    cuts the stack and writes the package and its "Random Parameters"
+    refinement, as the wizard's Finish does. Synchronous -- a project of a
+    few hundred thousand particles will take a while."""
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            result = refinement_packages.create_package(conn, project_id, body)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except OSError as exc:
+            return jsonify({"error": "could not read or write a file: {}".format(exc)}), 500
+        return jsonify(result), 201
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["GET"])
+@auth.project_access_required
+def get_refinement_package(project_id, package_id):
+    conn = db.get_conn(project_id)
+    pkg = [p for p in refinement_packages.list_packages(conn) if p["refinement_package_asset_id"] == package_id]
+    if not pkg:
+        conn.close()
+        return jsonify({"error": "no such refinement package"}), 404
+    d = pkg[0]
+    d["particles"], d["particle_total"] = refinement_packages.package_particles(conn, package_id)
+    d["refinements"] = [dict(r) for r in conn.execute(
+        "SELECT REFINEMENT_ID, NAME, DATETIME_OF_RUN, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM REFINEMENT_LIST "
+        "WHERE REFINEMENT_PACKAGE_ASSET_ID=? ORDER BY REFINEMENT_ID", (package_id,)).fetchall()]
+    conn.close()
+    return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_refinement_package(project_id, package_id):
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            ok = refinement_packages.rename_package(conn, package_id, body.get("name"))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        if not ok:
+            return jsonify({"error": "no such refinement package"}), 404
+        return jsonify({"renamed": package_id})
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_refinement_package(project_id, package_id):
+    conn = db.get_conn(project_id)
+    ok = refinement_packages.delete_package(conn, package_id)
+    conn.close()
+    if not ok:
+        return jsonify({"error": "no such refinement package"}), 404
+    return jsonify({"deleted": package_id})
 
 
 # ---------------------------------------------------------------------------

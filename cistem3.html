@@ -458,6 +458,12 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .ra-swatch-amp{border-top-color:var(--success);} .ra-swatch-fit{border-top-color:var(--plot-y);} .ra-swatch-q{border-top-color:var(--accent);}
 @media (max-width:1100px){ .ctf-result{grid-template-columns:1fr;} }
 
+.rpkg-layout{height:auto;min-height:340px;}
+.rpkg-layout > .groupbox:first-child{height:340px;}
+.rpkg-grid{margin-bottom:12px;}
+.rpkg-particles-head{font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;margin:4px 0 6px;}
+.rpkg-table{max-height:300px;overflow:auto;}
+
 /* ---------- Jobs: latest result of the selected job ---------- */
 .queue-scroll{max-height:340px;overflow-y:auto;}
 .live-plot-title-name{text-transform:none;letter-spacing:0;color:var(--text-secondary);font-weight:600;margin-left:6px;}
@@ -1035,7 +1041,60 @@ From branch : <span id="versionBranch">—</span></p>
           </div>
         </div>
 
-        <!-- 3D VOLUMES / REFINE PKGS: no backend data model yet -->
+        <!-- REFINEMENT PACKAGES: MyRefinementPackageAssetPanel. A package is a
+             particle stack cut from the images at a particle position group's
+             picks, with every particle's CTF and a first "Random Parameters"
+             refinement -- what 2D classification and refinement consume. -->
+        <div class="asset-subpage" id="assetpageRefine" hidden>
+          <div class="assets-layout rpkg-layout">
+            <div class="groupbox">
+              <span class="groupbox-label">Packages</span>
+              <ul class="group-list" id="rpkgList"></ul>
+              <div class="asset-toolbar">
+                <button class="small" id="rpkgNewBtn" title="cisTEM’s New Refinement Package wizard: cut a particle stack from a particle position group.">New</button>
+                <button class="small" id="rpkgRenameBtn" disabled>Rename</button>
+                <button class="small danger" id="rpkgDeleteBtn" disabled>Delete</button>
+              </div>
+              <div class="asset-toolbar">
+                <button class="small" disabled title="Combining packages isn’t implemented yet.">Combine</button>
+                <button class="small" disabled title="Importing a package isn’t implemented yet.">Import</button>
+                <button class="small" disabled title="Exporting a package isn’t implemented yet.">Export</button>
+              </div>
+            </div>
+
+            <div class="groupbox">
+              <span class="groupbox-label" id="rpkgDetailsLabel">Refinement Package</span>
+              <div class="empty-note" id="rpkgEmpty">No refinement packages yet<span class="hint">Click New to cut a particle stack from a particle position group. Every image the positions come from needs a CTF estimate.</span></div>
+              <div id="rpkgDetails" hidden>
+                <div class="details-grid rpkg-grid">
+                  <div class="details-item details-item-wide"><span class="details-key">Stack Filename</span><span class="details-val" id="dRpkgStack">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Stack Box Size</span><span class="details-val" id="dRpkgBox">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Output Pixel Size</span><span class="details-val" id="dRpkgPixel">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Symmetry</span><span class="details-val" id="dRpkgSymmetry">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Molecular Weight</span><span class="details-val" id="dRpkgMw">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Largest Dimension</span><span class="details-val" id="dRpkgSize">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Number of Classes</span><span class="details-val" id="dRpkgClasses">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Number of Refinements</span><span class="details-val" id="dRpkgRefinements">&mdash;</span></div>
+                  <div class="details-item"><span class="details-key">Last Refinement I.D.</span><span class="details-val" id="dRpkgLastRef">&mdash;</span></div>
+                </div>
+                <div class="rpkg-particles-head" id="rpkgParticlesHead">Contained Particles</div>
+                <div class="table-scroll rpkg-table">
+                  <table class="queue">
+                    <thead><tr>
+                      <th class="num">Orig. Pos. ID</th><th class="num">Image ID</th><th class="num">X Pos.</th><th class="num">Y Pos.</th>
+                      <th class="num">Pixel Size</th><th class="num">Cs</th><th class="num">Voltage</th><th class="num">Amp. Contrast</th>
+                      <th class="num">Init. Defocus 1</th><th class="num">Init. Defocus 2</th><th class="num">Init. Defocus Angle</th><th class="num">Init. Phase Shift</th><th class="num">Subset</th>
+                    </tr></thead>
+                    <tbody id="rpkgParticlesBody"></tbody>
+                  </table>
+                </div>
+                <p class="form-note" id="rpkgParticlesNote" hidden></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D VOLUMES: no backend data model yet -->
         <div class="asset-subpage" id="assetpagePlaceholder" hidden>
           <div class="assets-layout">
             <div class="groupbox">
@@ -1222,6 +1281,38 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
 </div>
 
+<div class="scrim" id="newPackageScrim"></div>
+<!-- MyNewRefinementPackageWizard, "New Refinement Package" path, as one
+     form: particle group, molecular weight, largest dimension, symmetry,
+     classes, box size (cisTEM's guess: 2.2 x the largest dimension, rounded
+     up to a 2^a3^b even number), output pixel size (the first image's), and
+     the initial reference -- generated from parameters, the only choice
+     until there are 3D volume assets. -->
+<div class="modal" id="newPackageModal">
+  <div class="modal-head">
+    <div class="modal-title">New Refinement Package</div>
+    <button class="log-close" id="newPackageModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">Cuts every particle in a particle position group out of its image into a stack, with the image's CTF estimate carried along, and starts the package with a &ldquo;Random Parameters&rdquo; refinement &mdash; cisTEM&rsquo;s New Refinement Package wizard.</p>
+    <div class="field"><label for="npGroup">Particle Position Group</label><select id="npGroup"></select></div>
+    <div class="field"><label for="npName">Name</label><input type="text" id="npName" /></div>
+    <div class="field-group-label">Particle</div>
+    <div class="field"><label for="npMw">Estimated Molecular Weight <span class="unit">(kDa)</span></label><input type="number" id="npMw" step="1" min="1" value="300" /></div>
+    <div class="field"><label for="npSize">Estimated Largest Dimension <span class="unit">(&Aring;)</span></label><input type="number" id="npSize" step="1" min="1" value="150" /></div>
+    <div class="field"><label for="npSymmetry">Pointgroup Symmetry</label><select id="npSymmetry"></select></div>
+    <div class="field-group-label">Stack</div>
+    <div class="field"><label for="npBox">Box Size <span class="unit">(px)</span> <span class="unit" id="npBoxHint"></span></label><input type="number" id="npBox" step="2" min="16" /></div>
+    <div class="field"><label for="npPixel">Output Pixel Size <span class="unit">(&Aring;)</span></label><input type="number" id="npPixel" step="0.001" min="0.01" /></div>
+    <div class="field-group-label">Refinement</div>
+    <div class="field"><label for="npClasses">Number of Classes</label><input type="number" id="npClasses" min="1" max="50" value="1" /></div>
+    <div class="field"><label>Initial Reference</label><div class="form-note" style="margin:0;">Generate from parameters (every class) &mdash; a reference volume can be chosen here once 3D Volume assets exist.</div></div>
+    <div class="submit-row">
+      <button class="primary" id="npCreateBtn">Create</button>
+    </div>
+    <p class="form-note" id="npNote"></p>
+  </div>
+</div>
 <div class="scrim" id="importPositionsScrim"></div>
 <!-- MyParticlePositionAssetPanel::ImportAssetClick(): a text file of
      "<image asset id or filename> <x> <y>" lines, Angstroms, one position
@@ -1684,7 +1775,10 @@ From branch : <span id="versionBranch">—</span></p>
    "browseTitle","browseNote",
    "movieDisplayBtn","previewScrim","previewModal","previewModalClose","previewTitle",
    "previewStage","previewStatus","previewImg","previewNote",
-   "assetpageMovies","assetpageImages","assetpageParticles","assetpagePlaceholder","placeholderPanelLabel",
+   "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpagePlaceholder","placeholderPanelLabel",
+   "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
+   "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
+   "newPackageScrim","newPackageModal","newPackageModalClose","npGroup","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
    "ppGroupList","ppGroupAddBtn","ppGroupRenameBtn","ppGroupRemoveBtn","ppGroupInvertBtn","ppGroupFromImagesBtn",
    "ppSelectAllCheckbox","ppListBody","ppListNote","ppRemoveBtn","ppRemoveAllBtn","ppAddToGroupBtn","ppDisplayBtn",
    "ppDetailsLabel","dPpId","dPpParentId","dPpJob","dPpX","dPpY","dPpPeak",
@@ -1739,6 +1833,7 @@ From branch : <span id="versionBranch">—</span></p>
     selectedMovieIds: new Set(),
     selectedImageGroupId: 0,
     selectedPositionGroupId: 0,
+    selectedPackageId: null,
     selectedPositionIds: new Set(),
     selectedPositionId: null,
     selectedImageId: null,
@@ -1767,10 +1862,9 @@ From branch : <span id="versionBranch">—</span></p>
   // Movies and Images are backed by real project data (see CLAUDE.md's
   // "Scope note"). The other three share one placeholder shell rather than
   // faking import/list UI for a data model that doesn't exist yet.
-  var REAL_ASSET_TABS = {movies: "assetpageMovies", images: "assetpageImages", particles: "assetpageParticles"};
+  var REAL_ASSET_TABS = {movies: "assetpageMovies", images: "assetpageImages", particles: "assetpageParticles", refine: "assetpageRefine"};
   var ASSET_PLACEHOLDER_INFO = {
-    volumes: {label: "3D Volumes", groupLabel: "All Volumes (0)"},
-    refine: {label: "Refine Pkgs.", groupLabel: "All Refinement Packages (0)"}
+    volumes: {label: "3D Volumes", groupLabel: "All Volumes (0)"}
   };
   var assetSubtabBtns = document.querySelectorAll("#assetSubtabs .subtab-btn");
   function showAssetTab(name){
@@ -1785,7 +1879,7 @@ From branch : <span id="versionBranch">—</span></p>
       els.placeholderPanelLabel.textContent = info.label;
       els.placeholderGroupLabel.textContent = info.groupLabel;
       els.placeholderNote.innerHTML = info.label + " assets aren't wired up yet" +
-        '<span class="hint">Only movie, image and particle position assets are backed by real project data so far — see CLAUDE.md’s "Scope note".</span>';
+        '<span class="hint">3D volumes are the one asset type not yet backed by project data — see CLAUDE.md’s "Scope note".</span>';
     }
   }
   assetSubtabBtns.forEach(function(btn){
@@ -3503,6 +3597,7 @@ From branch : <span id="versionBranch">—</span></p>
     loadImages();
     loadPositionGroups();
     loadPositions();
+    loadPackages();
     loadRunProfiles();
     state.jobs = [];
     state.jobsSeen = false;
@@ -5159,6 +5254,134 @@ From branch : <span id="versionBranch">—</span></p>
     });
     updatePositionGroupButtons();
   }
+
+  // ---------- refinement packages (MyRefinementPackageAssetPanel) ----------
+  function loadPackages(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(data){ renderPackageList((data && data.refinement_packages) || []); }).catch(function(){});
+  }
+  function renderPackageList(pkgs){
+    state.packages = pkgs;
+    els.rpkgList.innerHTML = "";
+    if (!pkgs.some(function(p){ return p.refinement_package_asset_id === state.selectedPackageId; })) state.selectedPackageId = pkgs.length ? pkgs[0].refinement_package_asset_id : null;
+    pkgs.forEach(function(p){
+      var li = document.createElement("li");
+      li.textContent = p.name + " (" + p.particle_count + ")";
+      li.title = p.particle_count + " particles, box " + p.stack_box_size + " px";
+      li.classList.toggle("selected", p.refinement_package_asset_id === state.selectedPackageId);
+      li.addEventListener("click", function(){ state.selectedPackageId = p.refinement_package_asset_id; renderPackageList(state.packages); });
+      els.rpkgList.appendChild(li);
+    });
+    els.rpkgRenameBtn.disabled = els.rpkgDeleteBtn.disabled = state.selectedPackageId == null;
+    showPackage(state.selectedPackageId);
+  }
+  function showPackage(id){
+    if (id == null){ els.rpkgEmpty.hidden = false; els.rpkgDetails.hidden = true; els.rpkgDetailsLabel.textContent = "Refinement Package"; return; }
+    apiFetch(projectApiUrl("/refinement-packages/" + id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(p){
+        if (p.refinement_package_asset_id !== state.selectedPackageId) return;
+        els.rpkgEmpty.hidden = true; els.rpkgDetails.hidden = false;
+        els.rpkgDetailsLabel.textContent = p.name;
+        els.dRpkgStack.textContent = p.stack_filename + (p.stack_file_exists ? "" : " (missing)");
+        els.dRpkgBox.textContent = p.stack_box_size + " px";
+        els.dRpkgPixel.textContent = Number(p.output_pixel_size).toFixed(4) + " \u00c5";
+        els.dRpkgSymmetry.textContent = p.symmetry;
+        els.dRpkgMw.textContent = Math.round(p.molecular_weight) + " kDa";
+        els.dRpkgSize.textContent = Math.round(p.particle_size) + " \u00c5";
+        els.dRpkgClasses.textContent = p.number_of_classes;
+        els.dRpkgRefinements.textContent = p.number_of_refinements;
+        els.dRpkgLastRef.textContent = p.last_refinement_id;
+        els.rpkgParticlesHead.textContent = "Contained Particles (" + p.particle_total + ")";
+        els.rpkgParticlesBody.innerHTML = "";
+        (p.particles || []).forEach(function(c){
+          var tr = document.createElement("tr");
+          tr.innerHTML = ["original_particle_position_asset_id", "parent_image_asset_id"].map(function(k){ return "<td class='num'>" + c[k] + "</td>"; }).join("") +
+            ["x_position", "y_position"].map(function(k){ return "<td class='num'>" + Number(c[k]).toFixed(1) + "</td>"; }).join("") +
+            "<td class='num'>" + Number(c.pixel_size).toFixed(4) + "</td><td class='num'>" + Number(c.spherical_aberration).toFixed(2) + "</td>" +
+            "<td class='num'>" + Number(c.microscope_voltage).toFixed(0) + "</td><td class='num'>" + Number(c.amplitude_contrast).toFixed(2) + "</td>" +
+            "<td class='num'>" + Math.round(c.defocus_1) + "</td><td class='num'>" + Math.round(c.defocus_2) + "</td>" +
+            "<td class='num'>" + Number(c.defocus_angle).toFixed(2) + "</td><td class='num'>" + Number(c.phase_shift).toFixed(2) + "</td><td class='num'>" + c.assigned_subset + "</td>";
+          els.rpkgParticlesBody.appendChild(tr);
+        });
+        els.rpkgParticlesNote.hidden = !(p.particle_total > (p.particles || []).length);
+        if (!els.rpkgParticlesNote.hidden) els.rpkgParticlesNote.textContent = "Showing the first " + p.particles.length + " of " + p.particle_total + " particles.";
+      }).catch(function(){});
+  }
+  els.rpkgRenameBtn.addEventListener("click", function(){
+    var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0]; if (!p) return;
+    var name = prompt('Rename "' + p.name + '" to:', p.name); if (name === null || !name.trim()) return;
+    apiFetch(projectApiUrl("/refinement-packages/" + p.refinement_package_asset_id), {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: name})})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); loadPackages(); })
+      .catch(function(err){ alert("Could not rename: " + err.message); });
+  });
+  els.rpkgDeleteBtn.addEventListener("click", function(){
+    var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0]; if (!p) return;
+    if (!confirm('Delete "' + p.name + '"? Its particle stack, its refinements and their results are removed permanently.')) return;
+    apiFetch(projectApiUrl("/refinement-packages/" + p.refinement_package_asset_id), {method: "DELETE"})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); state.selectedPackageId = null; loadPackages(); })
+      .catch(function(err){ alert("Could not delete: " + err.message); });
+  });
+
+  // ---- New Refinement Package ----
+  var np = { boxTouched: false, pixelTouched: false };
+  function openNewPackageModal(){
+    els.npGroup.innerHTML = "";
+    (state.positionGroups || []).forEach(function(g){
+      var o = document.createElement("option"); o.value = g.group_id; o.textContent = g.group_name + " (" + g.particle_position_count + ")"; els.npGroup.appendChild(o);
+    });
+    if (!els.npSymmetry.options.length){
+      ["C1","C2","C3","C4","D2","D3","D4","I","I2","O","T","T2"].forEach(function(sym){ var o = document.createElement("option"); o.value = o.textContent = sym; els.npSymmetry.appendChild(o); });
+    }
+    np.boxTouched = np.pixelTouched = false;
+    els.npNote.textContent = ""; els.npNote.classList.remove("blocked");
+    els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create";
+    els.newPackageModal.classList.add("open"); els.newPackageScrim.classList.add("open");
+    refreshPackageDefaults();
+  }
+  function closeNewPackageModal(){ els.newPackageModal.classList.remove("open"); els.newPackageScrim.classList.remove("open"); }
+  // The wizard's prefills: the name, the first image's pixel size, and the
+  // box size from the largest dimension -- until the user has typed their own.
+  function refreshPackageDefaults(){
+    var gid = els.npGroup.value;
+    if (gid === "" || !state.projectId) return;
+    apiFetch(projectApiUrl("/refinement-packages/defaults?particle_group_id=" + Number(gid) + "&largest_dimension_a=" + (Number(els.npSize.value) || 150)))
+      .then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+        if (!d) return;
+        if (!els.npName.value.trim() || /^Refinement Package #\d+$/.test(els.npName.value.trim())) els.npName.value = d.next_name;
+        if (!np.pixelTouched && d.pixel_size) els.npPixel.value = d.pixel_size;
+        if (!np.boxTouched && d.box_size) els.npBox.value = d.box_size;
+        els.npBoxHint.textContent = d.box_size ? "\u2014 cisTEM suggests " + d.box_size : "";
+      }).catch(function(){});
+  }
+  els.rpkgNewBtn.addEventListener("click", function(){ if (state.projectId) openNewPackageModal(); });
+  els.newPackageModalClose.addEventListener("click", closeNewPackageModal);
+  els.newPackageScrim.addEventListener("click", closeNewPackageModal);
+  els.npGroup.addEventListener("change", refreshPackageDefaults);
+  els.npSize.addEventListener("input", refreshPackageDefaults);
+  els.npBox.addEventListener("input", function(){ np.boxTouched = true; });
+  els.npPixel.addEventListener("input", function(){ np.pixelTouched = true; });
+  els.npCreateBtn.addEventListener("click", function(){
+    if (!state.projectId) return;
+    var body = {
+      particle_group_id: Number(els.npGroup.value), name: els.npName.value.trim(), symmetry: els.npSymmetry.value,
+      molecular_weight_kda: Number(els.npMw.value), largest_dimension_a: Number(els.npSize.value),
+      number_of_classes: Number(els.npClasses.value) || 1, box_size: Number(els.npBox.value) || undefined, output_pixel_size: Number(els.npPixel.value) || undefined
+    };
+    if (els.npGroup.value === ""){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Pick a particle position group."; return; }
+    els.npCreateBtn.disabled = true; els.npCreateBtn.textContent = "Creating\u2026";
+    els.npNote.classList.remove("blocked"); els.npNote.textContent = "Cutting particles from every image in the group \u2014 this can take a while for a large group.";
+    apiFetch(projectApiUrl("/refinement-packages"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+      .then(function(res){
+        if (!res.ok) throw new Error((res.data && res.data.error) || "could not create the package");
+        state.selectedPackageId = res.data.refinement_package_asset_id;
+        closeNewPackageModal();
+        loadPackages();
+      })
+      .catch(function(err){ els.npNote.classList.add("blocked"); els.npNote.textContent = err.message; })
+      .finally(function(){ els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create"; });
+  });
 
   // ---------- start button gating ----------
   // Mirrors MyAlignMoviesPanel::OnUpdateUI(): the start button is live only

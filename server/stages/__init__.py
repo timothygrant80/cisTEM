@@ -11,9 +11,10 @@ Keys are the API's stage names (the same ones STAGE_COMMANDS uses); a stage
 with no adapter here still runs, in simulation, exactly as before.
 """
 
-from . import ctffind, unblur
+from . import ctffind, find_particles, unblur
 
 ADAPTERS = {
     "motion_correction": unblur,
     "ctf_estimation": ctffind,
+    "particle_picking": find_particles,
 }

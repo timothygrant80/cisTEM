@@ -1005,16 +1005,26 @@ def _list_assets(project_id, kind):
 
 def _list_groups(project_id, kind):
     conn = db.get_conn(project_id)
-    rows = conn.execute(
+    rows = [dict(r) for r in conn.execute(
         "SELECT g.GROUP_ID as group_id, g.GROUP_NAME as group_name, "
         "COUNT(m.{id}) as {count} "
         "FROM {g} g LEFT JOIN {m} m ON m.GROUP_ID = g.GROUP_ID "
         "GROUP BY g.GROUP_ID ORDER BY g.GROUP_ID".format(
             id=kind.id_column, count=kind.count_key, g=kind.group_table, m=kind.member_table
         )
-    ).fetchall()
+    ).fetchall()]
+    if kind is IMAGE_KIND:
+        # How many members have an active CTF estimate: Find Particles needs
+        # all of them to (cisTEM's can_be_picked), and the Actions panel
+        # says so before the job is refused.
+        with_ctf = {r[0]: r[1] for r in conn.execute(
+            "SELECT m.GROUP_ID, COUNT(*) FROM IMAGE_GROUP_MEMBERS m "
+            "JOIN IMAGE_ASSETS ia ON ia.IMAGE_ASSET_ID = m.IMAGE_ASSET_ID "
+            "JOIN ESTIMATED_CTF_PARAMETERS ce ON ce.CTF_ESTIMATION_ID = ia.CTF_ESTIMATION_ID GROUP BY m.GROUP_ID")}
+        for r in rows:
+            r["images_with_ctf"] = with_ctf.get(r["group_id"], 0)
     conn.close()
-    return jsonify({kind.groups_key: [dict(r) for r in rows]})
+    return jsonify({kind.groups_key: rows})
 
 
 def _create_group(project_id, kind):
@@ -1963,6 +1973,93 @@ def ctf_diagnostic_preview(project_id, estimate_id):
     return _file_preview_response(row["OUTPUT_DIAGNOSTIC_FILE"], "ctf-diagnostic-{}".format(estimate_id), "diagnostic image")
 
 
+# ---------------------------------------------------------------------------
+# Results: Find Particles (MyPickingResultsPanel + PickingResultsDisplayPanel)
+# ---------------------------------------------------------------------------
+
+_PICK_COLUMNS = (
+    "PICKING_ID", "DATETIME_OF_RUN", "PICKING_JOB_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ALGORITHM",
+    "CHARACTERISTIC_RADIUS", "MAXIMUM_RADIUS", "THRESHOLD_PEAK_HEIGHT", "HIGHEST_RESOLUTION_USED_IN_PICKING",
+    "MIN_DIST_FROM_EDGES", "AVOID_HIGH_VARIANCE", "AVOID_HIGH_LOW_MEAN", "NUM_BACKGROUND_BOXES", "MANUAL_EDIT",
+)
+
+_PICK_SELECT = (
+    "SELECT pl.*, ia.NAME AS IMAGE_NAME, ia.FILENAME AS IMAGE_FILENAME, ia.X_SIZE, ia.Y_SIZE, ia.PIXEL_SIZE, "
+    "(ia.ACTIVE_PICKING_ID = pl.PICKING_ID) AS IS_ACTIVE, j.JOB_NUMBER, "
+    "ce.DEFOCUS1, ce.DEFOCUS2, ce.ICINESS "
+    "FROM PARTICLE_PICKING_LIST pl "
+    "JOIN IMAGE_ASSETS ia ON ia.IMAGE_ASSET_ID = pl.PARENT_IMAGE_ASSET_ID "
+    "LEFT JOIN JOBS j ON j.JOB_ID = pl.PICKING_JOB_ID "
+    "LEFT JOIN ESTIMATED_CTF_PARAMETERS ce ON ce.CTF_ESTIMATION_ID = ia.CTF_ESTIMATION_ID "
+)
+
+
+def _pick_json(row, conn):
+    d = {c.lower(): row[c] for c in _PICK_COLUMNS}
+    d["image_asset_id"] = row["PARENT_IMAGE_ASSET_ID"]
+    d["image_name"] = row["IMAGE_NAME"]
+    d["image_filename"] = row["IMAGE_FILENAME"]
+    d["x_size"], d["y_size"], d["pixel_size"] = row["X_SIZE"], row["Y_SIZE"], row["PIXEL_SIZE"]
+    d["is_active"] = bool(row["IS_ACTIVE"])
+    d["job_number"] = row["JOB_NUMBER"]
+    d["defocus1"], d["defocus2"], d["iciness"] = row["DEFOCUS1"], row["DEFOCUS2"], row["ICINESS"]
+    d["image_file_exists"] = bool(row["IMAGE_FILENAME"]) and Path(row["IMAGE_FILENAME"]).is_file()
+    table = stages.find_particles.results_table(row["PICKING_JOB_ID"])
+    if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+        d["pick_count"] = conn.execute("SELECT COUNT(*) FROM {} WHERE PICKING_ID=?".format(table), (row["PICKING_ID"],)).fetchone()[0]
+    else:
+        d["pick_count"] = None
+    return d
+
+
+@app.route("/api/projects/<project_id>/picks", methods=["GET"])
+@auth.project_access_required
+def list_picks(project_id):
+    """Every particle picking (one PARTICLE_PICKING_LIST row per image per
+    job) with its image's name and size, job number, pick count and whether
+    it is the image's active one. Read-only; feeds the Results tab's grid."""
+    conn = db.get_conn(project_id)
+    rows = conn.execute(_PICK_SELECT + "ORDER BY pl.PARENT_IMAGE_ASSET_ID, pl.PICKING_ID").fetchall()
+    out = [_pick_json(r, conn) for r in rows]
+    conn.close()
+    return jsonify({"picks": out})
+
+
+@app.route("/api/projects/<project_id>/picks/<int:picking_id>", methods=["GET"])
+@auth.project_access_required
+def get_pick(project_id, picking_id):
+    """One picking plus `positions: [{x, y, peak_height}]` in Angstroms from
+    the image centre, as find_particles reports them."""
+    conn = db.get_conn(project_id)
+    row = conn.execute(_PICK_SELECT + "WHERE pl.PICKING_ID = ?", (picking_id,)).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such picking"}), 404
+    d = _pick_json(row, conn)
+    d["positions"] = stages.find_particles.picks_for(conn, picking_id)
+    conn.close()
+    return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/picks/<int:picking_id>/activate", methods=["POST"])
+@auth.project_access_required
+def activate_pick(project_id, picking_id):
+    """These picks become the image's particle positions (cisTEM's checked
+    cell in the picking results grid)."""
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            image_id = stages.find_particles.activate_picking(conn, picking_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 409
+        if image_id is None:
+            return jsonify({"error": "no such picking"}), 404
+        row = conn.execute(_PICK_SELECT + "WHERE pl.PICKING_ID = ?", (picking_id,)).fetchone()
+        return jsonify(_pick_json(row, conn))
+    finally:
+        conn.close()
+
+
 def _file_preview_response(path, etag_key, what):
     """_preview_response for a file that isn't an asset row: the aligned sum
     or spectrum an alignment points at."""
@@ -2156,10 +2253,11 @@ def create_job(project_id):
         conn.close()
         if count == 0:
             return jsonify({"error": "movie group has no movies"}), 400
-    elif stage == "ctf_estimation":
-        # Find CTF consumes images the way Align Movies consumes movies:
-        # a group, whose members' metadata (voltage, Cs, pixel size, parent
-        # movie) is what the tasks are built from.
+    elif stage in ("ctf_estimation", "particle_picking"):
+        # Find CTF and Find Particles consume images the way Align Movies
+        # consumes movies: a group, whose members' metadata (voltage, Cs,
+        # pixel size, parent movie, CTF estimate) is what the tasks are
+        # built from.
         image_group_id = params.get("image_group_id")
         if image_group_id is None:
             return jsonify({"error": "image_group_id is required"}), 400
@@ -2167,9 +2265,13 @@ def create_job(project_id):
         count = conn.execute(
             "SELECT COUNT(*) FROM IMAGE_GROUP_MEMBERS WHERE GROUP_ID=?", (image_group_id,)
         ).fetchone()[0]
+        # cisTEM's can_be_picked: every image in the group needs a CTF estimate first.
+        missing_ctf = stages.find_particles.images_without_ctf(conn, image_group_id) if stage == "particle_picking" else []
         conn.close()
         if count == 0:
             return jsonify({"error": "image group has no images"}), 400
+        if missing_ctf:
+            return jsonify({"error": stages.find_particles.CTF_REQUIRED_MESSAGE}), 400
 
     job_id = uuid.uuid4().hex[:10]
     conn = db.get_conn(project_id)

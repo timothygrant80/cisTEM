@@ -433,6 +433,15 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
   .results-layout > .groupbox.ra-right{height:auto;}
 }
 
+.pick-result{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start;}
+.pick-frame{position:relative;border:1px solid var(--border);background:var(--surface-sunken);min-height:120px;}
+.pick-frame img{display:block;width:100%;height:auto;}
+.pick-frame .ra-figure-status{position:absolute;left:0;right:0;top:40%;text-align:center;}
+.pick-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.pick-overlay circle{fill:none;stroke:#3CC24A;stroke-width:6;vector-effect:non-scaling-stroke;stroke-width:1.5px;}
+.pick-side .ra-radio{margin-bottom:6px;}
+.pick-numbers{grid-template-columns:1fr;margin-top:4px;}
+@media (max-width:1100px){ .pick-result{grid-template-columns:1fr;} }
 .ctf-result{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:14px;align-items:start;}
 .ctf-numbers{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 18px;margin-top:10px;}
 .ctf-numbers .details-item{font-size:12px;}
@@ -1432,18 +1441,80 @@ From branch : <span id="versionBranch">—</span></p>
       }
     },
     particle_picking: {
+      // Widgets, defaults and grey-outs from cisTEM's Find Particles panel
+      // (FindParticlesPanel in ProjectX_gui_picking.cpp, MyFindParticlesPanel::
+      // ResetDefaults()); the option text from SetInfo(). cisTEM shows the
+      // picking parameters (radii, threshold, variance avoidance) outside the
+      // expert panel, so they are ordinary fields here; the expert panel
+      // holds the rest. Only cisTEM's "ab initio" algorithm exists, so the
+      // algorithm box it shows disabled is left out.
       label: "Find Particles",
-      description: "Locates candidate particles in each micrograph so they can be extracted for downstream processing.",
+      startLabel: "Start Picking",
+      requiresCtf: true,
+      note: "Each image's picks are written to the project database; the picked positions become the image's particle position assets, replacing those of any earlier pick.",
+      description: "Locates particles in each image by matching a soft-edged disc template with a whitening filter (Sigworth, 2004), using the image's CTF estimate.",
       fields: [
-        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/ctf/*.mrc", group:"Input"},
-        {key:"picker", label:"Picker", unit:"", type:"select", options:["blob","template"], group:"Picking Parameters"},
-        {key:"particle_diameter_a", label:"Particle diameter", unit:"Å", type:"number", placeholder:"180", group:"Picking Parameters"},
-        {key:"threshold", label:"Score threshold", unit:"", type:"number", step:"0.01", placeholder:"0.50", group:"Picking Parameters"}
+        {key:"image_group_id", label:"Input Group", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The group of image assets in which to find particles. Every image in it needs a CTF estimate first.",
+         dynamicOptions:{endpoint:"/image-groups", listKey:"image_groups", value:"group_id", label:"group_name", countKey:"image_count", countLabel:"images", ctfKey:"images_with_ctf", emptyText:"No image groups yet — align movies or import images first"}},
+        {key:"maximum_radius_a", label:"Exclusion radius", unit:"Å", type:"number", step:"1", min:1, default:"120", group:"Picking Parameters",
+         tooltip:"In Angstroms, the maximum radius of the particles to be found. This also determines the minimum distance between picks."},
+        {key:"characteristic_radius_a", label:"Template radius", unit:"Å", type:"number", step:"1", min:1, default:"80", group:"Picking Parameters",
+         tooltip:"In Angstroms, the radius within which most of the density is enclosed. The template for picking is a soft-edge disc, where the edge is 5 pixels wide and this parameter defines the radius at which the cosine-edge template reaches 0.5."},
+        {key:"threshold_peak_height", label:"Threshold peak height", unit:"", type:"number", step:"0.1", min:0, default:"6.0", group:"Picking Parameters",
+         tooltip:"Particle coordinates will be defined as the coordinates of any peak in the search function which exceeds this threshold. In numbers of standard deviations above expected noise variations in the scoring function. See Sigworth (2004) for definition."},
+        {key:"avoid_low_variance", label:"Avoid low variance areas", type:"checkbox", default:true, group:"Picking Parameters",
+         tooltip:"Areas with low local variance should be avoided. This often works well to avoid false positive picks in empty areas."},
+        {key:"low_variance_threshold", label:"Low variance threshold", unit:"FWHM", type:"number", step:"0.1", default:"-0.5", group:"Picking Parameters", enabledBy:"avoid_low_variance",
+         tooltip:"When the local variance is below this threshold, no particles can be found. Expressed in numbers of FWHM above the mode of the local variance in the image; a negative number is below the mode."},
+        {key:"avoid_high_variance", label:"Avoid high variance areas", type:"checkbox", default:false, group:"Picking Parameters",
+         tooltip:"Avoid areas with abnormally high local variance. This can be effective in avoiding edges of support films or contamination."},
+        {key:"high_variance_threshold", label:"High variance threshold", unit:"FWHM", type:"number", step:"0.1", default:"2.0", group:"Picking Parameters", enabledBy:"avoid_high_variance",
+         tooltip:"When the local variance is above this threshold, no particles can be found. Expressed in numbers of FWHM above the mode of the local variance in the image."}
       ],
       expertFields: [
-        {key:"min_distance_a", label:"Minimum distance between particles", unit:"Å", type:"number", placeholder:"90"},
-        {key:"avoid_high_variance", label:"Avoid high-variance areas", unit:"", type:"select", options:["Yes","No"]}
-      ]
+        {key:"highest_resolution_a", label:"Highest resolution used", unit:"Å", type:"number", step:"1", min:1, default:"30", group:"Expert Options",
+         tooltip:"The template and micrograph will be resampled (by Fourier cropping) to a pixel size of half the resolution given here. Note that the information in the 'corners' of the Fourier transforms (beyond the Nyquist frequency) remains intact, so that there is some small risk of bias beyond this resolution."},
+        {key:"min_edge_distance_px", label:"Min. edge distance", unit:"px", type:"number", min:1, max:999999999, default:"128", group:"Expert Options",
+         tooltip:"No particle shall be picked closer than this distance from the edges of the micrograph. In pixels."},
+        {key:"avoid_abnormal_mean", label:"Avoid abnormal local mean", type:"checkbox", default:true, group:"Expert Options",
+         tooltip:"Avoid areas with abnormally low or high local mean. This can be effective to avoid picking from, e.g., contaminating ice crystals, support film."},
+        {key:"background_boxes", label:"Number of background boxes", unit:"", type:"number", min:1, max:999, default:"50", group:"Expert Options",
+         tooltip:"Number of background areas to use in estimating the background spectrum. The larger the number of boxes, the more accurate the estimate should be, provided that none of the background boxes contain any particles to be picked."},
+        {key:"background_algorithm", label:"Find background areas by", unit:"", type:"select", options:["Lowest variance","Variance near mode"], default:"Lowest variance", group:"Expert Options",
+         tooltip:"Testing so far suggests that areas of lowest variance in experimental micrographs should be used to estimate the background spectrum. However, when using synthetic micrographs this can lead to bias in the spectrum estimation and the alternative (areas with local variances near the mean of the distribution of local variances) seems to perform better."}
+      ],
+      info: {
+        title: "Particle picking",
+        body: [
+          "Individual particles need to be located in each micrograph so that they may be used to compute a 3D reconstruction later. Ideally one would find all the particles and not make any erroneous selections.",
+          "One can either select (click on) each particle manually, or use the \u2018ab-initio\u2019 mode. In this mode, a circular blob template is generated internally, and then matched against each micrograph, using a matched filter based on the approach described in Sigworth (2004). This blob approach is very fast, and enables real-time optimization of the picking parameters. Users should pay attention to the exclusion radius, template radius and threshold, and check the picks on a few micrographs before running a whole group.",
+          {heading: "Program Options"},
+          {options: [
+            ["Input Group", "The group of image assets in which to find particles."],
+            ["Run Profile", "The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers). Run profiles are set in the Run Profile panel, located under settings."],
+            ["Maximum Particle Radius (Å)", "In Angstroms, the maximum radius of the particles to be found. This also determines the minimum distance between picks."],
+            ["Characteristic Particle Radius (Å)", "In Angstroms, the radius within which most of the density is enclosed. The template for picking is a soft-edge disc, where the edge is 5 pixels wide and this parameter defines the radius at which the cosine-edge template reaches 0.5."],
+            ["Threshold Peak Height", "Particle coordinates will be defined as the coordinates of any peak in the search function which exceeds this threshold. In numbers of standard deviations above expected noise variations in the scoring function. See Sigworth (2004) for definition."],
+            ["Avoid High-Variance Areas", "Avoid areas with abnormally high local variance. This can be effective in avoiding edges of support films or contamination."]
+          ]},
+          {heading: "Expert Program Options"},
+          {options: [
+            ["Highest Resolution Used in Picking (Å)", "The template and micrograph will be resampled (by Fourier cropping) to a pixel size of half the resolution given here. Note that the information in the 'corners' of the Fourier transforms (beyond the Nyquist frequency) remains intact, so that there is some small risk of bias beyond this resolution."],
+            ["Set Minimum Distance From Edges (px)", "No particle shall be picked closer than this distance from the edges of the micrograph. In pixels."],
+            ["Avoid Areas With Abnormal Local Means", "Avoid areas with abnormally low or high local mean. This can be effective to avoid picking from, e.g., contaminating ice crystals, support film."],
+            ["Number of Background Boxes", "Number of background areas to use in estimating the background spectrum. The larger the number of boxes, the more accurate the estimate should be, provided that none of the background boxes contain any particles to be picked."],
+            ["Algorithm to Find Background Areas", "Testing so far suggests that areas of lowest variance in experimental micrographs should be used to estimate the background spectrum. However, when using synthetic micrographs this can lead to bias in the spectrum estimation and the alternative (areas with local variances near the mean of the distribution of local variances) seems to perform better."]
+          ]}
+        ],
+        // cisTEM's own SetInfo() gives this paper CTFFIND4's volume and
+        // pages; the DOI it links is the right one, so the details here follow the DOI.
+        references: [
+          {authors:"Sigworth F.J.",
+           text:"2004. Classical detection theory and the cryo-EM particle selection problem. J. Struct. Biol. 145, 111\u2013120.",
+           doi:"10.1016/j.jsb.2003.10.025"}
+        ]
+      }
     },
     class2d: {
       label: "2D Classification",
@@ -1947,6 +2018,7 @@ From branch : <span id="versionBranch">—</span></p>
           var opt = document.createElement("option");
           opt.value = row[f.dynamicOptions.value];
           opt.dataset.count = row[f.dynamicOptions.countKey];
+          if (f.dynamicOptions.ctfKey) opt.dataset.ctf = row[f.dynamicOptions.ctfKey];
           opt.textContent = row[f.dynamicOptions.label] + " (" + row[f.dynamicOptions.countKey] + " " + (f.dynamicOptions.countLabel || "movies") + ")";
           input.appendChild(opt);
         });
@@ -2521,6 +2593,93 @@ From branch : <span id="versionBranch">—</span></p>
       {label: "Diagnostic File", value: function(c){ return c.output_diagnostic_file || "—"; }, wide: true}
     ],
     buildResult: buildCtfResultView
+  });
+  // ---- Find Particles: MyPickingResultsPanel + PickingResultsDisplayPanel ----
+  // The image with a circle of the exclusion radius around every pick (the
+  // "Circles around particles" toggle), and the count, image id, iciness and
+  // defocus the display panel prints. Coordinates are Angstroms from the
+  // image origin, y up, as find_particles reports them.
+  function buildPicksResultView(box){
+    var wrap = document.createElement("div"); wrap.className = "pick-result"; box.appendChild(wrap);
+    var frame = document.createElement("div"); frame.className = "pick-frame"; wrap.appendChild(frame);
+    var img = document.createElement("img"); img.alt = "Micrograph with picked particles"; img.hidden = true; frame.appendChild(img);
+    var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading\u2026"; frame.appendChild(status);
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "pick-overlay"); frame.appendChild(svg);
+    var side = document.createElement("div"); side.className = "pick-side"; wrap.appendChild(side);
+    var toggle = document.createElement("label"); toggle.className = "ra-radio";
+    var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; toggle.appendChild(cb); toggle.appendChild(document.createTextNode(" Circles around particles"));
+    side.appendChild(toggle);
+    var numbers = document.createElement("div"); numbers.className = "ctf-numbers pick-numbers"; side.appendChild(numbers);
+    var rows = [
+      ["Picked coordinates", function(c){ return c.positions ? String(c.positions.length) : fmtVal(c.pick_count); }],
+      ["Image ID", function(c){ return fmtVal(c.image_asset_id); }],
+      ["Iciness", function(c){ return fmtVal(c.iciness, 2); }],
+      ["Defocus", function(c){ return c.defocus1 != null ? ((c.defocus1 + (c.defocus2 != null ? c.defocus2 : c.defocus1)) / 20000).toFixed(2) + " \u00b5m" : "\u2014"; }],
+      ["Exclusion radius", function(c){ return fmtVal(c.maximum_radius, 1) + " \u00c5"; }]
+    ];
+    var cells = rows.map(function(pair){
+      var item = document.createElement("div"); item.className = "details-item";
+      var k = document.createElement("span"); k.className = "details-key"; k.textContent = pair[0];
+      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "\u2014";
+      item.appendChild(k); item.appendChild(v); numbers.appendChild(item); return v;
+    });
+    var current = null;
+    function drawCircles(){
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (!current || !current.x_size || !current.y_size) return;
+      var X = current.x_size, Y = current.y_size, px = current.pixel_size || 1;
+      svg.setAttribute("viewBox", "0 0 " + X + " " + Y);
+      svg.style.display = cb.checked ? "" : "none";
+      var r = (current.maximum_radius || 0) / px;
+      (current.positions || []).forEach(function(p){
+        var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        // particle_finder.cpp reports pixel_size * (box centre - peak offset),
+        // i.e. Angstroms from the image origin; MRC rows run bottom-up
+        // while the PNG's run top-down, so y is flipped.
+        c.setAttribute("cx", (p.x / px).toFixed(1));
+        c.setAttribute("cy", (Y - p.y / px).toFixed(1));
+        c.setAttribute("r", r.toFixed(1));
+        svg.appendChild(c);
+      });
+    }
+    cb.addEventListener("change", drawCircles);
+    return {
+      loading: function(){ img.hidden = true; status.hidden = false; status.textContent = "Loading\u2026"; while (svg.firstChild) svg.removeChild(svg.firstChild); },
+      error: function(msg){ status.textContent = "Could not load these picks: " + msg; },
+      update: function(c, urls, picturePath){
+        current = c;
+        rows.forEach(function(pair, i){ cells[i].textContent = pair[1](c); });
+        loadFigure(img, status, picturePath || ("/images/" + c.image_asset_id + "/preview.png"), c.image_file_exists !== false, "micrograph", urls);
+        drawCircles();
+      }
+    };
+  }
+  RESULT_PAGES.particle_picking = makeResultsPage({
+    stage: "particle_picking",
+    listPath: "/picks", listKey: "picks", idKey: "picking_id", jobKey: "picking_job_id",
+    rowIdKey: "image_asset_id", rowNameKey: "image_name", rowLabel: "Image", rowLabelPlural: "Images",
+    groupAssetKey: "image_asset_id", addAllTitle: "Add every image listed to an image group.",
+    itemPath: function(id){ return "/picks/" + id; },
+    activatePath: function(id){ return "/picks/" + id + "/activate"; },
+    titleWord: "Picks",
+    emptyTitle: "No particle picks in this project yet",
+    emptyHint: "Run Find Particles from the Actions tab; each image appears here with its picks drawn over it.",
+    details: [
+      {label: "Pick ID", value: function(c){ return fmtVal(c.picking_id) + (c.job_number ? " (Job " + c.job_number + ")" : ""); }},
+      {label: "Date of Run", value: function(c){ return fmtWhenDate(c.datetime_of_run); }},
+      {label: "Time of Run", value: function(c){ return fmtWhenTime(c.datetime_of_run); }},
+      {label: "Algorithm", value: function(c){ return c.picking_algorithm === 0 ? "ab initio (disc template)" : fmtVal(c.picking_algorithm); }},
+      {label: "Manual Edit", value: function(c){ return fmtYesNo(c.manual_edit); }},
+      {label: "Threshold", value: function(c){ return fmtVal(c.threshold_peak_height, 1); }},
+      {label: "Maximum Radius", value: function(c){ return fmtVal(c.maximum_radius, 1) + " \u00c5"; }},
+      {label: "Characteristic Radius", value: function(c){ return fmtVal(c.characteristic_radius, 1) + " \u00c5"; }},
+      {label: "Highest Res.", value: function(c){ return fmtVal(c.highest_resolution_used_in_picking, 1) + " \u00c5"; }},
+      {label: "Min. Edge Dist.", value: function(c){ return fmtVal(c.min_dist_from_edges) + " px"; }},
+      {label: "Avoid High Var.", value: function(c){ return fmtYesNo(c.avoid_high_variance); }},
+      {label: "Avoid High/Low Mean", value: function(c){ return fmtYesNo(c.avoid_high_low_mean); }},
+      {label: "Background Boxes", value: function(c){ return fmtVal(c.num_background_boxes); }}
+    ],
+    buildResult: buildPicksResultView
   });
   showResultsStage("motion_correction");
 
@@ -4639,6 +4798,14 @@ From branch : <span id="versionBranch">—</span></p>
     if (!opt || opt.dataset.count === undefined) return 0;
     return Number(opt.dataset.count);
   }
+  // How many of the selected group's images have a CTF estimate (null if the
+  // picker doesn't report it). cisTEM's can_be_picked: all of them, or none.
+  function selectedGroupCtfCount(){
+    var select = els.paramFields.querySelector("select[data-key$='_group_id']");
+    var opt = select && select.options[select.selectedIndex];
+    if (!opt || opt.dataset.ctf === undefined) return null;
+    return Number(opt.dataset.ctf);
+  }
 
   function updateStartButton(){
     var stage = STAGES[state.currentStage];
@@ -4650,6 +4817,8 @@ From branch : <span id="versionBranch">—</span></p>
       var count = selectedGroupCount();
       var profile = state.runProfiles.filter(function(p){ return p.profile_name === els.runProfile.value; })[0];
       if (count === 0) reason = "The selected group is empty — add " + (stage.fields.some(function(f){ return f.key === "image_group_id"; }) ? "images" : "movies") + " to it on the Assets tab.";
+      // MyFindParticlesPanel's PleaseEstimateCTFStaticText, in its words.
+      else if (stage.requiresCtf && selectedGroupCtfCount() !== null && selectedGroupCtfCount() < count) reason = "Please run CTF estimation on this group before picking particles.";
       // cisTEM's OnUpdateUI: a profile whose commands add up to zero
       // processes can't launch anything, so the button greys rather than
       // letting the job fail at start.
@@ -4722,7 +4891,8 @@ From branch : <span id="versionBranch">—</span></p>
   var STAGE_RESULT_REFRESH = {
     motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); loadResults("motion_correction"); },
     // Find CTF changes each image's active estimate, which the Images panel shows.
-    ctf_estimation: function(){ loadImages(); loadResults("ctf_estimation"); }
+    ctf_estimation: function(){ loadImages(); loadResults("ctf_estimation"); },
+    particle_picking: function(){ loadResults("particle_picking"); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 
@@ -5047,6 +5217,14 @@ From branch : <span id="versionBranch">—</span></p>
       return function(result, base, urls){
         view.loading();
         view.update(result, urls, base + "diagnostic.png");
+      };
+    },
+    particle_picking: function(body){
+      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+      var view = buildPicksResultView(box);
+      return function(result, base, urls){
+        view.loading();
+        view.update(result, urls, base + "image.png");
       };
     }
   };

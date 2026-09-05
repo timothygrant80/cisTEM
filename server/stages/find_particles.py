@@ -155,7 +155,12 @@ def _arg_values(task):
 
 
 def _positions(task_row):
-    """The result's five floats per pick -> [{x, y, peak_height, template, rotation}] (x, y in A from the image centre)."""
+    """The result's five floats per pick -> [{x, y, peak_height, template, rotation}] (x, y in A from the image origin, y up).
+    An image with no candidate particles sends no result at all (cisTEM's
+    OnSocketJobResultMsg ignores an empty one), so a finished task without
+    one is a legitimate zero picks, not a failure."""
+    if task_row["STATUS"] == "ok" and not task_row["RESULT_JSON"]:
+        return []
     result = json.loads(task_row["RESULT_JSON"]) if task_row["RESULT_JSON"] else None
     data = (result or {}).get("data") if (result or {}).get("kind") == "floats" else None
     if data is None:

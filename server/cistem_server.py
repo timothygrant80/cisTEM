@@ -2029,7 +2029,7 @@ def list_picks(project_id):
 @auth.project_access_required
 def get_pick(project_id, picking_id):
     """One picking plus `positions: [{x, y, peak_height}]` in Angstroms from
-    the image centre, as find_particles reports them."""
+    the image origin (y up), as find_particles reports them."""
     conn = db.get_conn(project_id)
     row = conn.execute(_PICK_SELECT + "WHERE pl.PICKING_ID = ?", (picking_id,)).fetchone()
     if row is None:

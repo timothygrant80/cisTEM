@@ -112,6 +112,9 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/ctf-estimates/:cid` | One estimate plus `plot` (the 1D fit curves) |
 | `POST` | `/projects/:id/ctf-estimates/:cid/activate` | Make this estimate the image's active one |
 | `GET` | `/projects/:id/ctf-estimates/:cid/diagnostic.png` | PNG of ctffind's diagnostic image |
+| `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |
+| `GET` | `/projects/:id/picks/:pid` | One picking plus `positions` (Å from the image origin) |
+| `POST` | `/projects/:id/picks/:pid/activate` | Make these picks the image's particle positions |
 | `GET` | `/projects/:id/alignments/:aid/sum.png`, `/spectrum.png` | PNG renders of the aligned sum and its amplitude spectrum |
 | `GET` | `/run-profiles` | The machine's run profiles (system-wide, any logged-in user) — feeds the Run Profile picker |
 | `POST` / `PATCH` / `DELETE` | `/run-profiles[/:rid]` | Admin only: add (empty body), duplicate (`{copy_of}`), import (full profile), edit, remove |

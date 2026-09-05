@@ -976,7 +976,66 @@ From branch : <span id="versionBranch">—</span></p>
 
         </div>
 
-        <!-- PARTICLE POSITIONS / 3D VOLUMES / REFINE PKGS: no backend data model yet -->
+        <!-- PARTICLE POSITIONS: MyParticlePositionAssetPanel. One row per
+             picked particle (cisTEM lists I.D. and Parent Image I.D.; the pick
+             job and coordinates are added here). Positions are written by Find
+             Particles; Display opens the parent image's picks on the Results
+             tab. -->
+        <div class="asset-subpage" id="assetpageParticles" hidden>
+          <div class="assets-layout">
+            <div class="groupbox">
+              <span class="groupbox-label">Groups</span>
+              <ul class="group-list" id="ppGroupList"></ul>
+              <div class="asset-toolbar">
+                <button class="small" id="ppGroupAddBtn">Add</button>
+                <button class="small" id="ppGroupRenameBtn" disabled title="Select a group other than All Particle Positions first.">Rename</button>
+                <button class="small" id="ppGroupRemoveBtn" disabled title="Select a group other than All Particle Positions first.">Remove</button>
+                <button class="small" id="ppGroupInvertBtn" disabled title="Select a group other than All Particle Positions first.">Invert</button>
+              </div>
+              <div class="asset-toolbar">
+                <button class="small" id="ppGroupFromImagesBtn" title="cisTEM’s “New from parent”: a group holding the positions of every image in an image group.">From Image Group</button>
+              </div>
+            </div>
+
+            <div class="groupbox">
+              <span class="groupbox-label">Particle Positions</span>
+              <div class="table-scroll">
+                <table class="queue">
+                  <thead><tr>
+                    <th class="check-col"><input type="checkbox" id="ppSelectAllCheckbox" title="Select all"></th>
+                    <th>I.D.</th><th>Parent Image</th><th class="num">Parent Image I.D.</th><th class="num">Pick Job</th>
+                    <th class="num">X (Å)</th><th class="num">Y (Å)</th><th class="num">Peak Height</th>
+                  </tr></thead>
+                  <tbody id="ppListBody">
+                    <tr><td colspan="8"><div class="empty-note">No particle positions yet</div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="form-note" id="ppListNote" hidden></p>
+              <div class="asset-toolbar">
+                <button class="small" disabled title="Importing coordinate files isn’t implemented yet.">Import</button>
+                <button class="small" id="ppRemoveBtn" disabled title="Select one or more positions first.">Remove</button>
+                <button class="small" id="ppRemoveAllBtn" disabled title="No positions in this group yet.">Remove All</button>
+                <button class="small" id="ppAddToGroupBtn" disabled title="Select one or more positions first.">Add To Group</button>
+                <button class="small" id="ppDisplayBtn" disabled title="Select a position first.">Display</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="groupbox" style="margin-top:16px;">
+            <span class="groupbox-label" id="ppDetailsLabel">Selected Position</span>
+            <div class="details-grid">
+              <div class="details-item"><span class="details-key">I.D.</span><span class="details-val" id="dPpId">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Parent Image I.D.</span><span class="details-val" id="dPpParentId">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Pick Job I.D.</span><span class="details-val" id="dPpJob">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">X Position</span><span class="details-val" id="dPpX">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Y Position</span><span class="details-val" id="dPpY">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Peak Height</span><span class="details-val" id="dPpPeak">&mdash;</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D VOLUMES / REFINE PKGS: no backend data model yet -->
         <div class="asset-subpage" id="assetpagePlaceholder" hidden>
           <div class="assets-layout">
             <div class="groupbox">
@@ -1596,7 +1655,10 @@ From branch : <span id="versionBranch">—</span></p>
    "browseTitle","browseNote",
    "movieDisplayBtn","previewScrim","previewModal","previewModalClose","previewTitle",
    "previewStage","previewStatus","previewImg","previewNote",
-   "assetpageMovies","assetpageImages","assetpagePlaceholder","placeholderPanelLabel",
+   "assetpageMovies","assetpageImages","assetpageParticles","assetpagePlaceholder","placeholderPanelLabel",
+   "ppGroupList","ppGroupAddBtn","ppGroupRenameBtn","ppGroupRemoveBtn","ppGroupInvertBtn","ppGroupFromImagesBtn",
+   "ppSelectAllCheckbox","ppListBody","ppListNote","ppRemoveBtn","ppRemoveAllBtn","ppAddToGroupBtn","ppDisplayBtn",
+   "ppDetailsLabel","dPpId","dPpParentId","dPpJob","dPpX","dPpY","dPpPeak",
    "placeholderGroupLabel","placeholderNote",
    "resultsTabs","resultsPages","resultspagePlaceholder","resultsPlaceholderLabel","resultsPlaceholderNote",
    "movieDetailsLabel","imageDetailsLabel","dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
@@ -1646,6 +1708,9 @@ From branch : <span id="versionBranch">—</span></p>
     selectedMovieId: null,
     selectedMovieIds: new Set(),
     selectedImageGroupId: 0,
+    selectedPositionGroupId: 0,
+    selectedPositionIds: new Set(),
+    selectedPositionId: null,
     selectedImageId: null,
     selectedImageIds: new Set()
   };
@@ -1672,9 +1737,8 @@ From branch : <span id="versionBranch">—</span></p>
   // Movies and Images are backed by real project data (see CLAUDE.md's
   // "Scope note"). The other three share one placeholder shell rather than
   // faking import/list UI for a data model that doesn't exist yet.
-  var REAL_ASSET_TABS = {movies: "assetpageMovies", images: "assetpageImages"};
+  var REAL_ASSET_TABS = {movies: "assetpageMovies", images: "assetpageImages", particles: "assetpageParticles"};
   var ASSET_PLACEHOLDER_INFO = {
-    particles: {label: "Particle Positions", groupLabel: "All Particle Positions (0)"},
     volumes: {label: "3D Volumes", groupLabel: "All Volumes (0)"},
     refine: {label: "Refine Pkgs.", groupLabel: "All Refinement Packages (0)"}
   };
@@ -1691,7 +1755,7 @@ From branch : <span id="versionBranch">—</span></p>
       els.placeholderPanelLabel.textContent = info.label;
       els.placeholderGroupLabel.textContent = info.groupLabel;
       els.placeholderNote.innerHTML = info.label + " assets aren't wired up yet" +
-        '<span class="hint">Only movie and image assets are backed by real project data so far — see CLAUDE.md’s "Scope note".</span>';
+        '<span class="hint">Only movie, image and particle position assets are backed by real project data so far — see CLAUDE.md’s "Scope note".</span>';
     }
   }
   assetSubtabBtns.forEach(function(btn){
@@ -2497,6 +2561,7 @@ From branch : <span id="versionBranch">—</span></p>
         .then(function(){ loadImageGroups(); })
         .catch(function(err){ alert("Could not add to group: " + err.message); });
     });
+    page.select = select;
     return page;
   }
 
@@ -3406,6 +3471,8 @@ From branch : <span id="versionBranch">—</span></p>
     loadImageImportDefaults();
     loadImageGroups();
     loadImages();
+    loadPositionGroups();
+    loadPositions();
     loadRunProfiles();
     state.jobs = [];
     state.jobsSeen = false;
@@ -4818,6 +4885,203 @@ From branch : <span id="versionBranch">—</span></p>
     loadImages();
   }
 
+  // ---------- particle positions (MyParticlePositionAssetPanel) ----------
+  // The Images panel's shape again: groups on the left, positions on the
+  // right, the selected one's details below. Positions are made by Find
+  // Particles (the active picks of each image), so there is no Import yet;
+  // Display jumps to the image's picks on the Results tab, where the
+  // position can be seen on the micrograph.
+  function fmtCoord(v){ return v == null ? "—" : Number(v).toFixed(1); }
+  function loadPositions(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/particle-positions?group_id=" + state.selectedPositionGroupId)).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){ renderPositionList((data && data.particle_positions) || [], data); }).catch(function(){});
+  }
+  function renderPositionList(rows, data){
+    state.positions = rows;
+    var present = new Set(rows.map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }));
+    state.selectedPositionIds = new Set(Array.from(state.selectedPositionIds).filter(function(id){ return present.has(id); }));
+    if (!present.has(state.selectedPositionId)) state.selectedPositionId = null;
+    els.ppListBody.innerHTML = "";
+    els.ppListNote.hidden = !(data && data.truncated);
+    if (data && data.truncated) els.ppListNote.textContent = "Showing the first " + rows.length + " of " + data.total + " positions.";
+    if (!rows.length){
+      updatePositionDetails(null); updatePositionBulkButtons();
+      var tr = document.createElement("tr"); var td = document.createElement("td"); td.colSpan = 8;
+      var box = document.createElement("div"); box.className = "empty-note"; box.textContent = "No particle positions in this group";
+      var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Find Particles from the Actions tab — each image's picks land here.";
+      box.appendChild(hint); td.appendChild(box); tr.appendChild(td); els.ppListBody.appendChild(tr);
+      return;
+    }
+    rows.forEach(function(p){
+      var tr = document.createElement("tr");
+      tr.className = "clickable" + (p.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId ? " selected" : "");
+      tr.dataset.positionId = p.PARTICLE_POSITION_ASSET_ID;
+      var cells = ["<td class='check-col'><input type='checkbox' class='pp-check'></td>",
+        "<td>" + p.PARTICLE_POSITION_ASSET_ID + "</td>", "<td></td>", "<td class='num'>" + p.PARENT_IMAGE_ASSET_ID + "</td>",
+        "<td class='num'>" + (p.JOB_NUMBER != null ? "Job " + p.JOB_NUMBER : "—") + "</td>",
+        "<td class='num'>" + fmtCoord(p.X_POSITION) + "</td>", "<td class='num'>" + fmtCoord(p.Y_POSITION) + "</td>",
+        "<td class='num'>" + (p.PEAK_HEIGHT != null ? Number(p.PEAK_HEIGHT).toFixed(2) : "—") + "</td>"];
+      tr.innerHTML = cells.join("");
+      tr.children[2].textContent = p.IMAGE_NAME || "—";
+      tr.addEventListener("click", function(){ selectPosition(p.PARTICLE_POSITION_ASSET_ID); });
+      var cb = tr.querySelector(".pp-check");
+      cb.checked = state.selectedPositionIds.has(p.PARTICLE_POSITION_ASSET_ID);
+      cb.addEventListener("click", function(e){ e.stopPropagation(); });
+      cb.addEventListener("change", function(){ if (cb.checked) state.selectedPositionIds.add(p.PARTICLE_POSITION_ASSET_ID); else state.selectedPositionIds.delete(p.PARTICLE_POSITION_ASSET_ID); updatePositionBulkButtons(); });
+      els.ppListBody.appendChild(tr);
+    });
+    updatePositionDetails(rows.filter(function(p){ return p.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId; })[0] || null);
+    updatePositionBulkButtons();
+  }
+  function selectPosition(id){
+    state.selectedPositionId = id;
+    els.ppListBody.querySelectorAll("tr").forEach(function(tr){ tr.classList.toggle("selected", Number(tr.dataset.positionId) === id); });
+    updatePositionDetails((state.positions || []).filter(function(p){ return p.PARTICLE_POSITION_ASSET_ID === id; })[0] || null);
+  }
+  function updatePositionDetails(p){
+    els.ppDetailsLabel.textContent = p ? "Selected Position \u2014 " + p.PARTICLE_POSITION_ASSET_ID : "Selected Position";
+    els.dPpId.textContent = p ? p.PARTICLE_POSITION_ASSET_ID : "—";
+    els.dPpParentId.textContent = p ? p.PARENT_IMAGE_ASSET_ID + (p.IMAGE_NAME ? " (" + p.IMAGE_NAME + ")" : "") : "—";
+    els.dPpJob.textContent = p ? (p.JOB_NUMBER != null ? "Job " + p.JOB_NUMBER : (p.PICK_JOB_ID || "—")) : "—";
+    els.dPpX.textContent = p ? fmtCoord(p.X_POSITION) + " Å" : "—";
+    els.dPpY.textContent = p ? fmtCoord(p.Y_POSITION) + " Å" : "—";
+    els.dPpPeak.textContent = p && p.PEAK_HEIGHT != null ? Number(p.PEAK_HEIGHT).toFixed(2) : "—";
+    els.ppDisplayBtn.disabled = !p;
+    els.ppDisplayBtn.title = p ? "Show this image's picks on the Results tab." : "Select a position first.";
+  }
+  function updatePositionBulkButtons(){
+    var count = state.selectedPositionIds.size, total = (state.positions || []).length;
+    var isAll = state.selectedPositionGroupId === 0;
+    var verb = isAll ? "Delete" : "Remove", suffix = isAll ? " from the project." : " from this group (they stay in All Particle Positions).";
+    els.ppRemoveBtn.disabled = count === 0;
+    els.ppRemoveBtn.title = count === 0 ? "Select one or more positions first." : verb + " " + count + " selected position" + (count === 1 ? "" : "s") + suffix;
+    els.ppAddToGroupBtn.disabled = count === 0;
+    els.ppAddToGroupBtn.title = count === 0 ? "Select one or more positions first." : "Add " + count + " selected position" + (count === 1 ? "" : "s") + " to a group.";
+    els.ppSelectAllCheckbox.disabled = total === 0;
+    els.ppSelectAllCheckbox.checked = total > 0 && count === total;
+    els.ppSelectAllCheckbox.indeterminate = count > 0 && count < total;
+    els.ppRemoveAllBtn.disabled = total === 0;
+    els.ppRemoveAllBtn.title = total === 0 ? "No positions in this group yet." : verb + " all " + total + " listed positions" + suffix;
+  }
+  els.ppSelectAllCheckbox.addEventListener("change", function(){
+    var checked = els.ppSelectAllCheckbox.checked;
+    state.selectedPositionIds = new Set(checked ? (state.positions || []).map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }) : []);
+    els.ppListBody.querySelectorAll(".pp-check").forEach(function(cb){ cb.checked = checked; });
+    updatePositionBulkButtons();
+  });
+  function removePositions(ids){
+    if (!ids.length || !state.projectId) return;
+    var url = state.selectedPositionGroupId === 0 ? projectApiUrl("/particle-positions/delete")
+      : projectApiUrl("/particle-position-groups/" + state.selectedPositionGroupId + "/remove-particle-positions");
+    apiFetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({particle_position_ids: ids})})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+      .then(function(){ loadPositionGroups(); loadPositions(); loadResults("particle_picking"); })
+      .catch(function(err){ alert("Could not remove positions: " + err.message); });
+  }
+  els.ppRemoveBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedPositionIds); if (!ids.length) return;
+    var msg = state.selectedPositionGroupId === 0 ? "Permanently delete " + ids.length + " selected position" + (ids.length === 1 ? "" : "s") + " from the project? This cannot be undone."
+      : "Remove " + ids.length + " selected position" + (ids.length === 1 ? "" : "s") + " from this group? They stay in All Particle Positions.";
+    if (confirm(msg)) removePositions(ids);
+  });
+  els.ppRemoveAllBtn.addEventListener("click", function(){
+    var ids = (state.positions || []).map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }); if (!ids.length) return;
+    var msg = state.selectedPositionGroupId === 0 ? "Permanently delete all " + ids.length + " listed positions from the project? This cannot be undone."
+      : "Remove all " + ids.length + " listed positions from this group? They stay in All Particle Positions.";
+    if (confirm(msg)) removePositions(ids);
+  });
+  els.ppAddToGroupBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedPositionIds); if (!ids.length || !state.projectId) return;
+    var name = prompt("Add " + ids.length + " selected position" + (ids.length === 1 ? "" : "s") + " to group (existing or new name):");
+    if (name === null || !name.trim()) return;
+    apiFetch(projectApiUrl("/particle-positions/add-to-group"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({particle_position_ids: ids, group_name: name})})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+      .then(function(){ loadPositionGroups(); })
+      .catch(function(err){ alert("Could not add to group: " + err.message); });
+  });
+  els.ppDisplayBtn.addEventListener("click", function(){
+    var p = (state.positions || []).filter(function(x){ return x.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId; })[0];
+    if (!p) return;
+    showTab("results");
+    showResultsStage("particle_picking");
+    var page = RESULT_PAGES.particle_picking;
+    var tryOnce = function(){ if (page.entries.some(function(e){ return e.rowId === p.PARENT_IMAGE_ASSET_ID; })) page.select(p.PARENT_IMAGE_ASSET_ID, null); };
+    tryOnce(); setTimeout(tryOnce, 700);
+  });
+
+  // ---- particle position groups ----
+  function positionGroupName(){ var g = (state.positionGroups || []).filter(function(x){ return x.group_id === state.selectedPositionGroupId; })[0]; return g ? g.group_name : "this group"; }
+  function updatePositionGroupButtons(){
+    var isAll = state.selectedPositionGroupId === 0, reason = "The All Particle Positions group can't be renamed, removed or inverted.";
+    els.ppGroupRenameBtn.disabled = isAll; els.ppGroupRenameBtn.title = isAll ? reason : 'Rename "' + positionGroupName() + '".';
+    els.ppGroupRemoveBtn.disabled = isAll; els.ppGroupRemoveBtn.title = isAll ? reason : 'Remove the group "' + positionGroupName() + '" (its positions stay in All Particle Positions).';
+    els.ppGroupInvertBtn.disabled = isAll; els.ppGroupInvertBtn.title = isAll ? reason : 'Invert "' + positionGroupName() + '" — it will hold the positions it doesn\'t hold now.';
+  }
+  function groupRequest(path, opts, then){
+    apiFetch(projectApiUrl(path), opts).then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+      .then(then).catch(function(err){ alert(err.message); });
+  }
+  els.ppGroupAddBtn.addEventListener("click", function(){
+    if (!state.projectId) return;
+    var name = prompt("New particle position group name:"); if (name === null || !name.trim()) return;
+    groupRequest("/particle-position-groups", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: name})},
+      function(g){ state.selectedPositionGroupId = g.group_id; loadPositionGroups(); loadPositions(); });
+  });
+  els.ppGroupRenameBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedPositionGroupId === 0) return;
+    var name = prompt('Rename "' + positionGroupName() + '" to:', positionGroupName()); if (name === null || !name.trim()) return;
+    groupRequest("/particle-position-groups/" + state.selectedPositionGroupId, {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: name})},
+      function(){ loadPositionGroups(); });
+  });
+  els.ppGroupRemoveBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedPositionGroupId === 0) return;
+    if (!confirm('Remove the group "' + positionGroupName() + '"? Its positions stay in All Particle Positions.')) return;
+    groupRequest("/particle-position-groups/" + state.selectedPositionGroupId, {method: "DELETE"},
+      function(){ state.selectedPositionGroupId = 0; loadPositionGroups(); loadPositions(); });
+  });
+  els.ppGroupInvertBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedPositionGroupId === 0) return;
+    if (!confirm('Invert "' + positionGroupName() + '"? It will hold every position it doesn\'t hold now.')) return;
+    groupRequest("/particle-position-groups/" + state.selectedPositionGroupId + "/invert", {method: "POST", headers: {"Content-Type": "application/json"}},
+      function(){ loadPositionGroups(); loadPositions(); });
+  });
+  els.ppGroupFromImagesBtn.addEventListener("click", function(){
+    if (!state.projectId) return;
+    var groups = state.imageGroups || [];
+    if (!groups.length){ alert("No image groups yet."); return; }
+    var listing = groups.map(function(g, i){ return (i + 1) + ". " + g.group_name + " (" + g.image_count + " images)"; }).join("\n");
+    var pick = prompt("Positions of which image group?\n" + listing + "\n\nEnter its number:", "1");
+    if (pick === null) return;
+    var g = groups[Number(pick) - 1];
+    if (!g){ alert("No image group with that number."); return; }
+    var name = prompt("Name for the particle position group (existing or new):", g.group_name);
+    if (name === null || !name.trim()) return;
+    groupRequest("/particle-position-groups/from-image-group", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({image_group_id: g.group_id, group_name: name})},
+      function(res){ state.selectedPositionGroupId = res.group_id; loadPositionGroups(); loadPositions(); });
+  });
+  function loadPositionGroups(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/particle-position-groups")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(data){ renderPositionGroupList((data && data.particle_position_groups) || []); }).catch(function(){});
+  }
+  function renderPositionGroupList(groups){
+    state.positionGroups = groups;
+    els.ppGroupList.innerHTML = "";
+    if (!groups.some(function(g){ return g.group_id === state.selectedPositionGroupId; })) state.selectedPositionGroupId = 0;
+    groups.forEach(function(g){
+      var li = document.createElement("li");
+      li.textContent = g.group_name + " (" + g.particle_position_count + ")";
+      li.dataset.groupId = g.group_id;
+      li.classList.toggle("selected", g.group_id === state.selectedPositionGroupId);
+      li.addEventListener("click", function(){ state.selectedPositionGroupId = g.group_id; renderPositionGroupList(state.positionGroups); loadPositions(); });
+      els.ppGroupList.appendChild(li);
+    });
+    updatePositionGroupButtons();
+  }
+
   // ---------- start button gating ----------
   // Mirrors MyAlignMoviesPanel::OnUpdateUI(): the start button is live only
   // when the selected group has members and a run profile exists. The
@@ -5038,7 +5302,7 @@ From branch : <span id="versionBranch">—</span></p>
     motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); loadResults("motion_correction"); },
     // Find CTF changes each image's active estimate, which the Images panel shows.
     ctf_estimation: function(){ loadImages(); loadResults("ctf_estimation"); },
-    particle_picking: function(){ loadResults("particle_picking"); }
+    particle_picking: function(){ loadResults("particle_picking"); loadPositionGroups(); loadPositions(); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 

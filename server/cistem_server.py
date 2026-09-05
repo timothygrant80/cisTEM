@@ -902,6 +902,10 @@ MOVIE_KIND = AssetKind("movie", "MOVIE_ASSETS", "MOVIE_ASSET_ID",
                        "MOVIE_GROUP_LIST", "MOVIE_GROUP_MEMBERS", "All Movies")
 IMAGE_KIND = AssetKind("image", "IMAGE_ASSETS", "IMAGE_ASSET_ID",
                        "IMAGE_GROUP_LIST", "IMAGE_GROUP_MEMBERS", "All Images")
+# Particle positions (cisTEM's MyParticlePositionAssetPanel): one asset per
+# picked particle, written by Find Particles. Same group machinery.
+POSITION_KIND = AssetKind("particle_position", "PARTICLE_POSITION_ASSETS", "PARTICLE_POSITION_ASSET_ID",
+                          "PARTICLE_POSITION_GROUP_LIST", "PARTICLE_POSITION_GROUP_MEMBERS", "All Particle Positions")
 
 # Group 0 is the master list db.py seeds into every project -- every asset is
 # a member of it, and the app treats it as the source of truth for what
@@ -1735,6 +1739,120 @@ def remove_images_from_group(project_id, group_id):
 @auth.project_access_required
 def add_images_to_group(project_id):
     return _add_to_group(project_id, IMAGE_KIND)
+
+
+# ---------------------------------------------------------------------------
+# Particle position assets -- the third AssetKind. Listing is bespoke (it
+# joins the parent image's name and the pick job's number, and a project can
+# hold hundreds of thousands, so it is capped); everything else is shared.
+# ---------------------------------------------------------------------------
+
+POSITION_LIST_LIMIT = 5000
+
+
+@app.route("/api/projects/<project_id>/particle-positions", methods=["GET"])
+@auth.project_access_required
+def list_particle_positions(project_id):
+    """Positions in a group (`group_id`, default all), oldest first, with the
+    parent image's name and the pick job's number. `total` is the full
+    count; at most POSITION_LIST_LIMIT rows come back (`truncated` says so)
+    -- cisTEM's panel lists every position, but a browser table of 200k
+    rows isn't a table anyone reads."""
+    group_id = request.args.get("group_id", type=int)
+    image_id = request.args.get("image_id", type=int)
+    conn = db.get_conn(project_id)
+    where, args = [], []
+    if group_id is not None:
+        where.append("pp.PARTICLE_POSITION_ASSET_ID IN (SELECT PARTICLE_POSITION_ASSET_ID FROM PARTICLE_POSITION_GROUP_MEMBERS WHERE GROUP_ID = ?)")
+        args.append(group_id)
+    if image_id is not None:
+        where.append("pp.PARENT_IMAGE_ASSET_ID = ?")
+        args.append(image_id)
+    clause = (" WHERE " + " AND ".join(where)) if where else ""
+    total = conn.execute("SELECT COUNT(*) FROM PARTICLE_POSITION_ASSETS pp" + clause, args).fetchone()[0]
+    rows = conn.execute(
+        "SELECT pp.*, ia.NAME AS IMAGE_NAME, j.JOB_NUMBER FROM PARTICLE_POSITION_ASSETS pp "
+        "LEFT JOIN IMAGE_ASSETS ia ON ia.IMAGE_ASSET_ID = pp.PARENT_IMAGE_ASSET_ID "
+        "LEFT JOIN JOBS j ON j.JOB_ID = pp.PICK_JOB_ID" + clause +
+        " ORDER BY pp.PARTICLE_POSITION_ASSET_ID LIMIT ?", args + [POSITION_LIST_LIMIT]).fetchall()
+    conn.close()
+    return jsonify({"particle_positions": [dict(r) for r in rows], "total": total, "truncated": total > len(rows)})
+
+
+@app.route("/api/projects/<project_id>/particle-position-groups", methods=["GET"])
+@auth.project_access_required
+def list_position_groups(project_id):
+    return _list_groups(project_id, POSITION_KIND)
+
+
+@app.route("/api/projects/<project_id>/particle-position-groups", methods=["POST"])
+@auth.project_access_required
+def create_position_group(project_id):
+    return _create_group(project_id, POSITION_KIND)
+
+
+@app.route("/api/projects/<project_id>/particle-position-groups/<int:group_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_position_group(project_id, group_id):
+    return _rename_group(project_id, POSITION_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/particle-position-groups/<int:group_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_position_group(project_id, group_id):
+    return _delete_group(project_id, POSITION_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/particle-position-groups/<int:group_id>/invert", methods=["POST"])
+@auth.project_access_required
+def invert_position_group(project_id, group_id):
+    return _invert_group(project_id, POSITION_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/particle-positions/delete", methods=["POST"])
+@auth.project_access_required
+def delete_particle_positions(project_id):
+    return _delete_assets(project_id, POSITION_KIND)
+
+
+@app.route("/api/projects/<project_id>/particle-position-groups/<int:group_id>/remove-particle-positions", methods=["POST"])
+@auth.project_access_required
+def remove_positions_from_group(project_id, group_id):
+    return _remove_from_group(project_id, POSITION_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/particle-positions/add-to-group", methods=["POST"])
+@auth.project_access_required
+def add_positions_to_group(project_id):
+    return _add_to_group(project_id, POSITION_KIND)
+
+
+@app.route("/api/projects/<project_id>/particle-position-groups/from-image-group", methods=["POST"])
+@auth.project_access_required
+def position_group_from_image_group(project_id):
+    """cisTEM's "New from parent": a particle position group holding every
+    position whose parent image is in the given image group. Body
+    {image_group_id, group_name}; an existing group of that name gains the
+    positions, a new name creates one."""
+    body = request.get_json(force=True, silent=True) or {}
+    image_group_id = body.get("image_group_id")
+    group_name = (body.get("group_name") or "").strip()
+    if image_group_id is None or not group_name:
+        return jsonify({"error": "image_group_id and group_name are required"}), 400
+    conn = db.get_conn(project_id)
+    with conn:
+        ids = [r[0] for r in conn.execute(
+            "SELECT PARTICLE_POSITION_ASSET_ID FROM PARTICLE_POSITION_ASSETS WHERE PARENT_IMAGE_ASSET_ID IN "
+            "(SELECT IMAGE_ASSET_ID FROM IMAGE_GROUP_MEMBERS WHERE GROUP_ID = ?)", (int(image_group_id),))]
+        row = conn.execute("SELECT GROUP_ID FROM PARTICLE_POSITION_GROUP_LIST WHERE LOWER(GROUP_NAME) = LOWER(?)", (group_name,)).fetchone()
+        if row:
+            gid = row["GROUP_ID"]
+        else:
+            gid = conn.execute("INSERT INTO PARTICLE_POSITION_GROUP_LIST(GROUP_NAME, LIST_ID) VALUES (?, 0)", (group_name,)).lastrowid
+        conn.executemany("INSERT OR IGNORE INTO PARTICLE_POSITION_GROUP_MEMBERS(GROUP_ID, PARTICLE_POSITION_ASSET_ID) VALUES (?, ?)",
+                         [(gid, i) for i in ids])
+    conn.close()
+    return jsonify({"group_id": gid, "group_name": group_name, "added": len(ids)}), 201
 
 
 # ---------------------------------------------------------------------------

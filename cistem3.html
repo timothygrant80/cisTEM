@@ -104,6 +104,7 @@ button,input,select{font-family:var(--font-ui);}
 
 .page-heading{font-size:14.5px;font-weight:700;margin:0 0 3px;}
 .page-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 16px;max-width:70ch;}
+.page-sub.page-sub-wide{max-width:none;}
 
 /* ---------- group box (native fieldset look) ---------- */
 .groupbox{
@@ -1014,22 +1015,11 @@ From branch : <span id="versionBranch">—</span></p>
            used to be a separate Details tab -- they are all job bookkeeping. -->
       <section class="tabpage" id="page-jobs" hidden>
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-          <div>
+          <div style="flex:1;min-width:0;">
             <h2 class="page-heading">Jobs</h2>
-            <p class="page-sub">Every job this project has run &mdash; queued, running and finished. Click a row to follow its latest result as it runs; Log opens its output.</p>
+            <p class="page-sub page-sub-wide">Every job this project has run &mdash; queued, running and finished. Click a row to follow its latest result as it runs; Log opens its output.</p>
           </div>
           <button class="small" id="refreshBtn">Refresh</button>
-        </div>
-
-        <div class="groupbox">
-          <span class="groupbox-label">Queue Summary</span>
-          <div class="asset-grid">
-            <div class="asset-tile"><div class="asset-label">Queued</div><div class="asset-value" id="sumQueued">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Running</div><div class="asset-value running" id="sumRunning">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Completed</div><div class="asset-value completed" id="sumCompleted">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Failed</div><div class="asset-value failed" id="sumFailed">0</div></div>
-            <div class="asset-tile"><div class="asset-label">Total</div><div class="asset-value" id="sumTotal">0</div></div>
-          </div>
         </div>
 
         <div class="groupbox" style="padding:10px;">
@@ -1084,6 +1074,17 @@ From branch : <span id="versionBranch">—</span></p>
             <thead><tr><th>Stage</th><th class="num">Jobs Run</th><th class="num">Completed</th><th class="num">Failed</th></tr></thead>
             <tbody id="stageInventoryBody"></tbody>
           </table>
+        </div>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Queue Summary</span>
+          <div class="asset-grid">
+            <div class="asset-tile"><div class="asset-label">Queued</div><div class="asset-value" id="sumQueued">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Running</div><div class="asset-value running" id="sumRunning">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Completed</div><div class="asset-value completed" id="sumCompleted">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Failed</div><div class="asset-value failed" id="sumFailed">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Total</div><div class="asset-value" id="sumTotal">0</div></div>
+          </div>
         </div>
       </section>
 

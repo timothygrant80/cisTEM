@@ -1284,7 +1284,7 @@ def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
         }), 415
 
     stat = Path(path).stat()
-    etag = '"{}-{}-{}-{}"'.format(kind.noun, asset_id, int(stat.st_mtime), stat.st_size)
+    etag = '"r{}-{}-{}-{}-{}"'.format(preview.RENDER_VERSION, kind.noun, asset_id, int(stat.st_mtime), stat.st_size)
     if request.headers.get("If-None-Match") == etag:
         return "", 304
 
@@ -1295,7 +1295,7 @@ def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
 
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, max-age=3600"
+    response.headers["Cache-Control"] = "private, no-cache"
     for header, value in (extra_headers or {}).items():
         response.headers[header] = str(meta[value])
     return response
@@ -2099,7 +2099,7 @@ def _file_preview_response(path, etag_key, what):
     if not preview.can_preview(path):
         return jsonify({"error": "previews aren't supported for {} files".format(Path(path).suffix.lower() or "these")}), 415
     stat = Path(path).stat()
-    etag = '"{}-{}-{}"'.format(etag_key, int(stat.st_mtime), stat.st_size)
+    etag = '"r{}-{}-{}-{}"'.format(preview.RENDER_VERSION, etag_key, int(stat.st_mtime), stat.st_size)
     if request.headers.get("If-None-Match") == etag:
         return "", 304
     try:
@@ -2108,7 +2108,7 @@ def _file_preview_response(path, etag_key, what):
         return jsonify({"error": str(exc)}), 422
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, max-age=3600"
+    response.headers["Cache-Control"] = "private, no-cache"
     return response
 
 

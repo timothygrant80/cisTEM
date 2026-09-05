@@ -2118,7 +2118,7 @@ From branch : <span id="versionBranch">—</span></p>
       return;
     }
     img.hidden = true; status.hidden = false; status.textContent = "Loading…";
-    apiFetch(projectApiUrl(path)).then(function(r){
+    apiFetch(projectApiUrl(path), {cache: "no-cache"}).then(function(r){
       if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.blob();
     }).then(function(blob){
@@ -2657,9 +2657,10 @@ From branch : <span id="versionBranch">—</span></p>
       var r = (current.maximum_radius || 0) / px;
       (current.positions || []).forEach(function(p){
         var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        // particle_finder.cpp reports pixel_size * (box centre - peak offset),
-        // i.e. Angstroms from the image origin; MRC rows run bottom-up
-        // while the PNG's run top-down, so y is flipped.
+        // particle_finder.cpp reports pixel_size * (box centre - peak offset):
+        // Angstroms from the image origin, y up. The previews are rendered
+        // bottom-up like cisTEM's display (preview.py), so a pick's y counts
+        // from the bottom of the picture.
         c.setAttribute("cx", (p.x / px).toFixed(1));
         c.setAttribute("cy", (Y - p.y / px).toFixed(1));
         c.setAttribute("r", r.toFixed(1));
@@ -3955,7 +3956,7 @@ From branch : <span id="versionBranch">—</span></p>
 
     // An <img src> can't carry the Authorization header this API needs, so
     // the PNG is fetched through apiFetch and shown from a blob URL.
-    apiFetch(projectApiUrl(descriptor.path)).then(function(r){
+    apiFetch(projectApiUrl(descriptor.path), {cache: "no-cache"}).then(function(r){
       if (!r.ok){
         return r.json().catch(function(){ return {}; }).then(function(d){
           throw new Error((d && d.error) || ("HTTP " + r.status));

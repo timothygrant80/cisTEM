@@ -62,6 +62,12 @@ class PreviewError(Exception):
     """The movie could not be rendered."""
 
 
+# Bumped whenever the rendering changes in a way a cached PNG would hide --
+# the preview ETags include it, so browsers refetch after such a change.
+# 2: rows written bottom-up, as cisTEM displays them.
+RENDER_VERSION = 2
+
+
 def can_preview(path):
     """Whether this file's format is one we render. EER deliberately isn't."""
     return Path(path).suffix.lower() in PREVIEWABLE_EXTENSIONS
@@ -155,9 +161,15 @@ def _to_grayscale_bytes(image):
 
 
 def _encode_png(gray):
-    """Minimal 8-bit greyscale PNG. Each row is prefixed with filter byte 0."""
+    """Minimal 8-bit greyscale PNG. Each row is prefixed with filter byte 0.
+
+    Rows are written bottom-up: an MRC's first row is the *bottom* of the
+    image (y increases upward, as cisTEM draws it), while a PNG's first row
+    is its top. Writing them in reverse shows the image the way cisTEM
+    does -- and the way coordinates from its programs expect (a pick's y is
+    measured from the bottom, a CTF diagnostic's fit sits lower-left)."""
     height, width = gray.shape
-    raw = b"".join(b"\x00" + gray[y].tobytes() for y in range(height))
+    raw = b"".join(b"\x00" + gray[y].tobytes() for y in range(height - 1, -1, -1))
 
     def chunk(kind, payload):
         body = kind + payload

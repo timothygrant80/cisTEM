@@ -1775,6 +1775,16 @@ def create_job(project_id):
     adapter = stages.ADAPTERS.get(stage)
     if adapter is not None and _job_runner is not None and _controller_available():
         return _submit_to_runner(project_id, job_id, adapter, params)
+    if adapter is not None:
+        # This stage *can* run for real; say exactly what is stopping it,
+        # rather than the generic simulation note about a stage binary.
+        if _job_runner is None:
+            why = "the job runner is not listening (see the server's startup output)"
+        else:
+            why = "'{}' was not found on the server's PATH -- build it from the cisTEM tree " \
+                  "(src/programs/cistem_job_controller) and install it next to unblur, or set " \
+                  "CISTEM_JOB_CONTROLLER".format(CONTROLLER_COMMAND)
+        append_log(project_id, job_id, "[{}] simulating: {}".format(now_iso(), why))
 
     with _live_lock:
         _live[job_id] = {"proc": None, "cancel_requested": False}

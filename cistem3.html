@@ -347,6 +347,43 @@ td.mono{font-family:var(--font-mono);}
 .empty-note .hint{display:block;font-size:11px;margin-top:4px;}
 
 /* ---------- Settings ---------- */
+/* ---------- Settings: run profiles (cisTEM's RunProfilesPanel) ----------
+   Same bounded two-column idiom as .assets-layout: profile list + button
+   column on the left, the commands panel on the right, a fixed height with
+   the commands table scrolling inside. The commands table is 6 columns wide,
+   cisTEM's exactly, so it scrolls sideways in its box before the page does. */
+.settings-heading{font-size:13px;font-weight:700;margin:22px 0 4px;}
+.profiles-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:stretch;height:440px;}
+.profiles-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
+.rp-io{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+.rp-total{font-size:12px;color:var(--text-secondary);margin-bottom:10px;flex-shrink:0;}
+.rp-total strong{color:var(--text);font-family:var(--font-mono);font-weight:600;}
+.rp-commands-panel .field{flex-shrink:0;margin-bottom:8px;}
+.rp-error{font-size:11px;margin-top:2px;}
+.rp-addresses{display:grid;grid-template-columns:auto minmax(60px,1fr) auto auto;gap:6px 10px;align-items:center;font-size:12px;margin:2px 0 10px;flex-shrink:0;}
+.rp-addr-label{font-weight:600;color:var(--text-secondary);text-align:right;cursor:help;}
+.rp-addr-value{font-family:var(--font-mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.profiles-layout .rp-table{flex:1;min-height:0;overflow:auto;background:var(--surface-sunken);margin:0;}
+.profiles-layout .rp-table thead th{position:sticky;top:0;z-index:1;}
+.profiles-layout .rp-table tbody td{background:var(--surface);}
+.profiles-layout .rp-table tbody tr:nth-child(even) td{background:var(--surface-sunken);}
+.profiles-layout .rp-table tbody tr.selected td{background:var(--accent-soft);}
+table.rp-commands-table{min-width:760px;}
+table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:normal;word-break:break-all;min-width:220px;}
+.rp-actions .rp-save{margin-left:auto;}
+.rp-commands-panel.disabled{opacity:.55;}
+.rp-cmd-modal{width:min(560px,92vw);}
+.rp-cmd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 12px;}
+.rp-cmd-override{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:12px;}
+.rp-cmd-override .rp-check{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--text-secondary);cursor:pointer;}
+.rp-cmd-override input[type=number]{width:130px;font-family:var(--font-mono);font-size:12px;padding:5px 7px;border:1px solid var(--border-strong);background:var(--surface);}
+.rp-cmd-override input[type=number]:disabled{opacity:.45;cursor:not-allowed;}
+.rp-cmd-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;}
+@media (max-width:900px){
+  .profiles-layout{grid-template-columns:1fr;height:auto;}
+  .profiles-layout > .groupbox{height:320px;}
+}
+
 .settings-row{display:flex;gap:10px;align-items:flex-end;}
 .settings-row .field{flex:1;margin-bottom:0;}
 .settings-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.6;}
@@ -875,11 +912,64 @@ From branch : <span id="versionBranch">—</span></p>
           <p class="settings-note">Requests are authenticated with your logged-in session — only point it at an API on a trusted network. See the bundled <code>server/</code> folder for a reference implementation and its contract.</p>
         </div>
 
-        <div class="groupbox">
-          <span class="groupbox-label">Run Profiles</span>
-          <p class="settings-note">This project's run profiles, seeded when it was created. Pick one per job from the Run Profile box on the Actions tab; it's sent with the job as <code>run_profile</code> and how your API server acts on it is up to its implementation.</p>
-          <ul class="group-list" id="runProfileList"></ul>
-          <p class="settings-note">Editing profiles isn't wired up yet — cisTEM manages these on its own Run Profiles settings panel.</p>
+        <!-- Run Profiles: cisTEM's MyRunProfilesPanel -- a profiles list with
+             its button column on the left, and on the right the selected
+             profile's manager command, addresses and run commands. Edits to the
+             right-hand panel are buffered until Save, as in cisTEM; the
+             profile-level buttons (Add / Rename / Remove / Duplicate) act at once. -->
+        <h3 class="settings-heading">Run Profiles</h3>
+        <p class="page-sub">How a job's processes are launched. A profile is picked per job from the Run Profile box on the Actions tab. In every command, <code>$command</code> stands for the executable and its arguments; the manager command launches the job controller, and each run command launches that many copies of the program.</p>
+        <div class="profiles-layout">
+          <div class="groupbox">
+            <span class="groupbox-label">Profiles</span>
+            <ul class="group-list" id="rpList"></ul>
+            <div class="asset-toolbar">
+              <button class="small" id="rpAddBtn" title="Add cisTEM's default local profile: one copy of the program per core, plus one for the master.">Add</button>
+              <button class="small" id="rpRenameBtn" disabled>Rename</button>
+              <button class="small" id="rpRemoveBtn" disabled>Remove</button>
+              <button class="small" id="rpDuplicateBtn" disabled>Duplicate</button>
+            </div>
+            <div class="asset-toolbar rp-io">
+              <button class="small" id="rpImportBtn" title="Add profiles from a JSON file written by Export.">Import</button>
+              <button class="small" id="rpExportBtn" disabled title="Save every profile to a JSON file.">Export</button>
+              <input type="file" id="rpImportFile" accept=".json,application/json" hidden>
+            </div>
+          </div>
+
+          <div class="groupbox rp-commands-panel" id="rpCommandsPanel">
+            <span class="groupbox-label" id="rpCommandsLabel">Commands</span>
+            <div class="rp-total">Total Number of Processes : <strong id="rpTotal">&mdash;</strong></div>
+            <div class="field">
+              <label for="rpManager">Manager Command <span class="unit">&mdash; launches the job controller; must contain <code>$command</code></span></label>
+              <input type="text" id="rpManager" placeholder="$command" />
+              <span class="validation-note blocked rp-error" id="rpManagerError" hidden>Oops! - Command must contain "$command"</span>
+            </div>
+            <div class="rp-addresses">
+              <span class="rp-addr-label" title="The address the job controller dials to reach this server. Automatic sends every address this machine answers on. cisTEM calls this the GUI address.">Server Address :</span>
+              <span class="rp-addr-value" id="rpGuiAddress">Automatic</span>
+              <button class="small" id="rpGuiAutoBtn" disabled>Auto</button>
+              <button class="small" id="rpGuiSpecifyBtn">Specify</button>
+              <span class="rp-addr-label" title="The address the worker processes dial to reach the job controller. Automatic lets the controller advertise its own.">Controller Address :</span>
+              <span class="rp-addr-value" id="rpControllerAddress">Automatic</span>
+              <button class="small" id="rpControllerAutoBtn" disabled>Auto</button>
+              <button class="small" id="rpControllerSpecifyBtn">Specify</button>
+            </div>
+            <div class="table-scroll rp-table">
+              <table class="queue rp-commands-table">
+                <thead>
+                  <tr><th>Command</th><th>No. Copies</th><th>No. Threads Per Copy</th><th>Override Total No. Copies?</th><th>Overriden Total No. Copies?</th><th>Launch Delay (ms)</th></tr>
+                </thead>
+                <tbody id="rpCommandsBody"></tbody>
+              </table>
+            </div>
+            <div class="asset-toolbar rp-actions">
+              <button class="small" id="rpCmdAddBtn">Add</button>
+              <button class="small" id="rpCmdEditBtn" disabled>Edit</button>
+              <button class="small" id="rpCmdRemoveBtn" disabled>Remove</button>
+              <button class="primary small rp-save" id="rpSaveBtn" disabled>Save</button>
+            </div>
+            <p class="form-note" id="rpNote">Changes to the manager command, addresses and run commands are kept here until you click Save.</p>
+          </div>
         </div>
       </section>
 
@@ -926,6 +1016,35 @@ From branch : <span id="versionBranch">—</span></p>
      into Movie files or Image files would be resolved too. Opens on top of
      the already-open Import modal, hence the higher z-index (see
      .browse-modal CSS). -->
+<!-- cisTEM's AddRunCommandDialog ("Enter Command..."): one run command of a profile. -->
+<div class="scrim" id="rpCmdScrim"></div>
+<div class="modal rp-cmd-modal" id="rpCmdModal">
+  <div class="modal-head">
+    <div class="modal-title">Enter Command...</div>
+    <button class="log-close" id="rpCmdModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="field">
+      <label for="rpCmdCommand">Command To Run <span class="unit">&mdash; <code>$command</code> becomes the program and its arguments; wrap it in <code>ssh</code>, <code>srun</code>, etc. as needed</span></label>
+      <input type="text" id="rpCmdCommand" value="$command" />
+    </div>
+    <div class="rp-cmd-grid">
+      <div class="field"><label for="rpCmdCopies">No. Copies To Run</label><input type="number" id="rpCmdCopies" min="1" max="999999" step="1" value="1" /></div>
+      <div class="field"><label for="rpCmdThreads">No. Threads Per Copy</label><input type="number" id="rpCmdThreads" min="1" max="999999" step="1" value="1" /></div>
+      <div class="field"><label for="rpCmdDelay">Launch Delay <span class="unit">(ms)</span></label><input type="number" id="rpCmdDelay" min="0" max="10000" step="1" value="10" /></div>
+    </div>
+    <div class="rp-cmd-override" title="When one command launches a batch that itself starts several processes (an MPI launcher, say), tell the job system how many processes to expect.">
+      <label for="rpCmdOverride" class="rp-check"><input type="checkbox" id="rpCmdOverride" /> Override Apparent No. Copies :</label>
+      <input type="number" id="rpCmdOverridden" min="0" max="99999999" step="1" value="0" disabled />
+    </div>
+    <p class="form-note validation-note blocked" id="rpCmdError" hidden>Oops! - Command must contain "$command"</p>
+    <div class="rp-cmd-buttons">
+      <button class="primary" id="rpCmdOkBtn">OK</button>
+      <button id="rpCmdCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="scrim browse-scrim" id="browseScrim"></div>
 <div class="modal browse-modal" id="browseModal">
   <div class="modal-head">
@@ -1164,7 +1283,13 @@ From branch : <span id="versionBranch">—</span></p>
    "dImageName","dImageFilename","dImageId","dImageParentId","dImageAlignmentId",
    "dImageXSize","dImageYSize","dImagePixelSize","dImageVoltage","dImageCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
-   "stageInventoryBody","runProfile","runProfileList","submitNote",
+   "stageInventoryBody","runProfile","submitNote",
+   "rpList","rpAddBtn","rpRenameBtn","rpRemoveBtn","rpDuplicateBtn","rpImportBtn","rpExportBtn","rpImportFile",
+   "rpCommandsPanel","rpCommandsLabel","rpTotal","rpManager","rpManagerError",
+   "rpGuiAddress","rpGuiAutoBtn","rpGuiSpecifyBtn","rpControllerAddress","rpControllerAutoBtn","rpControllerSpecifyBtn",
+   "rpCommandsBody","rpCmdAddBtn","rpCmdEditBtn","rpCmdRemoveBtn","rpSaveBtn",
+   "rpCmdScrim","rpCmdModal","rpCmdModalClose","rpCmdCommand","rpCmdCopies","rpCmdThreads","rpCmdDelay",
+   "rpCmdOverride","rpCmdOverridden","rpCmdError","rpCmdOkBtn","rpCmdCancelBtn",
    "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
   ].forEach(function(id){ els[id] = document.getElementById(id); });
@@ -1627,6 +1752,7 @@ From branch : <span id="versionBranch">—</span></p>
       none.textContent = "Open a project first";
       els.runProfile.appendChild(none);
       els.runProfile.disabled = true;
+      rpSetProfiles([]);
       return;
     }
     apiFetch(projectApiUrl("/run-profiles")).then(function(r){
@@ -1636,7 +1762,7 @@ From branch : <span id="versionBranch">—</span></p>
       var rows = (data && data.run_profiles) || [];
       state.runProfiles = rows;
       els.runProfile.innerHTML = "";
-      els.runProfileList.innerHTML = "";
+      rpSetProfiles(rows);
       if (!rows.length){
         var empty = document.createElement("option");
         empty.textContent = "No run profiles";
@@ -1651,9 +1777,6 @@ From branch : <span id="versionBranch">—</span></p>
         opt.value = row.profile_name;
         opt.textContent = row.profile_name;
         els.runProfile.appendChild(opt);
-        var li = document.createElement("li");
-        li.textContent = row.profile_name;
-        els.runProfileList.appendChild(li);
       });
       var remembered = rows.filter(function(r){ return r.profile_name === state.runProfile; })[0];
       els.runProfile.value = remembered ? remembered.profile_name : rows[0].profile_name;
@@ -1673,6 +1796,305 @@ From branch : <span id="versionBranch">—</span></p>
     state.runProfile = els.runProfile.value;
     localStorage.setItem("cryoem_run_profile", state.runProfile);
     updateStartButton();
+  });
+
+  // ---------- run profile editor (Settings) ----------
+  // MyRunProfilesPanel, in the browser. Profile-level actions (Add, Rename,
+  // Remove, Duplicate, Import) hit the API at once and reload the list. The
+  // commands panel on the right edits a *copy* of the selected profile
+  // (cisTEM's buffer_profile) and nothing reaches the server until Save --
+  // so a half-edited command list can be abandoned by switching profiles.
+  var rp = { profiles: [], selectedId: null, buffer: null, selectedCommand: -1, dirty: false, editingCommand: -1 };
+
+  function rpFetch(path, opts){
+    return apiFetch(projectApiUrl(path), opts).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.status === 204 ? null : r.json();
+    });
+  }
+
+  function rpSelected(){
+    return rp.profiles.filter(function(p){ return p.run_profile_id === rp.selectedId; })[0] || null;
+  }
+
+  function rpCommandTotal(commands){
+    // RunProfile::ReturnTotalJobs()
+    return commands.reduce(function(n, c){ return n + (c.override_total_copies ? c.overridden_total_copies : c.copies); }, 0);
+  }
+
+  function rpHasCommandToken(text){ return (text || "").indexOf("$command") !== -1; }
+
+  // Called by loadRunProfiles() with the fresh list (or [] with no project).
+  function rpSetProfiles(rows){
+    rp.profiles = rows;
+    var stillThere = rows.some(function(p){ return p.run_profile_id === rp.selectedId; });
+    if (!stillThere){
+      rp.selectedId = rows.length ? rows[0].run_profile_id : null;
+      rp.dirty = false;
+    }
+    if (!rp.dirty) rpLoadBuffer();
+    rpRenderList();
+    rpRenderCommands();
+  }
+
+  function rpLoadBuffer(){
+    var p = rpSelected();
+    rp.buffer = p ? JSON.parse(JSON.stringify(p)) : null;
+    rp.selectedCommand = -1;
+    rp.dirty = false;
+  }
+
+  function rpSelectProfile(id){
+    if (id === rp.selectedId) return;
+    if (rp.dirty && !confirm("Discard the unsaved changes to \u201c" + (rpSelected() || {}).profile_name + "\u201d?")) return;
+    rp.selectedId = id;
+    rpLoadBuffer();
+    rpRenderList();
+    rpRenderCommands();
+  }
+
+  function rpRenderList(){
+    els.rpList.innerHTML = "";
+    rp.profiles.forEach(function(p){
+      var li = document.createElement("li");
+      li.textContent = p.profile_name;
+      if (p.run_profile_id === rp.selectedId) li.classList.add("selected");
+      li.addEventListener("click", function(){ rpSelectProfile(p.run_profile_id); });
+      li.addEventListener("dblclick", function(){ rpRename(); });
+      els.rpList.appendChild(li);
+    });
+    var have = !!rpSelected();
+    els.rpRenameBtn.disabled = !have;
+    els.rpRemoveBtn.disabled = !have;
+    els.rpDuplicateBtn.disabled = !have;
+    els.rpExportBtn.disabled = !rp.profiles.length;
+    els.rpAddBtn.disabled = !state.projectId;
+    els.rpImportBtn.disabled = !state.projectId;
+  }
+
+  function rpRenderCommands(){
+    var b = rp.buffer;
+    var panel = els.rpCommandsPanel;
+    panel.classList.toggle("disabled", !b);
+    els.rpCommandsLabel.textContent = b ? b.profile_name : "Commands";
+    els.rpTotal.textContent = b ? String(rpCommandTotal(b.run_commands)) : "\u2014";
+    if (document.activeElement !== els.rpManager) els.rpManager.value = b ? b.manager_run_command : "";
+    els.rpManager.disabled = !b;
+    var managerOk = !b || rpHasCommandToken(els.rpManager.value);
+    els.rpManagerError.hidden = managerOk;
+
+    els.rpGuiAddress.textContent = b && b.gui_address ? b.gui_address : "Automatic";
+    els.rpGuiAutoBtn.disabled = !(b && b.gui_address);
+    els.rpGuiSpecifyBtn.disabled = !b;
+    els.rpControllerAddress.textContent = b && b.controller_address ? b.controller_address : "Automatic";
+    els.rpControllerAutoBtn.disabled = !(b && b.controller_address);
+    els.rpControllerSpecifyBtn.disabled = !b;
+
+    els.rpCommandsBody.innerHTML = "";
+    if (b){
+      b.run_commands.forEach(function(c, i){
+        var tr = document.createElement("tr");
+        tr.className = "clickable" + (i === rp.selectedCommand ? " selected" : "");
+        [c.command, c.copies, c.threads_per_copy, c.override_total_copies ? "Yes" : "No", c.overridden_total_copies, c.delay_ms]
+          .forEach(function(v){ var td = document.createElement("td"); td.textContent = v; tr.appendChild(td); });
+        tr.addEventListener("click", function(){ rp.selectedCommand = i; rpRenderCommands(); });
+        tr.addEventListener("dblclick", function(){ rp.selectedCommand = i; rpEditCommand(); });
+        els.rpCommandsBody.appendChild(tr);
+      });
+    }
+    var haveCmd = !!b && rp.selectedCommand >= 0 && rp.selectedCommand < b.run_commands.length;
+    els.rpCmdAddBtn.disabled = !b;
+    els.rpCmdEditBtn.disabled = !haveCmd;
+    els.rpCmdRemoveBtn.disabled = !haveCmd;
+    els.rpSaveBtn.disabled = !(b && rp.dirty && managerOk);
+    els.rpSaveBtn.title = b && rp.dirty && !managerOk ? "The manager command must contain $command." : "";
+  }
+
+  function rpMarkDirty(){ rp.dirty = true; rpRenderCommands(); }
+
+  // ---- profile-level actions ----
+  function rpReload(selectId){
+    if (selectId !== undefined){ rp.selectedId = selectId; rp.dirty = false; }
+    loadRunProfiles();
+  }
+
+  els.rpAddBtn.addEventListener("click", function(){
+    rpFetch("/run-profiles", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"})
+      .then(function(p){ rpReload(p.run_profile_id); })
+      .catch(function(err){ alert("Could not add a run profile: " + err.message); });
+  });
+
+  function rpRename(){
+    var p = rpSelected();
+    if (!p) return;
+    var name = prompt("Rename run profile \u201c" + p.profile_name + "\u201d to:", p.profile_name);
+    name = name ? name.trim() : "";
+    if (!name || name === p.profile_name) return;
+    rpFetch("/run-profiles/" + p.run_profile_id, {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({profile_name: name})})
+      .then(function(){
+        // keep the Actions picker's remembered choice pointing at the same profile
+        if (state.runProfile === p.profile_name){ state.runProfile = name; localStorage.setItem("cryoem_run_profile", name); }
+        if (rp.buffer && rp.buffer.run_profile_id === p.run_profile_id) rp.buffer.profile_name = name;
+        rpReload();
+      })
+      .catch(function(err){ alert("Could not rename the run profile: " + err.message); });
+  }
+  els.rpRenameBtn.addEventListener("click", rpRename);
+
+  els.rpRemoveBtn.addEventListener("click", function(){
+    var p = rpSelected();
+    if (!p) return;
+    var idx = rp.profiles.indexOf(p);
+    rpFetch("/run-profiles/" + p.run_profile_id, {method: "DELETE"})
+      .then(function(){
+        // select the neighbour, as OnRemoveProfileClick does
+        var next = rp.profiles[idx > 0 ? idx - 1 : 1];
+        rpReload(next ? next.run_profile_id : null);
+      })
+      .catch(function(err){ alert("Could not remove the run profile: " + err.message); });
+  });
+
+  els.rpDuplicateBtn.addEventListener("click", function(){
+    var p = rpSelected();
+    if (!p) return;
+    rpFetch("/run-profiles", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({copy_of: p.run_profile_id})})
+      .then(function(np){ rpReload(np.run_profile_id); })
+      .catch(function(err){ alert("Could not duplicate the run profile: " + err.message); });
+  });
+
+  // Export: every profile, as the JSON the API speaks, so Import (here or on
+  // another project/server) can POST each one back.
+  els.rpExportBtn.addEventListener("click", function(){
+    var payload = rp.profiles.map(function(p){
+      return {profile_name: p.profile_name, manager_run_command: p.manager_run_command, gui_address: p.gui_address,
+              controller_address: p.controller_address, run_commands: p.run_commands};
+    });
+    var blob = new Blob([JSON.stringify({run_profiles: payload}, null, 2)], {type: "application/json"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "run_profiles.json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  els.rpImportBtn.addEventListener("click", function(){ els.rpImportFile.value = ""; els.rpImportFile.click(); });
+  els.rpImportFile.addEventListener("change", function(){
+    var file = els.rpImportFile.files && els.rpImportFile.files[0];
+    if (!file) return;
+    file.text().then(function(text){
+      var data = JSON.parse(text);
+      var list = Array.isArray(data) ? data : (data && data.run_profiles) || [];
+      if (!list.length) throw new Error("no profiles in that file");
+      var lastId = null;
+      return list.reduce(function(chain, p){
+        return chain.then(function(){
+          return rpFetch("/run-profiles", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(p)})
+            .then(function(np){ lastId = np.run_profile_id; });
+        });
+      }, Promise.resolve()).then(function(){ rpReload(lastId); });
+    }).catch(function(err){ alert("Could not import run profiles: " + err.message); });
+  });
+
+  // ---- the commands panel (buffered) ----
+  els.rpManager.addEventListener("input", function(){
+    if (!rp.buffer) return;
+    rp.buffer.manager_run_command = els.rpManager.value;
+    rpMarkDirty();
+  });
+
+  function rpSpecify(field, promptText){
+    if (!rp.buffer) return;
+    var v = prompt(promptText, rp.buffer[field] || "");
+    if (v === null) return;
+    rp.buffer[field] = v.trim();
+    rpMarkDirty();
+  }
+  els.rpGuiSpecifyBtn.addEventListener("click", function(){ rpSpecify("gui_address", "Wanted Server Address :-"); });
+  els.rpGuiAutoBtn.addEventListener("click", function(){ if (rp.buffer){ rp.buffer.gui_address = ""; rpMarkDirty(); } });
+  els.rpControllerSpecifyBtn.addEventListener("click", function(){ rpSpecify("controller_address", "Wanted Controller Address :-"); });
+  els.rpControllerAutoBtn.addEventListener("click", function(){ if (rp.buffer){ rp.buffer.controller_address = ""; rpMarkDirty(); } });
+
+  // Add appends cisTEM's default command and selects it; the dialog is for Edit.
+  els.rpCmdAddBtn.addEventListener("click", function(){
+    if (!rp.buffer) return;
+    rp.buffer.run_commands.push({command: "$command", copies: 1, threads_per_copy: 1, override_total_copies: false, overridden_total_copies: 0, delay_ms: 10});
+    rp.selectedCommand = rp.buffer.run_commands.length - 1;
+    rpMarkDirty();
+  });
+
+  els.rpCmdRemoveBtn.addEventListener("click", function(){
+    if (!rp.buffer || rp.selectedCommand < 0) return;
+    rp.buffer.run_commands.splice(rp.selectedCommand, 1);
+    var n = rp.buffer.run_commands.length;
+    rp.selectedCommand = rp.selectedCommand > 0 ? rp.selectedCommand - 1 : (n ? 0 : -1);
+    rpMarkDirty();
+  });
+
+  function rpEditCommand(){
+    if (!rp.buffer || rp.selectedCommand < 0) return;
+    var c = rp.buffer.run_commands[rp.selectedCommand];
+    rp.editingCommand = rp.selectedCommand;
+    els.rpCmdCommand.value = c.command;
+    els.rpCmdCopies.value = c.copies;
+    els.rpCmdThreads.value = c.threads_per_copy;
+    els.rpCmdDelay.value = c.delay_ms;
+    els.rpCmdOverride.checked = !!c.override_total_copies;
+    els.rpCmdOverridden.value = c.overridden_total_copies;
+    els.rpCmdOverridden.disabled = !c.override_total_copies;
+    els.rpCmdError.hidden = true;
+    els.rpCmdModal.classList.add("open");
+    els.rpCmdScrim.classList.add("open");
+    els.rpCmdCommand.focus();
+  }
+  els.rpCmdEditBtn.addEventListener("click", rpEditCommand);
+
+  function rpCloseCommandDialog(){
+    els.rpCmdModal.classList.remove("open");
+    els.rpCmdScrim.classList.remove("open");
+    rp.editingCommand = -1;
+  }
+  els.rpCmdModalClose.addEventListener("click", rpCloseCommandDialog);
+  els.rpCmdCancelBtn.addEventListener("click", rpCloseCommandDialog);
+  els.rpCmdScrim.addEventListener("click", rpCloseCommandDialog);
+  els.rpCmdOverride.addEventListener("change", function(){ els.rpCmdOverridden.disabled = !els.rpCmdOverride.checked; });
+
+  function rpCommitCommandDialog(){
+    if (!rp.buffer || rp.editingCommand < 0) return;
+    if (!rpHasCommandToken(els.rpCmdCommand.value)){ els.rpCmdError.hidden = false; return; }
+    var c = rp.buffer.run_commands[rp.editingCommand];
+    var clamp = function(el, lo){ var v = parseInt(el.value, 10); return isNaN(v) || v < lo ? lo : v; };
+    var next = {
+      command: els.rpCmdCommand.value.trim(),
+      copies: clamp(els.rpCmdCopies, 1),
+      threads_per_copy: clamp(els.rpCmdThreads, 1),
+      delay_ms: clamp(els.rpCmdDelay, 0),
+      override_total_copies: els.rpCmdOverride.checked,
+      overridden_total_copies: clamp(els.rpCmdOverridden, 0)
+    };
+    var changed = Object.keys(next).some(function(k){ return next[k] !== c[k]; });
+    var index = rp.editingCommand;
+    rpCloseCommandDialog();
+    if (!changed) return;  // ProcessResult(): nothing changed, just exit
+    rp.buffer.run_commands[index] = next;
+    rpMarkDirty();
+  }
+  els.rpCmdOkBtn.addEventListener("click", rpCommitCommandDialog);
+  [els.rpCmdCommand, els.rpCmdCopies, els.rpCmdThreads, els.rpCmdDelay, els.rpCmdOverridden].forEach(function(el){
+    el.addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); rpCommitCommandDialog(); } });
+  });
+
+  els.rpSaveBtn.addEventListener("click", function(){
+    var b = rp.buffer;
+    if (!b || !rp.dirty) return;
+    if (!rpHasCommandToken(b.manager_run_command)){ els.rpManagerError.hidden = false; return; }
+    rpFetch("/run-profiles/" + b.run_profile_id, {
+      method: "PATCH", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({manager_run_command: b.manager_run_command, gui_address: b.gui_address,
+                            controller_address: b.controller_address, run_commands: b.run_commands})
+    }).then(function(){
+      rp.dirty = false;
+      rpReload(b.run_profile_id);
+    }).catch(function(err){ alert("Could not save the run profile: " + err.message); });
   });
 
   // ---------- connection ----------

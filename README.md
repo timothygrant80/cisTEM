@@ -103,7 +103,10 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/images/import` | Import micrographs into "All Images". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, protein_is_white}` — no dose, gain/dark or EER fields, since an image is already averaged. `400`s unless voltage/Cs/pixel size are set and the glob matches at least one not-already-imported MRC/TIFF file (`.eer` never matches). Returns `{image_count, skipped_count, failed}`. |
 | `POST` | `/projects/:id/images/check-import` | Same shape as the movie version, for the Import Images dialog's live validation |
 | `POST` | `/projects/:id/image-groups/:gid/invert` | Invert a group against All Images (self-reversing; `400` for All Images) |
-| `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command, controller_address, run_commands: [...], total_jobs}, ...] }` — fills the Run Profile picker; `total_jobs == 0` greys the start button |
+| `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command, gui_address, controller_address, run_commands: [...], total_jobs}, ...] }` — fills the Run Profile picker and the Settings editor; `total_jobs == 0` greys the start button |
+| `POST` | `/projects/:id/run-profiles` | Add a profile: `{}` for cisTEM's "Default Local", `{ "copy_of": id }` to duplicate, or a full profile (the `GET` shape) to import → `201` with the new profile |
+| `PATCH` | `/projects/:id/run-profiles/:rid` | Change any of `profile_name`, `manager_run_command`, `gui_address`, `controller_address`, `run_commands` (each command: `{command, copies, threads_per_copy, override_total_copies, overridden_total_copies, delay_ms}`); `400` if a command lacks `$command` |
+| `DELETE` | `/projects/:id/run-profiles/:rid` | Remove a profile and its commands |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below). `400` if `params.run_profile` names a profile with no run commands |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
@@ -158,7 +161,7 @@ CISTEM_JOB_CONTROLLER="python3 $PWD/tools/fake_controller.py" python server/cist
 
 The controller itself is `cistem_job_controller`, built from the cisTEM tree (`src/programs/cistem_job_controller/`, wired into both the autotools and CMake builds) — point `CISTEM_JOB_CONTROLLER` at it, and make sure the worker executables (`unblur`, …) are on the `PATH` of the server process, which the controller and its workers inherit. Each job's controller output (including the workers' stdout, since they inherit it) lands in `<project dir>/Logs/<job id>_controller.log`; per-task results are recorded in `JOB_TASKS` as they arrive and turned into `MOVIE_ALIGNMENT_LIST` rows, per-frame `MOVIE_ALIGNMENT_PARAMETERS_<id>` tables and image assets when the job finishes. A job that was running when the server stopped is **not** failed on restart any more: its controller reconnects within the reconnect window (10 minutes) and carries on.
 
-Run profiles now carry their commands (`RUN_PROFILE_COMMANDS_<id>`, cisTEM's own tables), seeded like cisTEM's defaults; the seeded Slurm profile has none and is refused at submit until it is edited (there is no editor yet — use `sqlite3` on the project file).
+Run profiles carry their commands (`RUN_PROFILE_COMMANDS_<id>`, cisTEM's own tables), seeded like cisTEM's defaults, and are edited on the Settings tab the way cisTEM's Run Profiles panel does it; the seeded Slurm profile has no commands and is refused at submit until you give it some there.
 
 Tests: `python -m unittest discover -s server/tests` — codec tests plus runner integration tests that launch the fake controller for real.
 

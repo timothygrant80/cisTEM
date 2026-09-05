@@ -218,8 +218,11 @@ CREATE INDEX IF NOT EXISTS idx_image_group_members_asset ON IMAGE_GROUP_MEMBERS(
 _CORES = os.cpu_count() or 4
 RUN_PROFILE_SEED = [
     # (name, manager_command, [(command, copies, threads_per_copy, delay_ms), ...])
-    ("Local (single-threaded)", "$command", [("$command", _CORES, 1, 10)]),
-    ("Local (multi-threaded)", "$command", [("$command", 1, max(1, _CORES // 2), 10)]),
+    # cores + 1 copies, as AddDefaultLocalProfile() does: the first process to
+    # connect becomes the master and only dispatches, so this is `cores`
+    # processes actually computing.
+    ("Local (single-threaded)", "$command", [("$command", _CORES + 1, 1, 10)]),
+    ("Local (multi-threaded)", "$command", [("$command", 2, max(1, _CORES // 2), 10)]),
     ("Cluster (Slurm)", "$command", []),
 ]
 
@@ -392,6 +395,159 @@ def load_run_profile_by_name(conn, name):
         if profile["name"] == name:
             return profile
     return None
+
+
+def load_run_profile(conn, run_profile_id):
+    for profile in load_run_profiles(conn):
+        if profile["run_profile_id"] == run_profile_id:
+            return profile
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Editing run profiles -- MyRunProfilesPanel's Add / Rename / Remove /
+# Duplicate and the Save of its commands panel, as database operations.
+# Names are unique per project (case-insensitively) because jobs refer to
+# their profile by name; cisTEM tolerates duplicates but has no such
+# reference to keep straight.
+# ---------------------------------------------------------------------------
+
+class RunProfileError(ValueError):
+    """A run-profile edit the API should refuse with a 400."""
+
+
+def _validate_command_text(text, what):
+    text = (text or "").strip()
+    if "$command" not in text:
+        # cisTEM's exact wording, from AddRunCommandDialog / CommandsSaveButtonClick.
+        raise RunProfileError('Oops! - {} must contain "$command"'.format(what))
+    return text
+
+
+def _validate_run_commands(run_commands):
+    clean = []
+    for i, c in enumerate(run_commands or []):
+        if not isinstance(c, dict):
+            raise RunProfileError("run command {} is not an object".format(i))
+        try:
+            copies = int(c.get("copies", 1))
+            threads = int(c.get("threads_per_copy", 1))
+            overridden = int(c.get("overridden_total_copies", 0) or 0)
+            delay = int(c.get("delay_ms", 10) or 0)
+        except (TypeError, ValueError):
+            raise RunProfileError("run command {} has a non-integer count".format(i))
+        if copies < 1 or threads < 1 or overridden < 0 or delay < 0:
+            raise RunProfileError("run command {} has a count out of range".format(i))
+        clean.append({
+            "command": _validate_command_text(c.get("command"), "Command"),
+            "copies": copies,
+            "threads_per_copy": threads,
+            "override_total_copies": bool(c.get("override_total_copies", False)),
+            "overridden_total_copies": overridden,
+            "delay_ms": delay,
+        })
+    return clean
+
+
+def _unique_profile_name(conn, wanted, exclude_id=None):
+    """`wanted`, or `wanted (2)`, `wanted (3)`... -- the first not already
+    taken by another profile."""
+    taken = {
+        r["PROFILE_NAME"].lower()
+        for r in conn.execute("SELECT RUN_PROFILE_ID, PROFILE_NAME FROM RUN_PROFILES").fetchall()
+        if r["RUN_PROFILE_ID"] != exclude_id
+    }
+    if wanted.lower() not in taken:
+        return wanted
+    n = 2
+    while "{} ({})".format(wanted, n).lower() in taken:
+        n += 1
+    return "{} ({})".format(wanted, n)
+
+
+def default_local_profile_spec():
+    """What cisTEM's Add button creates (RunProfileManager::AddDefaultLocalProfile)."""
+    return {
+        "name": "Default Local",
+        "manager_command": "$command",
+        "gui_address": "",
+        "controller_address": "",
+        "run_commands": [{"command": "$command", "copies": _CORES + 1, "threads_per_copy": 1,
+                          "override_total_copies": False, "overridden_total_copies": 0, "delay_ms": 10}],
+    }
+
+
+def _write_run_commands(conn, run_profile_id, commands):
+    """Replace a profile's command table wholesale -- what
+    Database::AddOrReplaceRunProfile does (DeleteTable + CreateTable)."""
+    conn.execute("DROP TABLE IF EXISTS RUN_PROFILE_COMMANDS_{}".format(run_profile_id))
+    conn.execute(_RUN_PROFILE_COMMANDS_SQL.format(run_profile_id))
+    for number, c in enumerate(commands):
+        conn.execute(
+            "INSERT INTO RUN_PROFILE_COMMANDS_{}(COMMANDS_NUMBER, COMMAND_STRING, NUMBER_OF_COPIES, "
+            "NUMBER_OF_THREADS_PER_COPY, OVERRIDE_TOTAL_NUMBER_OF_COPIES, OVERIDDEN_TOTAL_NUMBER_OF_COPIES, "
+            "DELAY_TIME_IN_MS) VALUES (?, ?, ?, ?, ?, ?, ?)".format(run_profile_id),
+            (number, c["command"], c["copies"], c["threads_per_copy"], 1 if c["override_total_copies"] else 0,
+             c["overridden_total_copies"], c["delay_ms"]),
+        )
+
+
+def create_run_profile(conn, spec):
+    """Add a profile from a spec shaped like load_run_profiles() output (any
+    field may be missing). Returns the new id. The name is made unique the
+    way cisTEM's Duplicate would want ("Copy of X", then "Copy of X (2)")."""
+    name = (spec.get("name") or "New Profile").strip() or "New Profile"
+    manager = _validate_command_text(spec.get("manager_command") or "$command", "Command")
+    commands = _validate_run_commands(spec.get("run_commands") or [])
+    with conn:
+        name = _unique_profile_name(conn, name)
+        cur = conn.execute(
+            "INSERT INTO RUN_PROFILES(PROFILE_NAME, MANAGER_RUN_COMMAND, GUI_ADDRESS, CONTROLLER_ADDRESS) "
+            "VALUES (?, ?, ?, ?)",
+            (name, manager, (spec.get("gui_address") or "").strip(), (spec.get("controller_address") or "").strip()),
+        )
+        pid = cur.lastrowid
+        conn.execute("UPDATE RUN_PROFILES SET COMMANDS_ID = RUN_PROFILE_ID WHERE RUN_PROFILE_ID = ?", (pid,))
+        _write_run_commands(conn, pid, commands)
+    return pid
+
+
+def update_run_profile(conn, run_profile_id, fields):
+    """Change any of name / manager_command / gui_address /
+    controller_address / run_commands. Raises RunProfileError for an invalid
+    value, KeyError for an unknown profile."""
+    row = conn.execute("SELECT RUN_PROFILE_ID FROM RUN_PROFILES WHERE RUN_PROFILE_ID=?", (run_profile_id,)).fetchone()
+    if row is None:
+        raise KeyError(run_profile_id)
+    sets, values = [], []
+    if "name" in fields:
+        name = (fields["name"] or "").strip()
+        if not name:
+            raise RunProfileError("a profile needs a name")
+        if _unique_profile_name(conn, name, exclude_id=run_profile_id) != name:
+            raise RunProfileError("another profile is already called {!r}".format(name))
+        sets.append("PROFILE_NAME=?"); values.append(name)
+    if "manager_command" in fields:
+        sets.append("MANAGER_RUN_COMMAND=?"); values.append(_validate_command_text(fields["manager_command"], "Command"))
+    if "gui_address" in fields:
+        sets.append("GUI_ADDRESS=?"); values.append((fields["gui_address"] or "").strip())
+    if "controller_address" in fields:
+        sets.append("CONTROLLER_ADDRESS=?"); values.append((fields["controller_address"] or "").strip())
+    commands = _validate_run_commands(fields["run_commands"]) if "run_commands" in fields else None
+    with conn:
+        if sets:
+            conn.execute("UPDATE RUN_PROFILES SET {} WHERE RUN_PROFILE_ID=?".format(", ".join(sets)),
+                         values + [run_profile_id])
+        if commands is not None:
+            _write_run_commands(conn, run_profile_id, commands)
+
+
+def delete_run_profile(conn, run_profile_id):
+    """Database::DeleteRunProfile: the row and its command table."""
+    with conn:
+        cur = conn.execute("DELETE FROM RUN_PROFILES WHERE RUN_PROFILE_ID=?", (run_profile_id,))
+        conn.execute("DROP TABLE IF EXISTS RUN_PROFILE_COMMANDS_{}".format(run_profile_id))
+    return cur.rowcount > 0
 
 
 def create_project(name, owner_user_id, owner_username):

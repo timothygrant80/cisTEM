@@ -1704,17 +1704,93 @@ def list_run_profiles(project_id):
     conn = db.get_conn(project_id)
     profiles = db.load_run_profiles(conn)
     conn.close()
-    return jsonify({"run_profiles": [
-        {
-            "run_profile_id": p["run_profile_id"],
-            "profile_name": p["name"],
-            "manager_run_command": p["manager_command"],
-            "controller_address": p["controller_address"],
-            "run_commands": p["run_commands"],
-            "total_jobs": p["total_jobs"],
-        }
-        for p in profiles
-    ]})
+    return jsonify({"run_profiles": [_profile_json(p) for p in profiles]})
+
+
+def _profile_json(p):
+    return {
+        "run_profile_id": p["run_profile_id"],
+        "profile_name": p["name"],
+        "manager_run_command": p["manager_command"],
+        "gui_address": p["gui_address"],
+        "controller_address": p["controller_address"],
+        "run_commands": p["run_commands"],
+        "total_jobs": p["total_jobs"],
+    }
+
+
+def _profile_spec_from_body(body):
+    """The API's field names -> db's. Missing keys stay missing so PATCH
+    can be partial."""
+    spec = {}
+    for api_key, db_key in (("profile_name", "name"), ("manager_run_command", "manager_command"),
+                            ("gui_address", "gui_address"), ("controller_address", "controller_address"),
+                            ("run_commands", "run_commands")):
+        if api_key in body:
+            spec[db_key] = body[api_key]
+    return spec
+
+
+@app.route("/api/projects/<project_id>/run-profiles", methods=["POST"])
+@auth.project_access_required
+def create_run_profile(project_id):
+    """MyRunProfilesPanel's Add, Duplicate and Import in one route. An empty
+    body adds cisTEM's "Default Local" profile; `copy_of` duplicates an
+    existing one as "Copy of <name>"; a full profile in the body (the shape
+    GET returns) imports it. Names are made unique."""
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        if "copy_of" in body:
+            source = db.load_run_profile(conn, int(body["copy_of"]))
+            if source is None:
+                return jsonify({"error": "run profile {} not found".format(body["copy_of"])}), 404
+            spec = dict(source, name="Copy of " + source["name"])
+        else:
+            spec = _profile_spec_from_body(body)
+            if not spec:
+                spec = db.default_local_profile_spec()
+        try:
+            pid = db.create_run_profile(conn, spec)
+        except db.RunProfileError as exc:
+            return jsonify({"error": str(exc)}), 400
+        profile = db.load_run_profile(conn, pid)
+    finally:
+        conn.close()
+    return jsonify(_profile_json(profile)), 201
+
+
+@app.route("/api/projects/<project_id>/run-profiles/<int:run_profile_id>", methods=["PATCH"])
+@auth.project_access_required
+def update_run_profile(project_id, run_profile_id):
+    """Rename, or the commands panel's Save: any of profile_name,
+    manager_run_command, gui_address, controller_address, run_commands."""
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            db.update_run_profile(conn, run_profile_id, _profile_spec_from_body(body))
+        except KeyError:
+            return jsonify({"error": "run profile {} not found".format(run_profile_id)}), 404
+        except db.RunProfileError as exc:
+            return jsonify({"error": str(exc)}), 400
+        profile = db.load_run_profile(conn, run_profile_id)
+    finally:
+        conn.close()
+    return jsonify(_profile_json(profile))
+
+
+@app.route("/api/projects/<project_id>/run-profiles/<int:run_profile_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_run_profile(project_id, run_profile_id):
+    conn = db.get_conn(project_id)
+    try:
+        deleted = db.delete_run_profile(conn, run_profile_id)
+    finally:
+        conn.close()
+    if not deleted:
+        return jsonify({"error": "run profile {} not found".format(run_profile_id)}), 404
+    return jsonify({"deleted": run_profile_id})
 
 
 # ---------------------------------------------------------------------------

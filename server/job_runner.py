@@ -286,8 +286,12 @@ class JobRunner:
     # ------------------------------------------------------------------
 
     def controller_command_line(self, session):
-        return "{} {} {} {}".format(
-            self.controller_executable, ",".join(self.hosts_to_advertise()), self.port, session.token)
+        # A profile may pin the address the controller dials (cisTEM's
+        # gui_address, "Specify" on the Run Profiles panel); otherwise the
+        # controller is told every address this machine answers on.
+        pinned = (session.spec.profile.get("gui_address") or "").strip()
+        hosts = pinned if pinned else ",".join(self.hosts_to_advertise())
+        return "{} {} {} {}".format(self.controller_executable, hosts, self.port, session.token)
 
     def _launch_manager(self, session):
         command = session.spec.manager_command or "$command"

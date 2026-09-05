@@ -85,6 +85,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/auth/me` | `{user}` for the current token — used to silently re-validate a stored token on page load |
 | `GET` | `/users` | Admin only. List users: `{ "users": [{id, username, role, display_name, created_at}, ...] }` — no password hashes |
 | `POST` | `/users` | Admin only. Create a user. Body: `{username, password, role, display_name}` (`password` min. 8 characters, `role` is `user` or `admin`) |
+| `PATCH` | `/users/:id` | Admin only. Body `{role}` (`admin` or `user`) → updated user; refuses to demote yourself or the last admin |
 | `GET` | `/projects` | List projects: `{ "projects": [{id, name, total_jobs_run, owner_username, creation_date, ...}, ...] }` — your own, or all of them if you're an admin |
 | `POST` | `/projects` | Create a project you own. Body: `{ "name" }` → returns its summary |
 | `GET` | `/projects/:id` | One project's summary |

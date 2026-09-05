@@ -163,6 +163,7 @@ button.link:hover{background:none;text-decoration:underline;}
 }
 .stage-inventory td{padding:8px 10px;border:1px solid var(--border);font-size:12px;}
 .stage-inventory td.num{font-family:var(--font-mono);text-align:right;}
+.stage-inventory td .role-select{font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--border-strong);background:var(--surface);}
 .stage-inventory td.mono{font-family:var(--font-mono);color:var(--text-secondary);white-space:nowrap;}
 .stage-inventory tbody tr.clickable{cursor:pointer;}
 .stage-inventory tbody tr.clickable:hover td{background:var(--accent-soft);}
@@ -2766,9 +2767,43 @@ From branch : <span id="versionBranch">—</span></p>
 
   function renderUserList(users){
     els.userListBody.innerHTML = "";
+    var me = state.currentUser ? state.currentUser.id : null;
     users.forEach(function(u){
       var tr = document.createElement("tr");
-      tr.innerHTML = "<td>" + u.username + "</td><td>" + (u.display_name || "") + "</td><td>" + u.role + "</td>";
+      var tdUser = document.createElement("td"); tdUser.textContent = u.username; tr.appendChild(tdUser);
+      var tdDisplay = document.createElement("td"); tdDisplay.textContent = u.display_name || ""; tr.appendChild(tdDisplay);
+
+      // The role is edited in place: pick the other one and it is saved at
+      // once, and the list reloads so what you see is what the server has.
+      // Your own row is fixed -- the server refuses a self-demotion anyway,
+      // and greying it says so before you try.
+      var tdRole = document.createElement("td");
+      var roleSel = document.createElement("select");
+      roleSel.className = "role-select";
+      ["user", "admin"].forEach(function(r){
+        var opt = document.createElement("option"); opt.value = r; opt.textContent = r; opt.selected = r === u.role;
+        roleSel.appendChild(opt);
+      });
+      if (u.id === me){ roleSel.disabled = true; roleSel.title = "You can't change your own role; another admin has to."; }
+      roleSel.addEventListener("change", function(){
+        var role = roleSel.value;
+        roleSel.disabled = true;
+        apiFetch(apiUrl("/users/" + u.id), {
+          method: "PATCH", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({role: role})
+        }).then(function(r){
+          return r.json().then(function(data){ return {ok: r.ok, data: data}; });
+        }).then(function(res){
+          if (!res.ok) throw new Error((res.data && res.data.error) || "Could not change role");
+          loadUsers();
+        }).catch(function(err){
+          alert("Could not change role: " + err.message);
+          roleSel.value = u.role;
+          roleSel.disabled = false;
+        });
+      });
+      tdRole.appendChild(roleSel);
+      tr.appendChild(tdRole);
 
       var tdPw = document.createElement("td");
       var pwInput = document.createElement("input");

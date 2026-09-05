@@ -258,6 +258,29 @@ def set_password(user_id, new_password):
         raise ValueError("user not found")
 
 
+def set_role(user_id, role):
+    """Promote or demote an account. Takes effect on the target's next
+    request, since every request looks its user up afresh -- no session
+    needs revoking. The route guards against removing the last admin."""
+    if role not in ("admin", "user"):
+        raise ValueError("role must be 'admin' or 'user'")
+    conn = get_conn()
+    with conn:
+        cur = conn.execute("UPDATE USERS SET ROLE=? WHERE USER_ID=?", (role, user_id))
+    found = cur.rowcount > 0
+    conn.close()
+    if not found:
+        raise ValueError("user not found")
+    return get_user_by_id(user_id)
+
+
+def admin_count():
+    conn = get_conn()
+    n = conn.execute("SELECT COUNT(*) FROM USERS WHERE ROLE='admin'").fetchone()[0]
+    conn.close()
+    return n
+
+
 def revoke_user_sessions(user_id, keep_token=None):
     """Invalidate a user's other sessions after their password changes --
     self-service change keeps the session that made the request alive

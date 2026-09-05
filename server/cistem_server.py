@@ -789,6 +789,29 @@ def reset_password_route(user_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/users/<int:user_id>", methods=["PATCH"])
+@auth.admin_required
+def update_user_route(user_id):
+    """Change an account's role. Two refusals keep an admin from locking
+    everyone out: you can't demote yourself, and you can't demote the last
+    admin (the same thing, seen from the other side)."""
+    body = request.get_json(force=True, silent=True) or {}
+    if "role" not in body:
+        return jsonify({"error": "nothing to change: body needs 'role'"}), 400
+    target = auth.get_user_by_id(user_id)
+    if target is None:
+        return jsonify({"error": "user not found"}), 404
+    if body["role"] != "admin" and target["role"] == "admin":
+        if user_id == g.current_user["id"]:
+            return jsonify({"error": "you can't remove your own admin role -- have another admin do it"}), 400
+        if auth.admin_count() <= 1:
+            return jsonify({"error": "that is the only admin account; promote someone else first"}), 400
+    try:
+        return jsonify(auth.set_role(user_id, body["role"]))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 # ---------------------------------------------------------------------------
 # Project routes
 # ---------------------------------------------------------------------------

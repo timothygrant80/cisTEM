@@ -25,6 +25,7 @@
   --text-tertiary:#7C868E;
   --accent:#2F5FA6;
   --accent-strong:#1F4680;
+  --plot-y:#B2562B;   /* the second series in the drift plot, distinct from the accent */
   --accent-soft:#DCE7F5;
   --success:#2F7D3C;
   --success-soft:#E1F0E3;
@@ -359,6 +360,50 @@ td.mono{font-family:var(--font-mono);}
 .empty-note .hint{display:block;font-size:11px;margin-top:4px;}
 
 /* ---------- Settings ---------- */
+/* ---------- Results: Align Movies (MyMovieAlignResultsPanel) ----------
+   The bounded list-plus-detail idiom again: movies on the left, the chosen
+   alignment's job details, drift plot and pictures on the right. */
+.results-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:stretch;height:620px;}
+.results-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
+.ra-nav{justify-content:space-between;flex-wrap:nowrap;}
+.ra-nav .small{white-space:nowrap;}
+.ra-filter-row{display:flex;align-items:center;gap:12px;font-size:12px;margin-bottom:8px;flex-shrink:0;flex-wrap:wrap;}
+.ra-radio{display:flex;align-items:center;gap:5px;font-weight:600;color:var(--text-secondary);cursor:pointer;}
+.ra-radio input:disabled + *,.ra-radio:has(input:disabled){opacity:.5;cursor:not-allowed;}
+.ra-list li{display:flex;justify-content:space-between;gap:8px;}
+.ra-list li .ra-count{font-weight:400;color:var(--text-tertiary);font-family:var(--font-mono);font-size:11px;}
+.ra-list li.selected .ra-count{color:rgba(255,255,255,.8);}
+.ra-toggle[aria-pressed="true"]{background:var(--surface-sunken);box-shadow:inset 0 1px 2px rgba(0,0,0,.15);}
+.ra-right-scroll{flex:1;min-height:0;overflow:auto;padding-right:6px;}
+.ra-job-details{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.ra-details-grid{grid-template-columns:repeat(3,1fr);}
+.ra-plot-head{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 4px;}
+.ra-plot-title{font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;}
+.ra-legend{font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;}
+.ra-swatch{display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);margin-left:8px;}
+.ra-swatch-y{border-top-color:var(--plot-y);}
+.ra-plot{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--border);}
+.ra-plot .axis{stroke:var(--border-strong);stroke-width:1;}
+.ra-plot .grid{stroke:var(--border);stroke-width:1;}
+.ra-plot .zero{stroke:var(--border-strong);stroke-width:1;stroke-dasharray:3 3;}
+.ra-plot .tick{font-family:var(--font-mono);font-size:10px;fill:var(--text-tertiary);}
+.ra-plot .axis-label{font-family:var(--font-ui);font-size:10.5px;fill:var(--text-secondary);}
+.ra-plot .line-x{fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linejoin:round;}
+.ra-plot .line-y{fill:none;stroke:var(--plot-y);stroke-width:1.8;stroke-linejoin:round;}
+.ra-plot .dot-x{fill:var(--accent);} .ra-plot .dot-y{fill:var(--plot-y);}
+.ra-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px;}
+.ra-figure{margin:0;}
+.ra-figure-frame{position:relative;border:1px solid var(--border);background:var(--surface-sunken);aspect-ratio:1 / 1;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.ra-figure-frame img{max-width:100%;max-height:100%;display:block;}
+.ra-figure-status{font-size:11px;color:var(--text-tertiary);padding:8px;text-align:center;}
+.ra-figure figcaption{font-size:11px;color:var(--text-secondary);margin-top:4px;font-weight:600;}
+.ra-nyquist{font-weight:400;color:var(--text-tertiary);font-family:var(--font-mono);}
+@media (max-width:900px){
+  .results-layout{grid-template-columns:1fr;height:auto;}
+  .results-layout > .groupbox.ra-left{height:300px;}
+  .results-layout > .groupbox.ra-right{height:auto;}
+}
+
 /* ---------- Settings: run profiles (cisTEM's RunProfilesPanel) ----------
    Same bounded two-column idiom as .assets-layout: profile list + button
    column on the left, the commands panel on the right, a fixed height with
@@ -609,12 +654,16 @@ From branch : <span id="versionBranch">—</span></p>
       <span>Actions</span>
     </button>
     <button class="rail-item" data-tab="results" title="Results">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1"/><path d="M3.5 9.5h17M9 9.5V19.5"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M6.5 15.5l4-5 3.5 2.5 5-6.5"/></svg>
       <span>Results</span>
     </button>
-    <button class="rail-item" data-tab="details" title="Details">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19v-8M12 19V5M18 19v-5"/></svg>
-      <span>Details</span>
+    <!-- cisTEM has no tab like this: a job's progress lives inside its Action
+         panel. Here the queue is where a submitted job goes, so it gets a tab
+         of its own -- named for what the table holds (all jobs, not only the
+         running ones), with the queue summary and per-stage totals folded in. -->
+    <button class="rail-item" data-tab="jobs" title="Jobs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1"/><path d="M3.5 9.5h17M3.5 14.5h17"/></svg>
+      <span>Jobs</span>
     </button>
     <button class="rail-item" data-tab="settings" title="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.4-2-3.4-2.3.8a7.5 7.5 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.5 7.5 0 0 0-2.6 1.5l-2.3-.8-2 3.4 2 1.4a7.6 7.6 0 0 0 0 3l-2 1.4 2 3.4 2.3-.8a7.5 7.5 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.5 7.5 0 0 0 2.6-1.5l2.3.8 2-3.4-2-1.4z"/></svg>
@@ -856,34 +905,106 @@ From branch : <span id="versionBranch">—</span></p>
         </div>
       </section>
 
-      <!-- RESULTS -->
+      <!-- RESULTS: cisTEM's ResultsPanel is a wxListbook with one page per
+           result type across the top (wxLB_TOP) -- the same icon tab bar the
+           Assets and Actions pages use. Only Align Movies has real results
+           behind it so far; the other stages share one placeholder shell, as
+           the unwired asset types do. -->
       <section class="tabpage" id="page-results" hidden>
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-          <div>
-            <h2 class="page-heading">Results</h2>
-            <p class="page-sub">Jobs submitted this session. Click a row for its log.</p>
+        <h2 class="page-heading">Results</h2>
+        <p class="page-sub">What each processing step produced, per movie or image.</p>
+
+        <div class="subtabs" id="resultsTabs"></div>
+
+        <!-- ALIGN MOVIES: MyMovieAlignResultsPanel + UnblurResultsPanel -->
+        <div class="results-subpage" id="resultspageAlignMovies">
+          <div class="results-layout">
+            <div class="groupbox ra-left">
+              <span class="groupbox-label">Movies</span>
+              <div class="ra-filter-row">
+                <label class="ra-radio"><input type="radio" name="raFilter" id="raAllMovies" checked /> All Movies</label>
+                <label class="ra-radio" title="Filtering alignments by their parameters isn't implemented yet — cisTEM's Define Filter dialog is the model."><input type="radio" name="raFilter" id="raByFilter" disabled /> By Filter</label>
+                <button class="small" id="raDefineFilterBtn" disabled title="Not implemented yet.">Define Filter</button>
+              </div>
+              <ul class="group-list ra-list" id="raMovieList"></ul>
+              <div class="asset-toolbar">
+                <button class="small ra-toggle" id="raJobDetailsBtn" aria-pressed="false">Show Job Details</button>
+              </div>
+              <div class="asset-toolbar ra-nav">
+                <button class="small" id="raPrevBtn" disabled>&larr; Previous</button>
+                <button class="small" id="raAddAllBtn" disabled title="Add the aligned images of every movie listed to an image group.">Add All To Group</button>
+                <button class="small" id="raNextBtn" disabled>Next &rarr;</button>
+              </div>
+            </div>
+
+            <div class="groupbox ra-right">
+              <span class="groupbox-label" id="raRightLabel">Alignment</span>
+              <div class="ra-right-scroll">
+                <div class="ra-job-details" id="raJobDetails" hidden>
+                  <div class="details-grid ra-details-grid">
+                    <div class="details-item"><span class="details-key">Alignment ID</span><span class="details-val" id="raAlignmentId">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Date of Run</span><span class="details-val" id="raDateOfRun">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Time of Run</span><span class="details-val" id="raTimeOfRun">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Voltage</span><span class="details-val" id="raVoltage">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Pixel Size</span><span class="details-val" id="raPixelSize">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Exp. per Frame</span><span class="details-val" id="raExposure">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Pre Exp.</span><span class="details-val" id="raPreExposure">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Min. Shift</span><span class="details-val" id="raMinShift">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Max. Shift</span><span class="details-val" id="raMaxShift">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Term. Threshold</span><span class="details-val" id="raTermination">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Max. Iterations</span><span class="details-val" id="raMaxIterations">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">B-Factor</span><span class="details-val" id="raBfactor">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Exposure Filter</span><span class="details-val" id="raDoseFilter">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Restore Power</span><span class="details-val" id="raRestorePower">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Mask Central Cross</span><span class="details-val" id="raMaskCross">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Horiz. / Vert. Mask</span><span class="details-val" id="raMasks">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Frames Summed</span><span class="details-val" id="raFrames">&mdash;</span></div>
+                    <div class="details-item"><span class="details-key">Final Pixel Size</span><span class="details-val" id="raFinalPixelSize">&mdash;</span></div>
+                    <div class="details-item details-item-wide"><span class="details-key">Output File</span><span class="details-val" id="raOutputFile">&mdash;</span></div>
+                  </div>
+                </div>
+                <div class="empty-note" id="raEmpty">No movie alignments in this project yet<span class="hint">Run Align Movies from the Actions tab; each aligned movie appears here with its drift plot, aligned sum and spectrum.</span></div>
+                <div class="ra-result" id="raResult" hidden>
+                  <div class="ra-plot-head">
+                    <span class="ra-plot-title">Drift</span>
+                    <span class="ra-legend"><span class="ra-swatch ra-swatch-x"></span>X shift <span class="ra-swatch ra-swatch-y"></span>Y shift</span>
+                  </div>
+                  <svg class="ra-plot" id="raPlot" viewBox="0 0 640 240" role="img" aria-label="Frame shift against accumulated exposure"></svg>
+                  <div class="ra-images">
+                    <figure class="ra-figure">
+                      <div class="ra-figure-frame"><img id="raSumImg" alt="Aligned sum" hidden /><span class="ra-figure-status" id="raSumStatus">Loading&hellip;</span></div>
+                      <figcaption>Aligned sum</figcaption>
+                    </figure>
+                    <figure class="ra-figure">
+                      <div class="ra-figure-frame"><img id="raSpectrumImg" alt="Amplitude spectrum" hidden /><span class="ra-figure-status" id="raSpectrumStatus">Loading&hellip;</span></div>
+                      <figcaption>Amplitude spectrum <span class="ra-nyquist" id="raNyquist"></span></figcaption>
+                    </figure>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <button class="small" id="refreshBtn">Refresh</button>
         </div>
 
-        <div class="groupbox" style="padding:10px;">
-          <div class="table-scroll">
-            <table class="queue">
-              <thead>
-                <tr><th>Job</th><th>Stage</th><th>Status</th><th>Progress</th><th>Submitted</th><th></th></tr>
-              </thead>
-              <tbody id="queueBody">
-                <tr><td colspan="6"><div class="empty-note">Not connected to a pipeline API<span class="hint">Go to Settings, enter your API base URL, and connect.</span></div></td></tr>
-              </tbody>
-            </table>
+        <!-- OTHER STAGES: no results data model yet -->
+        <div class="results-subpage" id="resultspagePlaceholder" hidden>
+          <div class="groupbox">
+            <span class="groupbox-label" id="resultsPlaceholderLabel">Results</span>
+            <div class="empty-note" id="resultsPlaceholderNote">Not wired up yet<span class="hint">Only Align Movies writes results into the project database so far.</span></div>
           </div>
         </div>
       </section>
 
-      <!-- DETAILS -->
-      <section class="tabpage" id="page-details" hidden>
-        <h2 class="page-heading">Details</h2>
-        <p class="page-sub">Queue status and per-stage job totals for this project.</p>
+      <!-- JOBS: the queue, with the summary tiles and per-stage totals that
+           used to be a separate Details tab -- they are all job bookkeeping. -->
+      <section class="tabpage" id="page-jobs" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+          <div>
+            <h2 class="page-heading">Jobs</h2>
+            <p class="page-sub">Every job this project has run &mdash; queued, running and finished. Click a row for its log.</p>
+          </div>
+          <button class="small" id="refreshBtn">Refresh</button>
+        </div>
 
         <div class="groupbox">
           <span class="groupbox-label">Queue Summary</span>
@@ -893,6 +1014,19 @@ From branch : <span id="versionBranch">—</span></p>
             <div class="asset-tile"><div class="asset-label">Completed</div><div class="asset-value completed" id="sumCompleted">0</div></div>
             <div class="asset-tile"><div class="asset-label">Failed</div><div class="asset-value failed" id="sumFailed">0</div></div>
             <div class="asset-tile"><div class="asset-label">Total</div><div class="asset-value" id="sumTotal">0</div></div>
+          </div>
+        </div>
+
+        <div class="groupbox" style="padding:10px;">
+          <div class="table-scroll">
+            <table class="queue">
+              <thead>
+                <tr><th>Job</th><th>Stage</th><th>Status</th><th>Progress</th><th>Submitted</th><th></th></tr>
+              </thead>
+              <tbody id="queueBody">
+                <tr><td colspan="6"><div class="empty-note">Not connected to a pipeline API<span class="hint">The page connects on load to the address in config.js.</span></div></td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1270,6 +1404,11 @@ From branch : <span id="versionBranch">—</span></p>
    "previewStage","previewStatus","previewImg","previewNote",
    "assetpageMovies","assetpageImages","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
+   "resultsTabs","resultspageAlignMovies","resultspagePlaceholder","resultsPlaceholderLabel","resultsPlaceholderNote",
+   "raAllMovies","raByFilter","raDefineFilterBtn","raMovieList","raJobDetailsBtn","raPrevBtn","raAddAllBtn","raNextBtn",
+   "raRightLabel","raJobDetails","raEmpty","raResult","raPlot","raSumImg","raSumStatus","raSpectrumImg","raSpectrumStatus","raNyquist",
+   "raAlignmentId","raDateOfRun","raTimeOfRun","raVoltage","raPixelSize","raExposure","raPreExposure","raMinShift","raMaxShift",
+   "raTermination","raMaxIterations","raBfactor","raDoseFilter","raRestorePower","raMaskCross","raMasks","raFrames","raFinalPixelSize","raOutputFile",
    "movieDetailsLabel","imageDetailsLabel","dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
    "importImagesScrim","importImagesModal","importImagesModalClose","importImagesFields",
@@ -1325,12 +1464,13 @@ From branch : <span id="versionBranch">—</span></p>
     assets: document.getElementById("page-assets"),
     actions: document.getElementById("page-actions"),
     results: document.getElementById("page-results"),
-    details: document.getElementById("page-details"),
+    jobs: document.getElementById("page-jobs"),
     settings: document.getElementById("page-settings")
   };
   function showTab(name){
     railItems.forEach(function(btn){ btn.classList.toggle("active", btn.dataset.tab === name); });
     Object.keys(pages).forEach(function(key){ pages[key].hidden = key !== name; });
+    if (name === "results" && typeof loadAlignments === "function") loadAlignments();
   }
   railItems.forEach(function(btn){
     btn.addEventListener("click", function(){ showTab(btn.dataset.tab); });
@@ -1735,6 +1875,253 @@ From branch : <span id="versionBranch">—</span></p>
   });
 
   selectStage(state.currentStage);
+
+  // ---------- results sub-tabs ----------
+  // One page per stage, the same bar as the Actions tab. Only Align Movies
+  // has a results page with data behind it; the rest share a placeholder.
+  var RESULTS_REAL_PAGES = {motion_correction: "resultspageAlignMovies"};
+  state.resultsStage = "motion_correction";
+  STAGE_ORDER.forEach(function(key){
+    var btn = document.createElement("button");
+    btn.className = "subtab-btn";
+    btn.dataset.stage = key;
+    btn.title = STAGES[key].description || "";
+    btn.innerHTML = SVG_OPEN + (STAGE_ICONS[key] || "") + "</svg><span></span>";
+    btn.querySelector("span").textContent = STAGES[key].label;
+    btn.addEventListener("click", function(){ showResultsStage(key); });
+    els.resultsTabs.appendChild(btn);
+  });
+  function showResultsStage(key){
+    state.resultsStage = key;
+    els.resultsTabs.querySelectorAll(".subtab-btn").forEach(function(btn){ btn.classList.toggle("active", btn.dataset.stage === key); });
+    Object.keys(RESULTS_REAL_PAGES).forEach(function(k){ els[RESULTS_REAL_PAGES[k]].hidden = k !== key; });
+    var placeholder = !RESULTS_REAL_PAGES[key];
+    els.resultspagePlaceholder.hidden = !placeholder;
+    if (placeholder){
+      els.resultsPlaceholderLabel.textContent = STAGES[key].label;
+      els.resultsPlaceholderNote.innerHTML = STAGES[key].label + " results aren\u2019t wired up yet" +
+        '<span class="hint">This stage doesn\u2019t write to its project tables yet \u2014 see CLAUDE.md\u2019s "Scope note". Its cisTEM results panel is the model for what goes here.</span>';
+    }
+  }
+  showResultsStage("motion_correction");
+
+  // ---------- Align Movies results (MyMovieAlignResultsPanel) ----------
+  // The list holds one entry per movie: its latest alignment, with a count
+  // of earlier ones. Selecting an entry fetches that alignment's per-frame
+  // shifts for the drift plot (UnblurResultsPanel) and renders the aligned
+  // sum and the amplitude spectrum unblur wrote beside it. Job Details is
+  // cisTEM's toggle: hidden by default, the parameters of the run when on.
+  var ra = { alignments: [], entries: [], selectedMovieId: null, current: null, showDetails: false, urls: [] };
+
+  function raLatestPerMovie(alignments){
+    var byMovie = {};
+    alignments.forEach(function(a){
+      var e = byMovie[a.movie_asset_id];
+      if (!e){ byMovie[a.movie_asset_id] = {movie_asset_id: a.movie_asset_id, movie_name: a.movie_name, latest: a, count: 1}; }
+      else { e.count++; if (a.alignment_id > e.latest.alignment_id) e.latest = a; }
+    });
+    return Object.keys(byMovie).map(function(k){ return byMovie[k]; }).sort(function(p, q){ return p.movie_asset_id - q.movie_asset_id; });
+  }
+
+  function loadAlignments(){
+    if (!state.projectId || !state.connected) return;
+    apiFetch(projectApiUrl("/alignments")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      ra.alignments = (data && data.alignments) || [];
+      ra.entries = raLatestPerMovie(ra.alignments);
+      var still = ra.entries.some(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
+      if (!still) ra.selectedMovieId = ra.entries.length ? ra.entries[0].movie_asset_id : null;
+      raRenderList();
+      raShowSelected();
+    }).catch(function(){});
+  }
+
+  function raRenderList(){
+    els.raMovieList.innerHTML = "";
+    ra.entries.forEach(function(e){
+      var li = document.createElement("li");
+      li.classList.toggle("selected", e.movie_asset_id === ra.selectedMovieId);
+      var name = document.createElement("span"); name.textContent = e.movie_name || ("Movie " + e.movie_asset_id);
+      li.appendChild(name);
+      if (e.count > 1){
+        var n = document.createElement("span"); n.className = "ra-count"; n.title = e.count + " alignments; the latest is shown"; n.textContent = "\u00d7" + e.count;
+        li.appendChild(n);
+      }
+      li.addEventListener("click", function(){ ra.selectedMovieId = e.movie_asset_id; raRenderList(); raShowSelected(); });
+      els.raMovieList.appendChild(li);
+    });
+    var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
+    els.raPrevBtn.disabled = idx <= 0;
+    els.raNextBtn.disabled = idx < 0 || idx >= ra.entries.length - 1;
+    els.raAddAllBtn.disabled = !ra.entries.length;
+  }
+
+  function raReleaseUrls(){ ra.urls.forEach(function(u){ URL.revokeObjectURL(u); }); ra.urls = []; }
+
+  function raShowSelected(){
+    var entry = ra.entries.filter(function(e){ return e.movie_asset_id === ra.selectedMovieId; })[0];
+    raReleaseUrls();
+    if (!entry){
+      ra.current = null;
+      els.raEmpty.hidden = false;
+      els.raResult.hidden = true;
+      els.raJobDetails.hidden = true;
+      els.raRightLabel.textContent = "Alignment";
+      return;
+    }
+    els.raEmpty.hidden = true;
+    els.raResult.hidden = false;
+    els.raJobDetails.hidden = !ra.showDetails;
+    els.raRightLabel.textContent = "Alignment \u2014 " + (entry.movie_name || entry.movie_asset_id);
+    var id = entry.latest.alignment_id;
+    els.raSumImg.hidden = true; els.raSumStatus.hidden = false; els.raSumStatus.textContent = "Loading\u2026";
+    els.raSpectrumImg.hidden = true; els.raSpectrumStatus.hidden = false; els.raSpectrumStatus.textContent = "Loading\u2026";
+    apiFetch(projectApiUrl("/alignments/" + id)).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(a){
+      if (!ra.entries.some(function(e){ return e.movie_asset_id === ra.selectedMovieId && e.latest.alignment_id === a.alignment_id; })) return; // selection moved on
+      ra.current = a;
+      raRenderDetails(a);
+      raDrawPlot(a);
+      raLoadFigure(els.raSumImg, els.raSumStatus, "/alignments/" + a.alignment_id + "/sum.png", a.output_file_exists, "aligned sum");
+      raLoadFigure(els.raSpectrumImg, els.raSpectrumStatus, "/alignments/" + a.alignment_id + "/spectrum.png", a.spectrum_file_exists, "spectrum");
+      // ProcessResult(): Nyquist is 2x the corrected pixel size, floored at 2.8 A -- that's what the spectrum's edge means.
+      var px = a.final_pixel_size || a.pixel_size;
+      els.raNyquist.textContent = px ? "(Nyquist " + (px < 1.4 ? 2.8 : 2 * px).toFixed(2) + " \u00c5)" : "";
+    }).catch(function(err){
+      els.raSumStatus.textContent = "Could not load this alignment: " + err.message;
+    });
+  }
+
+  function raLoadFigure(img, status, path, exists, what){
+    if (!exists){
+      status.hidden = false;
+      status.textContent = "The " + what + " file isn\u2019t on disk" + (what === "spectrum" ? " (simulated jobs don\u2019t write one)." : ".");
+      img.hidden = true;
+      return;
+    }
+    apiFetch(projectApiUrl(path)).then(function(r){
+      if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.blob();
+    }).then(function(blob){
+      var url = URL.createObjectURL(blob);
+      ra.urls.push(url);
+      img.src = url; img.hidden = false; status.hidden = true;
+    }).catch(function(err){
+      status.hidden = false; status.textContent = "Could not render the " + what + ": " + err.message; img.hidden = true;
+    });
+  }
+
+  function raFmt(v, digits){ return v == null ? "\u2014" : (digits == null ? String(v) : Number(v).toFixed(digits)); }
+  function raYesNo(v){ return v == null ? "\u2014" : (v ? "Yes" : "No"); }
+
+  function raRenderDetails(a){
+    var when = a.datetime_of_run ? new Date(a.datetime_of_run * 1000) : null;
+    els.raAlignmentId.textContent = raFmt(a.alignment_id) + (a.job_number ? " (Job " + a.job_number + ")" : "");
+    els.raDateOfRun.textContent = when ? when.toLocaleDateString() : "\u2014";
+    els.raTimeOfRun.textContent = when ? when.toLocaleTimeString() : "\u2014";
+    els.raVoltage.textContent = raFmt(a.voltage) + (a.voltage != null ? " kV" : "");
+    els.raPixelSize.textContent = raFmt(a.pixel_size) + (a.pixel_size != null ? " \u00c5" : "");
+    els.raExposure.textContent = raFmt(a.exposure_per_frame) + (a.exposure_per_frame != null ? " e\u207b/\u00c5\u00b2" : "");
+    els.raPreExposure.textContent = raFmt(a.pre_exposure_amount) + (a.pre_exposure_amount != null ? " e\u207b/\u00c5\u00b2" : "");
+    els.raMinShift.textContent = raFmt(a.min_shift) + " \u00c5";
+    els.raMaxShift.textContent = raFmt(a.max_shift) + " \u00c5";
+    els.raTermination.textContent = raFmt(a.termination_threshold) + " \u00c5";
+    els.raMaxIterations.textContent = raFmt(a.max_iterations);
+    els.raBfactor.textContent = raFmt(a.bfactor) + " \u00c5\u00b2";
+    els.raDoseFilter.textContent = raYesNo(a.should_dose_filter);
+    els.raRestorePower.textContent = raYesNo(a.should_restore_power);
+    els.raMaskCross.textContent = raYesNo(a.should_mask_central_cross);
+    els.raMasks.textContent = raFmt(a.horizontal_mask) + " / " + raFmt(a.vertical_mask) + " px";
+    els.raFrames.textContent = a.should_include_all_frames_in_sum ? "all" + (a.frame_count ? " (" + a.frame_count + ")" : "")
+      : raFmt(a.first_frame_to_sum) + " \u2013 " + (a.last_frame_to_sum ? a.last_frame_to_sum : "last");
+    els.raFinalPixelSize.textContent = raFmt(a.final_pixel_size, 3) + (a.final_pixel_size != null ? " \u00c5" : "");
+    els.raOutputFile.textContent = a.output_file || "\u2014";
+  }
+
+  // UnblurResultsPanel's plot: x and y shift (A) against accumulated
+  // exposure -- AddPoint(exposure_per_frame * frame, x, y). Inline SVG in
+  // the page's own flat style; one scale, both series, a zero line.
+  function raNiceStep(range, target){
+    var raw = range / Math.max(target, 1), mag = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    var norm = raw / mag;
+    return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+  }
+  function raDrawPlot(a){
+    var svg = els.raPlot;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var W = 640, H = 240, L = 52, R = 14, T = 12, B = 34;
+    var shifts = a.shifts || [];
+    var NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, text){
+      var n = document.createElementNS(NS, tag);
+      Object.keys(attrs).forEach(function(k){ n.setAttribute(k, attrs[k]); });
+      if (text != null) n.textContent = text;
+      svg.appendChild(n); return n;
+    }
+    if (!shifts.length){
+      el("text", {x: W / 2, y: H / 2, "text-anchor": "middle", "class": "axis-label"}, "No per-frame shifts were recorded for this alignment.");
+      return;
+    }
+    var dose = a.exposure_per_frame || 1;
+    var xs = shifts.map(function(s){ return dose * (s.frame - 1); });
+    var ys = shifts.map(function(s){ return s.x; }).concat(shifts.map(function(s){ return s.y; }));
+    var xMax = Math.max.apply(null, xs), xMin = 0;
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    if (yMax - yMin < 1e-6){ yMin -= 1; yMax += 1; }
+    var pad = (yMax - yMin) * 0.08; yMin -= pad; yMax += pad;
+    var yStep = raNiceStep(yMax - yMin, 5), xStep = raNiceStep(xMax - xMin || 1, 6);
+    yMin = Math.floor(yMin / yStep) * yStep; yMax = Math.ceil(yMax / yStep) * yStep;
+    var pw = W - L - R, ph = H - T - B;
+    var sx = function(v){ return L + (xMax > xMin ? (v - xMin) / (xMax - xMin) : 0) * pw; };
+    var sy = function(v){ return T + (1 - (v - yMin) / (yMax - yMin)) * ph; };
+    for (var yv = yMin; yv <= yMax + 1e-9; yv += yStep){
+      el("line", {x1: L, x2: L + pw, y1: sy(yv), y2: sy(yv), "class": Math.abs(yv) < 1e-9 ? "zero" : "grid"});
+      el("text", {x: L - 6, y: sy(yv) + 3, "text-anchor": "end", "class": "tick"}, yv.toFixed(yStep < 1 ? 1 : 0));
+    }
+    for (var xv = xMin; xv <= xMax + 1e-9; xv += xStep){
+      el("line", {x1: sx(xv), x2: sx(xv), y1: T + ph, y2: T + ph + 4, "class": "axis"});
+      el("text", {x: sx(xv), y: T + ph + 15, "text-anchor": "middle", "class": "tick"}, xStep < 1 ? xv.toFixed(1) : String(Math.round(xv)));
+    }
+    el("line", {x1: L, x2: L, y1: T, y2: T + ph, "class": "axis"});
+    el("line", {x1: L, x2: L + pw, y1: T + ph, y2: T + ph, "class": "axis"});
+    el("text", {x: L + pw / 2, y: H - 6, "text-anchor": "middle", "class": "axis-label"}, "Accumulated exposure (e\u207b/\u00c5\u00b2)");
+    el("text", {x: 12, y: T + ph / 2, "text-anchor": "middle", "class": "axis-label", transform: "rotate(-90 12 " + (T + ph / 2) + ")"}, "Shift (\u00c5)");
+    ["x", "y"].forEach(function(axis){
+      var d = shifts.map(function(s, i){ return (i ? "L" : "M") + sx(xs[i]).toFixed(1) + " " + sy(s[axis]).toFixed(1); }).join(" ");
+      el("path", {d: d, "class": "line-" + axis});
+      if (shifts.length <= 60) shifts.forEach(function(s, i){ el("circle", {cx: sx(xs[i]), cy: sy(s[axis]), r: 1.8, "class": "dot-" + axis}); });
+    });
+  }
+
+  els.raJobDetailsBtn.addEventListener("click", function(){
+    ra.showDetails = !ra.showDetails;
+    els.raJobDetailsBtn.setAttribute("aria-pressed", String(ra.showDetails));
+    els.raJobDetailsBtn.textContent = ra.showDetails ? "Hide Job Details" : "Show Job Details";
+    els.raJobDetails.hidden = !ra.showDetails || !ra.current;
+  });
+  function raStep(delta){
+    var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
+    var next = ra.entries[idx + delta];
+    if (!next) return;
+    ra.selectedMovieId = next.movie_asset_id; raRenderList(); raShowSelected();
+  }
+  els.raPrevBtn.addEventListener("click", function(){ raStep(-1); });
+  els.raNextBtn.addEventListener("click", function(){ raStep(1); });
+  els.raAddAllBtn.addEventListener("click", function(){
+    var ids = ra.entries.map(function(e){ return e.latest.image_asset_id; }).filter(function(id){ return id != null; });
+    if (!ids.length){ alert("None of these alignments has an image asset to add."); return; }
+    var name = prompt("Add the " + ids.length + " aligned image" + (ids.length === 1 ? "" : "s") + " to which image group? (a new name creates the group)");
+    name = name ? name.trim() : "";
+    if (!name) return;
+    apiFetch(projectApiUrl("/images/add-to-group"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({image_ids: ids, group_name: name})})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+      .then(function(){ loadImageGroups(); })
+      .catch(function(err){ alert("Could not add to group: " + err.message); });
+  });
 
   // ---------- run profile ----------
   // ---------- run profiles ----------
@@ -3858,7 +4245,7 @@ From branch : <span id="versionBranch">—</span></p>
       return r.json();
     }).then(function(){
       fetchJobs();
-      showTab("results");
+      showTab("jobs");
     }).catch(function(err){
       alert("Job submission failed: " + err.message);
     }).finally(function(){
@@ -3890,7 +4277,7 @@ From branch : <span id="versionBranch">—</span></p>
   // polling. Align Movies adds/updates image assets, adopts them into All
   // Images, and corrects each movie's frame count.
   var STAGE_RESULT_REFRESH = {
-    motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); }
+    motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); loadAlignments(); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 

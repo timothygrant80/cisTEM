@@ -1686,6 +1686,143 @@ def add_images_to_group(project_id):
 
 
 # ---------------------------------------------------------------------------
+# Results (project-scoped, read-only)
+#
+# What cisTEM's Results tab reads: for Align Movies, MOVIE_ALIGNMENT_LIST
+# (MyMovieAlignResultsPanel's list and Job Details) and the per-alignment
+# MOVIE_ALIGNMENT_PARAMETERS_<id> shift table (UnblurResultsPanel's drift
+# plot), plus renders of the aligned sum and the amplitude spectrum unblur
+# wrote beside it.
+# ---------------------------------------------------------------------------
+
+_ALIGNMENT_COLUMNS = (
+    "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE",
+    "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER",
+    "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS",
+    "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM",
+    "LAST_FRAME_TO_SUM", "FINAL_PIXEL_SIZE",
+)
+
+
+def _spectrum_path(output_file):
+    """unblur writes the amplitude spectrum to Spectra/ beside the sum, under
+    the same name (stages/unblur.py builds both paths the same way)."""
+    p = Path(output_file)
+    return p.parent / "Spectra" / p.name
+
+
+def _alignment_json(row, conn=None):
+    d = {c.lower(): row[c] for c in _ALIGNMENT_COLUMNS}
+    d["movie_name"] = row["MOVIE_NAME"]
+    d["movie_filename"] = row["MOVIE_FILENAME"]
+    d["image_asset_id"] = row["IMAGE_ASSET_ID"]
+    d["job_number"] = row["JOB_NUMBER"]
+    out = d["output_file"] or ""
+    d["output_file_exists"] = bool(out) and Path(out).is_file()
+    d["spectrum_file_exists"] = bool(out) and _spectrum_path(out).is_file()
+    if conn is not None:
+        try:
+            d["frame_count"] = conn.execute(
+                "SELECT COUNT(*) FROM MOVIE_ALIGNMENT_PARAMETERS_{}".format(row["ALIGNMENT_ID"])).fetchone()[0]
+        except Exception:  # noqa: BLE001 -- a simulated job never wrote the table
+            d["frame_count"] = None
+    return d
+
+
+_ALIGNMENT_SELECT = (
+    "SELECT al.*, ma.NAME AS MOVIE_NAME, ma.FILENAME AS MOVIE_FILENAME, ia.IMAGE_ASSET_ID, j.JOB_NUMBER "
+    "FROM MOVIE_ALIGNMENT_LIST al "
+    "JOIN MOVIE_ASSETS ma ON ma.MOVIE_ASSET_ID = al.MOVIE_ASSET_ID "
+    "LEFT JOIN IMAGE_ASSETS ia ON ia.ALIGNMENT_ID = al.ALIGNMENT_ID "
+    "LEFT JOIN JOBS j ON j.JOB_ID = al.ALIGNMENT_JOB_ID "
+)
+
+
+@app.route("/api/projects/<project_id>/alignments", methods=["GET"])
+@auth.project_access_required
+def list_alignments(project_id):
+    """Every movie alignment in the project, oldest first per movie, with
+    the movie's name and the image asset the alignment produced. The page
+    shows the latest per movie by default; earlier ones are history."""
+    conn = db.get_conn(project_id)
+    rows = conn.execute(_ALIGNMENT_SELECT + "ORDER BY al.MOVIE_ASSET_ID, al.ALIGNMENT_ID").fetchall()
+    out = [_alignment_json(r, conn) for r in rows]
+    conn.close()
+    return jsonify({"alignments": out})
+
+
+def _alignment_row(project_id, alignment_id):
+    conn = db.get_conn(project_id)
+    row = conn.execute(_ALIGNMENT_SELECT + "WHERE al.ALIGNMENT_ID = ?", (alignment_id,)).fetchone()
+    return conn, row
+
+
+@app.route("/api/projects/<project_id>/alignments/<int:alignment_id>", methods=["GET"])
+@auth.project_access_required
+def get_alignment(project_id, alignment_id):
+    """One alignment with its per-frame shifts (in Å, as unblur reported
+    them) -- the drift plot's data."""
+    conn, row = _alignment_row(project_id, alignment_id)
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such alignment"}), 404
+    d = _alignment_json(row, conn)
+    try:
+        d["shifts"] = [
+            {"frame": r["FRAME_NUMBER"], "x": r["X_SHIFT"], "y": r["Y_SHIFT"]}
+            for r in conn.execute(
+                "SELECT FRAME_NUMBER, X_SHIFT, Y_SHIFT FROM MOVIE_ALIGNMENT_PARAMETERS_{} ORDER BY FRAME_NUMBER".format(
+                    alignment_id)).fetchall()
+        ]
+    except Exception:  # noqa: BLE001
+        d["shifts"] = []
+    conn.close()
+    return jsonify(d)
+
+
+def _file_preview_response(path, etag_key, what):
+    """_preview_response for a file that isn't an asset row: the aligned sum
+    or spectrum an alignment points at."""
+    if not path or not Path(path).is_file():
+        return jsonify({"error": "{} file is missing: {}".format(what, path)}), 404
+    if not preview.can_preview(path):
+        return jsonify({"error": "previews aren't supported for {} files".format(Path(path).suffix.lower() or "these")}), 415
+    stat = Path(path).stat()
+    etag = '"{}-{}-{}"'.format(etag_key, int(stat.st_mtime), stat.st_size)
+    if request.headers.get("If-None-Match") == etag:
+        return "", 304
+    try:
+        png, _meta = preview.render_image_preview(path)
+    except preview.PreviewError as exc:
+        return jsonify({"error": str(exc)}), 422
+    response = app.response_class(png, mimetype="image/png")
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "private, max-age=3600"
+    return response
+
+
+@app.route("/api/projects/<project_id>/alignments/<int:alignment_id>/sum.png", methods=["GET"])
+@auth.project_access_required
+def alignment_sum_preview(project_id, alignment_id):
+    conn, row = _alignment_row(project_id, alignment_id)
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such alignment"}), 404
+    return _file_preview_response(row["OUTPUT_FILE"], "alignment-sum-{}".format(alignment_id), "aligned sum")
+
+
+@app.route("/api/projects/<project_id>/alignments/<int:alignment_id>/spectrum.png", methods=["GET"])
+@auth.project_access_required
+def alignment_spectrum_preview(project_id, alignment_id):
+    conn, row = _alignment_row(project_id, alignment_id)
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such alignment"}), 404
+    return _file_preview_response(str(_spectrum_path(row["OUTPUT_FILE"] or "")), "alignment-spectrum-{}".format(alignment_id),
+                                  "amplitude spectrum")
+
+
+# ---------------------------------------------------------------------------
 # Run profiles (project-scoped)
 # ---------------------------------------------------------------------------
 

@@ -103,6 +103,9 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/images/import` | Import micrographs into "All Images". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, protein_is_white}` — no dose, gain/dark or EER fields, since an image is already averaged. `400`s unless voltage/Cs/pixel size are set and the glob matches at least one not-already-imported MRC/TIFF file (`.eer` never matches). Returns `{image_count, skipped_count, failed}`. |
 | `POST` | `/projects/:id/images/check-import` | Same shape as the movie version, for the Import Images dialog's live validation |
 | `POST` | `/projects/:id/image-groups/:gid/invert` | Invert a group against All Images (self-reversing; `400` for All Images) |
+| `GET` | `/projects/:id/alignments` | `{ "alignments": [...] }` — every movie alignment with movie name, produced image asset id, job number, and whether its sum/spectrum files exist |
+| `GET` | `/projects/:id/alignments/:aid` | One alignment plus `shifts: [{frame, x, y}]` in Å |
+| `GET` | `/projects/:id/alignments/:aid/sum.png`, `/spectrum.png` | PNG renders of the aligned sum and its amplitude spectrum |
 | `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command, gui_address, controller_address, run_commands: [...], total_jobs}, ...] }` — fills the Run Profile picker and the Settings editor; `total_jobs == 0` greys the start button |
 | `POST` | `/projects/:id/run-profiles` | Add a profile: `{}` for cisTEM's "Default Local", `{ "copy_of": id }` to duplicate, or a full profile (the `GET` shape) to import → `201` with the new profile |
 | `PATCH` | `/projects/:id/run-profiles/:rid` | Change any of `profile_name`, `manager_run_command`, `gui_address`, `controller_address`, `run_commands` (each command: `{command, copies, threads_per_copy, override_total_copies, overridden_total_copies, delay_ms}`); `400` if a command lacks `$command` |

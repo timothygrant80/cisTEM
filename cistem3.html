@@ -433,6 +433,15 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
   .results-layout > .groupbox.ra-right{height:auto;}
 }
 
+.ctf-result{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:14px;align-items:start;}
+.ctf-numbers{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 18px;margin-top:10px;}
+.ctf-numbers .details-item{font-size:12px;}
+.ra-plot .line-amp{fill:none;stroke:var(--success);stroke-width:1.6;stroke-linejoin:round;}
+.ra-plot .line-fit{fill:none;stroke:var(--plot-y);stroke-width:1.6;stroke-linejoin:round;}
+.ra-plot .line-q{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linejoin:round;}
+.ra-swatch-amp{border-top-color:var(--success);} .ra-swatch-fit{border-top-color:var(--plot-y);} .ra-swatch-q{border-top-color:var(--accent);}
+@media (max-width:1100px){ .ctf-result{grid-template-columns:1fr;} }
+
 /* ---------- Jobs: latest result of the selected job ---------- */
 .queue-scroll{max-height:340px;overflow-y:auto;}
 .live-plot-title-name{text-transform:none;letter-spacing:0;color:var(--text-secondary);font-weight:600;margin-left:6px;}
@@ -1029,88 +1038,10 @@ From branch : <span id="versionBranch">—</span></p>
 
         <div class="subtabs" id="resultsTabs"></div>
 
-        <!-- ALIGN MOVIES: MyMovieAlignResultsPanel + UnblurResultsPanel -->
-        <div class="results-subpage" id="resultspageAlignMovies">
-          <div class="results-layout">
-            <div class="groupbox ra-left">
-              <span class="groupbox-label">Movies</span>
-              <div class="ra-filter-row">
-                <label class="ra-radio"><input type="radio" name="raFilter" id="raAllMovies" checked /> All Movies</label>
-                <label class="ra-radio" title="Filtering alignments by their parameters isn't implemented yet — cisTEM's Define Filter dialog is the model."><input type="radio" name="raFilter" id="raByFilter" disabled /> By Filter</label>
-                <button class="small" id="raDefineFilterBtn" disabled title="Not implemented yet.">Define Filter</button>
-              </div>
-              <!-- ResultsDataViewListCtrl: a row per movie, a check column per
-                   job. The check is the *active* run (the movie's image asset);
-                   the highlighted cell is the one being *shown* -- cisTEM's eye.
-                   Click a cell to show it; click the shown cell again, or Make
-                   Active, to make it the active one. A column header makes that
-                   job active for every movie it aligned. -->
-              <div class="ra-grid-scroll">
-                <table class="ra-grid" id="raGrid">
-                  <thead id="raGridHead"></thead>
-                  <tbody id="raGridBody"></tbody>
-                </table>
-              </div>
-              <div class="ra-legend-row"><span class="ra-cell-glyph active">&#10003;</span> active &nbsp; <span class="ra-cell-glyph"></span> other run &nbsp; <span class="ra-eye-swatch"></span> shown</div>
-              <div class="asset-toolbar">
-                <button class="small ra-toggle" id="raJobDetailsBtn" aria-pressed="false">Show Job Details</button>
-                <button class="small" id="raActivateBtn" disabled title="Make the shown alignment the active one for this movie — its image asset will point at this run.">Make Active</button>
-              </div>
-              <div class="asset-toolbar ra-nav">
-                <button class="small" id="raPrevBtn" disabled>&larr; Previous</button>
-                <button class="small" id="raAddAllBtn" disabled title="Add the aligned images of every movie listed to an image group.">Add All To Group</button>
-                <button class="small" id="raNextBtn" disabled>Next &rarr;</button>
-              </div>
-            </div>
-
-            <div class="groupbox ra-right">
-              <span class="groupbox-label" id="raRightLabel">Alignment</span>
-              <div class="ra-right-scroll">
-                <div class="ra-job-details" id="raJobDetails" hidden>
-                  <div class="details-grid ra-details-grid">
-                    <div class="details-item"><span class="details-key">Alignment ID</span><span class="details-val" id="raAlignmentId">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Date of Run</span><span class="details-val" id="raDateOfRun">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Time of Run</span><span class="details-val" id="raTimeOfRun">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Voltage</span><span class="details-val" id="raVoltage">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Pixel Size</span><span class="details-val" id="raPixelSize">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Exp. per Frame</span><span class="details-val" id="raExposure">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Pre Exp.</span><span class="details-val" id="raPreExposure">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Min. Shift</span><span class="details-val" id="raMinShift">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Max. Shift</span><span class="details-val" id="raMaxShift">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Term. Threshold</span><span class="details-val" id="raTermination">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Max. Iterations</span><span class="details-val" id="raMaxIterations">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">B-Factor</span><span class="details-val" id="raBfactor">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Exposure Filter</span><span class="details-val" id="raDoseFilter">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Restore Power</span><span class="details-val" id="raRestorePower">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Mask Central Cross</span><span class="details-val" id="raMaskCross">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Horiz. / Vert. Mask</span><span class="details-val" id="raMasks">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Frames Summed</span><span class="details-val" id="raFrames">&mdash;</span></div>
-                    <div class="details-item"><span class="details-key">Final Pixel Size</span><span class="details-val" id="raFinalPixelSize">&mdash;</span></div>
-                    <div class="details-item details-item-wide"><span class="details-key">Output File</span><span class="details-val" id="raOutputFile">&mdash;</span></div>
-                  </div>
-                </div>
-                <div class="empty-note" id="raEmpty">No movie alignments in this project yet<span class="hint">Run Align Movies from the Actions tab; each aligned movie appears here with its drift plot, aligned sum and spectrum.</span></div>
-                <div class="ra-result" id="raResult" hidden>
-                  <div class="ra-plot-head">
-                    <span class="ra-plot-title">Drift</span>
-                    <span class="ra-legend"><span class="ra-swatch ra-swatch-x"></span>X shift <span class="ra-swatch ra-swatch-y"></span>Y shift</span>
-                  </div>
-                  <svg class="ra-plot" id="raPlot" viewBox="0 0 640 240" role="img" aria-label="Frame shift against accumulated exposure"></svg>
-                  <div class="ra-images">
-                    <figure class="ra-figure">
-                      <div class="ra-figure-frame"><img id="raSumImg" alt="Aligned sum" hidden /><span class="ra-figure-status" id="raSumStatus">Loading&hellip;</span></div>
-                      <figcaption>Aligned sum</figcaption>
-                    </figure>
-                    <figure class="ra-figure">
-                      <div class="ra-figure-frame"><img id="raSpectrumImg" alt="Amplitude spectrum" hidden /><span class="ra-figure-status" id="raSpectrumStatus">Loading&hellip;</span></div>
-                      <figcaption>Amplitude spectrum <span class="ra-nyquist" id="raNyquist"></span></figcaption>
-                    </figure>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- One page per stage with results, built by makeResultsPage() from
+             RESULTS_PAGE_CONFIGS: cisTEM's results grid on the left, the
+             stage's own plots and pictures on the right. -->
+        <div id="resultsPages"></div>
 
         <!-- OTHER STAGES: no results data model yet -->
         <div class="results-subpage" id="resultspagePlaceholder" hidden>
@@ -1159,23 +1090,7 @@ From branch : <span id="versionBranch">—</span></p>
             </div>
           </div>
           <div class="empty-note" id="liveEmpty">No result yet</div>
-          <div class="live-body" id="liveBody" hidden>
-            <div class="live-plot-col">
-              <div class="ra-plot-head">
-                <span class="ra-plot-title" id="livePlotTitle">Drift</span>
-                <span class="ra-legend"><span class="ra-swatch ra-swatch-x"></span>X shift <span class="ra-swatch ra-swatch-y"></span>Y shift</span>
-              </div>
-              <svg class="ra-plot" id="livePlot" viewBox="0 0 640 240" role="img" aria-label="Frame shift against accumulated exposure"></svg>
-            </div>
-            <figure class="ra-figure">
-              <div class="ra-figure-frame"><img id="liveSumImg" alt="Aligned sum" hidden /><span class="ra-figure-status" id="liveSumStatus">Loading&hellip;</span></div>
-              <figcaption>Aligned sum</figcaption>
-            </figure>
-            <figure class="ra-figure">
-              <div class="ra-figure-frame"><img id="liveSpectrumImg" alt="Amplitude spectrum" hidden /><span class="ra-figure-status" id="liveSpectrumStatus">Loading&hellip;</span></div>
-              <figcaption>Amplitude spectrum <span class="ra-nyquist" id="liveNyquist"></span></figcaption>
-            </figure>
-          </div>
+          <div class="live-body" id="liveBody" hidden></div>
         </div>
 
         <div class="groupbox">
@@ -1415,19 +1330,106 @@ From branch : <span id="versionBranch">—</span></p>
       }
     },
     ctf_estimation: {
+      // Widgets, defaults and grey-out rules from cisTEM's Find CTF panel
+      // (FindCTFPanelParent in ProjectX_gui_ctffind.cpp, MyFindCTFPanel::
+      // ResetDefaults() and OnUpdateUI()); the option text from SetInfo().
+      // Voltage, Cs and pixel size are not asked for -- they come from the
+      // image assets (and their parent movies) the way AddJob() reads them.
       label: "Find CTF",
-      description: "Estimates the contrast transfer function — defocus and astigmatism — for each motion-corrected micrograph.",
+      startLabel: "Start Estimation",
+      note: "Each estimate is written to the project database and its diagnostic image to the project's Assets/CTF directory; the image asset then points at the new estimate.",
+      description: "Estimates the contrast transfer function — defocus, astigmatism and, optionally, phase shift — for each image, with CTFFIND.",
       fields: [
-        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/motioncorr/*.mrc", group:"Input"},
-        {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300", group:"Microscope Parameters"},
-        {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7", group:"Microscope Parameters"},
-        {key:"amp_contrast", label:"Amplitude contrast", unit:"", type:"number", step:"0.01", placeholder:"0.10", group:"Microscope Parameters"},
-        {key:"box_size", label:"Box size", unit:"px", type:"number", placeholder:"512", group:"Estimation"}
+        {key:"image_group_id", label:"Input Group", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The group of image assets to estimate the CTF for.",
+         dynamicOptions:{endpoint:"/image-groups", listKey:"image_groups", value:"group_id", label:"group_name", countKey:"image_count", countLabel:"images", emptyText:"No image groups yet — align movies or import images first"}}
       ],
       expertFields: [
-        {key:"min_res_a", label:"Min resolution of fit", unit:"Å", type:"number", placeholder:"30"},
-        {key:"max_res_a", label:"Max resolution of fit", unit:"Å", type:"number", placeholder:"5"}
-      ]
+        {key:"estimate_using", label:"Estimate Using", unit:"", type:"select", options:["Movies","Images"], default:"Movies", group:"Search",
+         tooltip:"Should the CTF parameters be estimated from movie frames or the frame averages? Using movie frames usually generates stronger Thon rings but also takes longer to run. Images with no parent movie are estimated from the image regardless."},
+        {key:"frames_to_average", label:"No. Movie Frames to Average", unit:"", type:"number", min:1, max:999999999, default:"3", group:"Search", enabledWhen:{key:"estimate_using", value:"Movies"},
+         tooltip:"When estimating parameters from movie frames, enter how many frames should be included in the sub-averages used to calculate the amplitude spectra."},
+        {key:"box_size", label:"Box Size", unit:"px", type:"number", min:128, max:99999999, default:"512", group:"Search",
+         tooltip:"The dimensions (in pixels) of the amplitude spectrum CTFfind will compute. Smaller box sizes make the fitting process significantly faster, but sometimes at the expense of fitting accuracy. If you see warnings regarding CTF aliasing, consider increasing this parameter."},
+        {key:"amplitude_contrast", label:"Amplitude Contrast", unit:"", type:"number", step:"0.01", min:0, max:1, default:"0.07", group:"Search",
+         tooltip:"The fraction (between 0.0 and 1.0) of total image contrast attributed to amplitude contrast (as opposed to phase contrast), arising for example from electron scattered outside the objective aperture, or those removed by energy filtering."},
+        {key:"search_tilt", label:"Also Search for Tilt?", type:"checkbox", default:false, group:"Search",
+         tooltip:"Answer yes if you tilted the sample and need to determine tilt axis and angle."},
+        {key:"min_resolution_a", label:"Min. Resolution of Fit", unit:"Å", type:"number", step:"0.1", default:"30", group:"Search Limits",
+         tooltip:"The CTF model will not be fit to regions of the amplitude spectrum corresponding to this resolution or lower."},
+        {key:"max_resolution_a", label:"Max. Resolution of Fit", unit:"Å", type:"number", step:"0.1", default:"5", group:"Search Limits",
+         tooltip:"The CTF model will not be fit to regions of the amplitude spectrum corresponding to this resolution or higher."},
+        {key:"min_defocus_a", label:"Low Defocus For Search", unit:"Å", type:"number", step:"100", default:"5000", group:"Search Limits",
+         tooltip:"Positive for underfocus. The lower bound of defocus search."},
+        {key:"max_defocus_a", label:"High Defocus For Search", unit:"Å", type:"number", step:"100", default:"50000", group:"Search Limits",
+         tooltip:"Positive for underfocus. Upper bound of defocus search."},
+        {key:"defocus_step_a", label:"Defocus Search Step", unit:"Å", type:"number", step:"10", min:1, default:"100", group:"Search Limits",
+         tooltip:"Step size for the defocus search."},
+        {key:"slower_search", label:"Use Slower, More Exhaustive Search?", type:"checkbox", default:false, group:"Search Limits",
+         tooltip:"Select this option if CTF determination fails on images that show clear Thon rings and should therefore yield good CTF parameters, or if you expect noticably elliptical Thon rings and high noise."},
+        {key:"restrain_astigmatism", label:"Restrain Astigmatism?", type:"checkbox", default:false, group:"Search Limits",
+         tooltip:"Should the amount of astigmatism be restrained during the parameter search and refinement? This option should be selected when astigmatism is expected to be small to produce more reliable fits. Disable this option if you expect large astigmatism."},
+        {key:"tolerated_astigmatism_a", label:"Tolerated Astigmatism", unit:"Å", type:"number", step:"10", default:"500", group:"Search Limits", enabledBy:"restrain_astigmatism",
+         tooltip:"When restraining astigmatism, astigmatism values much larger than this will be penalized. In cases where the amplitude spectrum is very noisy, such a restraint can help achieve more accurate results."},
+        {key:"find_phase_shift", label:"Find Additional Phase Shift?", type:"checkbox", default:false, group:"Phase Plates",
+         tooltip:"Was the data recorded using a phase plate with variable phase shift that must be determined together with the defocus parameters?"},
+        {key:"min_phase_shift_deg", label:"Min. Phase Shift", unit:"°", type:"number", step:"1", min:-180, max:180, default:"0", group:"Phase Plates", enabledBy:"find_phase_shift",
+         tooltip:"If finding an additional phase shift, this value sets the lower bound for the search."},
+        {key:"max_phase_shift_deg", label:"Max. Phase Shift", unit:"°", type:"number", step:"1", min:-180, max:180, default:"180", group:"Phase Plates", enabledBy:"find_phase_shift",
+         tooltip:"If finding an additional phase shift, this value sets the upper bound for the search."},
+        {key:"phase_shift_step_deg", label:"Phase Shift Search Step", unit:"°", type:"number", step:"1", min:0.1, default:"10", group:"Phase Plates", enabledBy:"find_phase_shift",
+         tooltip:"If finding an additional phase shift, this value sets the step size for the search."},
+        {key:"filter_lowres_signal", label:"Weight down low resolution signal?", type:"checkbox", default:true, group:"Additional Options",
+         tooltip:"Reduce the intensity of the powerspectrum at low resolution. This is normally desired for single-particle micrographs, but might cause issues for other types of data."}
+      ],
+      info: {
+        title: "CTF Estimation",
+        body: [
+          "The contrast transfer function (CTF) of the microscope affects the relative signal-to-noise ratio (SNR) of Fourier components of each micrograph. Those Fourier components where the CTF is near 0.0 have very low SNR compared to others. It is therefore essential to obtain accurate estimates of the CTF for each micrograph so that data from multiple micrographs may be combined in an optimal manner during later processing.",
+          "In this panel, you can use CTFfind (Mindell & Grigorieff, 2003; Rohou & Grigorieff, 2015) to estimate CTF parameter values for each micrograph. The main parameter to be determined for each micrograph is the objective lens defocus (in Angstroms). Because in general lenses are astigmatic, one actually needs to determine two defocus values (describing defocus along the lens\u2019 major and minor axes) and the angle of astigmatism.",
+          {image: "ctffind-definitions.png",
+           alt: "Definitions of the two defocus values and the astigmatism angle: an ellipse with its major and minor axes, and the angle from the x axis to the major axis."},
+          "To estimate the values of these three defocus parameters for a micrograph, CTFfind computes a filtered version of the amplitude spectrum of the micrograph and then fits a model of the CTF (Equation 1 of Rohou & Grigorieff) to this filtered amplitude spectrum. It then returns the values of the defocus parameters which maximize the quality of the fit, as well as an image of the filtered amplitude spectrum, with the CTF model overlayed onto the lower-left quadrant.",
+          {image: "ctffind-diagnostic-image.png",
+           alt: "A CTFfind diagnostic image: the filtered amplitude spectrum with the fitted CTF model drawn over its lower-left quadrant."},
+          "Another diagnostic output is a 1D plot of the experimental amplitude spectrum (green), the CTF fit (orange) and the quality of fit (blue). More details on how these plots are computed is given in Rohou & Grigorieff (2015).",
+          {image: "ctffind-example-1dfit.png",
+           alt: "An example 1D fit plot: rotational average of the spectrum, the CTF fit, and the quality of fit against spatial frequency."},
+          {heading: "Program Options"},
+          {options: [
+            ["Input Group", "The group of image assets to estimate the CTF for."],
+            ["Run Profile", "The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers). Run profiles are set in the Run Profile panel, located under settings."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Estimate Using Movies/Images", "Should the CTF parameters be estimated from movie frames or the frame averages? Using movie frames usually generates stronger Thon rings but also takes longer to run."],
+            ["No. Movie Frames to Average", "When estimating parameters from movie frames, enter how many frames should be included in the sub-averages used to calculate the amplitude spectra."],
+            ["Box Size (px)", "The dimensions (in pixels) of the amplitude spectrum CTFfind will compute. Smaller box sizes make the fitting process significantly faster, but sometimes at the expense of fitting accuracy. If you see warnings regarding CTF aliasing, consider increasing this parameter."],
+            ["Amplitude Contrast", "The fraction (between 0.0 and 1.0) of total image contrast attributed to amplitude contrast (as opposed to phase contrast), arising for example from electron scattered outside the objective aperture, or those removed by energy filtering."],
+            ["Min. Resolution of Fit (Å)", "The CTF model will not be fit to regions of the amplitude spectrum corresponding to this resolution or lower."],
+            ["Max. Resolution of Fit (Å)", "The CTF model will not be fit to regions of the amplitude spectrum corresponding to this resolution or higher."],
+            ["Low Defocus for Search (Å)", "Positive for underfocus. The Lower bound of defocus search."],
+            ["High Defocus for Search (Å)", "Positive for underfocus. Upper bound of defocus search."],
+            ["Defocus Search Step (Å)", "Step size for the defocus search."],
+            ["Use Slower, More Exhaustive Search?", "Select this option if CTF determination fails on images that show clear Thon rings and should therefore yield good CTF parameters, or if you expect noticably elliptical Thon rings and high noise."],
+            ["Restrain Astigmatism?", "Should the amount of astigmatism be restrained during the parameter search and refinement? This option should be selected when astigmatism is expected to be small to produce more reliable fits. Disable this option if you expect large astigmatism."],
+            ["Tolerated astigmatism (Å)", "When restraining astigmatism, astigmatism values much larger than this will be penalized. Set to negative to remove this restraint. In cases where the amplitude spectrum is very noisy, such a restraint can help achieve more accurate results."],
+            ["Find additional phase shift", "Was the data recorded using a phase plate with variable phase shift that must be determined together with the defocus parameters?"],
+            ["Min. Phase Shift (°)", "If finding an additional phase shift, this value sets the lower bound for the search."],
+            ["Max. Phase Shift (°)", "If finding an additional phase shift, this value sets the upper bound for the search."],
+            ["Step size of initial phase shift search (°)", "If finding an additional phase shift, this value sets the step size for the search."],
+            ["Weight down low resolution signal?", "Reduce the intensity of the powerspectrum at low resolution. This is normally desired for single-particle micrographs, but might cause issues for other types of data."]
+          ]}
+        ],
+        references: [
+          {authors:"Mindell J.A., Grigorieff N.",
+           text:"2003. Accurate determination of local defocus and specimen tilt in electron microscopy. J. Struct. Biol. 142, 334\u2013347.",
+           doi:"10.1016/S1047-8477(03)00069-8"},
+          {authors:"Rohou A., Grigorieff N.",
+           text:"2015. CTFFIND4: Fast and accurate defocus estimation from electron micrographs. J. Struct. Biol. 192, 216\u2013221.",
+           doi:"10.1016/j.jsb.2015.08.008"}
+        ]
+      }
     },
     particle_picking: {
       label: "Find Particles",
@@ -1497,11 +1499,7 @@ From branch : <span id="versionBranch">—</span></p>
    "previewStage","previewStatus","previewImg","previewNote",
    "assetpageMovies","assetpageImages","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
-   "resultsTabs","resultspageAlignMovies","resultspagePlaceholder","resultsPlaceholderLabel","resultsPlaceholderNote",
-   "raAllMovies","raByFilter","raDefineFilterBtn","raGridHead","raGridBody","raActivateBtn","raJobDetailsBtn","raPrevBtn","raAddAllBtn","raNextBtn",
-   "raRightLabel","raJobDetails","raEmpty","raResult","raPlot","raSumImg","raSumStatus","raSpectrumImg","raSpectrumStatus","raNyquist",
-   "raAlignmentId","raDateOfRun","raTimeOfRun","raVoltage","raPixelSize","raExposure","raPreExposure","raMinShift","raMaxShift",
-   "raTermination","raMaxIterations","raBfactor","raDoseFilter","raRestorePower","raMaskCross","raMasks","raFrames","raFinalPixelSize","raOutputFile",
+   "resultsTabs","resultsPages","resultspagePlaceholder","resultsPlaceholderLabel","resultsPlaceholderNote",
    "movieDetailsLabel","imageDetailsLabel","dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
    "importImagesScrim","importImagesModal","importImagesModalClose","importImagesFields",
@@ -1512,8 +1510,7 @@ From branch : <span id="versionBranch">—</span></p>
    "dImageName","dImageFilename","dImageId","dImageParentId","dImageAlignmentId",
    "dImageXSize","dImageYSize","dImagePixelSize","dImageVoltage","dImageCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
-   "livePanel","liveLabel","liveMeta","liveLogBtn","liveCloseBtn","liveEmpty","liveBody","livePlotTitle","livePlot",
-   "liveSumImg","liveSumStatus","liveSpectrumImg","liveSpectrumStatus","liveNyquist",
+   "livePanel","liveLabel","liveMeta","liveLogBtn","liveCloseBtn","liveEmpty","liveBody",
    "stageInventoryBody","runProfile","submitNote",
    "rpList","rpAddBtn","rpRenameBtn","rpRemoveBtn","rpDuplicateBtn","rpImportBtn","rpExportBtn","rpImportFile",
    "rpCommandsPanel","rpCommandsLabel","rpTotal","rpManager","rpManagerError",
@@ -1565,7 +1562,7 @@ From branch : <span id="versionBranch">—</span></p>
   function showTab(name){
     railItems.forEach(function(btn){ btn.classList.toggle("active", btn.dataset.tab === name); });
     Object.keys(pages).forEach(function(key){ pages[key].hidden = key !== name; });
-    if (name === "results" && typeof loadAlignments === "function") loadAlignments();
+    if (name === "results" && typeof loadResults === "function") loadResults(state.resultsStage);
   }
   railItems.forEach(function(btn){
     btn.addEventListener("click", function(){ showTab(btn.dataset.tab); });
@@ -1781,6 +1778,7 @@ From branch : <span id="versionBranch">—</span></p>
       f.options.forEach(function(o){
         var op = document.createElement("option");
         op.value = o; op.textContent = o;
+        if (f.default !== undefined && o === f.default) op.selected = true;
         input.appendChild(op);
       });
     } else if (f.type === "checkbox"){
@@ -1939,7 +1937,7 @@ From branch : <span id="versionBranch">—</span></p>
         if (!rows.length){
           input.disabled = true;
           var emptyOpt = document.createElement("option");
-          emptyOpt.textContent = "No movie groups yet — import movies first";
+          emptyOpt.textContent = f.dynamicOptions.emptyText || "No movie groups yet — import movies first";
           input.appendChild(emptyOpt);
           updateStartButton();
           return;
@@ -1949,7 +1947,7 @@ From branch : <span id="versionBranch">—</span></p>
           var opt = document.createElement("option");
           opt.value = row[f.dynamicOptions.value];
           opt.dataset.count = row[f.dynamicOptions.countKey];
-          opt.textContent = row[f.dynamicOptions.label] + " (" + row[f.dynamicOptions.countKey] + " movies)";
+          opt.textContent = row[f.dynamicOptions.label] + " (" + row[f.dynamicOptions.countKey] + " " + (f.dynamicOptions.countLabel || "movies") + ")";
           input.appendChild(opt);
         });
         updateStartButton();
@@ -1972,9 +1970,10 @@ From branch : <span id="versionBranch">—</span></p>
   selectStage(state.currentStage);
 
   // ---------- results sub-tabs ----------
-  // One page per stage, the same bar as the Actions tab. Only Align Movies
-  // has a results page with data behind it; the rest share a placeholder.
-  var RESULTS_REAL_PAGES = {motion_correction: "resultspageAlignMovies"};
+  // One page per stage, the same bar as the Actions tab. Stages with a
+  // results model get a page from makeResultsPage(); the rest share a
+  // placeholder.
+  var RESULT_PAGES = {};
   state.resultsStage = "motion_correction";
   STAGE_ORDER.forEach(function(key){
     var btn = document.createElement("button");
@@ -1989,228 +1988,40 @@ From branch : <span id="versionBranch">—</span></p>
   function showResultsStage(key){
     state.resultsStage = key;
     els.resultsTabs.querySelectorAll(".subtab-btn").forEach(function(btn){ btn.classList.toggle("active", btn.dataset.stage === key); });
-    Object.keys(RESULTS_REAL_PAGES).forEach(function(k){ els[RESULTS_REAL_PAGES[k]].hidden = k !== key; });
-    var placeholder = !RESULTS_REAL_PAGES[key];
+    Object.keys(RESULT_PAGES).forEach(function(k){ RESULT_PAGES[k].root.hidden = k !== key; });
+    var placeholder = !RESULT_PAGES[key];
     els.resultspagePlaceholder.hidden = !placeholder;
     if (placeholder){
       els.resultsPlaceholderLabel.textContent = STAGES[key].label;
-      els.resultsPlaceholderNote.innerHTML = STAGES[key].label + " results aren\u2019t wired up yet" +
-        '<span class="hint">This stage doesn\u2019t write to its project tables yet \u2014 see CLAUDE.md\u2019s "Scope note". Its cisTEM results panel is the model for what goes here.</span>';
+      els.resultsPlaceholderNote.innerHTML = STAGES[key].label + " results aren’t wired up yet" +
+        '<span class="hint">This stage doesn’t write to its project tables yet — see CLAUDE.md’s "Scope note". Its cisTEM results panel is the model for what goes here.</span>';
+    } else {
+      RESULT_PAGES[key].load();
     }
   }
-  showResultsStage("motion_correction");
-
-  // ---------- Align Movies results (MyMovieAlignResultsPanel) ----------
-  // One entry per movie, holding every alignment it has had. Each movie has
-  // one *active* alignment -- the one its image asset points at, which is
-  // what downstream stages consume (cisTEM keeps that on IMAGE_ASSETS, and
-  // so does this) -- and that is what is shown by default; a finished job
-  // makes itself active, and raActivate() lets the user pick another run.
-  // Viewing and activating are separate, as in cisTEM's grid (the eye vs
-  // the check). Selecting fetches the alignment's per-frame shifts for the
-  // drift plot (UnblurResultsPanel) and renders the aligned sum and the
-  // amplitude spectrum unblur wrote beside it. Job Details is cisTEM's
-  // toggle: hidden by default, the parameters of the run when on.
-  var ra = { alignments: [], entries: [], selectedMovieId: null, selectedAlignmentId: null, current: null, showDetails: false, urls: [] };
-
-  function raGroupByMovie(alignments){
-    var byMovie = {};
-    alignments.forEach(function(a){
-      var e = byMovie[a.movie_asset_id];
-      if (!e){ e = byMovie[a.movie_asset_id] = {movie_asset_id: a.movie_asset_id, movie_name: a.movie_name, movie_image_asset_id: a.movie_image_asset_id, alignments: [], active: null, latest: null}; }
-      e.alignments.push(a);
-      if (a.is_active) e.active = a;
-      if (!e.latest || a.alignment_id > e.latest.alignment_id) e.latest = a;
-    });
-    return Object.keys(byMovie).map(function(k){
-      var e = byMovie[k];
-      e.alignments.sort(function(p, q){ return p.alignment_id - q.alignment_id; });
-      return e;
-    }).sort(function(p, q){ return p.movie_asset_id - q.movie_asset_id; });
-  }
-  function raEntry(movieId){ return ra.entries.filter(function(e){ return e.movie_asset_id === movieId; })[0]; }
-  function raDefaultAlignment(entry){ return entry.active || entry.latest; }
-  function raAlignmentById(id){ return ra.alignments.filter(function(a){ return a.alignment_id === id; })[0]; }
-
-  function loadAlignments(){
-    if (!state.projectId || !state.connected) return;
-    apiFetch(projectApiUrl("/alignments")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){
-      ra.alignments = (data && data.alignments) || [];
-      ra.entries = raGroupByMovie(ra.alignments);
-      var entry = raEntry(ra.selectedMovieId);
-      if (!entry){
-        entry = ra.entries[0] || null;
-        ra.selectedMovieId = entry ? entry.movie_asset_id : null;
-        ra.selectedAlignmentId = entry ? raDefaultAlignment(entry).alignment_id : null;
-      } else if (!entry.alignments.some(function(a){ return a.alignment_id === ra.selectedAlignmentId; })){
-        ra.selectedAlignmentId = raDefaultAlignment(entry).alignment_id;
-      }
-      raRenderList();
-      raShowSelected();
-    }).catch(function(){});
+  // Reload a stage's results (after a job finishes, or on opening the tab).
+  function loadResults(stageKey){
+    if (stageKey){ if (RESULT_PAGES[stageKey]) RESULT_PAGES[stageKey].load(); return; }
+    Object.keys(RESULT_PAGES).forEach(function(k){ RESULT_PAGES[k].load(); });
   }
 
-  function raSelect(movieId, alignmentId){
-    var entry = raEntry(movieId);
-    if (!entry) return;
-    ra.selectedMovieId = movieId;
-    ra.selectedAlignmentId = alignmentId != null ? alignmentId : raDefaultAlignment(entry).alignment_id;
-    raRenderList();
-    raShowSelected();
-  }
+  // ---------- shared drawing helpers ----------
+  function fmtNum(v, digits){ return v == null ? "—" : (digits == null ? String(v) : Number(v).toFixed(digits)); }
+  function fmtYesNo(v){ return v == null ? "—" : (v ? "Yes" : "No"); }
+  function fmtWhenDate(epoch){ return epoch ? new Date(epoch * 1000).toLocaleDateString() : "—"; }
+  function fmtWhenTime(epoch){ return epoch ? new Date(epoch * 1000).toLocaleTimeString() : "—"; }
 
-  // Make an alignment the movie's active one (its image asset now is that
-  // sum), then reload both this page and the Images panel, whose row for
-  // the movie just changed file.
-  function raActivate(alignmentId, done){
-    apiFetch(projectApiUrl("/alignments/" + alignmentId + "/activate"), {method: "POST"}).then(function(r){
-      return r.json().then(function(d){ return {ok: r.ok, data: d}; });
-    }).then(function(res){
-      if (!res.ok) throw new Error((res.data && res.data.error) || ("HTTP " + res.status));
-      loadAlignments(); loadImages();
-      if (done) done(null, res.data);
-    }).catch(function(err){
-      alert("Could not make that alignment active: " + err.message);
-      if (done) done(err);
-    });
-  }
-  // The bulk form: one job's results become active for every movie it aligned.
-  function raActivateJob(jobId, done){
-    apiFetch(projectApiUrl("/jobs/" + jobId + "/activate-alignments"), {method: "POST"}).then(function(r){
-      return r.json().then(function(d){ return {ok: r.ok, data: d}; });
-    }).then(function(res){
-      if (!res.ok) throw new Error((res.data && res.data.error) || ("HTTP " + res.status));
-      loadAlignments(); loadImages();
-      if (res.data.failed && res.data.failed.length) alert(res.data.failed.length + " movie(s) could not be switched: " + res.data.failed[0].reason);
-      if (done) done(null, res.data);
-    }).catch(function(err){
-      alert("Could not make that job active: " + err.message);
-      if (done) done(err);
-    });
-  }
-
-  // Distinct jobs across all alignments, oldest first -- the grid's columns.
-  function raJobs(){
-    var seen = {}, jobs = [];
-    ra.alignments.forEach(function(a){
-      if (seen[a.alignment_job_id]) return;
-      seen[a.alignment_job_id] = true;
-      jobs.push({id: a.alignment_job_id, number: a.job_number});
-    });
-    return jobs.sort(function(p, q){ return (p.number || 0) - (q.number || 0); });
-  }
-
-  function raRenderList(){
-    var jobs = raJobs();
-    els.raGridHead.innerHTML = ""; els.raGridBody.innerHTML = "";
-    var hr = document.createElement("tr");
-    var th0 = document.createElement("th"); th0.textContent = "Movie"; hr.appendChild(th0);
-    jobs.forEach(function(job){
-      var th = document.createElement("th"); th.className = "ra-job-head";
-      var b = document.createElement("button");
-      b.textContent = "#" + (job.number != null ? job.number : "?");
-      var n = ra.alignments.filter(function(a){ return a.alignment_job_id === job.id; }).length;
-      b.title = "Job " + job.number + " aligned " + n + " movie" + (n === 1 ? "" : "s") + ". Click to make its results active for all of them.";
-      b.addEventListener("click", function(){
-        if (!confirm("Make Job " + job.number + "\u2019s alignments the active ones for all " + n + " movie" + (n === 1 ? "" : "s") + " it aligned?")) return;
-        raActivateJob(job.id);
-      });
-      th.appendChild(b); hr.appendChild(th);
-    });
-    els.raGridHead.appendChild(hr);
-
-    ra.entries.forEach(function(e){
-      var tr = document.createElement("tr");
-      var isRow = e.movie_asset_id === ra.selectedMovieId;
-      tr.classList.toggle("shown-row", isRow);
-      var tdName = document.createElement("td"); tdName.className = "ra-movie";
-      tdName.textContent = e.movie_name || ("Movie " + e.movie_asset_id); tdName.title = tdName.textContent;
-      tdName.addEventListener("click", function(){ raSelect(e.movie_asset_id, null); });
-      tr.appendChild(tdName);
-      jobs.forEach(function(job){
-        var td = document.createElement("td"); td.className = "ra-cell";
-        var a = e.alignments.filter(function(x){ return x.alignment_job_id === job.id; })[0];
-        if (a){
-          td.classList.add("has");
-          var shown = isRow && a.alignment_id === ra.selectedAlignmentId;
-          td.classList.toggle("shown", shown);
-          var g = document.createElement("span"); g.className = "ra-cell-glyph" + (a.is_active ? " active" : "");
-          g.textContent = a.is_active ? "\u2713" : "";
-          td.appendChild(g);
-          td.title = "Job " + job.number + (a.is_active ? " \u2014 active" : "") + (shown ? " \u2014 shown" : "") +
-            (shown && !a.is_active ? ". Click again to make it active." : "");
-          td.addEventListener("click", function(){
-            // cisTEM: the first click puts the eye on a cell, a click on the
-            // eyed cell checks it.
-            if (shown && !a.is_active) raActivate(a.alignment_id);
-            else raSelect(e.movie_asset_id, a.alignment_id);
-          });
-        }
-        tr.appendChild(td);
-      });
-      els.raGridBody.appendChild(tr);
-    });
-    var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
-    els.raPrevBtn.disabled = idx <= 0;
-    els.raNextBtn.disabled = idx < 0 || idx >= ra.entries.length - 1;
-    els.raAddAllBtn.disabled = !ra.entries.length;
-    var shownA = raAlignmentById(ra.selectedAlignmentId);
-    els.raActivateBtn.disabled = !shownA || shownA.is_active;
-    var shownCell = els.raGridBody.querySelector("td.ra-cell.shown");
-    if (shownCell) shownCell.scrollIntoView({block: "nearest", inline: "nearest"});
-  }
-
-  function raReleaseUrls(){ ra.urls.forEach(function(u){ URL.revokeObjectURL(u); }); ra.urls = []; }
-
-  function raShowSelected(){
-    var entry = raEntry(ra.selectedMovieId);
-    var shown = entry ? raAlignmentById(ra.selectedAlignmentId) : null;
-    raReleaseUrls();
-    if (!entry || !shown){
-      ra.current = null;
-      els.raEmpty.hidden = false;
-      els.raResult.hidden = true;
-      els.raJobDetails.hidden = true;
-      els.raRightLabel.textContent = "Alignment";
-      return;
-    }
-    els.raEmpty.hidden = true;
-    els.raResult.hidden = false;
-    els.raJobDetails.hidden = !ra.showDetails;
-    els.raRightLabel.textContent = "Alignment \u2014 " + (entry.movie_name || entry.movie_asset_id) +
-      (shown.job_number ? " \u00b7 Job " + shown.job_number : "") + (shown.is_active ? " (active)" : " (not active)");
-    var id = shown.alignment_id;
-    els.raSumImg.hidden = true; els.raSumStatus.hidden = false; els.raSumStatus.textContent = "Loading\u2026";
-    els.raSpectrumImg.hidden = true; els.raSpectrumStatus.hidden = false; els.raSpectrumStatus.textContent = "Loading\u2026";
-    apiFetch(projectApiUrl("/alignments/" + id)).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(a){
-      if (a.alignment_id !== ra.selectedAlignmentId) return; // selection moved on
-      ra.current = a;
-      raRenderDetails(a);
-      raDrawPlot(a);
-      raLoadFigure(els.raSumImg, els.raSumStatus, "/alignments/" + a.alignment_id + "/sum.png", a.output_file_exists, "aligned sum");
-      raLoadFigure(els.raSpectrumImg, els.raSpectrumStatus, "/alignments/" + a.alignment_id + "/spectrum.png", a.spectrum_file_exists, "spectrum");
-      // ProcessResult(): Nyquist is 2x the corrected pixel size, floored at 2.8 A -- that's what the spectrum's edge means.
-      var px = a.final_pixel_size || a.pixel_size;
-      els.raNyquist.textContent = px ? "(Nyquist " + (px < 1.4 ? 2.8 : 2 * px).toFixed(2) + " \u00c5)" : "";
-    }).catch(function(err){
-      els.raSumStatus.textContent = "Could not load this alignment: " + err.message;
-    });
-  }
-
-  function raLoadFigure(img, status, path, exists, what, urls){
-    urls = urls || ra.urls;
+  // Fetch a PNG through apiFetch (an <img src> can't carry the bearer
+  // token) and hand it to an <img> as a blob URL, remembered in `urls` so
+  // the page can revoke it when the picture changes.
+  function loadFigure(img, status, path, exists, what, urls){
     if (!exists){
       status.hidden = false;
-      status.textContent = "The " + what + " file isn\u2019t on disk" + (what === "spectrum" ? " (simulated jobs don\u2019t write one)." : ".");
+      status.textContent = "The " + what + " file isn’t on disk" + (what === "spectrum" ? " (simulated jobs don’t write one)." : ".");
       img.hidden = true;
       return;
     }
+    img.hidden = true; status.hidden = false; status.textContent = "Loading…";
     apiFetch(projectApiUrl(path)).then(function(r){
       if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.blob();
@@ -2222,51 +2033,46 @@ From branch : <span id="versionBranch">—</span></p>
       status.hidden = false; status.textContent = "Could not render the " + what + ": " + err.message; img.hidden = true;
     });
   }
-
-  function raFmt(v, digits){ return v == null ? "\u2014" : (digits == null ? String(v) : Number(v).toFixed(digits)); }
-  function raYesNo(v){ return v == null ? "\u2014" : (v ? "Yes" : "No"); }
-
-  function raRenderDetails(a){
-    var when = a.datetime_of_run ? new Date(a.datetime_of_run * 1000) : null;
-    els.raAlignmentId.textContent = raFmt(a.alignment_id) + (a.job_number ? " (Job " + a.job_number + ")" : "");
-    els.raDateOfRun.textContent = when ? when.toLocaleDateString() : "\u2014";
-    els.raTimeOfRun.textContent = when ? when.toLocaleTimeString() : "\u2014";
-    els.raVoltage.textContent = raFmt(a.voltage) + (a.voltage != null ? " kV" : "");
-    els.raPixelSize.textContent = raFmt(a.pixel_size) + (a.pixel_size != null ? " \u00c5" : "");
-    els.raExposure.textContent = raFmt(a.exposure_per_frame) + (a.exposure_per_frame != null ? " e\u207b/\u00c5\u00b2" : "");
-    els.raPreExposure.textContent = raFmt(a.pre_exposure_amount) + (a.pre_exposure_amount != null ? " e\u207b/\u00c5\u00b2" : "");
-    els.raMinShift.textContent = raFmt(a.min_shift) + " \u00c5";
-    els.raMaxShift.textContent = raFmt(a.max_shift) + " \u00c5";
-    els.raTermination.textContent = raFmt(a.termination_threshold) + " \u00c5";
-    els.raMaxIterations.textContent = raFmt(a.max_iterations);
-    els.raBfactor.textContent = raFmt(a.bfactor) + " \u00c5\u00b2";
-    els.raDoseFilter.textContent = raYesNo(a.should_dose_filter);
-    els.raRestorePower.textContent = raYesNo(a.should_restore_power);
-    els.raMaskCross.textContent = raYesNo(a.should_mask_central_cross);
-    els.raMasks.textContent = raFmt(a.horizontal_mask) + " / " + raFmt(a.vertical_mask) + " px";
-    els.raFrames.textContent = a.should_include_all_frames_in_sum ? "all" + (a.frame_count ? " (" + a.frame_count + ")" : "")
-      : raFmt(a.first_frame_to_sum) + " \u2013 " + (a.last_frame_to_sum ? a.last_frame_to_sum : "last");
-    els.raFinalPixelSize.textContent = raFmt(a.final_pixel_size, 3) + (a.final_pixel_size != null ? " \u00c5" : "");
-    els.raOutputFile.textContent = a.output_file || "\u2014";
+  function makeFigure(caption, alt){
+    var fig = document.createElement("figure"); fig.className = "ra-figure";
+    var frame = document.createElement("div"); frame.className = "ra-figure-frame";
+    var img = document.createElement("img"); img.alt = alt || caption; img.hidden = true;
+    var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading…";
+    frame.appendChild(img); frame.appendChild(status);
+    var cap = document.createElement("figcaption"); cap.textContent = caption + " ";
+    var extra = document.createElement("span"); extra.className = "ra-nyquist"; cap.appendChild(extra);
+    fig.appendChild(frame); fig.appendChild(cap);
+    return {root: fig, img: img, status: status, extra: extra};
+  }
+  function makePlotBlock(title, legend){
+    var wrap = document.createElement("div");
+    var head = document.createElement("div"); head.className = "ra-plot-head";
+    var t = document.createElement("span"); t.className = "ra-plot-title"; t.textContent = title; head.appendChild(t);
+    var lg = document.createElement("span"); lg.className = "ra-legend";
+    legend.forEach(function(item){
+      var sw = document.createElement("span"); sw.className = "ra-swatch " + item[0]; lg.appendChild(sw);
+      lg.appendChild(document.createTextNode(item[1]));
+    });
+    head.appendChild(lg);
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "ra-plot"); svg.setAttribute("viewBox", "0 0 640 240"); svg.setAttribute("role", "img");
+    wrap.appendChild(head); wrap.appendChild(svg);
+    return {root: wrap, svg: svg, title: t};
   }
 
-  // UnblurResultsPanel's plot: x and y shift (A) against accumulated
-  // exposure -- AddPoint(exposure_per_frame * frame, x, y). Inline SVG in
-  // the page's own flat style; one scale, both series, a zero line.
-  function raNiceStep(range, target){
+  function niceStep(range, target){
     var raw = range / Math.max(target, 1), mag = Math.pow(10, Math.floor(Math.log10(raw || 1)));
     var norm = raw / mag;
     return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
   }
-  function raDrawPlot(a){ drawDriftPlot(els.raPlot, a.shifts, a.exposure_per_frame); }
-  function drawDriftPlot(svg, shifts, exposure_per_frame){
+  // The plots are drawn at the pixel width the layout gives them (redrawn
+  // on resize, below), so a wide window gets more axis rather than a
+  // taller picture. `series` = [{xs, ys, cls, dots}], one shared y scale.
+  function drawLinePlot(svg, series, opts){
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    // Drawn at the pixel width the layout gives it (redrawn on resize, below),
-    // so a wide window gets more exposure axis rather than a taller picture.
     var W = Math.max(480, Math.round(svg.clientWidth) || 640), H = 240, L = 52, R = 14, T = 12, B = 34;
     svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-    svg._plot = {shifts: shifts, dose: exposure_per_frame};
-    shifts = shifts || [];
+    svg._redraw = function(){ drawLinePlot(svg, series, opts); };
     var NS = "http://www.w3.org/2000/svg";
     function el(tag, attrs, text){
       var n = document.createElementNS(NS, tag);
@@ -2274,81 +2080,449 @@ From branch : <span id="versionBranch">—</span></p>
       if (text != null) n.textContent = text;
       svg.appendChild(n); return n;
     }
-    if (!shifts.length){
-      el("text", {x: W / 2, y: H / 2, "text-anchor": "middle", "class": "axis-label"}, "No per-frame shifts were recorded for this alignment.");
+    var allX = [], allY = [];
+    series.forEach(function(sr){ allX = allX.concat(sr.xs); allY = allY.concat(sr.ys); });
+    if (!allX.length){
+      el("text", {x: W / 2, y: H / 2, "text-anchor": "middle", "class": "axis-label"}, opts.emptyText || "No data.");
       return;
     }
-    var dose = exposure_per_frame || 1;
-    var xs = shifts.map(function(s){ return dose * (s.frame - 1); });
-    var ys = shifts.map(function(s){ return s.x; }).concat(shifts.map(function(s){ return s.y; }));
-    var xMax = Math.max.apply(null, xs), xMin = 0;
-    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    var xMin = opts.xMin != null ? opts.xMin : Math.min.apply(null, allX), xMax = Math.max.apply(null, allX);
+    var yMin = opts.yMin != null ? opts.yMin : Math.min.apply(null, allY), yMax = opts.yMax != null ? opts.yMax : Math.max.apply(null, allY);
     if (yMax - yMin < 1e-6){ yMin -= 1; yMax += 1; }
-    var pad = (yMax - yMin) * 0.08; yMin -= pad; yMax += pad;
-    var yStep = raNiceStep(yMax - yMin, 5), xStep = raNiceStep(xMax - xMin || 1, 6);
-    yMin = Math.floor(yMin / yStep) * yStep; yMax = Math.ceil(yMax / yStep) * yStep;
+    if (opts.yMin == null || opts.yMax == null){ var pad = (yMax - yMin) * 0.08; if (opts.yMin == null) yMin -= pad; if (opts.yMax == null) yMax += pad; }
+    var yStep = niceStep(yMax - yMin, 5), xStep = niceStep(xMax - xMin || 1, 6);
+    if (opts.yMin == null) yMin = Math.floor(yMin / yStep) * yStep;
+    if (opts.yMax == null) yMax = Math.ceil(yMax / yStep) * yStep;
     var pw = W - L - R, ph = H - T - B;
     var sx = function(v){ return L + (xMax > xMin ? (v - xMin) / (xMax - xMin) : 0) * pw; };
     var sy = function(v){ return T + (1 - (v - yMin) / (yMax - yMin)) * ph; };
     for (var yv = yMin; yv <= yMax + 1e-9; yv += yStep){
-      el("line", {x1: L, x2: L + pw, y1: sy(yv), y2: sy(yv), "class": Math.abs(yv) < 1e-9 ? "zero" : "grid"});
-      el("text", {x: L - 6, y: sy(yv) + 3, "text-anchor": "end", "class": "tick"}, yv.toFixed(yStep < 1 ? 1 : 0));
+      el("line", {x1: L, x2: L + pw, y1: sy(yv), y2: sy(yv), "class": Math.abs(yv) < 1e-9 && opts.zeroLine ? "zero" : "grid"});
+      el("text", {x: L - 6, y: sy(yv) + 3, "text-anchor": "end", "class": "tick"}, yv.toFixed(yStep < 1 ? (yStep < 0.1 ? 2 : 1) : 0));
     }
-    for (var xv = xMin; xv <= xMax + 1e-9; xv += xStep){
+    for (var xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax + 1e-9; xv += xStep){
       el("line", {x1: sx(xv), x2: sx(xv), y1: T + ph, y2: T + ph + 4, "class": "axis"});
-      el("text", {x: sx(xv), y: T + ph + 15, "text-anchor": "middle", "class": "tick"}, xStep < 1 ? xv.toFixed(1) : String(Math.round(xv)));
+      el("text", {x: sx(xv), y: T + ph + 15, "text-anchor": "middle", "class": "tick"}, opts.xTick ? opts.xTick(xv) : (xStep < 1 ? xv.toFixed(xStep < 0.1 ? 2 : 1) : String(Math.round(xv))));
     }
     el("line", {x1: L, x2: L, y1: T, y2: T + ph, "class": "axis"});
     el("line", {x1: L, x2: L + pw, y1: T + ph, y2: T + ph, "class": "axis"});
-    el("text", {x: L + pw / 2, y: H - 6, "text-anchor": "middle", "class": "axis-label"}, "Accumulated exposure (e\u207b/\u00c5\u00b2)");
-    el("text", {x: 12, y: T + ph / 2, "text-anchor": "middle", "class": "axis-label", transform: "rotate(-90 12 " + (T + ph / 2) + ")"}, "Shift (\u00c5)");
-    ["x", "y"].forEach(function(axis){
-      var d = shifts.map(function(s, i){ return (i ? "L" : "M") + sx(xs[i]).toFixed(1) + " " + sy(s[axis]).toFixed(1); }).join(" ");
-      el("path", {d: d, "class": "line-" + axis});
-      if (shifts.length <= 60) shifts.forEach(function(s, i){ el("circle", {cx: sx(xs[i]), cy: sy(s[axis]), r: 1.8, "class": "dot-" + axis}); });
+    el("text", {x: L + pw / 2, y: H - 6, "text-anchor": "middle", "class": "axis-label"}, opts.xLabel || "");
+    el("text", {x: 12, y: T + ph / 2, "text-anchor": "middle", "class": "axis-label", transform: "rotate(-90 12 " + (T + ph / 2) + ")"}, opts.yLabel || "");
+    series.forEach(function(sr){
+      var d = sr.xs.map(function(x, i){ return (i ? "L" : "M") + sx(x).toFixed(1) + " " + sy(Math.max(yMin, Math.min(yMax, sr.ys[i]))).toFixed(1); }).join(" ");
+      el("path", {d: d, "class": sr.cls});
+      if (sr.dots && sr.xs.length <= 60) sr.xs.forEach(function(x, i){ el("circle", {cx: sx(x), cy: sy(sr.ys[i]), r: 1.8, "class": sr.dots}); });
     });
   }
-
+  // UnblurResultsPanel: x and y shift (A) against accumulated exposure --
+  // AddPoint(exposure_per_frame * frame, x, y).
+  function drawDriftPlot(svg, shifts, exposure_per_frame){
+    shifts = shifts || [];
+    var dose = exposure_per_frame || 1;
+    var xs = shifts.map(function(s){ return dose * (s.frame - 1); });
+    drawLinePlot(svg, [
+      {xs: xs, ys: shifts.map(function(s){ return s.x; }), cls: "line-x", dots: "dot-x"},
+      {xs: xs, ys: shifts.map(function(s){ return s.y; }), cls: "line-y", dots: "dot-y"}
+    ], {xMin: 0, zeroLine: true, xLabel: "Accumulated exposure (e⁻/Å²)", yLabel: "Shift (Å)",
+        emptyText: "No per-frame shifts were recorded for this alignment."});
+  }
+  // CTF1DPanel: the rotational average of the spectrum, the CTF fit and
+  // the quality of fit against spatial frequency (the _avrot.txt curves).
+  function drawCtfPlot(svg, plot){
+    if (!plot || !plot.frequency || !plot.frequency.length){
+      drawLinePlot(svg, [], {emptyText: "No 1D fit curves were written for this estimate (the _avrot.txt file is missing)."});
+      return;
+    }
+    var xs = plot.frequency;
+    drawLinePlot(svg, [
+      {xs: xs, ys: plot.amplitude, cls: "line-amp"},
+      {xs: xs, ys: plot.fit, cls: "line-fit"},
+      {xs: xs, ys: plot.quality, cls: "line-q"}
+    ], {xMin: 0, yMin: 0, yMax: 1, xLabel: "Spatial frequency (1/Å)", yLabel: "Amplitude / fit",
+        xTick: function(v){ return v ? v.toFixed(2) : "0"; }});
+  }
   var plotResizeTimer = null;
   window.addEventListener("resize", function(){
     clearTimeout(plotResizeTimer);
     plotResizeTimer = setTimeout(function(){
-      document.querySelectorAll("svg.ra-plot").forEach(function(svg){
-        if (svg._plot && svg.clientWidth) drawDriftPlot(svg, svg._plot.shifts, svg._plot.dose);
-      });
+      document.querySelectorAll("svg.ra-plot").forEach(function(svg){ if (svg._redraw && svg.clientWidth) svg._redraw(); });
     }, 120);
   });
 
-  els.raJobDetailsBtn.addEventListener("click", function(){
-    ra.showDetails = !ra.showDetails;
-    els.raJobDetailsBtn.setAttribute("aria-pressed", String(ra.showDetails));
-    els.raJobDetailsBtn.textContent = ra.showDetails ? "Hide Job Details" : "Show Job Details";
-    els.raJobDetails.hidden = !ra.showDetails || !ra.current;
-  });
-  function raStep(delta){
-    var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
-    var next = ra.entries[idx + delta];
-    if (!next) return;
-    var shown = raAlignmentById(ra.selectedAlignmentId);
-    var same = shown ? next.alignments.filter(function(a){ return a.alignment_job_id === shown.alignment_job_id; })[0] : null;
-    raSelect(next.movie_asset_id, same ? same.alignment_id : null);
+  // ---------- a results page (MyMovieAlignResultsPanel / MyFindCTFResultsPanel) ----------
+  // cisTEM's ResultsDataViewListCtrl on the left: a row per asset, a check
+  // column per job. The check is the asset's *active* result -- the one
+  // its asset row points at, which is what downstream stages consume; a
+  // finished job makes itself active and the user can pick another. The
+  // accent-filled cell is the one being *shown* (cisTEM's eye); showing
+  // changes nothing. Click a cell to show it; click the shown cell again
+  // or Make Active to make it active; a column header makes that job
+  // active for every asset it processed. On the right, Job Details (the
+  // run's parameters, toggled) and the stage's own result view.
+  function makeResultsPage(cfg){
+    var page = { cfg: cfg, items: [], entries: [], selectedRowId: null, selectedItemId: null, current: null, showDetails: false, urls: [], inflight: null };
+
+    // ---- DOM ----
+    var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
+    var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
+    var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
+    left.innerHTML =
+      '<span class="groupbox-label">' + cfg.rowLabelPlural + '</span>' +
+      '<div class="ra-filter-row">' +
+        '<label class="ra-radio"><input type="radio" checked /> All ' + cfg.rowLabelPlural + '</label>' +
+        '<label class="ra-radio" title="Filtering by result parameters isn’t implemented yet — cisTEM’s Define Filter dialog is the model."><input type="radio" disabled /> By Filter</label>' +
+        '<button class="small" disabled title="Not implemented yet.">Define Filter</button>' +
+      '</div>' +
+      '<div class="ra-grid-scroll"><table class="ra-grid"><thead></thead><tbody></tbody></table></div>' +
+      '<div class="ra-legend-row"><span class="ra-cell-glyph active">&#10003;</span> active &nbsp; <span class="ra-cell-glyph"></span> other run &nbsp; <span class="ra-eye-swatch"></span> shown</div>' +
+      '<div class="asset-toolbar">' +
+        '<button class="small ra-toggle" data-role="details" aria-pressed="false">Show Job Details</button>' +
+        '<button class="small" data-role="activate" disabled title="Make the shown result the active one for this ' + cfg.rowLabel.toLowerCase() + ' — its asset will point at this run.">Make Active</button>' +
+      '</div>' +
+      '<div class="asset-toolbar ra-nav">' +
+        '<button class="small" data-role="prev" disabled>&larr; Previous</button>' +
+        '<button class="small" data-role="addall" disabled title="' + cfg.addAllTitle + '">Add All To Group</button>' +
+        '<button class="small" data-role="next" disabled>Next &rarr;</button>' +
+      '</div>';
+    var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
+    var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = cfg.titleWord; right.appendChild(rightLabel);
+    var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
+    var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
+    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
+    var detailCells = cfg.details.map(function(d){
+      var item = document.createElement("div"); item.className = "details-item" + (d.wide ? " details-item-wide" : "");
+      var k = document.createElement("span"); k.className = "details-key"; k.textContent = d.label;
+      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
+      item.appendChild(k); item.appendChild(v); grid.appendChild(item);
+      return v;
+    });
+    var empty = document.createElement("div"); empty.className = "empty-note";
+    empty.textContent = cfg.emptyTitle; var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = cfg.emptyHint; empty.appendChild(hint);
+    scroll.appendChild(empty);
+    var resultBox = document.createElement("div"); resultBox.className = "ra-result"; resultBox.hidden = true; scroll.appendChild(resultBox);
+    var view = cfg.buildResult(resultBox);
+    els.resultsPages.appendChild(root);
+    page.root = root;
+    var gridHead = left.querySelector("thead"), gridBody = left.querySelector("tbody");
+    var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
+
+    // ---- data ----
+    function groupByRow(items){
+      var byRow = {};
+      items.forEach(function(it){
+        var rid = it[cfg.rowIdKey];
+        var e = byRow[rid];
+        if (!e){ e = byRow[rid] = {rowId: rid, name: it[cfg.rowNameKey], groupAssetId: it[cfg.groupAssetKey], items: [], active: null, latest: null}; }
+        e.items.push(it);
+        if (it.is_active) e.active = it;
+        if (!e.latest || it[cfg.idKey] > e.latest[cfg.idKey]) e.latest = it;
+      });
+      return Object.keys(byRow).map(function(k){
+        var e = byRow[k]; e.items.sort(function(p, q){ return p[cfg.idKey] - q[cfg.idKey]; }); return e;
+      }).sort(function(p, q){ return p.rowId - q.rowId; });
+    }
+    function entry(rowId){ return page.entries.filter(function(e){ return e.rowId === rowId; })[0]; }
+    function itemById(id){ return page.items.filter(function(it){ return it[cfg.idKey] === id; })[0]; }
+    function defaultItem(e){ return e.active || e.latest; }
+    function jobs(){
+      var seen = {}, out = [];
+      page.items.forEach(function(it){
+        if (seen[it[cfg.jobKey]]) return;
+        seen[it[cfg.jobKey]] = true;
+        out.push({id: it[cfg.jobKey], number: it.job_number});
+      });
+      return out.sort(function(p, q){ return (p.number || 0) - (q.number || 0); });
+    }
+
+    page.load = function(){
+      if (!state.projectId || !state.connected) return;
+      apiFetch(projectApiUrl(cfg.listPath)).then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function(data){
+        page.items = (data && data[cfg.listKey]) || [];
+        page.entries = groupByRow(page.items);
+        var e = entry(page.selectedRowId);
+        if (!e){
+          e = page.entries[0] || null;
+          page.selectedRowId = e ? e.rowId : null;
+          page.selectedItemId = e ? defaultItem(e)[cfg.idKey] : null;
+        } else if (!e.items.some(function(it){ return it[cfg.idKey] === page.selectedItemId; })){
+          page.selectedItemId = defaultItem(e)[cfg.idKey];
+        }
+        renderGrid();
+        showSelected();
+      }).catch(function(){});
+    };
+
+    function select(rowId, itemId){
+      var e = entry(rowId);
+      if (!e) return;
+      page.selectedRowId = rowId;
+      page.selectedItemId = itemId != null ? itemId : defaultItem(e)[cfg.idKey];
+      renderGrid();
+      showSelected();
+    }
+    function activate(id){
+      apiFetch(projectApiUrl(cfg.activatePath(id)), {method: "POST"}).then(function(r){
+        return r.json().then(function(d){ return {ok: r.ok, data: d}; });
+      }).then(function(res){
+        if (!res.ok) throw new Error((res.data && res.data.error) || "request failed");
+        page.load(); if (cfg.afterActivate) cfg.afterActivate();
+      }).catch(function(err){ alert("Could not make that result active: " + err.message); });
+    }
+    function activateJob(jobId){
+      apiFetch(projectApiUrl("/jobs/" + jobId + "/activate-results"), {method: "POST"}).then(function(r){
+        return r.json().then(function(d){ return {ok: r.ok, data: d}; });
+      }).then(function(res){
+        if (!res.ok) throw new Error((res.data && res.data.error) || "request failed");
+        page.load(); if (cfg.afterActivate) cfg.afterActivate();
+        if (res.data.failed && res.data.failed.length) alert(res.data.failed.length + " " + cfg.rowLabelPlural.toLowerCase() + " could not be switched: " + res.data.failed[0].reason);
+      }).catch(function(err){ alert("Could not make that job active: " + err.message); });
+    }
+
+    function renderGrid(){
+      var js = jobs();
+      gridHead.innerHTML = ""; gridBody.innerHTML = "";
+      var hr = document.createElement("tr");
+      var th0 = document.createElement("th"); th0.textContent = cfg.rowLabel; hr.appendChild(th0);
+      js.forEach(function(job){
+        var th = document.createElement("th"); th.className = "ra-job-head";
+        var b = document.createElement("button");
+        b.textContent = "#" + (job.number != null ? job.number : "?");
+        var n = page.items.filter(function(it){ return it[cfg.jobKey] === job.id; }).length;
+        b.title = "Job " + job.number + " processed " + n + " " + (n === 1 ? cfg.rowLabel.toLowerCase() : cfg.rowLabelPlural.toLowerCase()) + ". Click to make its results active for all of them.";
+        b.addEventListener("click", function(){
+          if (!confirm("Make Job " + job.number + "’s results the active ones for all " + n + " " + (n === 1 ? cfg.rowLabel.toLowerCase() : cfg.rowLabelPlural.toLowerCase()) + " it processed?")) return;
+          activateJob(job.id);
+        });
+        th.appendChild(b); hr.appendChild(th);
+      });
+      gridHead.appendChild(hr);
+      page.entries.forEach(function(e){
+        var tr = document.createElement("tr");
+        var isRow = e.rowId === page.selectedRowId;
+        tr.classList.toggle("shown-row", isRow);
+        var tdName = document.createElement("td"); tdName.className = "ra-movie";
+        tdName.textContent = e.name || (cfg.rowLabel + " " + e.rowId); tdName.title = tdName.textContent;
+        tdName.addEventListener("click", function(){ select(e.rowId, null); });
+        tr.appendChild(tdName);
+        js.forEach(function(job){
+          var td = document.createElement("td"); td.className = "ra-cell";
+          var it = e.items.filter(function(x){ return x[cfg.jobKey] === job.id; })[0];
+          if (it){
+            td.classList.add("has");
+            var shown = isRow && it[cfg.idKey] === page.selectedItemId;
+            td.classList.toggle("shown", shown);
+            var g = document.createElement("span"); g.className = "ra-cell-glyph" + (it.is_active ? " active" : "");
+            g.textContent = it.is_active ? "✓" : "";
+            td.appendChild(g);
+            td.title = "Job " + job.number + (it.is_active ? " — active" : "") + (shown ? " — shown" : "") + (shown && !it.is_active ? ". Click again to make it active." : "");
+            td.addEventListener("click", function(){
+              // cisTEM: the first click puts the eye on a cell, a click on
+              // the eyed cell checks it.
+              if (shown && !it.is_active) activate(it[cfg.idKey]);
+              else select(e.rowId, it[cfg.idKey]);
+            });
+          }
+          tr.appendChild(td);
+        });
+        gridBody.appendChild(tr);
+      });
+      var idx = page.entries.findIndex(function(e){ return e.rowId === page.selectedRowId; });
+      btn("prev").disabled = idx <= 0;
+      btn("next").disabled = idx < 0 || idx >= page.entries.length - 1;
+      btn("addall").disabled = !page.entries.length;
+      var shownItem = itemById(page.selectedItemId);
+      btn("activate").disabled = !shownItem || shownItem.is_active;
+      var shownCell = gridBody.querySelector("td.ra-cell.shown");
+      if (shownCell) shownCell.scrollIntoView({block: "nearest", inline: "nearest"});
+    }
+
+    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
+
+    function showSelected(){
+      var e = entry(page.selectedRowId);
+      var shown = e ? itemById(page.selectedItemId) : null;
+      releaseUrls();
+      if (!e || !shown){
+        page.current = null;
+        empty.hidden = false; resultBox.hidden = true; details.hidden = true;
+        rightLabel.textContent = cfg.titleWord;
+        return;
+      }
+      empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
+      rightLabel.textContent = cfg.titleWord + " — " + (e.name || e.rowId) + (shown.job_number ? " · Job " + shown.job_number : "") + (shown.is_active ? " (active)" : " (not active)");
+      var id = shown[cfg.idKey];
+      view.loading();
+      apiFetch(projectApiUrl(cfg.itemPath(id))).then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function(full){
+        if (full[cfg.idKey] !== page.selectedItemId) return; // selection moved on
+        page.current = full;
+        cfg.details.forEach(function(d, i){ detailCells[i].textContent = d.value(full); });
+        view.update(full, page.urls);
+      }).catch(function(err){ view.error(err.message); });
+    }
+
+    function step(delta){
+      var idx = page.entries.findIndex(function(e){ return e.rowId === page.selectedRowId; });
+      var next = page.entries[idx + delta];
+      if (!next) return;
+      var shown = itemById(page.selectedItemId);
+      var same = shown ? next.items.filter(function(it){ return it[cfg.jobKey] === shown[cfg.jobKey]; })[0] : null;
+      select(next.rowId, same ? same[cfg.idKey] : null);
+    }
+    btn("details").addEventListener("click", function(){
+      page.showDetails = !page.showDetails;
+      btn("details").setAttribute("aria-pressed", String(page.showDetails));
+      btn("details").textContent = page.showDetails ? "Hide Job Details" : "Show Job Details";
+      details.hidden = !page.showDetails || !page.current;
+    });
+    btn("activate").addEventListener("click", function(){ if (page.selectedItemId != null) activate(page.selectedItemId); });
+    btn("prev").addEventListener("click", function(){ step(-1); });
+    btn("next").addEventListener("click", function(){ step(1); });
+    btn("addall").addEventListener("click", function(){
+      var ids = page.entries.map(function(e){ return e.groupAssetId; }).filter(function(id){ return id != null; });
+      if (!ids.length){ alert("None of these " + cfg.rowLabelPlural.toLowerCase() + " has an image asset to add."); return; }
+      var name = prompt("Add the " + ids.length + " image" + (ids.length === 1 ? "" : "s") + " to which image group? (a new name creates the group)");
+      name = name ? name.trim() : "";
+      if (!name) return;
+      apiFetch(projectApiUrl("/images/add-to-group"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({image_ids: ids, group_name: name})})
+        .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+        .then(function(){ loadImageGroups(); })
+        .catch(function(err){ alert("Could not add to group: " + err.message); });
+    });
+    return page;
   }
-  els.raActivateBtn.addEventListener("click", function(){
-    if (ra.selectedAlignmentId != null) raActivate(ra.selectedAlignmentId);
+
+  // ---- Align Movies: MyMovieAlignResultsPanel + UnblurResultsPanel ----
+  RESULT_PAGES.motion_correction = makeResultsPage({
+    stage: "motion_correction",
+    listPath: "/alignments", listKey: "alignments", idKey: "alignment_id", jobKey: "alignment_job_id",
+    rowIdKey: "movie_asset_id", rowNameKey: "movie_name", rowLabel: "Movie", rowLabelPlural: "Movies",
+    groupAssetKey: "movie_image_asset_id", addAllTitle: "Add the aligned images of every movie listed to an image group.",
+    itemPath: function(id){ return "/alignments/" + id; },
+    activatePath: function(id){ return "/alignments/" + id + "/activate"; },
+    afterActivate: function(){ loadImages(); },
+    titleWord: "Alignment",
+    emptyTitle: "No movie alignments in this project yet",
+    emptyHint: "Run Align Movies from the Actions tab; each aligned movie appears here with its drift plot, aligned sum and spectrum.",
+    details: [
+      {label: "Alignment ID", value: function(a){ return fmtNum(a.alignment_id) + (a.job_number ? " (Job " + a.job_number + ")" : ""); }},
+      {label: "Date of Run", value: function(a){ return fmtWhenDate(a.datetime_of_run); }},
+      {label: "Time of Run", value: function(a){ return fmtWhenTime(a.datetime_of_run); }},
+      {label: "Voltage", value: function(a){ return fmtNum(a.voltage) + (a.voltage != null ? " kV" : ""); }},
+      {label: "Pixel Size", value: function(a){ return fmtNum(a.pixel_size) + (a.pixel_size != null ? " Å" : ""); }},
+      {label: "Exp. per Frame", value: function(a){ return fmtNum(a.exposure_per_frame) + (a.exposure_per_frame != null ? " e⁻/Å²" : ""); }},
+      {label: "Pre Exp.", value: function(a){ return fmtNum(a.pre_exposure_amount) + (a.pre_exposure_amount != null ? " e⁻/Å²" : ""); }},
+      {label: "Min. Shift", value: function(a){ return fmtNum(a.min_shift) + " Å"; }},
+      {label: "Max. Shift", value: function(a){ return fmtNum(a.max_shift) + " Å"; }},
+      {label: "Term. Threshold", value: function(a){ return fmtNum(a.termination_threshold) + " Å"; }},
+      {label: "Max. Iterations", value: function(a){ return fmtNum(a.max_iterations); }},
+      {label: "B-Factor", value: function(a){ return fmtNum(a.bfactor) + " Å²"; }},
+      {label: "Exposure Filter", value: function(a){ return fmtYesNo(a.should_dose_filter); }},
+      {label: "Restore Power", value: function(a){ return fmtYesNo(a.should_restore_power); }},
+      {label: "Mask Central Cross", value: function(a){ return fmtYesNo(a.should_mask_central_cross); }},
+      {label: "Horiz. / Vert. Mask", value: function(a){ return fmtNum(a.horizontal_mask) + " / " + fmtNum(a.vertical_mask) + " px"; }},
+      {label: "Frames Summed", value: function(a){ return a.should_include_all_frames_in_sum ? "all" + (a.frame_count ? " (" + a.frame_count + ")" : "") : fmtNum(a.first_frame_to_sum) + " – " + (a.last_frame_to_sum ? a.last_frame_to_sum : "last"); }},
+      {label: "Final Pixel Size", value: function(a){ return fmtNum(a.final_pixel_size, 3) + (a.final_pixel_size != null ? " Å" : ""); }},
+      {label: "Output File", value: function(a){ return a.output_file || "—"; }, wide: true}
+    ],
+    buildResult: function(box){
+      var plot = makePlotBlock("Drift", [["ra-swatch-x", "X shift"], ["ra-swatch-y", "Y shift"]]);
+      plot.svg.setAttribute("aria-label", "Frame shift against accumulated exposure");
+      box.appendChild(plot.root);
+      var images = document.createElement("div"); images.className = "ra-images"; box.appendChild(images);
+      var sum = makeFigure("Aligned sum"), spectrum = makeFigure("Amplitude spectrum");
+      images.appendChild(sum.root); images.appendChild(spectrum.root);
+      return {
+        loading: function(){ sum.img.hidden = true; sum.status.hidden = false; sum.status.textContent = "Loading…"; spectrum.img.hidden = true; spectrum.status.hidden = false; spectrum.status.textContent = "Loading…"; },
+        error: function(msg){ sum.status.textContent = "Could not load this alignment: " + msg; },
+        update: function(a, urls){
+          drawDriftPlot(plot.svg, a.shifts, a.exposure_per_frame);
+          loadFigure(sum.img, sum.status, "/alignments/" + a.alignment_id + "/sum.png", a.output_file_exists, "aligned sum", urls);
+          loadFigure(spectrum.img, spectrum.status, "/alignments/" + a.alignment_id + "/spectrum.png", a.spectrum_file_exists, "spectrum", urls);
+          // ProcessResult(): Nyquist is 2x the corrected pixel size, floored at 2.8 A -- that's what the spectrum's edge means.
+          var px = a.final_pixel_size || a.pixel_size;
+          spectrum.extra.textContent = px ? "(Nyquist " + (px < 1.4 ? 2.8 : 2 * px).toFixed(2) + " Å)" : "";
+        }
+      };
+    }
   });
-  els.raPrevBtn.addEventListener("click", function(){ raStep(-1); });
-  els.raNextBtn.addEventListener("click", function(){ raStep(1); });
-  els.raAddAllBtn.addEventListener("click", function(){
-    var ids = ra.entries.map(function(e){ return e.movie_image_asset_id; }).filter(function(id){ return id != null; });
-    if (!ids.length){ alert("None of these movies has an image asset to add."); return; }
-    var name = prompt("Add the " + ids.length + " aligned image" + (ids.length === 1 ? "" : "s") + " to which image group? (a new name creates the group)");
-    name = name ? name.trim() : "";
-    if (!name) return;
-    apiFetch(projectApiUrl("/images/add-to-group"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({image_ids: ids, group_name: name})})
-      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
-      .then(function(){ loadImageGroups(); })
-      .catch(function(err){ alert("Could not add to group: " + err.message); });
+
+  // ---- Find CTF: MyFindCTFResultsPanel + ShowCTFResultsPanel ----
+  var CTF_NUMBERS = [
+    ["Defocus 1", function(c){ return c.defocus1 != null ? Math.round(c.defocus1) + " Å" : "—"; }],
+    ["Defocus 2", function(c){ return c.defocus2 != null ? Math.round(c.defocus2) + " Å" : "—"; }],
+    ["Astig. Angle", function(c){ return fmtNum(c.defocus_angle, 2) + " °"; }],
+    ["Phase Shift", function(c){ return c.find_additional_phase_shift ? fmtNum(c.additional_phase_shift * 180 / Math.PI, 2) + " °" : "0.00 °"; }],
+    ["Score", function(c){ return fmtNum(c.score, 3); }],
+    ["Fit Res.", function(c){ return fmtNum(c.detected_ring_resolution, 2) + " Å"; }],
+    ["Alias Res.", function(c){ return c.detected_alias_resolution ? fmtNum(c.detected_alias_resolution, 2) + " Å" : "None"; }],
+    ["Iciness", function(c){ return fmtNum(c.iciness, 2); }],
+    ["Tilt Angle", function(c){ return fmtNum(c.tilt_angle, 2) + " °"; }],
+    ["Tilt Axis", function(c){ return fmtNum(c.tilt_axis, 2) + " °"; }]
+  ];
+  function buildCtfResultView(box){
+    var wrap = document.createElement("div"); wrap.className = "ctf-result"; box.appendChild(wrap);
+    var diag = makeFigure("Diagnostic image", "Filtered amplitude spectrum with the CTF fit in the lower-left quadrant"); wrap.appendChild(diag.root);
+    var col = document.createElement("div"); col.className = "live-plot-col"; wrap.appendChild(col);
+    var plot = makePlotBlock("1D Fit", [["ra-swatch-amp", "Spectrum"], ["ra-swatch-fit", "CTF fit"], ["ra-swatch-q", "Quality of fit"]]);
+    plot.svg.setAttribute("aria-label", "Rotational average of the spectrum, the CTF fit and the quality of fit against spatial frequency");
+    col.appendChild(plot.root);
+    var numbers = document.createElement("div"); numbers.className = "ctf-numbers"; col.appendChild(numbers);
+    var cells = CTF_NUMBERS.map(function(pair){
+      var item = document.createElement("div"); item.className = "details-item";
+      var k = document.createElement("span"); k.className = "details-key"; k.textContent = pair[0];
+      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
+      item.appendChild(k); item.appendChild(v); numbers.appendChild(item); return v;
+    });
+    return {
+      loading: function(){ diag.img.hidden = true; diag.status.hidden = false; diag.status.textContent = "Loading…"; },
+      error: function(msg){ diag.status.textContent = "Could not load this estimate: " + msg; },
+      update: function(c, urls, picturePath){
+        drawCtfPlot(plot.svg, c.plot);
+        CTF_NUMBERS.forEach(function(pair, i){ cells[i].textContent = pair[1](c); });
+        loadFigure(diag.img, diag.status, picturePath || ("/ctf-estimates/" + c.ctf_estimation_id + "/diagnostic.png"), c.diagnostic_file_exists, "diagnostic image", urls);
+        diag.extra.textContent = c.output_diagnostic_file ? "(" + c.output_diagnostic_file.split("/").pop() + ")" : "";
+      }
+    };
+  }
+  RESULT_PAGES.ctf_estimation = makeResultsPage({
+    stage: "ctf_estimation",
+    listPath: "/ctf-estimates", listKey: "ctf_estimates", idKey: "ctf_estimation_id", jobKey: "ctf_estimation_job_id",
+    rowIdKey: "image_asset_id", rowNameKey: "image_name", rowLabel: "Image", rowLabelPlural: "Images",
+    groupAssetKey: "image_asset_id", addAllTitle: "Add every image listed to an image group.",
+    itemPath: function(id){ return "/ctf-estimates/" + id; },
+    activatePath: function(id){ return "/ctf-estimates/" + id + "/activate"; },
+    titleWord: "CTF Estimate",
+    emptyTitle: "No CTF estimates in this project yet",
+    emptyHint: "Run Find CTF from the Actions tab; each image appears here with its diagnostic image, 1D fit and defocus values.",
+    details: [
+      {label: "Estimation ID", value: function(c){ return fmtNum(c.ctf_estimation_id) + (c.job_number ? " (Job " + c.job_number + ")" : ""); }},
+      {label: "Date of Run", value: function(c){ return fmtWhenDate(c.datetime_of_run); }},
+      {label: "Time of Run", value: function(c){ return fmtWhenTime(c.datetime_of_run); }},
+      {label: "Voltage", value: function(c){ return fmtNum(c.voltage, 2) + " kV"; }},
+      {label: "Cs", value: function(c){ return fmtNum(c.spherical_aberration, 2) + " mm"; }},
+      {label: "Pixel Size", value: function(c){ return fmtNum(c.pixel_size, 4) + " Å"; }},
+      {label: "Amplitude Contrast", value: function(c){ return fmtNum(c.amplitude_contrast, 2); }},
+      {label: "Box Size", value: function(c){ return fmtNum(c.box_size) + " px"; }},
+      {label: "Min. Res.", value: function(c){ return fmtNum(c.min_resolution, 2) + " Å"; }},
+      {label: "Max. Res.", value: function(c){ return fmtNum(c.max_resolution, 2) + " Å"; }},
+      {label: "Min. Defocus", value: function(c){ return fmtNum(c.min_defocus, 2) + " Å"; }},
+      {label: "Max. Defocus", value: function(c){ return fmtNum(c.max_defocus, 2) + " Å"; }},
+      {label: "Defocus Step", value: function(c){ return fmtNum(c.defocus_step, 2) + " Å"; }},
+      {label: "Frames Averaged", value: function(c){ return c.estimated_on_movie_frames ? fmtNum(c.number_of_frames_averaged) : "n/a"; }},
+      {label: "Large Astig. Expected", value: function(c){ return fmtYesNo(c.large_astigmatism_expected); }},
+      {label: "Restrain Astig.", value: function(c){ return c.restrain_astigmatism ? "Yes (" + fmtNum(c.tolerated_astigmatism, 2) + " Å)" : "No"; }},
+      {label: "Phase Shift Search", value: function(c){ return c.find_additional_phase_shift ? fmtNum(c.min_phase_shift * 180 / Math.PI, 1) + "° – " + fmtNum(c.max_phase_shift * 180 / Math.PI, 1) + "°, step " + fmtNum(c.phase_shift_step * 180 / Math.PI, 1) + "°" : "No"; }},
+      {label: "Diagnostic File", value: function(c){ return c.output_diagnostic_file || "—"; }, wide: true}
+    ],
+    buildResult: buildCtfResultView
   });
+  showResultsStage("motion_correction");
 
   // ---------- run profile ----------
   // ---------- run profiles ----------
@@ -3248,7 +3422,10 @@ From branch : <span id="versionBranch">—</span></p>
   // `enabledByNot` is the same thing inverted. The dependent input and its
   // whole .field wrapper are marked, so the label greys out with the control
   // the way Enable(false) greys both in the reference panels.
-  function conditionalGovernor(f){ return f.enabledBy || f.enabledByNot; }
+  // `enabledWhen: {key, value}` is the same idea for a select governor --
+  // live only while that select holds that value (Find CTF's frame count
+  // follows Estimate Using = Movies, cf. EnableMovieProcessingIfAppropriate()).
+  function conditionalGovernor(f){ return f.enabledBy || f.enabledByNot || (f.enabledWhen && f.enabledWhen.key); }
 
   function syncConditionalFields(container, fields){
     fields.forEach(function(f){
@@ -3257,7 +3434,7 @@ From branch : <span id="versionBranch">—</span></p>
       var dependent = container.querySelector('[data-key="' + f.key + '"]');
       var governor = container.querySelector('[data-key="' + governorKey + '"]');
       if (!dependent || !governor) return;
-      var on = f.enabledByNot ? !governor.checked : governor.checked;
+      var on = f.enabledWhen ? governor.value === f.enabledWhen.value : (f.enabledByNot ? !governor.checked : governor.checked);
       dependent.disabled = !on;
       var wrap = dependent.closest(".field");
       if (wrap) wrap.classList.toggle("field-disabled", !on);
@@ -4472,7 +4649,7 @@ From branch : <span id="versionBranch">—</span></p>
     else {
       var count = selectedGroupCount();
       var profile = state.runProfiles.filter(function(p){ return p.profile_name === els.runProfile.value; })[0];
-      if (count === 0) reason = "The selected group has no movies in it — import some on the Assets tab.";
+      if (count === 0) reason = "The selected group is empty — add " + (stage.fields.some(function(f){ return f.key === "image_group_id"; }) ? "images" : "movies") + " to it on the Assets tab.";
       // cisTEM's OnUpdateUI: a profile whose commands add up to zero
       // processes can't launch anything, so the button greys rather than
       // letting the job fail at start.
@@ -4524,7 +4701,7 @@ From branch : <span id="versionBranch">—</span></p>
     var v = input.value;
     if (input.type === "checkbox") v = input.checked;
     else if (input.type === "number") v = v === "" ? null : Number(v);
-    else if (input.dataset.key === "movie_group_id") v = v === "" ? null : Number(v);
+    else if (/_group_id$/.test(input.dataset.key)) v = v === "" ? null : Number(v);
     params[input.dataset.key] = v;
   }
 
@@ -4543,7 +4720,9 @@ From branch : <span id="versionBranch">—</span></p>
   // polling. Align Movies adds/updates image assets, adopts them into All
   // Images, and corrects each movie's frame count.
   var STAGE_RESULT_REFRESH = {
-    motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); loadAlignments(); }
+    motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); loadResults("motion_correction"); },
+    // Find CTF changes each image's active estimate, which the Images panel shows.
+    ctf_estimation: function(){ loadImages(); loadResults("ctf_estimation"); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 
@@ -4771,12 +4950,12 @@ From branch : <span id="versionBranch">—</span></p>
   // drawn no sooner than LIVE_MIN_INTERVAL_MS after the last redraw; when a
   // job has finished, its last result is shown at once.
   var LIVE_MIN_INTERVAL_MS = 10000;
-  var live = { jobId: null, shownTask: null, shownAt: 0, pending: null, timer: null, urls: [], inflight: false };
+  var live = { jobId: null, shownTask: null, shownAt: 0, pending: null, timer: null, urls: [], inflight: false, viewStage: null, render: null };
 
   function selectJob(jobId){
     if (state.selectedJobId === jobId) return;
     state.selectedJobId = jobId;
-    live.jobId = jobId; live.shownTask = null; live.shownAt = 0; live.pending = null;
+    live.jobId = jobId; live.shownTask = null; live.shownAt = 0; live.pending = null; live.viewStage = null; live.render = null;
     if (live.timer){ clearTimeout(live.timer); live.timer = null; }
     liveReleaseUrls();
     renderQueue();
@@ -4842,21 +5021,48 @@ From branch : <span id="versionBranch">—</span></p>
     els.liveMeta.textContent = parts.join(" \u00b7 ");
   }
 
+  // What each stage's live result looks like -- the same views the Results
+  // tab uses, fed from the task's own files (pictures are fetched from
+  // /jobs/:id/tasks/:n/<name>.png, which exist before the job finalizes).
+  var LIVE_VIEWS = {
+    motion_correction: function(body){
+      var col = document.createElement("div"); col.className = "live-plot-col"; body.appendChild(col);
+      var plot = makePlotBlock("Drift", [["ra-swatch-x", "X shift"], ["ra-swatch-y", "Y shift"]]); col.appendChild(plot.root);
+      var sum = makeFigure("Aligned sum"), spectrum = makeFigure("Amplitude spectrum");
+      body.appendChild(sum.root); body.appendChild(spectrum.root);
+      return function(result, base, urls){
+        plot.title.textContent = "Drift";
+        var name = document.createElement("span"); name.className = "live-plot-title-name";
+        name.textContent = result.movie_name + (result.frame_count ? " (" + result.frame_count + " frames)" : "");
+        plot.title.appendChild(name);
+        drawDriftPlot(plot.svg, result.shifts, result.exposure_per_frame);
+        loadFigure(sum.img, sum.status, base + "sum.png", result.output_file_exists, "aligned sum", urls);
+        loadFigure(spectrum.img, spectrum.status, base + "spectrum.png", result.spectrum_file_exists, "spectrum", urls);
+        spectrum.extra.textContent = result.nyquist ? "(Nyquist " + result.nyquist.toFixed(2) + " \u00c5)" : "";
+      };
+    },
+    ctf_estimation: function(body){
+      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+      var view = buildCtfResultView(box);
+      return function(result, base, urls){
+        view.loading();
+        view.update(result, urls, base + "diagnostic.png");
+      };
+    }
+  };
   function liveShow(result){
     live.shownTask = result.task_index; live.shownAt = Date.now();
     liveReleaseUrls();
     els.liveEmpty.hidden = true; els.liveBody.hidden = false;
-    els.livePlotTitle.textContent = "Drift";
-    var name = document.createElement("span"); name.className = "live-plot-title-name";
-    name.textContent = result.movie_name + (result.frame_count ? " (" + result.frame_count + " frames)" : "");
-    els.livePlotTitle.appendChild(name);
-    drawDriftPlot(els.livePlot, result.shifts, result.exposure_per_frame);
-    var base = "/jobs/" + live.jobId + "/tasks/" + result.task_index + "/";
-    els.liveSumImg.hidden = true; els.liveSumStatus.hidden = false; els.liveSumStatus.textContent = "Loading\u2026";
-    els.liveSpectrumImg.hidden = true; els.liveSpectrumStatus.hidden = false; els.liveSpectrumStatus.textContent = "Loading\u2026";
-    raLoadFigure(els.liveSumImg, els.liveSumStatus, base + "sum.png", result.output_file_exists, "aligned sum", live.urls);
-    raLoadFigure(els.liveSpectrumImg, els.liveSpectrumStatus, base + "spectrum.png", result.spectrum_file_exists, "spectrum", live.urls);
-    els.liveNyquist.textContent = result.nyquist ? "(Nyquist " + result.nyquist.toFixed(2) + " \u00c5)" : "";
+    var job = selectedJob();
+    var stageKey = job ? job.stage : null;
+    if (live.viewStage !== stageKey || !live.render){
+      els.liveBody.innerHTML = "";
+      live.viewStage = stageKey;
+      live.render = LIVE_VIEWS[stageKey] ? LIVE_VIEWS[stageKey](els.liveBody) : null;
+    }
+    if (!live.render){ els.liveBody.textContent = "No live view for this stage."; return; }
+    live.render(result, "/jobs/" + live.jobId + "/tasks/" + result.task_index + "/", live.urls);
   }
 
   els.liveCloseBtn.addEventListener("click", closeLive);

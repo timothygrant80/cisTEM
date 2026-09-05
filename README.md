@@ -107,14 +107,18 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/alignments` | `{ "alignments": [...] }` — every movie alignment with movie name, produced image asset id, job number, and whether its sum/spectrum files exist |
 | `GET` | `/projects/:id/alignments/:aid` | One alignment plus `shifts: [{frame, x, y}]` in Å |
 | `POST` | `/projects/:id/alignments/:aid/activate` | Make this alignment the movie's active one (its image asset now points at it) |
-| `POST` | `/projects/:id/jobs/:id/activate-alignments` | Make one job's alignments active for every movie it aligned → `{activated, failed}` |
+| `POST` | `/projects/:id/jobs/:id/activate-results` | Make one job's results active for every asset it processed → `{activated, failed}` (`/activate-alignments` is an alias) |
+| `GET` | `/projects/:id/ctf-estimates` | `{ "ctf_estimates": [...] }` — every CTF estimate with image name, job number and `is_active` |
+| `GET` | `/projects/:id/ctf-estimates/:cid` | One estimate plus `plot` (the 1D fit curves) |
+| `POST` | `/projects/:id/ctf-estimates/:cid/activate` | Make this estimate the image's active one |
+| `GET` | `/projects/:id/ctf-estimates/:cid/diagnostic.png` | PNG of ctffind's diagnostic image |
 | `GET` | `/projects/:id/alignments/:aid/sum.png`, `/spectrum.png` | PNG renders of the aligned sum and its amplitude spectrum |
 | `GET` | `/run-profiles` | The machine's run profiles (system-wide, any logged-in user) — feeds the Run Profile picker |
 | `POST` / `PATCH` / `DELETE` | `/run-profiles[/:rid]` | Admin only: add (empty body), duplicate (`{copy_of}`), import (full profile), edit, remove |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below). `400` if `params.run_profile` names a profile with no run commands |
 | `GET` | `/projects/:id/jobs/:id/latest-result` | Newest finished task's result for the Jobs tab's live panel (`result: null` + `reason` when there is none yet) |
-| `GET` | `/projects/:id/jobs/:id/tasks/:tidx/sum.png`, `/spectrum.png` | PNG of one task's aligned sum / spectrum, available mid-run |
+| `GET` | `/projects/:id/jobs/:id/tasks/:tidx/<name>.png` | PNG of one task's output picture (`sum`, `spectrum`, `diagnostic`), available mid-run |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
 | `POST` | `/projects/:id/jobs/:id/cancel` | Best-effort cancel → returns the updated `Job` |
 

@@ -331,7 +331,19 @@ table.queue tbody td{padding:8px 10px;border:1px solid var(--border);font-size:1
 table.queue tbody tr:nth-child(even) td{background:var(--surface-sunken);}
 table.queue tbody tr.clickable{cursor:pointer;}
 table.queue tbody tr.clickable:hover td{background:var(--accent-soft);}
-table.queue tbody tr.selected td{background:var(--accent-soft);}
+/* The selected row is solid navy with white text -- the Groups list's own
+   `li.selected` look, and what a native wxListCtrl does -- so "what I
+   picked" and "where the mouse is" (the soft hover above) can't be
+   confused. Listed with the striped-table variants too, because the zebra
+   rules under .assets-layout / .profiles-layout are more specific than a
+   bare tr.selected and would otherwise win on every even row. */
+table.queue tbody tr.selected td,
+table.queue tbody tr.selected:hover td,
+.assets-layout .table-scroll tbody tr.selected td,
+.assets-layout .table-scroll tbody tr.selected:hover td,
+.profiles-layout .rp-table tbody tr.selected td,
+.profiles-layout .rp-table tbody tr.selected:hover td{background:var(--accent);color:#fff;}
+table.queue tbody tr.selected .job-name,table.queue tbody tr.selected .job-id{color:#fff;}
 th.check-col,td.check-col{width:1%;padding-left:10px;padding-right:6px;}
 td.check-col{cursor:default;}
 td.mono{font-family:var(--font-mono);}
@@ -367,7 +379,6 @@ td.mono{font-family:var(--font-mono);}
 .profiles-layout .rp-table thead th{position:sticky;top:0;z-index:1;}
 .profiles-layout .rp-table tbody td{background:var(--surface);}
 .profiles-layout .rp-table tbody tr:nth-child(even) td{background:var(--surface-sunken);}
-.profiles-layout .rp-table tbody tr.selected td{background:var(--accent-soft);}
 table.rp-commands-table{min-width:760px;}
 table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:normal;word-break:break-all;min-width:220px;}
 .rp-actions .rp-save{margin-left:auto;}
@@ -694,7 +705,7 @@ From branch : <span id="versionBranch">—</span></p>
           </div>
 
           <div class="groupbox" style="margin-top:16px;">
-            <span class="groupbox-label">Selected Movie</span>
+            <span class="groupbox-label" id="movieDetailsLabel">Selected Movie</span>
             <div class="details-grid">
               <div class="details-item"><span class="details-key">Name</span><span class="details-val" id="dMovieName">—</span></div>
               <div class="details-item"><span class="details-key">No. Frames</span><span class="details-val" id="dMovieFrames">—</span></div>
@@ -761,7 +772,7 @@ From branch : <span id="versionBranch">—</span></p>
           </div>
 
           <div class="groupbox" style="margin-top:16px;">
-            <span class="groupbox-label">Selected Image</span>
+            <span class="groupbox-label" id="imageDetailsLabel">Selected Image</span>
             <div class="details-grid">
               <div class="details-item"><span class="details-key">Name</span><span class="details-val" id="dImageName">&mdash;</span></div>
               <div class="details-item"><span class="details-key">Parent Movie I.D.</span><span class="details-val" id="dImageParentId">&mdash;</span></div>
@@ -1259,7 +1270,7 @@ From branch : <span id="versionBranch">—</span></p>
    "previewStage","previewStatus","previewImg","previewNote",
    "assetpageMovies","assetpageImages","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
-   "dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
+   "movieDetailsLabel","imageDetailsLabel","dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
    "importImagesScrim","importImagesModal","importImagesModalClose","importImagesFields",
    "importImagesBtn","importImagesNote","importImagesValidationNote",
@@ -2824,13 +2835,18 @@ From branch : <span id="versionBranch">—</span></p>
 
   function renderMovieList(movies){
     state.movies = movies;
-    state.selectedMovieId = null;
-    state.selectedMovieIds = new Set();
-    updateMovieDetails(null);
-    updateDisplayButton(null);
-    updateBulkActionButtons();
+    // A reload (a job finished, a group changed) keeps whatever the user had
+    // selected or ticked, as long as it is still in the list -- being
+    // deselected by a background refresh is the thing that made selection
+    // feel unreliable.
+    var present = new Set(movies.map(function(m){ return m.MOVIE_ASSET_ID; }));
+    state.selectedMovieIds = new Set(Array.from(state.selectedMovieIds).filter(function(id){ return present.has(id); }));
+    if (!present.has(state.selectedMovieId)) state.selectedMovieId = null;
     els.movieListBody.innerHTML = "";
     if (!movies.length){
+      updateMovieDetails(null);
+      updateDisplayButton(null);
+      updateBulkActionButtons();
       var tr = document.createElement("tr");
       var td = document.createElement("td");
       td.colSpan = 13;
@@ -2844,7 +2860,7 @@ From branch : <span id="versionBranch">—</span></p>
     }
     movies.forEach(function(m){
       var tr = document.createElement("tr");
-      tr.className = "clickable";
+      tr.className = "clickable" + (m.MOVIE_ASSET_ID === state.selectedMovieId ? " selected" : "");
       tr.dataset.movieId = m.MOVIE_ASSET_ID;
       tr.innerHTML = "<td class='check-col'><input type='checkbox' class='movie-check'></td>" +
         "<td>" + m.MOVIE_ASSET_ID + "</td>" +
@@ -2861,10 +2877,15 @@ From branch : <span id="versionBranch">—</span></p>
         "<td>" + (m.GAIN_FILENAME || "—") + "</td>";
       tr.addEventListener("click", function(){ selectMovie(m.MOVIE_ASSET_ID); });
       var checkbox = tr.querySelector(".movie-check");
+      checkbox.checked = state.selectedMovieIds.has(m.MOVIE_ASSET_ID);
       checkbox.addEventListener("click", function(e){ e.stopPropagation(); });
       checkbox.addEventListener("change", function(){ toggleMovieChecked(m.MOVIE_ASSET_ID, checkbox.checked); });
       els.movieListBody.appendChild(tr);
     });
+    var selected = movies.filter(function(m){ return m.MOVIE_ASSET_ID === state.selectedMovieId; })[0] || null;
+    updateMovieDetails(selected);
+    updateDisplayButton(selected);
+    updateBulkActionButtons();
   }
 
   function selectMovie(movieId){
@@ -3163,6 +3184,9 @@ From branch : <span id="versionBranch">—</span></p>
   });
 
   function updateMovieDetails(m){
+    // The panel names what it shows, so the choice survives the row
+    // scrolling out of view.
+    els.movieDetailsLabel.textContent = m ? "Selected Movie \u2014 " + (m.NAME || m.MOVIE_ASSET_ID) : "Selected Movie";
     els.dMovieName.textContent = m ? (m.NAME || "—") : "—";
     els.dMovieFilename.textContent = m ? (m.FILENAME || "—") : "—";
     els.dMovieId.textContent = m ? m.MOVIE_ASSET_ID : "—";
@@ -3450,13 +3474,14 @@ From branch : <span id="versionBranch">—</span></p>
 
   function renderImageList(images){
     state.images = images;
-    state.selectedImageId = null;
-    state.selectedImageIds = new Set();
-    updateImageDetails(null);
-    updateImageDisplayButton(null);
-    updateImageBulkActionButtons();
+    var present = new Set(images.map(function(m){ return m.IMAGE_ASSET_ID; }));
+    state.selectedImageIds = new Set(Array.from(state.selectedImageIds).filter(function(id){ return present.has(id); }));
+    if (!present.has(state.selectedImageId)) state.selectedImageId = null;
     els.imageListBody.innerHTML = "";
     if (!images.length){
+      updateImageDetails(null);
+      updateImageDisplayButton(null);
+      updateImageBulkActionButtons();
       var tr = document.createElement("tr");
       var td = document.createElement("td");
       td.colSpan = 12;
@@ -3474,7 +3499,7 @@ From branch : <span id="versionBranch">—</span></p>
     }
     images.forEach(function(m){
       var tr = document.createElement("tr");
-      tr.className = "clickable";
+      tr.className = "clickable" + (m.IMAGE_ASSET_ID === state.selectedImageId ? " selected" : "");
       tr.dataset.imageId = m.IMAGE_ASSET_ID;
       tr.innerHTML = "<td class='check-col'><input type='checkbox' class='image-check'></td>" +
         "<td>" + m.IMAGE_ASSET_ID + "</td>" +
@@ -3490,10 +3515,15 @@ From branch : <span id="versionBranch">—</span></p>
         "<td>" + (m.PROTEIN_IS_WHITE ? "Yes" : "No") + "</td>";
       tr.addEventListener("click", function(){ selectImage(m.IMAGE_ASSET_ID); });
       var checkbox = tr.querySelector(".image-check");
+      checkbox.checked = state.selectedImageIds.has(m.IMAGE_ASSET_ID);
       checkbox.addEventListener("click", function(e){ e.stopPropagation(); });
       checkbox.addEventListener("change", function(){ toggleImageChecked(m.IMAGE_ASSET_ID, checkbox.checked); });
       els.imageListBody.appendChild(tr);
     });
+    var selected = images.filter(function(m){ return m.IMAGE_ASSET_ID === state.selectedImageId; })[0] || null;
+    updateImageDetails(selected);
+    updateImageDisplayButton(selected);
+    updateImageBulkActionButtons();
   }
 
   function selectImage(imageId){
@@ -3507,6 +3537,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   function updateImageDetails(m){
+    els.imageDetailsLabel.textContent = m ? "Selected Image \u2014 " + (m.NAME || m.IMAGE_ASSET_ID) : "Selected Image";
     els.dImageName.textContent = m ? (m.NAME || "—") : "—";
     els.dImageFilename.textContent = m ? (m.FILENAME || "—") : "—";
     els.dImageId.textContent = m ? m.IMAGE_ASSET_ID : "—";

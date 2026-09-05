@@ -120,10 +120,13 @@ def _settings_from_params(params):
         low_variance_threshold=_num(params, "low_variance_threshold", -0.5, float),
         avoid_high_variance=_flag(params, "avoid_high_variance", False),
         high_variance_threshold=_num(params, "high_variance_threshold", 2.0, float),
-        highest_resolution=_num(params, "highest_resolution_a", 30.0, float),
-        min_edge_distance=_num(params, "min_edge_distance_px", 128, int),
+        highest_resolution=_num(params, "highest_resolution_a", 15.0, float),
+        # cisTEM computes the edge distance from the exclusion radius unless
+        # "Set minimum distance from edges" is ticked (ReturnDefaultMinimumDistanceFromEdges);
+        # None here means "compute it per image" in _image_args().
+        min_edge_distance=_num(params, "min_edge_distance_px", 128, int) if _flag(params, "set_min_edge_distance", False) else None,
         avoid_abnormal_mean=_flag(params, "avoid_abnormal_mean", True),
-        background_boxes=_num(params, "background_boxes", 50, int),
+        background_boxes=_num(params, "background_boxes", 40, int),
         background_algorithm=BACKGROUND_ALGORITHMS.index(algo) if algo in BACKGROUND_ALGORITHMS else _num(params, "background_algorithm", 0, int),
     )
 
@@ -132,6 +135,10 @@ def _image_args(image, input_file, pixel_size, output_stack, st):
     """The 28 arguments for one image (a row of IMAGE_ASSETS joined with its
     active CTF estimate), in StartPickingClick()'s order."""
     A = jp.arg
+    # cisTEM: int(exclusion radius / pixel size) + 1, from the group's first
+    # image; here from each image's own, which is the same for a group of
+    # one pixel size and right for a mixed one.
+    edge = st["min_edge_distance"] if st["min_edge_distance"] is not None else default_edge_distance(st["maximum_radius"], pixel_size)
     args = [
         A("text", input_file),                              # 0  micrograph
         A("float", pixel_size),                             # 1
@@ -151,7 +158,7 @@ def _image_args(image, input_file, pixel_size, output_stack, st):
         A("float", st["highest_resolution"]),                     # 15
         A("text", output_stack),                            # 16 candidate stack (not written: box size 0)
         A("int", 0),                                        # 17 output stack box size
-        A("int", st["min_edge_distance"]),                        # 18 px
+        A("int", int(edge)),                                # 18 px
         A("float", st["threshold"]),                              # 19 picking threshold
         A("bool", st["avoid_low_variance"]),                      # 20
         A("bool", st["avoid_high_variance"]),                     # 21
@@ -164,6 +171,11 @@ def _image_args(image, input_file, pixel_size, output_stack, st):
     ]
     assert len(args) == 28
     return args
+
+
+def default_edge_distance(maximum_radius, pixel_size):
+    """MyFindParticlesPanel::ReturnDefaultMinimumDistanceFromEdges()."""
+    return int(float(maximum_radius) / float(pixel_size or 1.0)) + 1
 
 
 def _arg_values(task):
@@ -385,7 +397,8 @@ def preview(conn, project_id, image_id, params, executable, timeout=120.0):
             scaled_ps = pixel_size * scale
             if scaled_ps <= st["highest_resolution"] / 2.0:
                 input_file, input_ps, input_y, used_scaled = str(scaled), scaled_ps, hdr["y_size"], True
-                st = dict(st, min_edge_distance=max(1, int(round(st["min_edge_distance"] / scale))))
+                edge_full = st["min_edge_distance"] if st["min_edge_distance"] is not None else default_edge_distance(st["maximum_radius"], pixel_size)
+                st = dict(st, min_edge_distance=max(1, int(round(edge_full / scale))))
         except Exception:  # noqa: BLE001 -- an unreadable scaled copy just means the full image is used
             pass
 

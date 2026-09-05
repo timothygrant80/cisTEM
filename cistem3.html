@@ -1494,13 +1494,20 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"When the local variance is above this threshold, no particles can be found. Expressed in numbers of FWHM above the mode of the local variance in the image."}
       ],
       expertFields: [
-        {key:"highest_resolution_a", label:"Highest resolution used", unit:"Å", type:"number", step:"1", min:1, default:"30", group:"Expert Options",
+        // Defaults differ from cisTEM's ResetDefaults() where noted: 15 A
+        // (cisTEM 30) and 40 background boxes (cisTEM 50) are this lab's.
+        {key:"highest_resolution_a", label:"Highest resolution used", unit:"Å", type:"number", step:"1", min:1, default:"15", group:"Expert Options",
          tooltip:"The template and micrograph will be resampled (by Fourier cropping) to a pixel size of half the resolution given here. Note that the information in the 'corners' of the Fourier transforms (beyond the Nyquist frequency) remains intact, so that there is some small risk of bias beyond this resolution."},
-        {key:"min_edge_distance_px", label:"Min. edge distance", unit:"px", type:"number", min:1, max:999999999, default:"128", group:"Expert Options",
-         tooltip:"No particle shall be picked closer than this distance from the edges of the micrograph. In pixels."},
+        // cisTEM's "Min. edge distance (pix.)" checkbox + spin: unticked, the
+        // distance follows the exclusion radius (int(radius / pixel size) + 1,
+        // ReturnDefaultMinimumDistanceFromEdges) and the box just shows it.
+        {key:"set_min_edge_distance", label:"Set min. edge distance", type:"checkbox", default:false, group:"Expert Options",
+         tooltip:"Tick to set the minimum distance from the edges yourself. Otherwise it is computed from the exclusion radius, as cisTEM does."},
+        {key:"min_edge_distance_px", label:"Min. edge distance", unit:"px", type:"number", min:1, max:999999999, default:"128", group:"Expert Options", enabledBy:"set_min_edge_distance", autoEdge:true,
+         tooltip:"No particle shall be picked closer than this distance from the edges of the micrograph. In pixels. Computed from the exclusion radius unless set above."},
         {key:"avoid_abnormal_mean", label:"Avoid abnormal local mean", type:"checkbox", default:true, group:"Expert Options",
          tooltip:"Avoid areas with abnormally low or high local mean. This can be effective to avoid picking from, e.g., contaminating ice crystals, support film."},
-        {key:"background_boxes", label:"Number of background boxes", unit:"", type:"number", min:1, max:999, default:"50", group:"Expert Options",
+        {key:"background_boxes", label:"Number of background boxes", unit:"", type:"number", min:1, max:999, default:"40", group:"Expert Options",
          tooltip:"Number of background areas to use in estimating the background spectrum. The larger the number of boxes, the more accurate the estimate should be, provided that none of the background boxes contain any particles to be picked."},
         {key:"background_algorithm", label:"Find background areas by", unit:"", type:"select", options:["Lowest variance","Variance near mode"], default:"Lowest variance", group:"Expert Options",
          tooltip:"Testing so far suggests that areas of lowest variance in experimental micrographs should be used to estimate the background spectrum. However, when using synthetic micrographs this can lead to bias in the spectrum estimation and the alternative (areas with local variances near the mean of the distribution of local variances) seems to perform better."}
@@ -4891,6 +4898,18 @@ From branch : <span id="versionBranch">—</span></p>
     if (previewSupported()) loadPreviewImages();
   }
   // The images of the selected group -- the choices for "Preview image".
+  // cisTEM's ReturnDefaultMinimumDistanceFromEdges(): int(exclusion radius /
+  // the group's first image's pixel size) + 1, shown in the greyed box while
+  // "Set min. edge distance" is unticked and recomputed as the radius changes.
+  function syncAutoEdgeDistance(){
+    var box = els.expertFields.querySelector('[data-key="min_edge_distance_px"]');
+    var setIt = els.expertFields.querySelector('[data-key="set_min_edge_distance"]');
+    var radius = els.paramFields.querySelector('[data-key="maximum_radius_a"]');
+    if (!box || !setIt || !radius || setIt.checked) return;
+    var ps = pv.groupPixelSize;
+    if (!ps || !Number(radius.value)) return;
+    box.value = Math.floor(Number(radius.value) / ps) + 1;
+  }
   function loadPreviewImages(){
     var groupSel = els.paramFields.querySelector("select[data-key$='_group_id']");
     var gid = groupSel && groupSel.value !== "" ? groupSel.value : null;
@@ -4908,6 +4927,8 @@ From branch : <span id="versionBranch">—</span></p>
       });
       els.previewImage.disabled = !rows.length;
       if (keep && rows.some(function(img){ return String(img.IMAGE_ASSET_ID) === keep; })) els.previewImage.value = keep;
+      pv.groupPixelSize = rows.length ? rows[0].PIXEL_SIZE : null;
+      syncAutoEdgeDistance();
     }).catch(function(){});
   }
   function runPreview(){
@@ -4947,9 +4968,13 @@ From branch : <span id="versionBranch">—</span></p>
     pv.timer = setTimeout(runPreview, 600);
   }
   [els.paramFields, els.expertFields].forEach(function(box){
-    box.addEventListener("input", schedulePreview);
+    box.addEventListener("input", function(e){
+      if (e.target && (e.target.dataset.key === "maximum_radius_a")) syncAutoEdgeDistance();
+      schedulePreview();
+    });
     box.addEventListener("change", function(e){
       if (e.target && /_group_id$/.test(e.target.dataset.key || "")) loadPreviewImages();
+      if (e.target && (e.target.dataset.key === "maximum_radius_a" || e.target.dataset.key === "set_min_edge_distance")) syncAutoEdgeDistance();
       schedulePreview();
     });
   });

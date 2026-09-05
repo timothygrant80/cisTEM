@@ -369,7 +369,7 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 /* ---------- Results: Align Movies (MyMovieAlignResultsPanel) ----------
    The bounded list-plus-detail idiom again: movies on the left, the chosen
    alignment's job details, drift plot and pictures on the right. */
-.results-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:stretch;height:clamp(480px, calc(100vh - 240px), 900px);}
+.results-layout{display:grid;grid-template-columns:minmax(340px,36%) minmax(0,1fr);gap:16px;align-items:stretch;height:clamp(480px, calc(100vh - 240px), 900px);}
 .results-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
 .ra-nav{justify-content:space-between;flex-wrap:nowrap;}
 .ra-nav .small{white-space:nowrap;}
@@ -379,6 +379,26 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .ra-list li{display:flex;justify-content:space-between;gap:8px;}
 .ra-list li .ra-count{font-weight:400;color:var(--text-tertiary);font-family:var(--font-mono);font-size:11px;}
 .ra-list li.selected .ra-count{color:rgba(255,255,255,.8);}
+.ra-grid-scroll{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
+.ra-grid{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%;}
+.ra-grid th,.ra-grid td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;white-space:nowrap;}
+.ra-grid th{position:sticky;top:0;z-index:2;background:var(--chrome);font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;}
+.ra-grid th.ra-job-head{text-align:center;padding:0;}
+.ra-grid th.ra-job-head button{font:inherit;color:var(--accent);background:none;border:none;padding:6px 8px;cursor:pointer;width:100%;}
+.ra-grid th.ra-job-head button:hover{background:var(--accent-soft);}
+.ra-grid th:first-child,.ra-grid td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);}
+.ra-grid th:first-child{z-index:3;background:var(--chrome);}
+.ra-grid td.ra-movie{padding:6px 8px;font-weight:600;color:var(--text-secondary);max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+.ra-grid td.ra-cell{width:40px;min-width:40px;text-align:center;}
+.ra-grid td.ra-cell.has{cursor:pointer;}
+.ra-grid td.ra-cell.has:hover{background:var(--accent-soft);}
+.ra-grid td.ra-cell.shown,.ra-grid td.ra-cell.shown:hover{background:var(--accent);}
+.ra-grid tr.shown-row td.ra-movie{color:var(--accent);}
+.ra-cell-glyph{display:inline-block;width:13px;height:13px;border:1px solid var(--border-strong);background:var(--surface);vertical-align:middle;font-size:11px;line-height:12px;color:var(--text-primary);text-align:center;}
+.ra-cell-glyph.active{background:var(--surface);color:var(--success);font-weight:700;}
+.ra-grid td.ra-cell.shown .ra-cell-glyph{border-color:#fff;}
+.ra-eye-swatch{display:inline-block;width:13px;height:13px;background:var(--accent);vertical-align:middle;}
+.ra-legend-row{font-size:11px;color:var(--text-tertiary);margin-top:6px;flex-shrink:0;display:flex;align-items:center;gap:4px;}
 .ra-toggle[aria-pressed="true"]{background:var(--surface-sunken);box-shadow:inset 0 1px 2px rgba(0,0,0,.15);}
 .ra-right-scroll{flex:1;min-height:0;overflow:auto;padding-right:6px;}
 .ra-job-details{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
@@ -955,9 +975,22 @@ From branch : <span id="versionBranch">—</span></p>
                 <label class="ra-radio" title="Filtering alignments by their parameters isn't implemented yet — cisTEM's Define Filter dialog is the model."><input type="radio" name="raFilter" id="raByFilter" disabled /> By Filter</label>
                 <button class="small" id="raDefineFilterBtn" disabled title="Not implemented yet.">Define Filter</button>
               </div>
-              <ul class="group-list ra-list" id="raMovieList"></ul>
+              <!-- ResultsDataViewListCtrl: a row per movie, a check column per
+                   job. The check is the *active* run (the movie's image asset);
+                   the highlighted cell is the one being *shown* -- cisTEM's eye.
+                   Click a cell to show it; click the shown cell again, or Make
+                   Active, to make it the active one. A column header makes that
+                   job active for every movie it aligned. -->
+              <div class="ra-grid-scroll">
+                <table class="ra-grid" id="raGrid">
+                  <thead id="raGridHead"></thead>
+                  <tbody id="raGridBody"></tbody>
+                </table>
+              </div>
+              <div class="ra-legend-row"><span class="ra-cell-glyph active">&#10003;</span> active &nbsp; <span class="ra-cell-glyph"></span> other run &nbsp; <span class="ra-eye-swatch"></span> shown</div>
               <div class="asset-toolbar">
                 <button class="small ra-toggle" id="raJobDetailsBtn" aria-pressed="false">Show Job Details</button>
+                <button class="small" id="raActivateBtn" disabled title="Make the shown alignment the active one for this movie — its image asset will point at this run.">Make Active</button>
               </div>
               <div class="asset-toolbar ra-nav">
                 <button class="small" id="raPrevBtn" disabled>&larr; Previous</button>
@@ -1467,7 +1500,7 @@ From branch : <span id="versionBranch">—</span></p>
    "assetpageMovies","assetpageImages","assetpagePlaceholder","placeholderPanelLabel",
    "placeholderGroupLabel","placeholderNote",
    "resultsTabs","resultspageAlignMovies","resultspagePlaceholder","resultsPlaceholderLabel","resultsPlaceholderNote",
-   "raAllMovies","raByFilter","raDefineFilterBtn","raMovieList","raJobDetailsBtn","raPrevBtn","raAddAllBtn","raNextBtn",
+   "raAllMovies","raByFilter","raDefineFilterBtn","raGridHead","raGridBody","raActivateBtn","raJobDetailsBtn","raPrevBtn","raAddAllBtn","raNextBtn",
    "raRightLabel","raJobDetails","raEmpty","raResult","raPlot","raSumImg","raSumStatus","raSpectrumImg","raSpectrumStatus","raNyquist",
    "raAlignmentId","raDateOfRun","raTimeOfRun","raVoltage","raPixelSize","raExposure","raPreExposure","raMinShift","raMaxShift",
    "raTermination","raMaxIterations","raBfactor","raDoseFilter","raRestorePower","raMaskCross","raMasks","raFrames","raFinalPixelSize","raOutputFile",
@@ -2062,24 +2095,75 @@ From branch : <span id="versionBranch">—</span></p>
     });
   }
 
+  // Distinct jobs across all alignments, oldest first -- the grid's columns.
+  function raJobs(){
+    var seen = {}, jobs = [];
+    ra.alignments.forEach(function(a){
+      if (seen[a.alignment_job_id]) return;
+      seen[a.alignment_job_id] = true;
+      jobs.push({id: a.alignment_job_id, number: a.job_number});
+    });
+    return jobs.sort(function(p, q){ return (p.number || 0) - (q.number || 0); });
+  }
+
   function raRenderList(){
-    els.raMovieList.innerHTML = "";
+    var jobs = raJobs();
+    els.raGridHead.innerHTML = ""; els.raGridBody.innerHTML = "";
+    var hr = document.createElement("tr");
+    var th0 = document.createElement("th"); th0.textContent = "Movie"; hr.appendChild(th0);
+    jobs.forEach(function(job){
+      var th = document.createElement("th"); th.className = "ra-job-head";
+      var b = document.createElement("button");
+      b.textContent = "#" + (job.number != null ? job.number : "?");
+      var n = ra.alignments.filter(function(a){ return a.alignment_job_id === job.id; }).length;
+      b.title = "Job " + job.number + " aligned " + n + " movie" + (n === 1 ? "" : "s") + ". Click to make its results active for all of them.";
+      b.addEventListener("click", function(){
+        if (!confirm("Make Job " + job.number + "\u2019s alignments the active ones for all " + n + " movie" + (n === 1 ? "" : "s") + " it aligned?")) return;
+        raActivateJob(job.id);
+      });
+      th.appendChild(b); hr.appendChild(th);
+    });
+    els.raGridHead.appendChild(hr);
+
     ra.entries.forEach(function(e){
-      var li = document.createElement("li");
-      li.classList.toggle("selected", e.movie_asset_id === ra.selectedMovieId);
-      var name = document.createElement("span"); name.textContent = e.movie_name || ("Movie " + e.movie_asset_id);
-      li.appendChild(name);
-      if (e.alignments.length > 1){
-        var n = document.createElement("span"); n.className = "ra-count"; n.title = e.alignments.length + " alignments; the active one is shown first"; n.textContent = "\u00d7" + e.alignments.length;
-        li.appendChild(n);
-      }
-      li.addEventListener("click", function(){ raSelect(e.movie_asset_id, null); });
-      els.raMovieList.appendChild(li);
+      var tr = document.createElement("tr");
+      var isRow = e.movie_asset_id === ra.selectedMovieId;
+      tr.classList.toggle("shown-row", isRow);
+      var tdName = document.createElement("td"); tdName.className = "ra-movie";
+      tdName.textContent = e.movie_name || ("Movie " + e.movie_asset_id); tdName.title = tdName.textContent;
+      tdName.addEventListener("click", function(){ raSelect(e.movie_asset_id, null); });
+      tr.appendChild(tdName);
+      jobs.forEach(function(job){
+        var td = document.createElement("td"); td.className = "ra-cell";
+        var a = e.alignments.filter(function(x){ return x.alignment_job_id === job.id; })[0];
+        if (a){
+          td.classList.add("has");
+          var shown = isRow && a.alignment_id === ra.selectedAlignmentId;
+          td.classList.toggle("shown", shown);
+          var g = document.createElement("span"); g.className = "ra-cell-glyph" + (a.is_active ? " active" : "");
+          g.textContent = a.is_active ? "\u2713" : "";
+          td.appendChild(g);
+          td.title = "Job " + job.number + (a.is_active ? " \u2014 active" : "") + (shown ? " \u2014 shown" : "") +
+            (shown && !a.is_active ? ". Click again to make it active." : "");
+          td.addEventListener("click", function(){
+            // cisTEM: the first click puts the eye on a cell, a click on the
+            // eyed cell checks it.
+            if (shown && !a.is_active) raActivate(a.alignment_id);
+            else raSelect(e.movie_asset_id, a.alignment_id);
+          });
+        }
+        tr.appendChild(td);
+      });
+      els.raGridBody.appendChild(tr);
     });
     var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
     els.raPrevBtn.disabled = idx <= 0;
     els.raNextBtn.disabled = idx < 0 || idx >= ra.entries.length - 1;
     els.raAddAllBtn.disabled = !ra.entries.length;
+    var shownA = raAlignmentById(ra.selectedAlignmentId);
+    els.raActivateBtn.disabled = !shownA || shownA.is_active;
+    var shownCell = els.raGridBody.querySelector("td.ra-cell.shown");
+    if (shownCell) shownCell.scrollIntoView({block: "nearest", inline: "nearest"});
   }
 
   function raReleaseUrls(){ ra.urls.forEach(function(u){ URL.revokeObjectURL(u); }); ra.urls = []; }
@@ -2247,8 +2331,14 @@ From branch : <span id="versionBranch">—</span></p>
   function raStep(delta){
     var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
     var next = ra.entries[idx + delta];
-    if (next) raSelect(next.movie_asset_id, null);
+    if (!next) return;
+    var shown = raAlignmentById(ra.selectedAlignmentId);
+    var same = shown ? next.alignments.filter(function(a){ return a.alignment_job_id === shown.alignment_job_id; })[0] : null;
+    raSelect(next.movie_asset_id, same ? same.alignment_id : null);
   }
+  els.raActivateBtn.addEventListener("click", function(){
+    if (ra.selectedAlignmentId != null) raActivate(ra.selectedAlignmentId);
+  });
   els.raPrevBtn.addEventListener("click", function(){ raStep(-1); });
   els.raNextBtn.addEventListener("click", function(){ raStep(1); });
   els.raAddAllBtn.addEventListener("click", function(){

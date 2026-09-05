@@ -460,6 +460,13 @@ table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:
 }
 
 .settings-row{display:flex;gap:10px;align-items:flex-end;}
+/* The logged-in strip has no title cut into its border, so it takes even
+   padding rather than the groupbox's label allowance, and its one row is
+   centred: who you are on the left, what you can do on the right. */
+.home-user-strip{padding:14px 18px;}
+.home-user-row{align-items:center;justify-content:space-between;}
+.home-user-actions{display:flex;gap:8px;flex-shrink:0;}
+#changePasswordNote:empty{display:none;} /* an empty note still has margins, which pushed the row off centre */
 .settings-row .field{flex:1;margin-bottom:0;}
 .settings-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.6;}
 .settings-note code{font-family:var(--font-mono);background:var(--surface-sunken);padding:1px 4px;border:1px solid var(--border);}
@@ -585,11 +592,13 @@ From branch : <span id="versionBranch">—</span></p>
       <p class="settings-note" id="loginError"></p>
     </div>
 
-    <div class="groupbox" id="homeUserStrip" hidden>
-      <div class="settings-row" style="align-items:center;">
+    <div class="groupbox home-user-strip" id="homeUserStrip" hidden>
+      <div class="settings-row home-user-row">
         <p class="settings-note" style="margin:0;">Logged in as <strong id="homeUserLabel"></strong> <span id="homeUserRole"></span></p>
-        <button class="small" id="changePasswordToggleBtn">Change Password</button>
-        <button class="small" id="logoutBtn">Log Out</button>
+        <div class="home-user-actions">
+          <button class="small" id="changePasswordToggleBtn">Change Password</button>
+          <button class="small" id="logoutBtn">Log Out</button>
+        </div>
       </div>
       <div class="settings-row" id="changePasswordForm" hidden style="margin-top:12px;">
         <div class="field">

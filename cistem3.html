@@ -468,6 +468,11 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .c2d-list tr:hover td{background:var(--surface-sunken);}
 .c2d-list tr.selected:hover td{background:var(--accent);}
 .c2d-pkg-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;}
+.c2d-list.c2d-list-short{flex:0 0 auto;max-height:150px;}
+.c2d-sel-head{font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 4px;display:flex;justify-content:space-between;align-items:baseline;}
+.c2d-sel-hint{font-size:11px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0;}
+.c2d-overlay rect.c2d-picked{fill:rgba(47,95,166,.28);stroke:var(--accent);stroke-width:3;}
+.c2d-overlay text{font:700 16px var(--font-mono);fill:#fff;paint-order:stroke;stroke:var(--accent);stroke-width:3px;}
 .c2d-pkg-row select{flex:1;min-width:0;}
 .c2d-plots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
 @media (max-width:1100px){ .c2d-plots{grid-template-columns:1fr;} }
@@ -1318,8 +1323,12 @@ From branch : <span id="versionBranch">—</span></p>
     <button class="log-close" id="newPackageModalClose" aria-label="Close">&times;</button>
   </div>
   <div class="modal-body">
-    <p class="page-sub" style="margin:0 0 12px;">Cuts every particle in a particle position group out of its image into a stack, with the image's CTF estimate carried along, and starts the package with a &ldquo;Random Parameters&rdquo; refinement &mdash; cisTEM&rsquo;s New Refinement Package wizard.</p>
-    <div class="field"><label for="npGroup">Particle Position Group</label><select id="npGroup"></select></div>
+    <p class="page-sub" style="margin:0 0 12px;" id="npIntro">Cuts every particle in a particle position group out of its image into a stack, with the image's CTF estimate carried along, and starts the package with a &ldquo;Random Parameters&rdquo; refinement &mdash; cisTEM&rsquo;s New Refinement Package wizard.</p>
+    <div class="field" id="npGroupField"><label for="npGroup">Particle Position Group</label><select id="npGroup"></select></div>
+    <div class="field" id="npSelectionField" hidden><label>Class Selection</label><div class="form-note" style="margin:0;" id="npSelectionLabel"></div></div>
+    <div class="field field-checkbox" id="npRecentreField" hidden title="Move each pick by the x/y shift the classification found for it, so the new stack is cut around the particle's centre (the wizard's Re-centre picks page)."><input type="checkbox" id="npRecentre" checked /><label for="npRecentre">Re-centre picks using the classification&rsquo;s shifts</label></div>
+    <div class="field field-checkbox" id="npDedupField" hidden title="After re-centring, two picks on the same image that fall within the threshold of each other are the same particle; the one that moved least is kept."><input type="checkbox" id="npDedup" checked /><label for="npDedup">Remove duplicate picks</label></div>
+    <div class="field" id="npDedupThresholdField" hidden><label for="npDedupThreshold">Duplicate Distance Threshold <span class="unit">(&Aring;)</span></label><input type="number" id="npDedupThreshold" step="1" min="1" /></div>
     <div class="field"><label for="npName">Name</label><input type="text" id="npName" /></div>
     <div class="field-group-label">Particle</div>
     <div class="field"><label for="npMw">Estimated Molecular Weight <span class="unit">(kDa)</span></label><input type="number" id="npMw" step="1" min="1" value="300" /></div>
@@ -1885,7 +1894,8 @@ From branch : <span id="versionBranch">—</span></p>
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpagePlaceholder","placeholderPanelLabel",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
-   "newPackageScrim","newPackageModal","newPackageModalClose","npGroup","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
+   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel",
+   "npRecentreField","npRecentre","npDedupField","npDedup","npDedupThresholdField","npDedupThreshold","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
    "ppGroupList","ppGroupAddBtn","ppGroupRenameBtn","ppGroupRemoveBtn","ppGroupInvertBtn","ppGroupFromImagesBtn",
    "ppSelectAllCheckbox","ppListBody","ppListNote","ppRemoveBtn","ppRemoveAllBtn","ppAddToGroupBtn","ppDisplayBtn",
    "ppDetailsLabel","dPpId","dPpParentId","dPpJob","dPpX","dPpY","dPpPeak",
@@ -3035,22 +3045,37 @@ From branch : <span id="versionBranch">—</span></p>
       if ((x - geom.gap) % cw > geom.tile_width || (y - geom.gap) % ch > geom.tile_height) return -1;
       return r * geom.columns + c;
     }
-    function select(geom, index){
-      while (svg.firstChild) svg.removeChild(svg.firstChild);
-      if (!geom || index == null || index < 0) return;
-      svg.setAttribute("viewBox", "0 0 " + geom.width + " " + geom.height);
+    function tileRect(geom, index, cls){
       var r = Math.floor(index / geom.columns), c = index % geom.columns;
       var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       rect.setAttribute("x", geom.gap + c * (geom.tile_width + geom.gap) - 1);
       rect.setAttribute("y", geom.gap + r * (geom.tile_height + geom.gap) - 1);
       rect.setAttribute("width", geom.tile_width + 2); rect.setAttribute("height", geom.tile_height + 2);
-      svg.appendChild(rect);
+      if (cls) rect.setAttribute("class", cls);
+      return rect;
+    }
+    // The eye (selection square) on `index`, and cisTEM's selected-image
+    // shading with a tick on every class in `picked` (0-based indices).
+    function select(geom, index, picked){
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (!geom) return;
+      svg.setAttribute("viewBox", "0 0 " + geom.width + " " + geom.height);
+      (picked || []).forEach(function(i){
+        svg.appendChild(tileRect(geom, i, "c2d-picked"));
+        var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        var r = Math.floor(i / geom.columns), c = i % geom.columns;
+        t.setAttribute("x", geom.gap + c * (geom.tile_width + geom.gap) + 5);
+        t.setAttribute("y", geom.gap + r * (geom.tile_height + geom.gap) + 18);
+        t.textContent = "\u2713";
+        svg.appendChild(t);
+      });
+      if (index != null && index >= 0) svg.appendChild(tileRect(geom, index, null));
     }
     return {root: root, frame: frame, img: img, status: status, svg: svg, left: left, right: right, tileAt: tileAt, select: select};
   }
 
   function makeClassificationResultsPage(){
-    var page = {items: [], packages: [], packageId: null, selectedId: null, current: null, selectedClass: null, showDetails: false, urls: []};
+    var page = {items: [], packages: [], packageId: null, selectedId: null, current: null, selectedClass: null, showDetails: false, urls: [], selections: [], selectionId: null};
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
     var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
     var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
@@ -3061,6 +3086,16 @@ From branch : <span id="versionBranch">—</span></p>
       '<div class="asset-toolbar">' +
         '<button class="small ra-toggle" data-role="details" aria-pressed="false">Show Job Details</button>' +
         '<button class="small danger" data-role="delete" disabled title="Remove this classification, its per-particle results and its class averages file. A classification that later ones started from stays referenced by them.">Delete</button>' +
+      '</div>' +
+      '<div class="c2d-sel-head"><span>Selections</span><span class="c2d-sel-hint" data-role="selhint"></span></div>' +
+      '<div class="c2d-list c2d-list-short"><table><thead><tr><th>Selection</th><th>Classes</th><th>Particles</th></tr></thead><tbody data-role="selbody"></tbody></table></div>' +
+      '<div class="asset-toolbar">' +
+        '<button class="small" data-role="selnew" disabled title="A new, empty selection on the shown classification. Click class averages to add them to it.">New</button>' +
+        '<button class="small" data-role="selrename" disabled>Rename</button>' +
+        '<button class="small danger" data-role="seldelete" disabled>Delete</button>' +
+        '<button class="small" data-role="selclear" disabled title="Empty the selection.">Clear</button>' +
+        '<button class="small" data-role="selinvert" disabled title="Select every class that isn\u2019t selected, and vice versa.">Invert</button>' +
+        '<button class="small primary" data-role="selpackage" disabled title="Cut the members of the selected classes into a new refinement package (cisTEM\u2019s New Refinement Package wizard, class-average path).">New Package\u2026</button>' +
       '</div>';
     var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
     var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Class Averages"; right.appendChild(rightLabel);
@@ -3106,7 +3141,86 @@ From branch : <span id="versionBranch">—</span></p>
     page.root = root;
     var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody");
     var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
+    var selBody = left.querySelector('[data-role="selbody"]'), selHint = btn("selhint");
     function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
+
+    // ---- selections (Refine2DResultsPanel's SelectionManagerListCtrl) ----
+    function currentSelection(){ return page.selections.filter(function(s){ return s.selection_id === page.selectionId; })[0] || null; }
+    function pickedIndices(){ var s = currentSelection(); return s ? s.classes.map(function(k){ return k - 1; }) : []; }
+    function redrawOverlay(){ if (page.current) averages.select(page.current.montage, page.selectedClass != null ? page.selectedClass - 1 : null, pickedIndices()); }
+    function loadSelections(){
+      if (page.selectedId == null || !state.projectId){ page.selections = []; renderSelections(); return; }
+      var cid = page.selectedId;
+      apiFetch(projectApiUrl("/classification-selections?classification_id=" + cid)).then(function(r){ return r.ok ? r.json() : {selections: []}; }).then(function(d){
+        if (cid !== page.selectedId) return;
+        page.selections = (d && d.selections) || [];
+        if (!page.selections.some(function(s){ return s.selection_id === page.selectionId; })) page.selectionId = null;
+        renderSelections();
+      }).catch(function(){});
+    }
+    function renderSelections(){
+      selBody.innerHTML = "";
+      page.selections.forEach(function(sel){
+        var tr = document.createElement("tr");
+        tr.classList.toggle("selected", sel.selection_id === page.selectionId);
+        tr.innerHTML = "<td></td><td class='num'>" + sel.classes.length + " / " + sel.number_of_classes + "</td><td class='num'>" + sel.particle_count + "</td>";
+        tr.firstChild.textContent = sel.name;
+        tr.addEventListener("click", function(){ page.selectionId = sel.selection_id === page.selectionId ? null : sel.selection_id; renderSelections(); });
+        selBody.appendChild(tr);
+      });
+      var sel = currentSelection();
+      btn("selnew").disabled = page.selectedId == null;
+      ["selrename", "seldelete", "selclear", "selinvert"].forEach(function(role){ btn(role).disabled = !sel; });
+      btn("selpackage").disabled = !sel || !sel.classes.length;
+      selHint.textContent = sel ? "click class averages to add or remove them" : (page.selections.length ? "pick a selection to edit it" : "");
+      redrawOverlay();
+    }
+    function patchSelection(sel, body){
+      return apiFetch(projectApiUrl("/classification-selections/" + sel.selection_id), {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+        .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+        .then(function(res){
+          if (!res.ok) throw new Error((res.data && res.data.error) || "request failed");
+          page.selections = page.selections.map(function(s){ return s.selection_id === res.data.selection_id ? res.data : s; });
+          renderSelections();
+        }).catch(function(err){ alert("Could not update the selection: " + err.message); });
+    }
+    function toggleClassInSelection(k){
+      var sel = currentSelection(); if (!sel) return;
+      var classes = sel.classes.indexOf(k) >= 0 ? sel.classes.filter(function(x){ return x !== k; }) : sel.classes.concat([k]);
+      patchSelection(sel, {classes: classes});
+    }
+    btn("selnew").addEventListener("click", function(){
+      if (page.selectedId == null) return;
+      apiFetch(projectApiUrl("/classification-selections"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({classification_id: page.selectedId, name: "New Selection"})})
+        .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+        .then(function(res){
+          if (!res.ok) throw new Error((res.data && res.data.error) || "request failed");
+          page.selectionId = res.data.selection_id; loadSelections();
+        }).catch(function(err){ alert("Could not create a selection: " + err.message); });
+    });
+    btn("selrename").addEventListener("click", function(){
+      var sel = currentSelection(); if (!sel) return;
+      var name = prompt("Rename \u201c" + sel.name + "\u201d to:", sel.name); if (name === null || !name.trim()) return;
+      patchSelection(sel, {name: name.trim()});
+    });
+    btn("seldelete").addEventListener("click", function(){
+      var sel = currentSelection(); if (!sel) return;
+      if (!confirm("Delete the selection \u201c" + sel.name + "\u201d?")) return;
+      apiFetch(projectApiUrl("/classification-selections/" + sel.selection_id), {method: "DELETE"})
+        .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); page.selectionId = null; loadSelections(); })
+        .catch(function(err){ alert("Could not delete: " + err.message); });
+    });
+    btn("selclear").addEventListener("click", function(){ var sel = currentSelection(); if (sel) patchSelection(sel, {classes: []}); });
+    btn("selinvert").addEventListener("click", function(){
+      var sel = currentSelection(); if (!sel) return;
+      var all = []; for (var k = 1; k <= sel.number_of_classes; k++) if (sel.classes.indexOf(k) < 0) all.push(k);
+      patchSelection(sel, {classes: all});
+    });
+    btn("selpackage").addEventListener("click", function(){
+      var sel = currentSelection(); if (!sel || !sel.classes.length) return;
+      var cls = page.items.filter(function(c){ return c.classification_id === sel.classification_id; })[0];
+      openNewPackageModal(Object.assign({classification_name: cls ? cls.name : ("Classification #" + sel.classification_id)}, sel));
+    });
 
     page.load = function(){
       if (!state.projectId || !state.connected) return;
@@ -3145,6 +3259,8 @@ From branch : <span id="versionBranch">—</span></p>
         page.selectedId = rows.length ? rows[rows.length - 1].classification_id : null;
         page.selectedClass = null;
       }
+      if (page.selections.length && page.selections[0].classification_id !== page.selectedId){ page.selections = []; page.selectionId = null; }
+      loadSelections();
       tbody.innerHTML = "";
       rows.forEach(function(c){
         var tr = document.createElement("tr");
@@ -3168,7 +3284,7 @@ From branch : <span id="versionBranch">—</span></p>
       }
       empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
       rightLabel.textContent = "Class Averages — " + item.name;
-      averages.img.hidden = true; averages.status.hidden = false; averages.status.textContent = "Loading…"; averages.select(null, null);
+      averages.img.hidden = true; averages.status.hidden = false; averages.status.textContent = "Loading…"; averages.select(null, null, null);
       members.img.hidden = true; members.status.hidden = false; members.status.textContent = "Click a class average to see its members."; members.left.textContent = ""; members.right.textContent = "";
       membersHead.textContent = "Class Members";
       apiFetch(projectApiUrl("/classifications/" + item.classification_id)).then(function(r){
@@ -3183,13 +3299,13 @@ From branch : <span id="versionBranch">—</span></p>
         averages.img.style.maxWidth = full.montage ? (full.montage.width * 2) + "px" : "";
         averages.svg.style.maxWidth = averages.img.style.maxWidth;
         loadFigure(averages.img, averages.status, "/classifications/" + full.classification_id + "/averages.png", full.class_average_file_exists, "class averages", page.urls);
-        if (page.selectedClass != null) showClass(page.selectedClass);
+        if (page.selectedClass != null) showClass(page.selectedClass); else redrawOverlay();
       }).catch(function(err){ averages.status.textContent = "Could not load this classification: " + err.message; });
     }
     function showClass(k){
       var c = page.current; if (!c) return;
       page.selectedClass = k;
-      averages.select(c.montage, k - 1);
+      averages.select(c.montage, k - 1, pickedIndices());
       var n = (c.class_member_counts || [])[k - 1] || 0;
       membersHead.textContent = "Class Members — Class #" + k + " (" + n + " particle" + (n === 1 ? "" : "s") + ")";
       members.img.hidden = true; members.status.hidden = false; members.status.textContent = n ? "Loading…" : "This class has no members.";
@@ -3204,7 +3320,10 @@ From branch : <span id="versionBranch">—</span></p>
       var rect = averages.img.getBoundingClientRect();
       var x = (e.clientX - rect.left) * c.montage.width / rect.width, y = (e.clientY - rect.top) * c.montage.height / rect.height;
       var idx = averages.tileAt(c.montage, x, y);
-      if (idx >= 0 && idx < c.number_of_classes) showClass(idx + 1);
+      if (idx < 0 || idx >= c.number_of_classes) return;
+      showClass(idx + 1);
+      // With a selection picked, a click also toggles the class in it (OnClassumLeftClick).
+      if (currentSelection()) toggleClassInSelection(idx + 1);
     });
     pkgSelect.addEventListener("change", function(){ page.packageId = Number(pkgSelect.value); page.selectedId = null; renderList(); });
     btn("details").addEventListener("click", function(){
@@ -5649,8 +5768,23 @@ From branch : <span id="versionBranch">—</span></p>
   });
 
   // ---- New Refinement Package ----
-  var np = { boxTouched: false, pixelTouched: false };
-  function openNewPackageModal(){
+  var np = { boxTouched: false, pixelTouched: false, selection: null };
+  // `selection`, when given, is a class selection from the 2D Classification
+  // results page: the wizard's class-average path (re-cut the members of the
+  // selected classes from their images, re-centred, duplicates removed).
+  function openNewPackageModal(selection){
+    np.selection = selection || null;
+    var fromClasses = !!np.selection;
+    els.npGroupField.hidden = fromClasses;
+    els.npSelectionField.hidden = els.npRecentreField.hidden = els.npDedupField.hidden = els.npDedupThresholdField.hidden = !fromClasses;
+    els.npIntro.textContent = fromClasses
+      ? "Cuts the members of the selected class averages out of their images into a new stack, with each image\u2019s CTF estimate carried along, and starts the package with a \u201cRandom Parameters\u201d refinement \u2014 the class-average path of cisTEM\u2019s New Refinement Package wizard."
+      : "Cuts every particle in a particle position group out of its image into a stack, with the image\u2019s CTF estimate carried along, and starts the package with a \u201cRandom Parameters\u201d refinement \u2014 cisTEM\u2019s New Refinement Package wizard.";
+    if (fromClasses){
+      els.npSelectionLabel.textContent = np.selection.name + " \u2014 " + np.selection.classes.length + " class" + (np.selection.classes.length === 1 ? "" : "es") + ", " + np.selection.particle_count + " particle" + (np.selection.particle_count === 1 ? "" : "s") + " (" + np.selection.classification_name + ")";
+      els.npDedupThreshold.value = els.npSize.value || 150;
+      npSyncDedup();
+    }
     els.npGroup.innerHTML = "";
     (state.positionGroups || []).forEach(function(g){
       var o = document.createElement("option"); o.value = g.group_id; o.textContent = g.group_name + " (" + g.particle_position_count + ")"; els.npGroup.appendChild(o);
@@ -5667,19 +5801,34 @@ From branch : <span id="versionBranch">—</span></p>
   function closeNewPackageModal(){ els.newPackageModal.classList.remove("open"); els.newPackageScrim.classList.remove("open"); }
   // The wizard's prefills: the name, the first image's pixel size, and the
   // box size from the largest dimension -- until the user has typed their own.
+  function npSyncDedup(){
+    els.npDedup.disabled = !els.npRecentre.checked;
+    els.npDedupField.classList.toggle("field-disabled", !els.npRecentre.checked);
+    var dedupOn = els.npRecentre.checked && els.npDedup.checked;
+    els.npDedupThreshold.disabled = !dedupOn;
+    els.npDedupThresholdField.classList.toggle("field-disabled", !dedupOn);
+  }
+  els.npRecentre.addEventListener("change", npSyncDedup);
+  els.npDedup.addEventListener("change", npSyncDedup);
   function refreshPackageDefaults(){
-    var gid = els.npGroup.value;
-    if (gid === "" || !state.projectId) return;
-    apiFetch(projectApiUrl("/refinement-packages/defaults?particle_group_id=" + Number(gid) + "&largest_dimension_a=" + (Number(els.npSize.value) || 150)))
+    if (!state.projectId) return;
+    var query;
+    if (np.selection) query = "selection_ids=" + np.selection.selection_id;
+    else {
+      var gid = els.npGroup.value;
+      if (gid === "") return;
+      query = "particle_group_id=" + Number(gid) + "&largest_dimension_a=" + (Number(els.npSize.value) || 150);
+    }
+    apiFetch(projectApiUrl("/refinement-packages/defaults?" + query))
       .then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
         if (!d) return;
         if (!els.npName.value.trim() || /^Refinement Package #\d+$/.test(els.npName.value.trim())) els.npName.value = d.next_name;
         if (!np.pixelTouched && d.pixel_size) els.npPixel.value = d.pixel_size;
         if (!np.boxTouched && d.box_size) els.npBox.value = d.box_size;
-        els.npBoxHint.textContent = d.box_size ? "\u2014 cisTEM suggests " + d.box_size : "";
+        els.npBoxHint.textContent = d.box_size ? (np.selection ? "\u2014 the parent package\u2019s " + d.box_size : "\u2014 cisTEM suggests " + d.box_size) : "";
       }).catch(function(){});
   }
-  els.rpkgNewBtn.addEventListener("click", function(){ if (state.projectId) openNewPackageModal(); });
+  els.rpkgNewBtn.addEventListener("click", function(){ if (state.projectId) openNewPackageModal(null); });
   els.newPackageModalClose.addEventListener("click", closeNewPackageModal);
   els.newPackageScrim.addEventListener("click", closeNewPackageModal);
   els.npGroup.addEventListener("change", refreshPackageDefaults);
@@ -5689,13 +5838,21 @@ From branch : <span id="versionBranch">—</span></p>
   els.npCreateBtn.addEventListener("click", function(){
     if (!state.projectId) return;
     var body = {
-      particle_group_id: Number(els.npGroup.value), name: els.npName.value.trim(), symmetry: els.npSymmetry.value,
+      name: els.npName.value.trim(), symmetry: els.npSymmetry.value,
       molecular_weight_kda: Number(els.npMw.value), largest_dimension_a: Number(els.npSize.value),
       number_of_classes: Number(els.npClasses.value) || 1, box_size: Number(els.npBox.value) || undefined, output_pixel_size: Number(els.npPixel.value) || undefined
     };
-    if (els.npGroup.value === ""){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Pick a particle position group."; return; }
+    if (np.selection){
+      body.selection_ids = [np.selection.selection_id];
+      body.recentre = els.npRecentre.checked;
+      body.remove_duplicates = els.npRecentre.checked && els.npDedup.checked;
+      body.duplicate_threshold_a = Number(els.npDedupThreshold.value) || Number(els.npSize.value) || 150;
+    } else {
+      if (els.npGroup.value === ""){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Pick a particle position group."; return; }
+      body.particle_group_id = Number(els.npGroup.value);
+    }
     els.npCreateBtn.disabled = true; els.npCreateBtn.textContent = "Creating\u2026";
-    els.npNote.classList.remove("blocked"); els.npNote.textContent = "Cutting particles from every image in the group \u2014 this can take a while for a large group.";
+    els.npNote.classList.remove("blocked"); els.npNote.textContent = np.selection ? "Cutting the selected classes\u2019 particles from their images \u2014 this can take a while." : "Cutting particles from every image in the group \u2014 this can take a while for a large group.";
     apiFetch(projectApiUrl("/refinement-packages"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
       .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
       .then(function(res){
@@ -5703,6 +5860,11 @@ From branch : <span id="versionBranch">—</span></p>
         state.selectedPackageId = res.data.refinement_package_asset_id;
         closeNewPackageModal();
         loadPackages();
+        if (np.selection){
+          var made = "Created \u201c" + res.data.name + "\u201d with " + res.data.particles + " particle" + (res.data.particles === 1 ? "" : "s") +
+            (res.data.duplicates_removed ? " (" + res.data.duplicates_removed + " duplicate pick" + (res.data.duplicates_removed === 1 ? "" : "s") + " removed)" : "") + ". It is on the Assets tab under Refinement Packages.";
+          alert(made);
+        }
       })
       .catch(function(err){ els.npNote.classList.add("blocked"); els.npNote.textContent = err.message; })
       .finally(function(){ els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create"; });

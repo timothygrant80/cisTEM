@@ -108,6 +108,74 @@ class StarFileTests(unittest.TestCase):
         self.assertNotIn("theta", rows[0])
 
 
+class SelectionTests(unittest.TestCase):
+    """Selections and the class-average package source against a throwaway
+    project database: cisTEM's selection tables, re-centring by the
+    classification's shifts, and duplicate removal keeping the pick that
+    moved least."""
+
+    def setUp(self):
+        import db
+        import refinement_packages as rp
+        self.db, self.rp = db, rp
+        self.tmp = tempfile.mkdtemp()
+        self._root = db.PROJECTS_ROOT
+        db.PROJECTS_ROOT = __import__("pathlib").Path(self.tmp)
+        self.project = "t-" + os.path.basename(self.tmp)[-6:]
+        (db.PROJECTS_ROOT / self.project).mkdir(parents=True)
+        conn = db.get_conn(self.project)
+        with conn:
+            conn.execute("INSERT INTO REFINEMENT_PACKAGE_ASSETS(REFINEMENT_PACKAGE_ASSET_ID, NAME, STACK_FILENAME, STACK_BOX_SIZE, OUTPUT_PIXEL_SIZE) VALUES (1, 'P', '/nonexistent.mrc', 64, 1.0)")
+            conn.execute("CREATE TABLE REFINEMENT_PACKAGE_CONTAINED_PARTICLES_1(ORIGINAL_PARTICLE_POSITION_ASSET_ID INTEGER PRIMARY KEY, PARENT_IMAGE_ASSET_ID INTEGER, "
+                         "POSITION_IN_STACK INTEGER, X_POSITION REAL, Y_POSITION REAL, PIXEL_SIZE REAL, DEFOCUS_1 REAL, DEFOCUS_2 REAL, DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, "
+                         "SPHERICAL_ABERRATION REAL, MICROSCOPE_VOLTAGE REAL, AMPLITUDE_CONTRAST REAL, ASSIGNED_SUBSET INTEGER)")
+            # three picks on image 7: two of them 5 A apart once re-centred, one far away
+            for pid, pos, x, y in ((10, 1, 100.0, 100.0), (11, 2, 130.0, 100.0), (12, 3, 500.0, 500.0)):
+                conn.execute("INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_1 VALUES (?,7,?,?,?,1.0,1,1,0,0,2.7,300,0.07,1)", (pid, pos, x, y))
+            conn.execute("INSERT INTO IMAGE_ASSETS(IMAGE_ASSET_ID, NAME, FILENAME, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) VALUES (7, 'img', '/nonexistent.mrc', 1.0, 300, 2.7, 0)")
+        cls = {"classification_id": 1, "refinement_package_asset_id": 1, "name": "C", "class_average_file": "/nonexistent.mrc", "number_of_particles": 3,
+               "number_of_classes": 2, "low_resolution_limit": 300, "high_resolution_limit": 8, "mask_radius": 100, "angular_search_step": 15,
+               "search_range_x": 100, "search_range_y": 100, "smoothing_factor": 1, "exclude_blank_edges": True, "auto_percent_used": True, "percent_used": 100}
+        rows = [dict(c.empty_result(1), best_2d_class=1, x_shift=0.0, y_shift=0.0),
+                dict(c.empty_result(2), best_2d_class=1, x_shift=25.0, y_shift=0.0),   # moved a lot, lands 5 A from particle 1
+                dict(c.empty_result(3), best_2d_class=2, x_shift=1.0, y_shift=-1.0)]
+        c.add_classification(conn, cls, rows)
+        conn.close()
+
+    def tearDown(self):
+        self.db.PROJECTS_ROOT = self._root
+        __import__("shutil").rmtree(self.tmp, ignore_errors=True)
+
+    def test_selection_crud_and_members(self):
+        conn = self.db.get_conn(self.project)
+        sid = c.create_selection(conn, 1, "sel", [1])
+        sel = c.get_selection(conn, sid)
+        self.assertEqual((sel["name"], sel["classes"], sel["particle_count"], sel["number_of_classes"]), ("sel", [1], 2, 2))
+        c.set_selection_classes(conn, sid, [1, 2, 99])   # 99 is not a class
+        self.assertEqual(c.get_selection(conn, sid)["classes"], [1, 2])
+        members = c.selection_members(conn, [sid])
+        self.assertEqual([m["position_in_stack"] for m in members], [1, 2, 3])
+        self.assertTrue(c.rename_selection(conn, sid, "renamed"))
+        self.assertTrue(c.delete_selection(conn, sid))
+        self.assertEqual(c.list_selections(conn, 1), [])
+        conn.close()
+
+    def test_class_selection_source_recentres_and_removes_duplicates(self):
+        conn = self.db.get_conn(self.project)
+        sid = c.create_selection(conn, 1, "sel", [1, 2])
+        rows, info = self.rp._particles_of_selections(conn, {"selection_ids": [sid], "recentre": True, "remove_duplicates": True, "duplicate_threshold_a": 20.0})
+        # Particle 2 (moved 25 A) is the duplicate of particle 1 and goes; particle 3 is re-centred.
+        self.assertEqual(info["duplicates_removed"], 1)
+        self.assertEqual(sorted(r["PARTICLE_POSITION_ASSET_ID"] for r in rows), [10, 12])
+        p3 = [r for r in rows if r["PARTICLE_POSITION_ASSET_ID"] == 12][0]
+        self.assertEqual((p3["X_POSITION"], p3["Y_POSITION"]), (499.0, 501.0))
+        # Without re-centring nothing moves and nothing is removed.
+        rows, info = self.rp._particles_of_selections(conn, {"selection_ids": [sid], "recentre": False, "remove_duplicates": True})
+        self.assertEqual((len(rows), info["duplicates_removed"]), (3, 0))
+        self.assertEqual([r["X_POSITION"] for r in rows], [100.0, 130.0, 500.0])
+        conn.close()
+
+
 class StatisticsTests(unittest.TestCase):
     def test_round_statistics(self):
         inputs = [dict(c.empty_result(i), best_2d_class=1) for i in range(1, 5)]

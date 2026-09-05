@@ -17,9 +17,13 @@ ResolutionStatistics::GenerateDefaultStatistics() derives from the
 molecular weight. This module does the same, table for table, so a real
 cisTEM opening the project sees a package it made itself.
 
-Only the "New Refinement Package" path exists here -- packages from 2D
-class-average selections, from templates, and combining or importing
-packages are cisTEM wizards not yet mirrored.
+Two of the wizard's sources exist here: a particle position group (the
+"New Refinement Package" path) and 2D class-average selections
+(classification.py's selection manager) -- the latter re-cuts the members
+of the selected classes out of their parent images at the box size asked
+for, optionally re-centred by the classification's shifts and with
+near-duplicate picks removed, exactly as the wizard's class-selection path
+does. Templates, and combining or importing packages, are not mirrored.
 """
 
 import math
@@ -226,15 +230,132 @@ def group_defaults(conn, group_id, largest_dimension_a=150.0):
             "box_size": default_box_size(largest_dimension_a, pixel_size) if pixel_size else None}
 
 
+def _particles_of_selections(conn, params):
+    """The wizard's class-selection source: the members of the selected
+    classes, looked up in their parent package's contained particles for
+    where they were picked, then given the same row shape
+    _particles_of_group() returns (image, active CTF) so the cutting loop
+    needn't know where they came from. `recentre` moves each pick by the
+    classification's x/y shift (the wizard's Re-centre picks page);
+    `remove_duplicates` then drops picks on the same image closer than
+    `duplicate_threshold_a` to one another, keeping the one that moved least
+    (the wizard's Remove duplicate picks page; threshold defaults to the
+    largest dimension)."""
+    import classification  # noqa: E402 -- classification imports this module
+
+    selection_ids = params.get("selection_ids") or []
+    if not selection_ids:
+        raise ValueError("selection_ids is required")
+    members = classification.selection_members(conn, selection_ids)
+    if not members:
+        raise ValueError("the selected classes hold no particles")
+    recentre = bool(params.get("recentre", True))
+    remove_duplicates = recentre and bool(params.get("remove_duplicates", True))
+    threshold = float(params.get("duplicate_threshold_a") or params.get("largest_dimension_a") or 150.0)
+
+    contained_cache = {}
+    picks = []
+    seen = set()
+    for m in members:
+        # The same particle in two selections (or two selected classes of
+        # different classifications) is one particle.
+        key = (int(m["package_id"]), int(m["position_in_stack"]))
+        if key in seen:
+            continue
+        seen.add(key)
+        pid = int(m["package_id"])
+        if pid not in contained_cache:
+            table = "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(pid)
+            contained_cache[pid] = {r["POSITION_IN_STACK"]: r for r in conn.execute("SELECT * FROM {}".format(table)).fetchall()} \
+                if _table_exists(conn, table) else {}
+        c = contained_cache[pid].get(m["position_in_stack"])
+        if c is None or c["PARENT_IMAGE_ASSET_ID"] is None or c["PARENT_IMAGE_ASSET_ID"] < 0:
+            continue  # no parent image to cut from (an imported stack) -- not supported here
+        x, y = float(c["X_POSITION"]), float(c["Y_POSITION"])
+        shift2 = 0.0
+        if recentre:
+            x -= float(m["x_shift"]); y -= float(m["y_shift"])
+            shift2 = float(m["x_shift"]) ** 2 + float(m["y_shift"]) ** 2
+        picks.append({"position_id": c["ORIGINAL_PARTICLE_POSITION_ASSET_ID"], "image_id": c["PARENT_IMAGE_ASSET_ID"], "x": x, "y": y, "shift2": shift2})
+
+    removed = 0
+    if remove_duplicates and picks:
+        t2 = threshold ** 2
+        by_image = {}
+        for p in picks:
+            by_image.setdefault(p["image_id"], []).append(p)
+        kept = []
+        for image_picks in by_image.values():
+            i = 0
+            while i < len(image_picks):
+                j = i + 1
+                restart = False
+                while j < len(image_picks):
+                    a, b = image_picks[i], image_picks[j]
+                    if (a["x"] - b["x"]) ** 2 + (a["y"] - b["y"]) ** 2 < t2:
+                        # Too close: keep whichever moved least, the likelier original pick.
+                        if a["shift2"] < b["shift2"]:
+                            del image_picks[j]; removed += 1; continue
+                        del image_picks[i]; removed += 1; restart = True; break
+                    j += 1
+                if not restart:
+                    i += 1
+            kept.extend(image_picks)
+        picks = kept
+
+    image_ids = sorted({p["image_id"] for p in picks})
+    images = {}
+    for iid in image_ids:
+        images[iid] = conn.execute(
+            "SELECT ia.IMAGE_ASSET_ID, ia.FILENAME, ia.PIXEL_SIZE, ia.VOLTAGE, ia.SPHERICAL_ABERRATION, ia.PROTEIN_IS_WHITE, "
+            "ce.DEFOCUS1, ce.DEFOCUS2, ce.DEFOCUS_ANGLE, ce.ADDITIONAL_PHASE_SHIFT, ce.AMPLITUDE_CONTRAST, ce.TILT_ANGLE, ce.TILT_AXIS "
+            "FROM IMAGE_ASSETS ia LEFT JOIN ESTIMATED_CTF_PARAMETERS ce ON ce.CTF_ESTIMATION_ID = ia.CTF_ESTIMATION_ID "
+            "WHERE ia.IMAGE_ASSET_ID = ?", (iid,)).fetchone()
+    picks.sort(key=lambda p: (p["image_id"], p["position_id"] if p["position_id"] is not None else 0))
+    rows = []
+    for p in picks:
+        img = images.get(p["image_id"])
+        if img is None:
+            continue
+        rows.append({"PARTICLE_POSITION_ASSET_ID": p["position_id"], "PARENT_IMAGE_ASSET_ID": p["image_id"], "X_POSITION": p["x"], "Y_POSITION": p["y"],
+                     "FILENAME": img["FILENAME"], "PIXEL_SIZE": img["PIXEL_SIZE"], "VOLTAGE": img["VOLTAGE"], "SPHERICAL_ABERRATION": img["SPHERICAL_ABERRATION"],
+                     "PROTEIN_IS_WHITE": img["PROTEIN_IS_WHITE"], "DEFOCUS1": img["DEFOCUS1"], "DEFOCUS2": img["DEFOCUS2"], "DEFOCUS_ANGLE": img["DEFOCUS_ANGLE"],
+                     "ADDITIONAL_PHASE_SHIFT": img["ADDITIONAL_PHASE_SHIFT"], "AMPLITUDE_CONTRAST": img["AMPLITUDE_CONTRAST"],
+                     "TILT_ANGLE": img["TILT_ANGLE"], "TILT_AXIS": img["TILT_AXIS"]})
+    return rows, {"members": len(members), "duplicates_removed": removed, "recentred": recentre}
+
+
+def selection_defaults(conn, selection_ids):
+    """What the wizard prefills for a class-selection package: the parent
+    package's box size and pixel size (BoxSizeWizardPage takes the parent's
+    box), and how many particles the selections hold."""
+    import classification  # noqa: E402
+
+    members = classification.selection_members(conn, selection_ids)
+    pkg_ids = sorted({m["package_id"] for m in members})
+    pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (pkg_ids[0],)).fetchone() if pkg_ids else None
+    return {"particle_count": len(members),
+            "box_size": pkg["STACK_BOX_SIZE"] if pkg else None,
+            "pixel_size": pkg["OUTPUT_PIXEL_SIZE"] if pkg else None,
+            "parent_package_ids": pkg_ids}
+
+
 def create_package(conn, project_id, params, log=None):
     """MyNewRefinementPackageWizard::OnFinished() for a new package from a
-    particle position group. Returns the new package's id and particle count."""
-    group_id = params.get("particle_group_id")
-    if group_id is None:
-        raise ValueError("particle_group_id is required")
-    particles = _particles_of_group(conn, group_id)
-    if not particles:
-        raise ValueError("the particle position group is empty")
+    particle position group (`particle_group_id`) or from 2D class-average
+    selections (`selection_ids`). Returns the new package's id and particle count."""
+    source = {}
+    if params.get("selection_ids"):
+        particles, source = _particles_of_selections(conn, params)
+        if not particles:
+            raise ValueError("the selected classes hold no particles that can be cut from an image")
+    else:
+        group_id = params.get("particle_group_id")
+        if group_id is None:
+            raise ValueError("particle_group_id or selection_ids is required")
+        particles = _particles_of_group(conn, group_id)
+        if not particles:
+            raise ValueError("the particle position group is empty")
     missing_ctf = sorted({p["PARENT_IMAGE_ASSET_ID"] for p in particles if p["DEFOCUS1"] is None})
     if missing_ctf:
         raise ValueError("image{} {} {} no CTF estimate; run Find CTF first".format(
@@ -363,8 +484,8 @@ def create_package(conn, project_id, params, log=None):
             conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_RESOLUTION_STATISTICS_{}_{}(SHELL INTEGER PRIMARY KEY, RESOLUTION REAL, FSC REAL, PART_FSC REAL, "
                          "PART_SSNR REAL, REC_SSNR REAL)".format(refinement_id, k))
             conn.executemany("INSERT INTO REFINEMENT_RESOLUTION_STATISTICS_{}_{} VALUES (?,?,?,?,?,?)".format(refinement_id, k), stats)
-    return {"refinement_package_asset_id": package_id, "name": name, "particles": len(contained), "stack_filename": stack_path,
-            "box_size": box_size, "output_pixel_size": output_pixel_size, "refinement_id": refinement_id}
+    return dict(source, refinement_package_asset_id=package_id, name=name, particles=len(contained), stack_filename=stack_path,
+                box_size=box_size, output_pixel_size=output_pixel_size, refinement_id=refinement_id)
 
 
 def list_packages(conn):
@@ -411,6 +532,10 @@ def delete_package(conn, package_id, remove_stack=True):
                     conn.execute("DROP TABLE IF EXISTS {}_{}_{}".format(prefix, r["REFINEMENT_ID"], k))
             conn.execute("DROP TABLE IF EXISTS REFINEMENT_DETAILS_{}".format(r["REFINEMENT_ID"]))
         conn.execute("DELETE FROM REFINEMENT_LIST WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (package_id,))
+        # cisTEM's Delete also drops the class selections made on this package's classifications.
+        for (sid,) in conn.execute("SELECT SELECTION_ID FROM CLASSIFICATION_SELECTION_LIST WHERE REFINEMENT_PACKAGE_ID=?", (package_id,)).fetchall():
+            conn.execute("DROP TABLE IF EXISTS CLASSIFICATION_SELECTION_{}".format(sid))
+        conn.execute("DELETE FROM CLASSIFICATION_SELECTION_LIST WHERE REFINEMENT_PACKAGE_ID=?", (package_id,))
         for prefix in ("REFINEMENT_PACKAGE_CONTAINED_PARTICLES", "REFINEMENT_PACKAGE_CURRENT_REFERENCES",
                        "REFINEMENT_PACKAGE_REFINEMENTS_LIST", "REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST"):
             conn.execute("DROP TABLE IF EXISTS {}_{}".format(prefix, package_id))

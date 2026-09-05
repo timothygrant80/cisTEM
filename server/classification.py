@@ -441,6 +441,9 @@ def delete_classification(conn, classification_id, remove_file=True):
         return False
     with conn:
         conn.execute("DROP TABLE IF EXISTS {}".format(results_table(cid)))
+        for (sid,) in conn.execute("SELECT SELECTION_ID FROM CLASSIFICATION_SELECTION_LIST WHERE CLASSIFICATION_ID=?", (cid,)).fetchall():
+            conn.execute("DROP TABLE IF EXISTS {}".format(selection_table(sid)))
+        conn.execute("DELETE FROM CLASSIFICATION_SELECTION_LIST WHERE CLASSIFICATION_ID=?", (cid,))
         list_table = "REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_{}".format(row["REFINEMENT_PACKAGE_ASSET_ID"])
         if _table_exists(conn, list_table):
             conn.execute("DELETE FROM {} WHERE CLASSIFICATION_ID=?".format(list_table), (cid,))
@@ -517,6 +520,124 @@ def class_members(conn, classification_id, class_number, limit=None):
     rows = [{"position_in_stack": r[0], "active": r[1] > 0, "logp": r[2], "sigma": r[3], "psi": r[4], "x_shift": r[5], "y_shift": r[6]}
             for r in conn.execute(sql, (k,)).fetchall()]
     return rows, total
+
+
+# ---------------------------------------------------------------------------
+# Class selections (Refine2DResultsPanel's selection manager +
+# Database::AddClassificationSelection): a named set of class averages of
+# one classification, the raw material of a refinement package built from
+# class averages.
+# ---------------------------------------------------------------------------
+
+def selection_table(selection_id):
+    return "CLASSIFICATION_SELECTION_{}".format(int(selection_id))
+
+
+def _selection_json(conn, row):
+    d = {k.lower(): row[k] for k in row.keys()}
+    d["name"] = row["SELECTION_NAME"]
+    table = selection_table(row["SELECTION_ID"])
+    d["classes"] = sorted(r[0] for r in conn.execute("SELECT CLASS_AVERAGE_NUMBER FROM {}".format(table)).fetchall()) if _table_exists(conn, table) else []
+    d["particle_count"] = selection_particle_count(conn, row["CLASSIFICATION_ID"], d["classes"])
+    return d
+
+
+def selection_particle_count(conn, classification_id, classes):
+    table = results_table(classification_id)
+    if not classes or not _table_exists(conn, table):
+        return 0
+    return conn.execute("SELECT COUNT(*) FROM {} WHERE BEST_CLASS IN ({})".format(table, ",".join("?" * len(classes))),
+                        [int(k) for k in classes]).fetchone()[0]
+
+
+def list_selections(conn, classification_id=None, package_id=None):
+    sql = "SELECT * FROM CLASSIFICATION_SELECTION_LIST"
+    args, where = [], []
+    if classification_id is not None:
+        where.append("CLASSIFICATION_ID = ?"); args.append(int(classification_id))
+    if package_id is not None:
+        where.append("REFINEMENT_PACKAGE_ID = ?"); args.append(int(package_id))
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY SELECTION_ID"
+    return [_selection_json(conn, r) for r in conn.execute(sql, args).fetchall()]
+
+
+def get_selection(conn, selection_id):
+    row = conn.execute("SELECT * FROM CLASSIFICATION_SELECTION_LIST WHERE SELECTION_ID=?", (int(selection_id),)).fetchone()
+    return _selection_json(conn, row) if row is not None else None
+
+
+def create_selection(conn, classification_id, name=None, classes=()):
+    """OnAddButtonClick(): a "New Selection" on this classification."""
+    cls = conn.execute("SELECT * FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=?", (int(classification_id),)).fetchone()
+    if cls is None:
+        raise ValueError("classification {} does not exist".format(classification_id))
+    with conn:
+        sid = conn.execute("SELECT COALESCE(MAX(SELECTION_ID), 0) + 1 FROM CLASSIFICATION_SELECTION_LIST").fetchone()[0]
+        conn.execute("INSERT INTO CLASSIFICATION_SELECTION_LIST VALUES (?,?,?,?,?,?,?)",
+                     (sid, (name or "").strip() or "New Selection", db.now_epoch(), cls["REFINEMENT_PACKAGE_ASSET_ID"],
+                      cls["CLASSIFICATION_ID"], cls["NUMBER_OF_CLASSES"], 0))
+        conn.execute("CREATE TABLE IF NOT EXISTS {}(CLASS_AVERAGE_NUMBER INTEGER PRIMARY KEY)".format(selection_table(sid)))
+    if classes:
+        set_selection_classes(conn, sid, classes)
+    return sid
+
+
+def set_selection_classes(conn, selection_id, classes):
+    """The whole membership at once -- a click toggles one class, Clear
+    empties it, Invert complements it; the page sends the result."""
+    row = conn.execute("SELECT * FROM CLASSIFICATION_SELECTION_LIST WHERE SELECTION_ID=?", (int(selection_id),)).fetchone()
+    if row is None:
+        raise ValueError("selection {} does not exist".format(selection_id))
+    n = int(row["NUMBER_OF_CLASSES"] or 0)
+    wanted = sorted({int(k) for k in classes if 1 <= int(k) <= n})
+    table = selection_table(selection_id)
+    with conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS {}(CLASS_AVERAGE_NUMBER INTEGER PRIMARY KEY)".format(table))
+        conn.execute("DELETE FROM {}".format(table))
+        conn.executemany("INSERT INTO {} VALUES (?)".format(table), [(k,) for k in wanted])
+        conn.execute("UPDATE CLASSIFICATION_SELECTION_LIST SET NUMBER_OF_SELECTIONS=? WHERE SELECTION_ID=?", (len(wanted), int(selection_id)))
+    return wanted
+
+
+def rename_selection(conn, selection_id, name):
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("a name is required")
+    with conn:
+        cur = conn.execute("UPDATE CLASSIFICATION_SELECTION_LIST SET SELECTION_NAME=? WHERE SELECTION_ID=?", (name, int(selection_id)))
+    return cur.rowcount > 0
+
+
+def delete_selection(conn, selection_id):
+    with conn:
+        cur = conn.execute("DELETE FROM CLASSIFICATION_SELECTION_LIST WHERE SELECTION_ID=?", (int(selection_id),))
+        conn.execute("DROP TABLE IF EXISTS {}".format(selection_table(selection_id)))
+    return cur.rowcount > 0
+
+
+def selection_members(conn, selection_ids):
+    """For the refinement package wizard: every particle in the selected
+    classes of each selection -- (parent package id, position in stack,
+    x/y shift of that classification) -- in cisTEM's order (selection by
+    selection, class by class, stack order within a class). A particle whose
+    best class is negative sat that round out and is not a member (cisTEM's
+    Return2DClassMembers matches BEST_CLASS exactly)."""
+    out = []
+    for sid in selection_ids:
+        sel = get_selection(conn, sid)
+        if sel is None:
+            raise ValueError("selection {} does not exist".format(sid))
+        table = results_table(sel["classification_id"])
+        if not sel["classes"] or not _table_exists(conn, table):
+            continue
+        rows = conn.execute("SELECT POSITION_IN_STACK, XSHIFT, YSHIFT, BEST_CLASS FROM {} WHERE BEST_CLASS IN ({}) ORDER BY BEST_CLASS, POSITION_IN_STACK".format(
+            table, ",".join("?" * len(sel["classes"]))), sel["classes"]).fetchall()
+        for r in rows:
+            out.append({"package_id": sel["refinement_package_id"], "classification_id": sel["classification_id"], "selection_id": sel["selection_id"],
+                        "position_in_stack": r[0], "x_shift": r[1] or 0.0, "y_shift": r[2] or 0.0, "best_class": r[3]})
+    return out
 
 
 # ---------------------------------------------------------------------------

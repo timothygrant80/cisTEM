@@ -1981,10 +1981,19 @@ def refinement_package_defaults(project_id):
     dimension (`?particle_group_id=&largest_dimension_a=`)."""
     group_id = request.args.get("particle_group_id", type=int)
     largest = request.args.get("largest_dimension_a", type=float) or 150.0
-    if group_id is None:
-        return jsonify({"error": "particle_group_id is required"}), 400
+    selection_ids = [int(x) for x in request.args.get("selection_ids", "").split(",") if x.strip().isdigit()]
+    if group_id is None and not selection_ids:
+        return jsonify({"error": "particle_group_id or selection_ids is required"}), 400
     conn = db.get_conn(project_id)
-    out = refinement_packages.group_defaults(conn, group_id, largest)
+    if selection_ids:
+        # From class averages: the parent package's box and pixel size (BoxSizeWizardPage).
+        try:
+            out = refinement_packages.selection_defaults(conn, selection_ids)
+        except ValueError as exc:
+            conn.close()
+            return jsonify({"error": str(exc)}), 400
+    else:
+        out = refinement_packages.group_defaults(conn, group_id, largest)
     out["next_name"] = "Refinement Package #{}".format(
         conn.execute("SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) + 1 FROM REFINEMENT_PACKAGE_ASSETS").fetchone()[0])
     out["symmetries"] = list(refinement_packages.SYMMETRIES)
@@ -2192,6 +2201,71 @@ def classification_class_members_png(project_id, classification_id, class_number
 
 
 CLASS_MEMBER_LIMIT = 100
+
+
+# ---- class selections (Refine2DResultsPanel's selection manager) ----
+
+@app.route("/api/projects/<project_id>/classification-selections", methods=["GET"])
+@auth.project_access_required
+def list_classification_selections(project_id):
+    """Selections, all or one classification's (`?classification_id=`) or one
+    package's (`?refinement_package_id=`), each with its class numbers and
+    how many particles those classes hold."""
+    conn = db.get_conn(project_id)
+    out = classification.list_selections(conn, request.args.get("classification_id", type=int),
+                                         request.args.get("refinement_package_id", type=int))
+    conn.close()
+    return jsonify({"selections": out})
+
+
+@app.route("/api/projects/<project_id>/classification-selections", methods=["POST"])
+@auth.project_access_required
+def create_classification_selection(project_id):
+    body = request.get_json(force=True, silent=True) or {}
+    if body.get("classification_id") is None:
+        return jsonify({"error": "classification_id is required"}), 400
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            sid = classification.create_selection(conn, body["classification_id"], body.get("name"), body.get("classes") or [])
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify(classification.get_selection(conn, sid)), 201
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/classification-selections/<int:selection_id>", methods=["PATCH"])
+@auth.project_access_required
+def update_classification_selection(project_id, selection_id):
+    """`{name}` renames; `{classes: [...]}` replaces the membership (a click
+    toggles one class, Clear sends [], Invert sends the complement)."""
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        if classification.get_selection(conn, selection_id) is None:
+            return jsonify({"error": "no such selection"}), 404
+        try:
+            if "name" in body:
+                classification.rename_selection(conn, selection_id, body["name"])
+            if "classes" in body:
+                classification.set_selection_classes(conn, selection_id, body["classes"] or [])
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify(classification.get_selection(conn, selection_id))
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/classification-selections/<int:selection_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_classification_selection(project_id, selection_id):
+    conn = db.get_conn(project_id)
+    ok = classification.delete_selection(conn, selection_id)
+    conn.close()
+    if not ok:
+        return jsonify({"error": "no such selection"}), 404
+    return jsonify({"deleted": selection_id})
 
 
 # ---------------------------------------------------------------------------

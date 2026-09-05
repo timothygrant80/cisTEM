@@ -117,14 +117,16 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET`/`POST`/`PATCH`/`DELETE` | `/projects/:id/particle-position-groups[/:gid]`, `.../invert`, `.../remove-particle-positions`, `/particle-positions/delete`, `/particle-positions/add-to-group` | The same group routes movies and images have |
 | `POST` | `/projects/:id/particle-positions/import` | Body `{text}` or `{path}`: lines of `<image id or filename> <x> <y>` in Å → `{imported, failed, warnings}` |
 | `POST` | `/projects/:id/particle-position-groups/from-image-group` | A position group holding the positions of every image in an image group |
-| `GET`/`POST` | `/projects/:id/refinement-packages` | List packages / create one from a particle position group (cuts the stack, writes the package and its "Random Parameters" refinement) |
-| `GET` | `/projects/:id/refinement-packages/defaults` | The wizard's prefills for a group (`?particle_group_id=&largest_dimension_a=`) |
+| `GET`/`POST` | `/projects/:id/refinement-packages` | List packages / create one from a particle position group (`particle_group_id`) or from class selections (`selection_ids`, `recentre`, `remove_duplicates`, `duplicate_threshold_a`) — cuts the stack, writes the package and its "Random Parameters" refinement |
+| `GET` | `/projects/:id/refinement-packages/defaults` | The wizard's prefills for a group (`?particle_group_id=&largest_dimension_a=`) or for class selections (`?selection_ids=1,2` → the parent package's box and pixel size, particle count) |
 | `GET`/`PATCH`/`DELETE` | `/projects/:id/refinement-packages/:pid` | Details with contained particles / rename / delete (tables and stack file) |
 | `GET` | `/projects/:id/classifications` | Every 2D classification (`?refinement_package_id=` for one package's) with its package name, job number and whether its class averages file exists |
 | `GET` | `/projects/:id/class2d/defaults` | `MyRefine2DPanel::SetDefaults()` for a package (`?refinement_package_id=`): the class-count default and the earlier classifications the starting-references picker offers |
 | `GET`/`DELETE` | `/projects/:id/classifications/:cid` | One classification with per-class member counts and the montage geometry / delete it (results table and class averages file) |
 | `GET` | `/projects/:id/classifications/:cid/averages.png` | The class averages tiled into one PNG |
 | `GET` | `/projects/:id/classifications/:cid/class/:k` | The members of class k (`?limit=`, active ones first); `.../class/:k/members.png` tiles them from the particle stack |
+| `GET`/`POST` | `/projects/:id/classification-selections` | Named selections of class averages (`?classification_id=` / `?refinement_package_id=`), each with `classes` and `particle_count` / create one `{classification_id, name, classes}` |
+| `PATCH`/`DELETE` | `/projects/:id/classification-selections/:sid` | `{name}` renames, `{classes: [...]}` replaces the membership / delete |
 | `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |
 | `GET` | `/projects/:id/picks/:pid` | One picking plus `positions` (Å from the image origin) |
 | `POST` | `/projects/:id/picks/:pid/activate` | Make these picks the image's particle positions |

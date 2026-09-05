@@ -105,7 +105,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/image-groups/:gid/invert` | Invert a group against All Images (self-reversing; `400` for All Images) |
 | `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command, controller_address, run_commands: [...], total_jobs}, ...] }` — fills the Run Profile picker; `total_jobs == 0` greys the start button |
 | `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
-| `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below) |
+| `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below). `400` if `params.run_profile` names a profile with no run commands |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
 | `POST` | `/projects/:id/jobs/:id/cancel` | Best-effort cancel → returns the updated `Job` |
 
@@ -135,6 +135,32 @@ Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `pa
 `number` is per-project and assigned on creation (`MAX(JOB_NUMBER) + 1`), and `name` is just `Job <number>` — the submit form asks for neither, the same way cisTEM doesn't. Output paths are the server's too: a completed Align Movies job writes its aligned sums to `<project dir>/Assets/Images/<movie>_aligned.mrc`, mirroring cisTEM's own project layout, so no job parameter names a directory.
 
 Point the page at any server that implements this contract — the reference Flask app is one option, not a requirement. A different backend just needs to keep the same project/job bookkeeping shape around it.
+
+## Running real jobs
+
+Stages with an adapter in `server/stages/` (today: Align Movies → `unblur`) run for real through the **job runner** when a controller executable can be found; everything else, and everything when it can't, runs in simulation exactly as before. The runner is the server's half of the protocol in `docs/job-protocol.md`: it listens for a per-job `cistem_job_controller` process, which the run profile's manager command launches and which in turn launches the cisTEM workers.
+
+Settings, all environment variables:
+
+| variable | default | meaning |
+|---|---|---|
+| `CISTEM_JOB_CONTROLLER` | `cistem_job_controller` | the controller command; the first word must be on `PATH` or the server falls back to simulation |
+| `JOB_RUNNER_PORT` | `8010` | port the runner listens on for controllers |
+| `JOB_RUNNER_BIND` | `0.0.0.0` | bind address |
+| `JOB_RUNNER_HOSTS` | this machine's addresses, loopback last | comma-separated addresses the controller is told to dial, for NAT or multi-homed hosts |
+| `JOB_RUNNER_ENABLED` | `1` | `0` never starts the listener |
+
+To exercise the whole server side without a cisTEM build, point the controller setting at the Python stand-in, which speaks the protocol and fakes the workers:
+
+```bash
+CISTEM_JOB_CONTROLLER="python3 $PWD/tools/fake_controller.py" python server/cistem_server.py
+```
+
+The controller itself is `cistem_job_controller`, built from the cisTEM tree (`src/programs/cistem_job_controller/`, wired into both the autotools and CMake builds) — point `CISTEM_JOB_CONTROLLER` at it, and make sure the worker executables (`unblur`, …) are on the `PATH` of the server process, which the controller and its workers inherit. Each job's controller output (including the workers' stdout, since they inherit it) lands in `<project dir>/Logs/<job id>_controller.log`; per-task results are recorded in `JOB_TASKS` as they arrive and turned into `MOVIE_ALIGNMENT_LIST` rows, per-frame `MOVIE_ALIGNMENT_PARAMETERS_<id>` tables and image assets when the job finishes. A job that was running when the server stopped is **not** failed on restart any more: its controller reconnects within the reconnect window (10 minutes) and carries on.
+
+Run profiles now carry their commands (`RUN_PROFILE_COMMANDS_<id>`, cisTEM's own tables), seeded like cisTEM's defaults; the seeded Slurm profile has none and is refused at submit until it is edited (there is no editor yet — use `sqlite3` on the project file).
+
+Tests: `python -m unittest discover -s server/tests` — codec tests plus runner integration tests that launch the fake controller for real.
 
 ## Security
 

@@ -176,7 +176,20 @@ CREATE TABLE IF NOT EXISTS JOBS(
   STATUS TEXT NOT NULL DEFAULT 'queued', PROGRESS INTEGER NOT NULL DEFAULT 0,
   CREATED_AT TEXT, STARTED_AT TEXT, FINISHED_AT TEXT, ERROR TEXT, METRICS_JSON TEXT,
   CANCEL_REQUESTED INTEGER NOT NULL DEFAULT 0,
-  MOVIE_GROUP_ID INTEGER
+  MOVIE_GROUP_ID INTEGER,
+  JOB_TOKEN TEXT, CONTROLLER_SEQ INTEGER, TASKS_JSON TEXT
+);
+
+-- One row per unit of work the controller reported back (job_protocol
+-- task_done), written as it arrives. This is the durable copy of what cisTEM
+-- keeps in buffered_results[] until ProcessAllJobsFinished(): the stage
+-- adapter turns these into MOVIE_ALIGNMENT_LIST etc. when the job finishes,
+-- and after a server restart the runner rebuilds its done-set from here so a
+-- resend of an already-recorded task is recognised as a duplicate.
+CREATE TABLE IF NOT EXISTS JOB_TASKS(
+  JOB_ID TEXT NOT NULL, TASK_INDEX INTEGER NOT NULL, REF TEXT,
+  STATUS TEXT NOT NULL, CPU_MS INTEGER, ERROR TEXT, RESULT_JSON TEXT, FINISHED_AT TEXT,
+  PRIMARY KEY(JOB_ID, TASK_INDEX)
 );
 
 CREATE TABLE IF NOT EXISTS JOB_LOG_LINES(
@@ -249,6 +262,13 @@ _ALTER_STATEMENTS = [
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USER_ID INTEGER",
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USERNAME TEXT",
     "ALTER TABLE JOBS ADD COLUMN JOB_NUMBER INTEGER",
+    # The job protocol's per-job state, so a controller can reconnect to a
+    # restarted server (docs/job-protocol.md section 7.2): the token it must
+    # present, the highest seq of its we processed, and the task list we sent
+    # it -- kept verbatim so restore() needs nothing but this row.
+    "ALTER TABLE JOBS ADD COLUMN JOB_TOKEN TEXT",
+    "ALTER TABLE JOBS ADD COLUMN CONTROLLER_SEQ INTEGER",
+    "ALTER TABLE JOBS ADD COLUMN TASKS_JSON TEXT",
 ]
 
 # Rows every project must have, seeded here rather than in create_project()

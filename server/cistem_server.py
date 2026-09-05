@@ -32,6 +32,8 @@ HTTPS enforcement (see README.md's Security section for what that implies).
 
 import glob as glob_module
 import json
+import os
+import shlex
 import shutil
 import subprocess
 import threading
@@ -45,6 +47,8 @@ from flask_cors import CORS
 
 import auth
 import db
+import job_runner
+import stages
 import imageheaders
 import preview
 
@@ -75,6 +79,185 @@ def _git(args):
 # the actual OS process and to avoid a DB round trip on every progress check.
 _live_lock = threading.Lock()
 _live = {}  # job_id -> {"proc": Popen|None, "cancel_requested": bool}
+
+
+# ---------------------------------------------------------------------------
+# Real execution: the job runner (docs/job-protocol.md)
+#
+# One JobRunner per server process listens for cistem_job_controller
+# connections. A stage runs for real when it has an adapter in stages/ and
+# the controller executable can be found; otherwise it falls back to the
+# simulation below, exactly as before -- so a checkout with no cisTEM build
+# still demos end to end. All settings come from the environment:
+#
+#   CISTEM_JOB_CONTROLLER  controller command, default "cistem_job_controller"
+#                          (e.g. "python3 tools/fake_controller.py" to test
+#                          the server side without any C++)
+#   JOB_RUNNER_PORT        listening port, default 8010
+#   JOB_RUNNER_BIND        bind address, default 0.0.0.0
+#   JOB_RUNNER_HOSTS       comma-separated addresses the controller is told
+#                          to dial; default: this machine's, loopback last
+#   JOB_RUNNER_ENABLED     set to 0 to never start the listener
+# ---------------------------------------------------------------------------
+
+CONTROLLER_COMMAND = os.environ.get("CISTEM_JOB_CONTROLLER", "cistem_job_controller")
+_job_runner = None
+
+
+def _controller_available():
+    """True if the first word of CONTROLLER_COMMAND resolves on PATH or is an
+    existing file -- the same test the simulation fallback makes for stage
+    binaries."""
+    try:
+        first = shlex.split(CONTROLLER_COMMAND)[0]
+    except (ValueError, IndexError):
+        return False
+    return shutil.which(first) is not None or os.path.isfile(first)
+
+
+class DbSink(job_runner.Sink):
+    """Where the runner's callbacks land: the project database. The runner
+    only knows job ids, so this keeps the job -> project map (registered by
+    create_job / _recover_interrupted_jobs) and forgets an entry once the
+    job reaches a terminal status."""
+
+    def __init__(self):
+        self._projects = {}
+        self._lock = threading.Lock()
+
+    def register(self, job_id, project_id):
+        with self._lock:
+            self._projects[job_id] = project_id
+
+    def _project(self, job_id):
+        with self._lock:
+            return self._projects.get(job_id)
+
+    def _forget(self, job_id):
+        with self._lock:
+            self._projects.pop(job_id, None)
+
+    def on_status(self, job_id, status, error=None):
+        project_id = self._project(job_id)
+        if project_id is None:
+            return
+        if status == job_runner.LAUNCHING:
+            _update_job(project_id, job_id, STATUS="queued")
+        elif status == job_runner.RUNNING:
+            row = _fetch_job_row(project_id, job_id)
+            fields = {"STATUS": "running"}
+            if row is not None and not row["STARTED_AT"]:
+                fields["STARTED_AT"] = now_iso()
+            _update_job(project_id, job_id, **fields)
+        elif status == job_runner.AWAITING_RECONNECT:
+            pass  # still running as far as the API is concerned; the log says why
+        else:
+            fields = {"STATUS": status, "FINISHED_AT": now_iso()}
+            if error:
+                fields["ERROR"] = error
+            if status == job_runner.COMPLETED:
+                fields["PROGRESS"] = 100
+            _update_job(project_id, job_id, **fields)
+            append_log(project_id, job_id, "[{}] job {}{}".format(now_iso(), status, ": " + error if error else ""))
+            self._forget(job_id)
+
+    def on_log(self, job_id, text, level="info"):
+        project_id = self._project(job_id)
+        if project_id is None:
+            return
+        append_log(project_id, job_id, "[{}] {}{}".format(now_iso(), "ERROR: " if level == "error" else "", text))
+
+    def on_workers(self, job_id, connected, expected):
+        self.on_log(job_id, "{} / {} processes connected".format(connected, expected))
+
+    def on_task_done(self, job_id, task, ref, status, result, error, cpu_ms, done_count, task_count):
+        project_id = self._project(job_id)
+        if project_id is None:
+            return
+        conn = db.get_conn(project_id)
+        with conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO JOB_TASKS(JOB_ID, TASK_INDEX, REF, STATUS, CPU_MS, ERROR, RESULT_JSON, "
+                "FINISHED_AT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (job_id, task, None if ref is None else str(ref), status, cpu_ms, error,
+                 json.dumps(result) if result is not None else None, now_iso()),
+            )
+            conn.execute("UPDATE JOBS SET PROGRESS=? WHERE JOB_ID=?",
+                         (int(done_count * 100 / task_count) if task_count else 0, job_id))
+        conn.close()
+        if status == "failed":
+            self.on_log(job_id, "task {} failed: {}".format(task, error), level="error")
+
+    def on_job_done(self, job_id, status, cpu_ms, tasks_ok, tasks_failed, error=None):
+        project_id = self._project(job_id)
+        if project_id is None:
+            return
+        self.on_log(job_id, "controller reports {}: {} ok, {} failed, {:.1f} CPU-hours".format(
+            status, tasks_ok, tasks_failed, cpu_ms / 3600000.0))
+        metrics = {"cpu_ms": cpu_ms, "tasks_ok": tasks_ok, "tasks_failed": tasks_failed}
+        conn = db.get_conn(project_id)
+        row = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (job_id,)).fetchone()
+        adapter = stages.ADAPTERS.get(row["STAGE"]) if row is not None else None
+        if adapter is not None and tasks_ok:
+            job = _row_to_job(row)
+            sent_tasks = json.loads(row["TASKS_JSON"]) if row["TASKS_JSON"] else []
+            task_rows = conn.execute("SELECT * FROM JOB_TASKS WHERE JOB_ID=? ORDER BY TASK_INDEX", (job_id,)).fetchall()
+            # The adapter logs on *this* connection: it holds the write
+            # transaction, and a second connection would block on it.
+            def log_here(text, level="info"):
+                append_log(project_id, job_id, "[{}] {}{}".format(
+                    now_iso(), "ERROR: " if level == "error" else "", text), conn=conn)
+
+            try:
+                summary = adapter.finalize(conn, project_id, job, sent_tasks, task_rows, log_here)
+                metrics.update(summary)
+                self.on_log(job_id, "wrote {} alignment{} to the project database".format(
+                    summary.get("alignments_written", 0), "" if summary.get("alignments_written") == 1 else "s"))
+            except Exception as exc:  # noqa: BLE001
+                self.on_log(job_id, "could not write results to the project database: {}".format(exc), level="error")
+        # cisTEM adds the controller's timing to the project's CPU-hours total.
+        with conn:
+            conn.execute("UPDATE MASTER_SETTINGS SET TOTAL_CPU_HOURS = COALESCE(TOTAL_CPU_HOURS, 0) + ?, "
+                         "TOTAL_JOBS_RUN = COALESCE(TOTAL_JOBS_RUN, 0) + 1 WHERE NUMBER=1", (cpu_ms / 3600000.0,))
+            conn.execute("UPDATE JOBS SET METRICS_JSON=? WHERE JOB_ID=?", (json.dumps(metrics), job_id))
+        conn.close()
+
+    def on_controller_seq(self, job_id, seq):
+        project_id = self._project(job_id)
+        if project_id is not None:
+            _update_job(project_id, job_id, CONTROLLER_SEQ=seq)
+
+
+_db_sink = DbSink()
+
+
+def start_job_runner():
+    """Start the listener unless disabled. A bind failure (port taken --
+    e.g. a second server on the same machine) is logged and leaves the
+    server running in simulation-only mode rather than refusing to start."""
+    global _job_runner
+    if os.environ.get("JOB_RUNNER_ENABLED", "1") in ("0", "false", "no"):
+        print("job runner disabled (JOB_RUNNER_ENABLED=0); jobs will be simulated")
+        return None
+    hosts = os.environ.get("JOB_RUNNER_HOSTS")
+    runner = job_runner.JobRunner(
+        _db_sink,
+        bind_host=os.environ.get("JOB_RUNNER_BIND", "0.0.0.0"),
+        port=int(os.environ.get("JOB_RUNNER_PORT", "8010")),
+        advertise_hosts=[h.strip() for h in hosts.split(",") if h.strip()] if hosts else None,
+        controller_executable=CONTROLLER_COMMAND,
+        server_info={"name": "cistem3-server", "version": _git(["describe", "--always", "--dirty"]) or "unknown"},
+    )
+    try:
+        runner.start()
+    except OSError as exc:
+        print("job runner could not listen on port {}: {} -- jobs will be simulated".format(runner.port, exc))
+        return None
+    _job_runner = runner
+    if not _controller_available():
+        print("job runner listening, but '{}' is not on PATH -- jobs will be simulated until it is "
+              "(set CISTEM_JOB_CONTROLLER)".format(CONTROLLER_COMMAND))
+    return runner
 
 
 def now_iso():
@@ -138,16 +321,26 @@ def _update_job(project_id, job_id, **fields):
     conn.close()
 
 
-def append_log(project_id, job_id, line):
+def append_log(project_id, job_id, line, conn=None):
+    """Append one line to the job log. Pass `conn` to write on a connection
+    that already holds a transaction -- opening a second connection to the
+    same file from inside one deadlocks on SQLite's write lock (and then
+    fails after busy_timeout), which is exactly what a stage adapter's
+    progress logging inside finalize() would otherwise do."""
+    if conn is not None:
+        _insert_log_line(conn, job_id, line)
+        return
     conn = db.get_conn(project_id)
     with conn:
-        seq = conn.execute(
-            "SELECT COALESCE(MAX(SEQ), -1) + 1 FROM JOB_LOG_LINES WHERE JOB_ID=?", (job_id,)
-        ).fetchone()[0]
-        conn.execute(
-            "INSERT INTO JOB_LOG_LINES(JOB_ID, SEQ, LINE) VALUES (?, ?, ?)", (job_id, seq, line)
-        )
+        _insert_log_line(conn, job_id, line)
     conn.close()
+
+
+def _insert_log_line(conn, job_id, line):
+    seq = conn.execute(
+        "SELECT COALESCE(MAX(SEQ), -1) + 1 FROM JOB_LOG_LINES WHERE JOB_ID=?", (job_id,)
+    ).fetchone()[0]
+    conn.execute("INSERT INTO JOB_LOG_LINES(JOB_ID, SEQ, LINE) VALUES (?, ?, ?)", (job_id, seq, line))
 
 
 # ---------------------------------------------------------------------------
@@ -349,24 +542,57 @@ def _write_motion_correction_results(project_id, job):
 
 
 def _recover_interrupted_jobs():
-    """Any job still 'queued'/'running' when the server last stopped has no
-    thread left to finish it -- mark it failed instead of leaving it stuck
-    forever, since (unlike cisTEM's live socket-managed jobs) our execution
-    threads don't survive a restart."""
+    """Jobs still 'queued'/'running' when the server last stopped.
+
+    A job that went through the job runner has a token and its task list in
+    its row, so -- per docs/job-protocol.md section 7.2 -- it is handed back
+    to the runner as *awaiting reconnect*: its controller, if still alive,
+    dials in again and carries on. A simulated job has no such thing (its
+    thread died with the process) and is marked failed as before.
+    """
     if not db.PROJECTS_ROOT.is_dir():
         return
     for entry in db.PROJECTS_ROOT.iterdir():
         if not (entry / "project.db").is_file():
             continue
-        conn = db.get_conn(entry.name)
-        with conn:
-            conn.execute(
-                "UPDATE JOBS SET STATUS='failed', "
-                "ERROR='Server restarted while this job was in progress', FINISHED_AT=? "
-                "WHERE STATUS IN ('queued','running')",
-                (now_iso(),),
-            )
+        project_id = entry.name
+        conn = db.get_conn(project_id)
+        rows = conn.execute("SELECT * FROM JOBS WHERE STATUS IN ('queued','running')").fetchall()
+        for row in rows:
+            job_id = row["JOB_ID"]
+            adapter = stages.ADAPTERS.get(row["STAGE"])
+            if _job_runner is not None and adapter is not None and row["JOB_TOKEN"] and row["TASKS_JSON"]:
+                params = json.loads(row["PARAMS_JSON"]) if row["PARAMS_JSON"] else {}
+                profile = db.load_run_profile_by_name(conn, params.get("run_profile")) or {
+                    "name": params.get("run_profile") or "?", "manager_command": "$command",
+                    "controller_address": "", "run_commands": [], "total_jobs": 0}
+                spec = job_runner.JobSpec(
+                    job_id, _package_job_info(project_id, row), adapter.PROGRAM, profile,
+                    json.loads(row["TASKS_JSON"]), profile["manager_command"], token=row["JOB_TOKEN"],
+                    controller_log=_controller_log_path(project_id, job_id))
+                done = [r["TASK_INDEX"] for r in conn.execute(
+                    "SELECT TASK_INDEX FROM JOB_TASKS WHERE JOB_ID=?", (job_id,)).fetchall()]
+                _db_sink.register(job_id, project_id)
+                _job_runner.restore(spec, row["CONTROLLER_SEQ"] or 0, done)
+                continue
+            with conn:
+                conn.execute(
+                    "UPDATE JOBS SET STATUS='failed', "
+                    "ERROR='Server restarted while this job was in progress', FINISHED_AT=? WHERE JOB_ID=?",
+                    (now_iso(), job_id),
+                )
         conn.close()
+
+
+def _package_job_info(project_id, row):
+    """package.job (docs/job-protocol.md section 6.2) from a JOBS row."""
+    return {"id": row["JOB_ID"], "number": row["JOB_NUMBER"], "name": row["NAME"], "project": project_id}
+
+
+def _controller_log_path(project_id, job_id):
+    """Where a job's controller writes its stdout/stderr: alongside the
+    project, so it survives the server and is findable afterwards."""
+    return str(db.project_dir(project_id) / "Logs" / "{}_controller.log".format(job_id))
 
 
 # ---------------------------------------------------------------------------
@@ -1546,12 +1772,56 @@ def create_job(project_id):
         )
     conn.close()
 
+    adapter = stages.ADAPTERS.get(stage)
+    if adapter is not None and _job_runner is not None and _controller_available():
+        return _submit_to_runner(project_id, job_id, adapter, params)
+
     with _live_lock:
         _live[job_id] = {"proc": None, "cancel_requested": False}
 
     thread = threading.Thread(target=run_job, args=(project_id, job_id), daemon=True)
     thread.start()
 
+    return jsonify(_row_to_job(_fetch_job_row(project_id, job_id))), 201
+
+
+def _submit_to_runner(project_id, job_id, adapter, params):
+    """The real path: build the program's task list from the project's
+    assets, persist what a restart would need, and hand the job to the
+    runner, which launches the run profile's manager command."""
+    conn = db.get_conn(project_id)
+    try:
+        profile = db.load_run_profile_by_name(conn, params.get("run_profile"))
+        if profile is None:
+            error = "unknown run profile {!r}".format(params.get("run_profile"))
+        elif profile["total_jobs"] == 0:
+            error = "run profile {!r} has no run commands, so it can't launch anything".format(profile["name"])
+        else:
+            error = None
+        if error is None:
+            try:
+                tasks = adapter.build_tasks(conn, project_id, params)
+            except ValueError as exc:
+                error = str(exc)
+        if error is not None:
+            with conn:
+                conn.execute("UPDATE JOBS SET STATUS='failed', ERROR=?, FINISHED_AT=? WHERE JOB_ID=?",
+                             (error, now_iso(), job_id))
+            return jsonify({"error": error}), 400
+
+        row = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (job_id,)).fetchone()
+        spec = job_runner.JobSpec(job_id, _package_job_info(project_id, row), adapter.PROGRAM, profile, tasks,
+                                  profile["manager_command"], controller_log=_controller_log_path(project_id, job_id))
+        with conn:
+            conn.execute("UPDATE JOBS SET JOB_TOKEN=?, TASKS_JSON=? WHERE JOB_ID=?",
+                         (spec.token, json.dumps(tasks), job_id))
+    finally:
+        conn.close()
+
+    append_log(project_id, job_id, "[{}] job created (stage: {}, {} task{}, profile: {})".format(
+        now_iso(), row["STAGE"], len(tasks), "" if len(tasks) == 1 else "s", profile["name"]))
+    _db_sink.register(job_id, project_id)
+    _job_runner.submit(spec)
     return jsonify(_row_to_job(_fetch_job_row(project_id, job_id))), 201
 
 
@@ -1589,6 +1859,9 @@ def cancel_job(project_id, job_id):
         return jsonify(job)
 
     _update_job(project_id, job_id, CANCEL_REQUESTED=1)
+    if _job_runner is not None and _job_runner.cancel(job_id):
+        append_log(project_id, job_id, "[{}] cancel requested; asking the controller to stop".format(now_iso()))
+        return jsonify(_row_to_job(_fetch_job_row(project_id, job_id)))
     with _live_lock:
         info = _live.setdefault(job_id, {"proc": None})
         info["cancel_requested"] = True
@@ -1603,5 +1876,6 @@ def cancel_job(project_id, job_id):
 
 if __name__ == "__main__":
     auth.bootstrap_admin_if_needed()
+    start_job_runner()
     _recover_interrupted_jobs()
     app.run(host="0.0.0.0", port=8000, threaded=True)

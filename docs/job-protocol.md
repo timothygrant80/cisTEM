@@ -9,7 +9,11 @@ profile's commands, one worker still acts as master and dispatches units of
 work, and programs still see `my_current_job.arguments[i]` and
 `my_result.SetResult()`.
 
-Status: draft for review. Nothing implements this yet.
+Status: draft, implemented end to end. Server side: `server/job_protocol.py` (codec) and
+`server/job_runner.py` (the server's state machine). Controller side: `cistem_job_controller`
+in the cisTEM tree (`src/programs/cistem_job_controller/`), speaking v1 to the server and the
+legacy protocol to unmodified workers -- verified running real `unblur` jobs. `tools/fake_controller.py`
+is a Python controller used as the server's test double and as the readable reference.
 
 ---
 

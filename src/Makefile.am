@@ -271,6 +271,7 @@ noinst_LIBRARIES = libcore.a libguicore.a
 # Min needed for GUI
 bin_PROGRAMS =  cisTEM_job_control \
                 cisTEM \
+                cistem_job_controller \
                 unblur \
                 reconstruct3d \
                 merge3d \
@@ -792,6 +793,14 @@ cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 cisTEM_job_control_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 cisTEM_job_control_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 cisTEM_job_control_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
+
+# The per-job controller for the cisTEM3 web server: speaks Job Protocol v1
+# to the server and the legacy socket protocol to the workers (a fork of
+# guix_job_control.cpp with the GUI-facing half replaced).
+cistem_job_controller_SOURCES  = programs/cistem_job_controller/cistem_job_controller.cpp
+cistem_job_controller_CXXFLAGS = $(WX_CPPFLAGS_BASE) -DCISTEM_JOB_CONTROLLER_VERSION=CISTEM_VERSION_TEXT
+cistem_job_controller_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+cistem_job_controller_LDADD    = libcore.a $(WX_LIBS_BASE)
 
 # unlike other programs where we build program/ program_gpu to maintain
 # both codepaths with the most src code overlap as possible, for console tests

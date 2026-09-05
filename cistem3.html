@@ -449,6 +449,30 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .pick-side .ra-radio{margin-bottom:6px;}
 .pick-numbers{grid-template-columns:1fr;margin-top:4px;}
 @media (max-width:1100px){ .pick-result{grid-template-columns:1fr;} }
+/* 2D classification: a montage of class averages with a selection square
+   (ClassumDisplayPanel), and the members of the selected class below it. */
+.c2d-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;}
+.c2d-frame{position:relative;border:1px solid var(--border);background:#404040;min-height:80px;}
+.c2d-frame img{display:block;width:100%;height:auto;}
+.c2d-frame.selectable img{cursor:pointer;}
+.c2d-frame .ra-figure-status{position:absolute;left:0;right:0;top:40%;text-align:center;color:#ddd;}
+.c2d-overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;}
+.c2d-frame img{max-width:100%;}
+.c2d-overlay rect{fill:none;stroke:#ffd23f;stroke-width:3;}
+.c2d-caption{font-size:12px;color:var(--text-secondary);margin:6px 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
+.c2d-list table{width:100%;border-collapse:collapse;font-size:12px;}
+.c2d-list th{position:sticky;top:0;background:var(--chrome);font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
+.c2d-list td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text-secondary);white-space:nowrap;cursor:pointer;}
+.c2d-list tr.selected td{background:var(--accent);color:#fff;}
+.c2d-list tr:hover td{background:var(--surface-sunken);}
+.c2d-list tr.selected:hover td{background:var(--accent);}
+.c2d-pkg-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;}
+.c2d-pkg-row select{flex:1;min-width:0;}
+.c2d-plots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+@media (max-width:1100px){ .c2d-plots{grid-template-columns:1fr;} }
+.ra-swatch-logp{border-top-color:var(--accent);} .ra-swatch-sigma{border-top-color:var(--plot-y);} .ra-swatch-moved{border-top-color:var(--success);}
+.ra-plot .line-moved{fill:none;stroke:var(--success);stroke-width:1.8;stroke-linejoin:round;} .ra-plot .dot-moved{fill:var(--success);}
 .ctf-result{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:14px;align-items:start;}
 .ctf-numbers{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 18px;margin-top:10px;}
 .ctf-numbers .details-item{font-size:12px;}
@@ -1724,18 +1748,101 @@ From branch : <span id="versionBranch">—</span></p>
       }
     },
     class2d: {
+      // MyRefine2DPanel (ProjectX_gui_refine2d.cpp's Refine2DPanel widgets,
+      // SetDefaults()/ResetDefaults()) and its SetInfo(). The input is a
+      // refinement package, not an image group, and the second picker
+      // offers "New Classification" or any earlier classification of that
+      // package as the starting references -- its choices, and the class
+      // count default, follow the package (see class2dWire below).
       label: "2D Classification",
-      description: "Sorts extracted particles into 2D class averages to assess quality and discard junk before 3D processing.",
+      startLabel: "Start Classification",
+      note: "Each round's class averages are written to the project's Assets/ClassAverages directory and every classification to the project database; the job on the Jobs tab stands for the whole cycle.",
+      description: "Sorts a refinement package's particles into 2D class averages by maximum-likelihood refinement (refine2d), to judge the data and pick out good particles.",
+      inputKey: "refinement_package_id",
+      emptyReason: "Please create a refinement package (in the assets panel) in order to perform a 2D classification.",
       fields: [
-        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/particles.star", group:"Input"},
-        {key:"num_classes", label:"Number of classes", unit:"", type:"number", placeholder:"50", group:"Classification Parameters"},
-        {key:"mask_diameter_a", label:"Mask diameter", unit:"Å", type:"number", placeholder:"200", group:"Classification Parameters"},
-        {key:"iterations", label:"Iterations", unit:"", type:"number", placeholder:"25", group:"Classification Parameters"}
+        {key:"refinement_package_id", label:"Input Refinement Package", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
+         dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
+        {key:"starting_classification_id", label:"Input Starting References", unit:"", type:"select", options:["New Classification"], group:"Input",
+         tooltip:"A set of class averages from a previous run of 2D classification. If no prior class averages are available, the option “New Classification” can be selected, allowing the user to enter the number of desired classes in the next menu."},
+        {key:"number_of_classes", label:"No. of Classes", unit:"", type:"number", step:"1", min:1, max:1000, default:"50", group:"Classification",
+         tooltip:"The number of classes that should be generated. This input is only available when starting a fresh classification run."},
+        {key:"number_of_rounds", label:"No. of Cycles to Run", unit:"", type:"number", step:"1", min:1, max:100, default:"20", group:"Classification",
+         tooltip:"The number of refinement cycles to run. If the option “Auto Percent Used” is selected, 20 cycles are usually sufficient to generate good class averages."}
       ],
       expertFields: [
-        {key:"angular_search_step", label:"Angular search step", unit:"°", type:"number", placeholder:"15"},
-        {key:"high_res_limit_a", label:"High-res limit", unit:"Å", type:"number", placeholder:"8"}
-      ]
+        {key:"low_resolution_limit_a", label:"Low-Resolution Limit", unit:"Å", type:"number", step:"1", min:0, default:"300", group:"Refinement",
+         tooltip:"The data used for classification is usually bandpass-limited to exclude spurious low-resolution features in the particle background. It is therefore good practice to set the low-resolution limit to 2.5x the approximate particle mask radius."},
+        {key:"high_resolution_limit_start_a", label:"High-Resolution Limit (start)", unit:"Å", type:"number", step:"1", min:0, default:"40", group:"Refinement",
+         tooltip:"The high-resolution limit for the first cycle. Since the class averages are not well defined initially, it should be set to a low resolution, for example 40 Å; it is ramped towards the finish value over the first three-quarters of the cycles."},
+        {key:"high_resolution_limit_finish_a", label:"High-Resolution Limit (finish)", unit:"Å", type:"number", step:"1", min:0, default:"8", group:"Refinement",
+         tooltip:"The high-resolution limit used for the final cycles. It should be set sufficiently high, for example 8 Å, to include signal originating from protein secondary structure."},
+        {key:"mask_radius_a", label:"Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Refinement",
+         tooltip:"The radius of the circular mask applied to the input class averages before classification starts. This mask should be sufficiently large to include the largest dimension of the particle."},
+        {key:"angular_step_deg", label:"Angular Search Step", unit:"°", type:"number", step:"0.5", min:0, default:"15", group:"Refinement",
+         tooltip:"The angular step used to generate the search grid when marginalizing over the in-plane rotational alignment parameter. It is often sufficient to set the step to 15°."},
+        {key:"max_search_range_a", label:"Search Range in X/Y", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Refinement",
+         tooltip:"The search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are used for classification. If the range of particle displacements is unknown, start with a larger value, e.g. 100 Å."},
+        {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.1", min:0.01, default:"1", group:"Refinement",
+         tooltip:"A factor that reduces the range of likelihoods used during classification. A reduced range can help prevent the appearance of “empty” classes early in the classification. Try values between 0.1 and 1 if classification suffers from the disappearance of small classes or noisy class averages."},
+        {key:"exclude_blank_edges", label:"Exclude Blank Edges?", type:"checkbox", default:true, group:"Refinement",
+         tooltip:"Should particle boxes with blank edges be excluded from classification? Blank edges can be the result of particles selected close to the edges of micrographs, and can lead to errors in the calculation of the likelihood function."},
+        {key:"auto_percent_used", label:"Auto Percent Used?", type:"checkbox", default:true, group:"Particles Used",
+         tooltip:"Should the percent of included particles be adjusted automatically? A classification scheme using initially 300 particles/class, then 30% and then 100% is often sufficient to obtain good classes."},
+        {key:"percent_used", label:"Percent Used", unit:"%", type:"number", step:"1", min:0, max:100, default:"100", group:"Particles Used", enabledByNot:"auto_percent_used",
+         tooltip:"The fraction of the dataset used for classification. Only available when Auto Percent Used is not selected."},
+        {key:"auto_mask", label:"Automask Averages?", type:"checkbox", default:false, group:"Class Averages",
+         tooltip:"Apply automatic masking to the reference class averages before each cycle."},
+        {key:"auto_centre", label:"Auto Centre Averages?", type:"checkbox", default:false, group:"Class Averages",
+         tooltip:"Centre the class averages on their centre of mass before each cycle."}
+      ],
+      info: {
+        title: "2D Classification",
+        body: [
+          "2D classification offers a fast and robust way to assess the quality and homogeneity of a dataset. The results of classification can also be used to remove particles belonging to undesirable classes, for example classes with ill-defined features or features that suggest the presence of damaged particles or impurities.",
+          "2D classification typically starts with classes calculated as averages of randomly sampled particles from the dataset. This is shown here for a dataset of VSV polymerase, a 240 kDa protein (Liang et al. 2015):",
+          {image: "class2d-example-1.png", alt: "The first 24 of 50 starting class averages of VSV polymerase: noisy blobs, averages of randomly sampled particles."},
+          "The VSV polymerase dataset was collected after the initial publication in 2015 and contained 84,608 particle images with a pixel size of 0.97 Å, cut out into 400 x 400 pixel boxes. The figures shows the first 24 out of 50 starting class averages. When generating starting classes, the user has to specify the number of classes, for example 50 or 100. Furthermore, the percentage of the dataset used for the calculation has to be specified. In most cases, an average of about 200 images per class is sufficient to obtain reasonable averages (also in later refinement cycles). For example, if a dataset contains 100,000 particle images and the user requests 100 class averages, the number of particle images recommended for generating initial averages would be 100 classes x 200 images/class = 20,000 images. The percentage in this example should therefore be set to 0.2. In the case of VSV polymerase, the percentage was set to 0.12 (an average of 203 images/class).",
+          "In subsequent iteration cycles, the class averages are refined using a maximum likelihood algorithm (Sigworth 1998, Scheres et al. 2005). It is recommended to keep the percentage of the dataset used in the calculation unchanged for the first 10 cycles, or to increase it somewhat but remain below 100% if class averages appear very noisy. Also, the resolution limit should be set to 8 – 10 Å and the x,y search range should be limited in such a way that most particle displacement from the image center will be within this range. The required range will depend on the way the particles were picked. If particles are well centered after picking, the range can be set between 20 and 40 Å, otherwise a range of 100 Å or more is probably a safer option. Finally, the angular sampling rate must be set by the user. It is rarely required to choose a value below 5 degrees and in most cases 15 degrees is adequate. All four options (percentage, resolution limit, search range, angular sampling rate) can significantly speed up computation and it is therefore worth setting these carefully. For the VSV polymerase dataset, the following class averages were obtained after 9 cycles at 8 Å resolution, a search range of 40 Å and a sampling rate of 15 degrees:",
+          {image: "class2d-example-2.png", alt: "Class averages of VSV polymerase after 9 cycles at 8 Å: recognisable particle views."},
+          "This result was obtained in 8 minutes on a single Linux workstation with two 22-core CPUs (Intel Xeon E5-2699 v4 running at 2.2 GHz). After the initial refinement with a smaller percentage of the dataset, the dataset should be refined with a higher percentage and finally including all data, initially at 8 – 10 Å resolution, and perhaps at higher resolution if desired and warranted by the data. This final refinement usually requires less than 10 cycles but users can try more cycles if they still see improvements in the class averages. For the VSV polymerase, 5 cycles with 30% of the dataset yielded:",
+          {image: "class2d-example-3.png", alt: "Class averages after 5 further cycles with 30% of the dataset."},
+          "This took 10 minutes on the aforementioned Linux workstation. An additional 5 cycles at 7 Å resolution and using the full dataset took another 35 minutes and yielded the final class averages, many showing clear secondary structure (α-helixes):",
+          {image: "class2d-example-4.png", alt: "Final class averages after 5 cycles at 7 Å with the full dataset, many showing α-helices."},
+          {heading: "Program Options"},
+          {options: [
+            ["Input Refinement Package", "The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."],
+            ["Input Starting References", "A set of class averages from a previous run of 2D classification. If no prior class averages are available, the option “New Classification” can be selected, allowing the user to enter the number of desired classes in the next menu."],
+            ["No. of Classes", "The number of classes that should be generated. This input is only available when starting a fresh classification run."],
+            ["No. of Cycles to Run", "The number of refinement cycles to run. If the option “Auto Percent Used” is selected, 20 cycles are usually sufficient to generate good class averages. If the user decides to set parameters manually, 5 to 10 cycles are usually sufficient for a particular set of parameters. Several of these shorter runs should be used to obtain final class averages, updating parameters as needed (e.g. Percent Used, see example above)."],
+            ["Run Profile", "The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers). Each cycle is split over as many refine2d processes as the profile provides."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Low-Resolution Limit (Å)", "The data used for classification is usually bandpass-limited to exclude spurious low-resolution features in the particle background. It is therefore good practice to set the low-resolution limit to 2.5x the approximate particle mask radius."],
+            ["High-Resolution Limit (start/finish) (Å)", "The high-resolution bandpass limit should be selected to remove data with low signal-to-noise ratio, and to help speed up the calculation. Since the class averages are not well defined initially, the starting limit should be set to a low resolution, for example 40 Å. The limit used for the final iterations should be set sufficiently high, for example 8 Å, to include signal originating from protein secondary structure that often helps generate recognizable features in the class averages (see example above)."],
+            ["Mask Radius (Å)", "The radius of the circular mask applied to the input class averages before classification starts. This mask should be sufficiently large to include the largest dimension of the particle. The mask helps remove noise outside the area of the particle."],
+            ["Angular Search Step (°)", "The angular step used to generate the search grid when marginalizing over the in-plane rotational alignment parameter. The smaller the value, the finer the search grid and the slower the search. It is often sufficient to set the step to 15° as the algorithm varies the starting point of the grid in each refinement cycle, thereby covering intermediate in-plane alignment angles. However, users can try to reduce the step to 5° (smaller is probably not helpful) to see if class averages can be improved further once no further improvement is seen at 15°."],
+            ["Search Range in X/Y (Å)", "The search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are used for classification. A smaller range, for example 20 to 40 Å, can speed up computation. However, the range should be chosen sufficiently generously to capture most particles. If the range of particle displacements from the box center is unknown, start with a larger value, e.g. 100 Å, check the results when the run finishes and reduce the range appropriately."],
+            ["Smoothing Factor", "A factor that reduces the range of likelihoods used during classification. A reduced range can help prevent the appearance of “empty” classes (no members) early in the classification. Smoothing may also suppress some high-resolution noise. The user should try values between 0.1 and 1 if classification suffers from the disappearance of small classes or noisy class averages."],
+            ["Exclude Blank Edges?", "Should particle boxes with blank edges be excluded from classification? Blank edges can be the result of particles selected close to the edges of micrographs. Blank edges can lead to errors in the calculation of the likelihood function, which depends on the noise statistics."],
+            ["Auto Percent Used?", "Should the percent of included particles be adjusted automatically? A classification scheme using initially 300 particles/class, then 30% and then 100% is often sufficient to obtain good classes and this scheme will be used when this option is selected."],
+            ["Percent Used", "The fraction of the dataset used for classification. Especially in the beginning, classification proceeds more rapidly when only a small number of particles are used per class, e.g. 300 (see example above). Later runs that refine the class averages should use a higher percentage and the final run(s) should use all the data. This option is only available when “Auto Percent Used” is not selected."]
+          ]}
+        ],
+        references: [
+          {authors:"Sigworth F.J.",
+           text:"1998. A maximum-likelihood approach to single-particle image refinement. J. Struct. Biol. 122, 328–339.",
+           doi:"10.1006/jsbi.1998.4014"},
+          {authors:"Scheres S.H.W., Valle M., Nuñez R., Sorzano C.O.S., Marabini R., Herman G.T., Carazo J.-M.",
+           text:"2005. Maximum-likelihood multi-reference refinement for electron microscopy images. J. Mol. Biol. 348, 139–149.",
+           doi:"10.1016/j.jmb.2005.02.031"},
+          {authors:"Liang B., Li Z., Jenni S., Rahmeh A.A., Morin B.M., Grant T., Grigorieff N., Harrison S.C., Whelan S.P.",
+           text:"2015. Structure of the L protein of vesicular stomatitis virus from electron cryomicroscopy. Cell 162, 314–327.",
+           doi:"10.1016/j.cell.2015.06.018"}
+        ]
+      }
     },
     refine3d: {
       label: "Refine 3D",
@@ -2122,6 +2229,7 @@ From branch : <span id="versionBranch">—</span></p>
     // to be reattached each time rather than set up once at load.
     wireConditionalFields(els.paramFields, stage.fields);
     wireConditionalFields(els.expertFields, stage.expertFields);
+    if (stage.wire) stage.wire(els.paramFields, els.expertFields);
     els.expertFields.hidden = !state.expertOpen;
     els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
     els.submitBtn.textContent = stage.startLabel || "Run";
@@ -2242,6 +2350,8 @@ From branch : <span id="versionBranch">—</span></p>
         updateStartButton();
         // The preview image list follows the group, which is only known now.
         if (typeof loadPreviewImages === "function") loadPreviewImages();
+        var stage = STAGES[state.currentStage];
+        if (stage && stage.afterDynamicLoad) stage.afterDynamicLoad(f.key);
       }).catch(function(){
         input.innerHTML = "";
         var errOpt = document.createElement("option");
@@ -2381,7 +2491,7 @@ From branch : <span id="versionBranch">—</span></p>
     var yMin = opts.yMin != null ? opts.yMin : Math.min.apply(null, allY), yMax = opts.yMax != null ? opts.yMax : Math.max.apply(null, allY);
     if (yMax - yMin < 1e-6){ yMin -= 1; yMax += 1; }
     if (opts.yMin == null || opts.yMax == null){ var pad = (yMax - yMin) * 0.08; if (opts.yMin == null) yMin -= pad; if (opts.yMax == null) yMax += pad; }
-    var yStep = niceStep(yMax - yMin, 5), xStep = niceStep(xMax - xMin || 1, 6);
+    var yStep = niceStep(yMax - yMin, 5), xStep = opts.xStep || niceStep(xMax - xMin || 1, 6);
     if (opts.yMin == null) yMin = Math.floor(yMin / yStep) * yStep;
     if (opts.yMax == null) yMax = Math.ceil(yMax / yStep) * yStep;
     var pw = W - L - R, ph = H - T - B;
@@ -2902,6 +3012,221 @@ From branch : <span id="versionBranch">—</span></p>
     ],
     buildResult: buildPicksResultView
   });
+
+  // ---- 2D Classification: Refine2DResultsPanel ----
+  // Pick a refinement package, then one of its classifications; the class
+  // averages are shown as a montage (ClassumDisplayPanel) with a selection
+  // square, and clicking a class shows its members cut from the stack
+  // (ParticleDisplayPanel). Not the grid factory: a classification belongs
+  // to a package, not to an asset with an "active" result.
+  function classMontageFigure(alt){
+    var frame = document.createElement("div"); frame.className = "c2d-frame";
+    var img = document.createElement("img"); img.alt = alt; img.hidden = true; frame.appendChild(img);
+    var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading…"; frame.appendChild(status);
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "c2d-overlay"); frame.appendChild(svg);
+    var caption = document.createElement("div"); caption.className = "c2d-caption";
+    var left = document.createElement("span"), right = document.createElement("span"); caption.appendChild(left); caption.appendChild(right);
+    var root = document.createElement("div"); root.appendChild(frame); root.appendChild(caption);
+    function tileAt(geom, x, y){
+      // x, y in montage pixels -> 0-based tile index, or -1 in a gap.
+      var cw = geom.tile_width + geom.gap, ch = geom.tile_height + geom.gap;
+      var c = Math.floor((x - geom.gap) / cw), r = Math.floor((y - geom.gap) / ch);
+      if (c < 0 || c >= geom.columns || r < 0 || r >= geom.rows) return -1;
+      if ((x - geom.gap) % cw > geom.tile_width || (y - geom.gap) % ch > geom.tile_height) return -1;
+      return r * geom.columns + c;
+    }
+    function select(geom, index){
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (!geom || index == null || index < 0) return;
+      svg.setAttribute("viewBox", "0 0 " + geom.width + " " + geom.height);
+      var r = Math.floor(index / geom.columns), c = index % geom.columns;
+      var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", geom.gap + c * (geom.tile_width + geom.gap) - 1);
+      rect.setAttribute("y", geom.gap + r * (geom.tile_height + geom.gap) - 1);
+      rect.setAttribute("width", geom.tile_width + 2); rect.setAttribute("height", geom.tile_height + 2);
+      svg.appendChild(rect);
+    }
+    return {root: root, frame: frame, img: img, status: status, svg: svg, left: left, right: right, tileAt: tileAt, select: select};
+  }
+
+  function makeClassificationResultsPage(){
+    var page = {items: [], packages: [], packageId: null, selectedId: null, current: null, selectedClass: null, showDetails: false, urls: []};
+    var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
+    var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
+    var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
+    left.innerHTML =
+      '<span class="groupbox-label">Classifications</span>' +
+      '<div class="c2d-pkg-row"><label>Refinement Package</label><select data-role="package"></select></div>' +
+      '<div class="c2d-list"><table><thead><tr><th>Classification</th><th>Classes</th><th>Res.</th><th>Used</th><th>Job</th></tr></thead><tbody></tbody></table></div>' +
+      '<div class="asset-toolbar">' +
+        '<button class="small ra-toggle" data-role="details" aria-pressed="false">Show Job Details</button>' +
+        '<button class="small danger" data-role="delete" disabled title="Remove this classification, its per-particle results and its class averages file. A classification that later ones started from stays referenced by them.">Delete</button>' +
+      '</div>';
+    var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
+    var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Class Averages"; right.appendChild(rightLabel);
+    var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
+    var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
+    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
+    var DETAILS = [
+      ["Classification ID", function(c){ return fmtVal(c.classification_id) + (c.job_number ? " (Job " + c.job_number + ")" : ""); }],
+      ["Date of Run", function(c){ return fmtWhenDate(c.datetime_of_run); }],
+      ["Time of Run", function(c){ return fmtWhenTime(c.datetime_of_run); }],
+      ["Refinement Package", function(c){ return (c.package_name || fmtVal(c.refinement_package_asset_id)); }],
+      ["Start Classification", function(c){ return c.starting_classification_id != null && c.starting_classification_id >= 0 ? "#" + c.starting_classification_id : "random"; }],
+      ["No. Particles", function(c){ return fmtVal(c.number_of_particles); }],
+      ["No. Classes", function(c){ return fmtVal(c.number_of_classes); }],
+      ["Low Res. Limit", function(c){ return fmtVal(c.low_resolution_limit, 1) + " Å"; }],
+      ["High Res. Limit", function(c){ return fmtVal(c.high_resolution_limit, 1) + " Å"; }],
+      ["Mask Radius", function(c){ return fmtVal(c.mask_radius, 1) + " Å"; }],
+      ["Angular Step", function(c){ return fmtVal(c.angular_search_step, 1) + " °"; }],
+      ["Search Range X / Y", function(c){ return fmtVal(c.search_range_x, 1) + " / " + fmtVal(c.search_range_y, 1) + " Å"; }],
+      ["Smoothing Factor", function(c){ return fmtVal(c.smoothing_factor, 2); }],
+      ["Exclude Blank Edges", function(c){ return fmtYesNo(c.exclude_blank_edges); }],
+      ["Auto Percent Used", function(c){ return fmtYesNo(c.auto_percent_used); }],
+      ["Percent Used", function(c){ return fmtVal(c.percent_used, 1) + " %"; }],
+      ["Active Particles", function(c){ return fmtVal(c.active_particles) + (c.inactive_particles ? " (" + c.inactive_particles + " sat out)" : ""); }],
+      ["Class Averages File", function(c){ return c.class_average_file || "—"; }, true]
+    ];
+    var detailCells = DETAILS.map(function(d){
+      var item = document.createElement("div"); item.className = "details-item" + (d[2] ? " details-item-wide" : "");
+      var k = document.createElement("span"); k.className = "details-key"; k.textContent = d[0];
+      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
+      item.appendChild(k); item.appendChild(v); grid.appendChild(item); return v;
+    });
+    var empty = document.createElement("div"); empty.className = "empty-note";
+    empty.textContent = "No 2D classifications in this project yet";
+    var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run 2D Classification from the Actions tab on a refinement package; each round’s class averages appear here."; empty.appendChild(hint);
+    scroll.appendChild(empty);
+    var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
+    var averages = classMontageFigure("Class averages"); averages.frame.classList.add("selectable"); resultBox.appendChild(averages.root);
+    var membersHead = document.createElement("div"); membersHead.className = "rpkg-particles-head"; membersHead.textContent = "Class Members"; resultBox.appendChild(membersHead);
+    var members = classMontageFigure("Members of the selected class"); resultBox.appendChild(members.root);
+    members.status.textContent = "Click a class average to see its members.";
+    els.resultsPages.appendChild(root);
+    page.root = root;
+    var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody");
+    var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
+    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
+
+    page.load = function(){
+      if (!state.projectId || !state.connected) return;
+      Promise.all([
+        apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
+        apiFetch(projectApiUrl("/classifications")).then(function(r){ return r.ok ? r.json() : {classifications: []}; })
+      ]).then(function(res){
+        page.packages = (res[0] && res[0].refinement_packages) || [];
+        page.items = (res[1] && res[1].classifications) || [];
+        var withResults = {};
+        page.items.forEach(function(c){ withResults[c.refinement_package_asset_id] = true; });
+        if (!page.packages.some(function(p){ return p.refinement_package_asset_id === page.packageId; })){
+          var first = page.packages.filter(function(p){ return withResults[p.refinement_package_asset_id]; })[0] || page.packages[0];
+          page.packageId = first ? first.refinement_package_asset_id : null;
+        }
+        pkgSelect.innerHTML = "";
+        if (!page.packages.length){
+          var none = document.createElement("option"); none.textContent = "No refinement packages"; pkgSelect.appendChild(none); pkgSelect.disabled = true;
+        } else {
+          pkgSelect.disabled = false;
+          page.packages.forEach(function(p){
+            var opt = document.createElement("option"); opt.value = p.refinement_package_asset_id;
+            var n = page.items.filter(function(c){ return c.refinement_package_asset_id === p.refinement_package_asset_id; }).length;
+            opt.textContent = p.name + " (" + n + " classification" + (n === 1 ? "" : "s") + ")";
+            opt.selected = p.refinement_package_asset_id === page.packageId;
+            pkgSelect.appendChild(opt);
+          });
+        }
+        renderList();
+      }).catch(function(){});
+    };
+    function visible(){ return page.items.filter(function(c){ return c.refinement_package_asset_id === page.packageId; }); }
+    function renderList(){
+      var rows = visible();
+      if (!rows.some(function(c){ return c.classification_id === page.selectedId; })){
+        page.selectedId = rows.length ? rows[rows.length - 1].classification_id : null;
+        page.selectedClass = null;
+      }
+      tbody.innerHTML = "";
+      rows.forEach(function(c){
+        var tr = document.createElement("tr");
+        tr.classList.toggle("selected", c.classification_id === page.selectedId);
+        tr.innerHTML = "<td></td><td class='num'>" + c.number_of_classes + "</td><td class='num'>" + fmtVal(c.high_resolution_limit, 1) + " Å</td>" +
+          "<td class='num'>" + fmtVal(c.percent_used, 0) + "%</td><td>" + (c.job_number ? "#" + c.job_number : "—") + "</td>";
+        tr.firstChild.textContent = c.name; tr.firstChild.title = c.name;
+        tr.addEventListener("click", function(){ page.selectedId = c.classification_id; page.selectedClass = null; renderList(); });
+        tbody.appendChild(tr);
+      });
+      btn("delete").disabled = page.selectedId == null;
+      showSelected();
+    }
+    function showSelected(){
+      releaseUrls();
+      var item = page.items.filter(function(c){ return c.classification_id === page.selectedId; })[0];
+      if (!item){
+        page.current = null; empty.hidden = false; resultBox.hidden = true; details.hidden = true; rightLabel.textContent = "Class Averages";
+        empty.firstChild.textContent = page.items.length ? "No classifications for this refinement package yet" : "No 2D classifications in this project yet";
+        return;
+      }
+      empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
+      rightLabel.textContent = "Class Averages — " + item.name;
+      averages.img.hidden = true; averages.status.hidden = false; averages.status.textContent = "Loading…"; averages.select(null, null);
+      members.img.hidden = true; members.status.hidden = false; members.status.textContent = "Click a class average to see its members."; members.left.textContent = ""; members.right.textContent = "";
+      membersHead.textContent = "Class Members";
+      apiFetch(projectApiUrl("/classifications/" + item.classification_id)).then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function(full){
+        if (full.classification_id !== page.selectedId) return;
+        page.current = full;
+        DETAILS.forEach(function(d, i){ detailCells[i].textContent = d[1](full); });
+        averages.left.textContent = full.number_of_classes + " classes · " + fmtVal(full.active_particles) + " of " + fmtVal(full.number_of_particles) + " particles took part";
+        averages.right.textContent = full.high_resolution_limit != null ? "high-res limit " + Number(full.high_resolution_limit).toFixed(1) + " Å" : "";
+        averages.img.style.maxWidth = full.montage ? (full.montage.width * 2) + "px" : "";
+        averages.svg.style.maxWidth = averages.img.style.maxWidth;
+        loadFigure(averages.img, averages.status, "/classifications/" + full.classification_id + "/averages.png", full.class_average_file_exists, "class averages", page.urls);
+        if (page.selectedClass != null) showClass(page.selectedClass);
+      }).catch(function(err){ averages.status.textContent = "Could not load this classification: " + err.message; });
+    }
+    function showClass(k){
+      var c = page.current; if (!c) return;
+      page.selectedClass = k;
+      averages.select(c.montage, k - 1);
+      var n = (c.class_member_counts || [])[k - 1] || 0;
+      membersHead.textContent = "Class Members — Class #" + k + " (" + n + " particle" + (n === 1 ? "" : "s") + ")";
+      members.img.hidden = true; members.status.hidden = false; members.status.textContent = n ? "Loading…" : "This class has no members.";
+      members.left.textContent = ""; members.right.textContent = "";
+      if (!n) return;
+      var limit = 100;
+      members.right.textContent = n > limit ? "showing the first " + limit : "";
+      loadFigure(members.img, members.status, "/classifications/" + c.classification_id + "/class/" + k + "/members.png?limit=" + limit, true, "class members", page.urls);
+    }
+    averages.img.addEventListener("click", function(e){
+      var c = page.current; if (!c || !c.montage) return;
+      var rect = averages.img.getBoundingClientRect();
+      var x = (e.clientX - rect.left) * c.montage.width / rect.width, y = (e.clientY - rect.top) * c.montage.height / rect.height;
+      var idx = averages.tileAt(c.montage, x, y);
+      if (idx >= 0 && idx < c.number_of_classes) showClass(idx + 1);
+    });
+    pkgSelect.addEventListener("change", function(){ page.packageId = Number(pkgSelect.value); page.selectedId = null; renderList(); });
+    btn("details").addEventListener("click", function(){
+      page.showDetails = !page.showDetails;
+      btn("details").setAttribute("aria-pressed", String(page.showDetails));
+      btn("details").textContent = page.showDetails ? "Hide Job Details" : "Show Job Details";
+      details.hidden = !page.showDetails || !page.current;
+    });
+    btn("delete").addEventListener("click", function(){
+      var item = page.items.filter(function(c){ return c.classification_id === page.selectedId; })[0]; if (!item) return;
+      if (!confirm("Delete “" + item.name + "”? Its per-particle results and class averages file are removed permanently.")) return;
+      apiFetch(projectApiUrl("/classifications/" + item.classification_id), {method: "DELETE"})
+        .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); page.load(); })
+        .catch(function(err){ alert("Could not delete: " + err.message); });
+    });
+    page.select = function(classificationId){
+      var item = page.items.filter(function(c){ return c.classification_id === classificationId; })[0];
+      if (item){ page.packageId = item.refinement_package_asset_id; page.selectedId = classificationId; page.selectedClass = null; page.load(); }
+    };
+    return page;
+  }
+  RESULT_PAGES.class2d = makeClassificationResultsPage();
   showResultsStage("motion_correction");
 
   // ---------- run profile ----------
@@ -5389,7 +5714,7 @@ From branch : <span id="versionBranch">—</span></p>
   // tooltip says which condition is missing, since a silently dead button is
   // the thing that makes a form feel broken.
   function selectedGroupCount(){
-    var select = els.paramFields.querySelector("select[data-key$='_group_id']");
+    var select = els.paramFields.querySelector("select[data-key$='_group_id'], select[data-key='refinement_package_id']");
     if (!select) return null;  // this stage doesn't pick a group
     var opt = select.options[select.selectedIndex];
     if (!opt || opt.dataset.count === undefined) return 0;
@@ -5404,6 +5729,63 @@ From branch : <span id="versionBranch">—</span></p>
     return Number(opt.dataset.ctf);
   }
 
+  // ---------- 2D classification panel wiring (MyRefine2DPanel::NewRefinementPackageSelected / SetDefaults) ----------
+  // The starting-references picker offers "New Classification" plus every
+  // classification of the chosen package; picking one fixes the class count
+  // (SetDefaults takes it from that classification) and seeds the starting
+  // high-resolution limit with the one it reached; "New Classification" puts
+  // the package's particle count through the 300-per-class rule instead.
+  function class2dPackageChanged(){
+    var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
+    var start = els.paramFields.querySelector('[data-key="starting_classification_id"]');
+    if (!pkg || !start) return;
+    var pkgId = pkg.value;
+    start.innerHTML = "";
+    var fresh = document.createElement("option"); fresh.value = ""; fresh.textContent = "New Classification"; start.appendChild(fresh);
+    if (!pkgId || !state.projectId){ class2dStartChanged(); return; }
+    apiFetch(projectApiUrl("/class2d/defaults?refinement_package_id=" + encodeURIComponent(pkgId))).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (pkg.value !== pkgId) return;
+      start.dataset.newClasses = d.number_of_classes;
+      (d.classifications || []).forEach(function(c){
+        var opt = document.createElement("option");
+        opt.value = c.classification_id;
+        opt.textContent = c.name + (c.class_average_file_exists ? "" : " (averages missing)");
+        opt.dataset.classes = c.number_of_classes;
+        opt.dataset.highRes = c.high_resolution_limit;
+        opt.disabled = !c.class_average_file_exists;
+        start.appendChild(opt);
+      });
+      class2dStartChanged();
+    }).catch(function(){ class2dStartChanged(); });
+  }
+  function class2dStartChanged(){
+    var start = els.paramFields.querySelector('[data-key="starting_classification_id"]');
+    var classes = els.paramFields.querySelector('[data-key="number_of_classes"]');
+    var highRes = els.expertFields.querySelector('[data-key="high_resolution_limit_start_a"]');
+    if (!start || !classes) return;
+    var opt = start.options[start.selectedIndex];
+    var continuing = !!(opt && opt.value);
+    classes.disabled = continuing;
+    var wrap = classes.closest(".field"); if (wrap) wrap.classList.toggle("field-disabled", continuing);
+    if (continuing){
+      classes.value = opt.dataset.classes || classes.value;
+      if (highRes && opt.dataset.highRes) highRes.value = Number(opt.dataset.highRes).toFixed(2);
+    } else {
+      if (start.dataset.newClasses) classes.value = start.dataset.newClasses;
+      if (highRes) highRes.value = "40.00";
+    }
+  }
+  STAGES.class2d.wire = function(paramFields){
+    var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
+    var start = paramFields.querySelector('[data-key="starting_classification_id"]');
+    if (pkg) pkg.addEventListener("change", class2dPackageChanged);
+    if (start) start.addEventListener("change", class2dStartChanged);
+  };
+  STAGES.class2d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") class2dPackageChanged(); };
+
   function updateStartButton(){
     var stage = STAGES[state.currentStage];
     var reason = null;
@@ -5413,7 +5795,7 @@ From branch : <span id="versionBranch">—</span></p>
     else {
       var count = selectedGroupCount();
       var profile = state.runProfiles.filter(function(p){ return p.profile_name === els.runProfile.value; })[0];
-      if (count === 0) reason = "The selected group is empty — add " + (stage.fields.some(function(f){ return f.key === "image_group_id"; }) ? "images" : "movies") + " to it on the Assets tab.";
+      if (count === 0) reason = stage.emptyReason || ("The selected group is empty — add " + (stage.fields.some(function(f){ return f.key === "image_group_id"; }) ? "images" : "movies") + " to it on the Assets tab.");
       // MyFindParticlesPanel's PleaseEstimateCTFStaticText, in its words.
       else if (stage.requiresCtf && selectedGroupCtfCount() !== null && selectedGroupCtfCount() < count) reason = "Please run CTF estimation on this group before picking particles.";
       // cisTEM's OnUpdateUI: a profile whose commands add up to zero
@@ -5567,7 +5949,7 @@ From branch : <span id="versionBranch">—</span></p>
       alert("Job submission failed: " + err.message);
     }).finally(function(){
       els.submitBtn.disabled = false;
-      els.submitBtn.textContent = "Run";
+      els.submitBtn.textContent = STAGES[state.currentStage].startLabel || "Run";
     });
   });
 
@@ -5603,7 +5985,8 @@ From branch : <span id="versionBranch">—</span></p>
     motion_correction: function(){ loadMovies(); loadImages(); loadImageGroups(); loadResults("motion_correction"); },
     // Find CTF changes each image's active estimate, which the Images panel shows.
     ctf_estimation: function(){ loadImages(); loadResults("ctf_estimation"); },
-    particle_picking: function(){ loadResults("particle_picking"); loadPositionGroups(); loadPositions(); }
+    particle_picking: function(){ loadResults("particle_picking"); loadPositionGroups(); loadPositions(); },
+    class2d: function(){ loadResults("class2d"); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 
@@ -5936,6 +6319,32 @@ From branch : <span id="versionBranch">—</span></p>
       return function(result, base, urls){
         view.loading();
         view.update(result, urls, base + "image.png");
+      };
+    },
+    // MyRefine2DPanel while it runs: the newest class averages
+    // (ResultDisplayPanel) and the PlotPanel's three per-round curves.
+    class2d: function(body){
+      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+      var plots = document.createElement("div"); plots.className = "c2d-plots"; box.appendChild(plots);
+      var logp = makePlotBlock("Mean logP", [["ra-swatch-logp", "per active particle"]]);
+      var sigma = makePlotBlock("Mean sigma", [["ra-swatch-sigma", "per active particle"]]);
+      var moved = makePlotBlock("Particles that changed class", [["ra-swatch-moved", "%"]]);
+      [logp, sigma, moved].forEach(function(pl){ plots.appendChild(pl.root); });
+      var fig = classMontageFigure("Latest class averages"); fig.root.style.marginTop = "12px"; box.appendChild(fig.root);
+      return function(result, base, urls){
+        var h = result.history || [];
+        var xs = h.map(function(e){ return e.round; });
+        var opts = {xLabel: "round", xMin: 1, xStep: Math.max(1, Math.ceil((result.rounds || 1) / 10)), xTick: function(v){ return String(Math.round(v)); }, emptyText: "No round has finished yet."};
+        drawLinePlot(logp.svg, h.length ? [{xs: xs, ys: h.map(function(e){ return e.average_logp || 0; }), cls: "line-x", dots: "dot-x"}] : [], Object.assign({}, opts, {yLabel: "logP"}));
+        drawLinePlot(sigma.svg, h.length ? [{xs: xs, ys: h.map(function(e){ return e.average_sigma || 0; }), cls: "line-y", dots: "dot-y"}] : [], Object.assign({}, opts, {yLabel: "sigma"}));
+        drawLinePlot(moved.svg, h.length ? [{xs: xs, ys: h.map(function(e){ return e.percent_moved || 0; }), cls: "line-moved", dots: "dot-moved"}] : [], Object.assign({}, opts, {yLabel: "%", yMin: 0, yMax: 100}));
+        var phase = TERMINAL_STATUSES[selectedJob() ? selectedJob().status : ""] ? "" :
+          (result.phase === "startup" ? "creating starting references" : result.phase === "merge" ? "merging round " + (result.round + 1) : "refining round " + (result.round + 1) + " of " + result.rounds);
+        fig.left.textContent = result.name + (result.is_startup ? " (starting references)" : " (round " + result.round + " of " + result.rounds + ")");
+        fig.right.textContent = phase;
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+        fig.img.style.maxWidth = result.montage ? (result.montage.width * 2) + "px" : "";
+        loadFigure(fig.img, fig.status, "/classifications/" + result.classification_id + "/averages.png", result.class_average_file_exists, "class averages", urls);
       };
     }
   };

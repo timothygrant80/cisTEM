@@ -38,7 +38,7 @@ If your browser blocks `fetch` from a `file://` page, open `http://localhost:800
 
 ## Wiring in your real pipeline
 
-Open `server/cistem_server.py` and fill in `STAGE_COMMANDS` — one command template per stage, using `{param_key}` placeholders filled from the job's submitted parameters. For stages still using freeform typed params (`ctf_estimation`, `particle_picking`, `class2d`, `refine3d`) this is a direct 1:1 mapping, e.g.:
+Open `server/cistem_server.py` and fill in `STAGE_COMMANDS` — one command template per stage, using `{param_key}` placeholders filled from the job's submitted parameters. For the stage still using freeform typed params (`refine3d`) this is a direct 1:1 mapping, e.g.:
 
 ```python
 "ctf_estimation": {
@@ -120,6 +120,11 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET`/`POST` | `/projects/:id/refinement-packages` | List packages / create one from a particle position group (cuts the stack, writes the package and its "Random Parameters" refinement) |
 | `GET` | `/projects/:id/refinement-packages/defaults` | The wizard's prefills for a group (`?particle_group_id=&largest_dimension_a=`) |
 | `GET`/`PATCH`/`DELETE` | `/projects/:id/refinement-packages/:pid` | Details with contained particles / rename / delete (tables and stack file) |
+| `GET` | `/projects/:id/classifications` | Every 2D classification (`?refinement_package_id=` for one package's) with its package name, job number and whether its class averages file exists |
+| `GET` | `/projects/:id/class2d/defaults` | `MyRefine2DPanel::SetDefaults()` for a package (`?refinement_package_id=`): the class-count default and the earlier classifications the starting-references picker offers |
+| `GET`/`DELETE` | `/projects/:id/classifications/:cid` | One classification with per-class member counts and the montage geometry / delete it (results table and class averages file) |
+| `GET` | `/projects/:id/classifications/:cid/averages.png` | The class averages tiled into one PNG |
+| `GET` | `/projects/:id/classifications/:cid/class/:k` | The members of class k (`?limit=`, active ones first); `.../class/:k/members.png` tiles them from the particle stack |
 | `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |
 | `GET` | `/projects/:id/picks/:pid` | One picking plus `positions` (Å from the image origin) |
 | `POST` | `/projects/:id/picks/:pid/activate` | Make these picks the image's particle positions |

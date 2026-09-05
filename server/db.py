@@ -307,6 +307,15 @@ _ALTER_STATEMENTS = [
     "ALTER TABLE JOBS ADD COLUMN JOB_TOKEN TEXT",
     "ALTER TABLE JOBS ADD COLUMN CONTROLLER_SEQ INTEGER",
     "ALTER TABLE JOBS ADD COLUMN TASKS_JSON TEXT",
+    # 2D classification (server/classification.py): a user-visible class2d
+    # job drives hidden child jobs (one refine2d/merge2d run each) that
+    # point back at it, and keeps where it has got to in STATE_JSON so a
+    # server restart can pick the cycle up again.
+    "ALTER TABLE JOBS ADD COLUMN PARENT_JOB_ID TEXT",
+    "ALTER TABLE JOBS ADD COLUMN STATE_JSON TEXT",
+    # Which job a classification came from -- cisTEM has no job table to
+    # point at; the same addition PARTICLE_PICKING_LIST.PICKING_JOB_ID is.
+    "ALTER TABLE CLASSIFICATION_LIST ADD COLUMN JOB_ID TEXT",
 ]
 
 # Rows every project must have, seeded here rather than in create_project()

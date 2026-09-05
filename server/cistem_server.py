@@ -46,6 +46,7 @@ from flask import Flask, abort, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 import auth
+import classification
 import db
 import job_runner
 import refinement_packages
@@ -161,6 +162,10 @@ class DbSink(job_runner.Sink):
             _update_job(project_id, job_id, **fields)
             append_log(project_id, job_id, "[{}] job {}{}".format(now_iso(), status, ": " + error if error else ""))
             self._forget(job_id)
+            # A step of a 2D classification: its parent decides what comes next.
+            row = _fetch_job_row(project_id, job_id)
+            if row is not None and row["PARENT_JOB_ID"]:
+                classification.child_finished(project_id, row, status, error)
 
     def on_log(self, job_id, text, level="info"):
         project_id = self._project(job_id)
@@ -185,6 +190,9 @@ class DbSink(job_runner.Sink):
             )
             conn.execute("UPDATE JOBS SET PROGRESS=? WHERE JOB_ID=?",
                          (int(done_count * 100 / task_count) if task_count else 0, job_id))
+        parent = conn.execute("SELECT PARENT_JOB_ID FROM JOBS WHERE JOB_ID=?", (job_id,)).fetchone()
+        if parent is not None and parent["PARENT_JOB_ID"]:
+            classification.child_progress(conn, parent["PARENT_JOB_ID"], job_id, done_count, task_count)
         conn.close()
         if status == "failed":
             self.on_log(job_id, "task {} failed: {}".format(task, error), level="error")
@@ -287,7 +295,7 @@ STAGE_COMMANDS = {
 # Job store helpers (SQLite-backed, one project's JOBS/JOB_LOG_LINES tables)
 # ---------------------------------------------------------------------------
 
-def _task_progress(conn, row):
+def _task_progress(conn, row):  # noqa: D401 -- see _task_progress_for
     """How far a runner-backed job has got, for the page's time-remaining
     estimate (cisTEM's JobTracker: seconds per task so far times tasks left):
     tasks finished out of tasks sent, and when the first and latest finished.
@@ -317,7 +325,13 @@ def _row_to_job(row, conn=None):
         "finished_at": row["FINISHED_AT"],
         "error": row["ERROR"],
         "metrics": json.loads(row["METRICS_JSON"]) if row["METRICS_JSON"] else {},
-    }, **(_task_progress(conn, row) if conn is not None and row["STATUS"] in ("queued", "running") else {}))
+    }, **(_task_progress_for(conn, row) if conn is not None and row["STATUS"] in ("queued", "running") else {}))
+
+
+def _task_progress_for(conn, row):
+    if row["STAGE"] == classification.STAGE:
+        return classification.progress_info(json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None)
+    return _task_progress(conn, row)
 
 
 def _fetch_job_row(project_id, job_id):
@@ -575,9 +589,15 @@ def _recover_interrupted_jobs():
         project_id = entry.name
         conn = db.get_conn(project_id)
         rows = conn.execute("SELECT * FROM JOBS WHERE STATUS IN ('queued','running')").fetchall()
+        parents = []
         for row in rows:
             job_id = row["JOB_ID"]
             adapter = stages.ADAPTERS.get(row["STAGE"])
+            if row["STAGE"] == classification.STAGE and _job_runner is not None and row["STATE_JSON"]:
+                # Its children are restored by the branch below; it picks
+                # up from whichever of them is (or has already) finished.
+                parents.append(row)
+                continue
             if _job_runner is not None and adapter is not None and row["JOB_TOKEN"] and row["TASKS_JSON"]:
                 params = json.loads(row["PARAMS_JSON"]) if row["PARAMS_JSON"] else {}
                 sys_conn = db.get_system_conn()
@@ -601,6 +621,8 @@ def _recover_interrupted_jobs():
                     (now_iso(), job_id),
                 )
         conn.close()
+        for row in parents:
+            classification.resume(project_id, row)
 
 
 def _package_job_info(project_id, row):
@@ -625,7 +647,8 @@ def _controller_log_path(project_id, job_id):
 # ---------------------------------------------------------------------------
 
 STATIC_FILES = {"cistem3.html", "config.js", "logo.png", "movie-alignment-example.png",
-                "ctffind-definitions.png", "ctffind-diagnostic-image.png", "ctffind-example-1dfit.png"}
+                "ctffind-definitions.png", "ctffind-diagnostic-image.png", "ctffind-example-1dfit.png",
+                "class2d-example-1.png", "class2d-example-2.png", "class2d-example-3.png", "class2d-example-4.png"}
 
 
 @app.route("/")
@@ -2037,6 +2060,141 @@ def delete_refinement_package(project_id, package_id):
 
 
 # ---------------------------------------------------------------------------
+# 2D classifications (CLASSIFICATION_LIST) -- what Refine2DResultsPanel
+# reads, plus the pictures it shows: the class averages as a montage and
+# the members of one class cut from the package's stack.
+# ---------------------------------------------------------------------------
+
+@app.route("/api/projects/<project_id>/classifications", methods=["GET"])
+@auth.project_access_required
+def list_classifications(project_id):
+    """Every classification, or those of one package (`?refinement_package_id=`),
+    with its package's name and the job that made it."""
+    package_id = request.args.get("refinement_package_id", type=int)
+    conn = db.get_conn(project_id)
+    out = classification.list_classifications(conn, package_id)
+    conn.close()
+    return jsonify({"classifications": out})
+
+
+@app.route("/api/projects/<project_id>/class2d/defaults", methods=["GET"])
+@auth.project_access_required
+def class2d_defaults(project_id):
+    """MyRefine2DPanel::SetDefaults() for the chosen package: the class
+    count it would pick for a new classification, and, per earlier
+    classification, the class count and high-resolution limit a run
+    continuing from it inherits."""
+    package_id = request.args.get("refinement_package_id", type=int)
+    conn = db.get_conn(project_id)
+    try:
+        pkg = classification.package_row(conn, package_id) if package_id is not None else None
+        if pkg is None:
+            return jsonify({"error": "no such refinement package"}), 404
+        particles = len(classification.package_particles(conn, package_id))
+        return jsonify({
+            "refinement_package_id": package_id,
+            "particle_count": particles,
+            "number_of_classes": classification.default_number_of_classes(particles),
+            "defaults": classification.DEFAULTS,
+            "classifications": [{"classification_id": c["classification_id"], "name": c["name"],
+                                 "number_of_classes": c["number_of_classes"], "high_resolution_limit": c["high_resolution_limit"],
+                                 "class_average_file_exists": c["class_average_file_exists"]}
+                                for c in classification.list_classifications(conn, package_id)],
+        })
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/classifications/<int:classification_id>", methods=["GET"])
+@auth.project_access_required
+def get_classification(project_id, classification_id):
+    conn = db.get_conn(project_id)
+    d = classification.get_classification(conn, classification_id)
+    conn.close()
+    if d is None:
+        return jsonify({"error": "no such classification"}), 404
+    d["montage"] = classification.montage_geometry(d["number_of_classes"], box=d.get("stack_box_size"))
+    return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/classifications/<int:classification_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_classification(project_id, classification_id):
+    conn = db.get_conn(project_id)
+    ok = classification.delete_classification(conn, classification_id)
+    conn.close()
+    if not ok:
+        return jsonify({"error": "no such classification"}), 404
+    return jsonify({"deleted": classification_id})
+
+
+def _montage_response(path, sections, etag_key, what):
+    if not path or not Path(path).is_file():
+        return jsonify({"error": "{} file is missing: {}".format(what, path)}), 404
+    stat = Path(path).stat()
+    etag = '"r{}-m{}-{}-{}-{}"'.format(preview.RENDER_VERSION, classification.MONTAGE_TILE, etag_key, int(stat.st_mtime), stat.st_size)
+    if request.headers.get("If-None-Match") == etag:
+        return "", 304
+    try:
+        png, _meta = classification.render_montage(path, sections)
+    except (preview.PreviewError, ValueError, OSError) as exc:
+        return jsonify({"error": str(exc)}), 422
+    response = app.response_class(png, mimetype="image/png")
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "private, no-cache"
+    return response
+
+
+@app.route("/api/projects/<project_id>/classifications/<int:classification_id>/averages.png", methods=["GET"])
+@auth.project_access_required
+def classification_averages_png(project_id, classification_id):
+    """The class averages tiled into one picture (ClassumDisplayPanel)."""
+    conn = db.get_conn(project_id)
+    row = conn.execute("SELECT CLASS_AVERAGE_FILE FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=?", (classification_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such classification"}), 404
+    return _montage_response(row["CLASS_AVERAGE_FILE"], None, "averages-{}".format(classification_id), "class averages")
+
+
+@app.route("/api/projects/<project_id>/classifications/<int:classification_id>/class/<int:class_number>", methods=["GET"])
+@auth.project_access_required
+def classification_class_members(project_id, classification_id, class_number):
+    """Which particles a class holds (Refine2DResultsPanel's Class Members
+    list): the ones that took part in the round first, then those whose
+    best class this was before they sat the round out."""
+    limit = request.args.get("limit", default=CLASS_MEMBER_LIMIT, type=int)
+    conn = db.get_conn(project_id)
+    members, total = classification.class_members(conn, classification_id, class_number, limit)
+    conn.close()
+    return jsonify({"classification_id": classification_id, "class_number": class_number, "members": members, "total": total,
+                    "montage": classification.montage_geometry(len(members))})
+
+
+@app.route("/api/projects/<project_id>/classifications/<int:classification_id>/class/<int:class_number>/members.png", methods=["GET"])
+@auth.project_access_required
+def classification_class_members_png(project_id, classification_id, class_number):
+    """The class's members cut from the package's particle stack, tiled
+    (ParticleDisplayPanel)."""
+    limit = request.args.get("limit", default=CLASS_MEMBER_LIMIT, type=int)
+    conn = db.get_conn(project_id)
+    row = conn.execute("SELECT rp.STACK_FILENAME FROM CLASSIFICATION_LIST c JOIN REFINEMENT_PACKAGE_ASSETS rp "
+                       "ON rp.REFINEMENT_PACKAGE_ASSET_ID = c.REFINEMENT_PACKAGE_ASSET_ID WHERE c.CLASSIFICATION_ID=?",
+                       (classification_id,)).fetchone()
+    members, _total = classification.class_members(conn, classification_id, class_number, limit)
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such classification"}), 404
+    if not members:
+        return jsonify({"error": "class {} has no members".format(class_number)}), 404
+    return _montage_response(row["STACK_FILENAME"], [m["position_in_stack"] for m in members],
+                             "members-{}-{}-{}".format(classification_id, class_number, limit), "particle stack")
+
+
+CLASS_MEMBER_LIMIT = 100
+
+
+# ---------------------------------------------------------------------------
 # Results (project-scoped, read-only)
 #
 # What cisTEM's Results tab reads: for Align Movies, MOVIE_ALIGNMENT_LIST
@@ -2555,7 +2713,9 @@ def delete_run_profile(run_profile_id):
 @auth.project_access_required
 def list_jobs(project_id):
     conn = db.get_conn(project_id)
-    rows = conn.execute("SELECT * FROM JOBS ORDER BY CREATED_AT").fetchall()
+    # The steps of a 2D classification are jobs to the runner but not to the
+    # user: the parent row stands for the whole cycle.
+    rows = conn.execute("SELECT * FROM JOBS WHERE PARENT_JOB_ID IS NULL ORDER BY CREATED_AT").fetchall()
     jobs = [_row_to_job(r, conn) for r in rows]
     conn.close()
     return jsonify({"jobs": jobs})
@@ -2602,6 +2762,14 @@ def create_job(project_id):
             return jsonify({"error": "image group has no images"}), 400
         if missing_ctf:
             return jsonify({"error": stages.find_particles.CTF_REQUIRED_MESSAGE}), 400
+    elif stage == classification.STAGE:
+        conn = db.get_conn(project_id)
+        try:
+            classification.validate(conn, params)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        finally:
+            conn.close()
 
     job_id = uuid.uuid4().hex[:10]
     conn = db.get_conn(project_id)
@@ -2625,7 +2793,9 @@ def create_job(project_id):
     adapter = stages.ADAPTERS.get(stage)
     if adapter is not None and _job_runner is not None and _controller_available():
         return _submit_to_runner(project_id, job_id, adapter, params)
-    if adapter is not None:
+    if stage == classification.STAGE and _job_runner is not None and _controller_available():
+        return _start_classification(project_id, job_id, params)
+    if adapter is not None or stage == classification.STAGE:
         # This stage *can* run for real; say exactly what is stopping it,
         # rather than the generic simulation note about a stage binary.
         if _job_runner is None:
@@ -2687,6 +2857,62 @@ def _submit_to_runner(project_id, job_id, adapter, params):
     return jsonify(_row_to_job(_fetch_job_row(project_id, job_id))), 201
 
 
+def _submit_child_job(project_id, child_job_id, adapter, tasks, profile):
+    """classification.Runtime.submit_child: the child's JOBS row exists;
+    give it a token and its task list and hand it to the runner -- the tail
+    of _submit_to_runner() without the validation, which the driver did."""
+    conn = db.get_conn(project_id)
+    try:
+        row = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (child_job_id,)).fetchone()
+        spec = job_runner.JobSpec(child_job_id, _package_job_info(project_id, row), adapter.PROGRAM, profile, tasks,
+                                  profile["manager_command"], controller_log=_controller_log_path(project_id, child_job_id))
+        with conn:
+            conn.execute("UPDATE JOBS SET JOB_TOKEN=?, TASKS_JSON=? WHERE JOB_ID=?",
+                         (spec.token, json.dumps(tasks), child_job_id))
+    finally:
+        conn.close()
+    append_log(project_id, child_job_id, "[{}] step of 2D classification {} created ({}, {} task{}, profile: {})".format(
+        now_iso(), row["PARENT_JOB_ID"], adapter.PROGRAM["name"], len(tasks), "" if len(tasks) == 1 else "s", profile["name"]))
+    _db_sink.register(child_job_id, project_id)
+    _job_runner.submit(spec)
+
+
+classification.configure(classification.Runtime(
+    submit_child=_submit_child_job,
+    cancel=lambda job_id: _job_runner is not None and _job_runner.cancel(job_id),
+    append_log=lambda project_id, job_id, text, level="info": append_log(
+        project_id, job_id, "[{}] {}{}".format(now_iso(), "ERROR: " if level == "error" else "", text)),
+    update_job=_update_job,
+))
+
+
+def _start_classification(project_id, job_id, params):
+    """The class2d path: no single task list to hand the runner -- the
+    driver in classification.py launches the first step and follows up
+    from the sink's callbacks."""
+    conn = db.get_conn(project_id)
+    try:
+        sys_conn = db.get_system_conn()
+        profile = db.load_run_profile_by_name(sys_conn, params.get("run_profile"))
+        sys_conn.close()
+        error = None
+        if profile is None:
+            error = "unknown run profile {!r}".format(params.get("run_profile"))
+        else:
+            try:
+                classification.start(conn, project_id, job_id, params, profile)
+            except ValueError as exc:
+                error = str(exc)
+        if error is not None:
+            with conn:
+                conn.execute("UPDATE JOBS SET STATUS='failed', ERROR=?, FINISHED_AT=? WHERE JOB_ID=?",
+                             (error, now_iso(), job_id))
+            return jsonify({"error": error}), 400
+    finally:
+        conn.close()
+    return jsonify(_row_to_job(_fetch_job_row(project_id, job_id))), 201
+
+
 @app.route("/api/projects/<project_id>/jobs/<job_id>")
 @auth.project_access_required
 def get_job(project_id, job_id):
@@ -2732,6 +2958,21 @@ def get_latest_result(project_id, job_id):
         return jsonify({"error": "not found"}), 404
     adapter = stages.ADAPTERS.get(row["STAGE"])
     out = {"job_id": job_id, "status": row["STATUS"], "progress": row["PROGRESS"], "result": None}
+    if row["STAGE"] == classification.STAGE:
+        conn = db.get_conn(project_id)
+        try:
+            result = classification.live_result(conn, row)
+            info = classification.progress_info(json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None)
+        finally:
+            conn.close()
+        out["task_count"] = info.get("task_count")
+        out["done_count"] = info.get("tasks_done")
+        if result is None:
+            out["reason"] = "The starting references are being created." if row["STATUS"] in ("queued", "running") \
+                else "This job recorded no classifications."
+        else:
+            out["result"] = result
+        return jsonify(out)
     if adapter is None or not hasattr(adapter, "live_result"):
         out["reason"] = "This stage has no live results (it runs in simulation)."
         return jsonify(out)
@@ -2789,6 +3030,14 @@ def cancel_job(project_id, job_id):
     job = _row_to_job(row)
     if job["status"] not in ("queued", "running"):
         return jsonify(job)
+
+    if row["STAGE"] == classification.STAGE and row["STATE_JSON"]:
+        conn = db.get_conn(project_id)
+        try:
+            classification.cancel(conn, project_id, job_id)
+        finally:
+            conn.close()
+        return jsonify(_row_to_job(_fetch_job_row(project_id, job_id)))
 
     _update_job(project_id, job_id, CANCEL_REQUESTED=1)
     if _job_runner is not None and _job_runner.cancel(job_id):

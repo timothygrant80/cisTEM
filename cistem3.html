@@ -1672,6 +1672,7 @@ From branch : <span id="versionBranch">—</span></p>
   els.runProfile.addEventListener("change", function(){
     state.runProfile = els.runProfile.value;
     localStorage.setItem("cryoem_run_profile", state.runProfile);
+    updateStartButton();
   });
 
   // ---------- connection ----------
@@ -3409,7 +3410,12 @@ From branch : <span id="versionBranch">—</span></p>
     else if (!state.runProfiles || !state.runProfiles.length) reason = "This project has no run profiles.";
     else {
       var count = selectedGroupCount();
+      var profile = state.runProfiles.filter(function(p){ return p.profile_name === els.runProfile.value; })[0];
       if (count === 0) reason = "The selected group has no movies in it — import some on the Assets tab.";
+      // cisTEM's OnUpdateUI: a profile whose commands add up to zero
+      // processes can't launch anything, so the button greys rather than
+      // letting the job fail at start.
+      else if (profile && profile.total_jobs === 0) reason = "The run profile \u201c" + profile.profile_name + "\u201d has no run commands yet — it needs editing before it can launch a job.";
     }
     els.submitBtn.disabled = !!reason;
     els.submitBtn.title = reason || "";

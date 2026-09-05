@@ -1466,19 +1466,29 @@ def add_images_to_group(project_id):
 @app.route("/api/projects/<project_id>/run-profiles", methods=["GET"])
 @auth.project_access_required
 def list_run_profiles(project_id):
-    """The project's RUN_PROFILES rows, for the Run Profile picker each job
-    panel carries (cf. RunProfileComboBox in cisTEM's AlignMoviesPanel, filled
-    from run_profiles_panel). db.py seeds the same three profiles into every
-    project; nothing edits them yet, so this is read-only for now.
+    """The project's run profiles with their commands, for the Run Profile
+    picker each job panel carries (cf. RunProfileComboBox in cisTEM's
+    AlignMoviesPanel, filled from run_profiles_panel). db.py seeds the same
+    three into every project; nothing edits them yet, so this is read-only.
+
+    `total_jobs` is what the start button gates on: a profile with no run
+    commands (the seeded Slurm template) can't launch anything, and cisTEM's
+    OnUpdateUI greys the button in that case rather than let the job fail.
     """
     conn = db.get_conn(project_id)
-    rows = conn.execute(
-        "SELECT RUN_PROFILE_ID as run_profile_id, PROFILE_NAME as profile_name, "
-        "MANAGER_RUN_COMMAND as manager_run_command "
-        "FROM RUN_PROFILES ORDER BY RUN_PROFILE_ID"
-    ).fetchall()
+    profiles = db.load_run_profiles(conn)
     conn.close()
-    return jsonify({"run_profiles": [dict(r) for r in rows]})
+    return jsonify({"run_profiles": [
+        {
+            "run_profile_id": p["run_profile_id"],
+            "profile_name": p["name"],
+            "manager_run_command": p["manager_command"],
+            "controller_address": p["controller_address"],
+            "run_commands": p["run_commands"],
+            "total_jobs": p["total_jobs"],
+        }
+        for p in profiles
+    ]})
 
 
 # ---------------------------------------------------------------------------

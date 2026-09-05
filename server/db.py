@@ -22,6 +22,7 @@ user data -- if a column ever needs to change, add an ALTER TABLE guarded by
 try/except sqlite3.OperationalError rather than reaching for a migration tool.
 """
 
+import os
 import re
 import shutil
 import sqlite3
@@ -189,13 +190,37 @@ CREATE INDEX IF NOT EXISTS idx_image_assets_parent_movie ON IMAGE_ASSETS(PARENT_
 CREATE INDEX IF NOT EXISTS idx_image_group_members_asset ON IMAGE_GROUP_MEMBERS(IMAGE_ASSET_ID);
 """
 
-# (profile_name, manager_run_command) -- matches the run-profile options
-# cistem3.html has always hardcoded client-side (see <select id="runProfile">).
+# The run profiles every project starts with. Names are the three the Run
+# Profile picker has always offered; the commands follow cisTEM's own defaults
+# (RunProfileManager::AddDefaultLocalProfile and "Default Reconstruction"):
+# the controller is launched locally with `$command`, and each run command is
+# `$command` too, N copies with M threads each, 10 ms apart. `$command` is
+# substituted by the launcher -- the server for the manager command, the
+# controller for the run commands -- exactly as in guix_job_control.cpp.
+#
+# The Slurm profile is deliberately seeded with *no* run commands: a profile
+# with zero total jobs can't be started (cisTEM's OnUpdateUI greys the start
+# button), which is the honest state for a template nobody has adapted to
+# their cluster yet. Editing profiles is still a known gap.
+_CORES = os.cpu_count() or 4
 RUN_PROFILE_SEED = [
-    "Local (single-threaded)",
-    "Local (multi-threaded)",
-    "Cluster (Slurm)",
+    # (name, manager_command, [(command, copies, threads_per_copy, delay_ms), ...])
+    ("Local (single-threaded)", "$command", [("$command", _CORES, 1, 10)]),
+    ("Local (multi-threaded)", "$command", [("$command", 1, max(1, _CORES // 2), 10)]),
+    ("Cluster (Slurm)", "$command", []),
 ]
+
+# cisTEM keeps each profile's commands in its own numbered table,
+# RUN_PROFILE_COMMANDS_<RUN_PROFILE_ID>, and this follows suit -- unlike the
+# group-membership sharding (see the module docstring), there are only ever a
+# handful of profiles, so matching cisTEM costs nothing and a real cisTEM
+# reads the result. Column names are verbatim, misspelling included.
+_RUN_PROFILE_COMMANDS_SQL = (
+    "CREATE TABLE IF NOT EXISTS RUN_PROFILE_COMMANDS_{}("
+    "COMMANDS_NUMBER INTEGER PRIMARY KEY, COMMAND_STRING TEXT, NUMBER_OF_COPIES INTEGER, "
+    "NUMBER_OF_THREADS_PER_COPY INTEGER, OVERRIDE_TOTAL_NUMBER_OF_COPIES INTEGER, "
+    "OVERIDDEN_TOTAL_NUMBER_OF_COPIES INTEGER, DELAY_TIME_IN_MS INTEGER)"
+)
 
 
 def slugify(name):
@@ -269,7 +294,84 @@ def get_conn(project_id):
     with conn:
         for stmt in _SEED_STATEMENTS:
             conn.execute(stmt)
+        _seed_run_profile_commands(conn)
     return conn
+
+
+def _seed_run_profile_commands(conn):
+    """Give every RUN_PROFILES row a manager command and a commands table,
+    and fill the table with the seed defaults the first time -- so projects
+    made before run profiles had commands get the same ones a new project
+    does. Idempotent: only NULL manager commands and empty tables are
+    touched, so a profile someone has edited is left alone."""
+    defaults = {name: (manager, commands) for name, manager, commands in RUN_PROFILE_SEED}
+    for row in conn.execute("SELECT RUN_PROFILE_ID, PROFILE_NAME, MANAGER_RUN_COMMAND FROM RUN_PROFILES").fetchall():
+        pid = row["RUN_PROFILE_ID"]
+        manager, commands = defaults.get(row["PROFILE_NAME"], ("$command", []))
+        conn.execute(
+            "UPDATE RUN_PROFILES SET MANAGER_RUN_COMMAND = COALESCE(MANAGER_RUN_COMMAND, ?), "
+            "GUI_ADDRESS = COALESCE(GUI_ADDRESS, ''), CONTROLLER_ADDRESS = COALESCE(CONTROLLER_ADDRESS, ''), "
+            "COMMANDS_ID = COALESCE(COMMANDS_ID, RUN_PROFILE_ID) WHERE RUN_PROFILE_ID = ?",
+            (manager, pid),
+        )
+        conn.execute(_RUN_PROFILE_COMMANDS_SQL.format(pid))
+        # Only tell an untouched (empty) table from a deliberately emptied one
+        # by whether the manager command was still NULL -- i.e. this is the
+        # first time this profile has been seen by code that knows commands.
+        if row["MANAGER_RUN_COMMAND"] is None and commands:
+            for number, (command, copies, threads, delay_ms) in enumerate(commands):
+                conn.execute(
+                    "INSERT OR IGNORE INTO RUN_PROFILE_COMMANDS_{}(COMMANDS_NUMBER, COMMAND_STRING, "
+                    "NUMBER_OF_COPIES, NUMBER_OF_THREADS_PER_COPY, OVERRIDE_TOTAL_NUMBER_OF_COPIES, "
+                    "OVERIDDEN_TOTAL_NUMBER_OF_COPIES, DELAY_TIME_IN_MS) VALUES (?, ?, ?, ?, 0, 0, ?)".format(pid),
+                    (number, command, copies, threads, delay_ms),
+                )
+
+
+def load_run_profiles(conn):
+    """Every run profile with its commands, in the shape the job protocol's
+    `package.profile` wants (docs/job-protocol.md section 6.2) plus the ids
+    the API needs. `total_jobs` is cisTEM's RunProfile::ReturnTotalJobs()."""
+    profiles = []
+    for row in conn.execute(
+        "SELECT RUN_PROFILE_ID, PROFILE_NAME, MANAGER_RUN_COMMAND, GUI_ADDRESS, CONTROLLER_ADDRESS "
+        "FROM RUN_PROFILES ORDER BY RUN_PROFILE_ID"
+    ).fetchall():
+        pid = row["RUN_PROFILE_ID"]
+        conn.execute(_RUN_PROFILE_COMMANDS_SQL.format(pid))
+        commands = [
+            {
+                "command": c["COMMAND_STRING"],
+                "copies": c["NUMBER_OF_COPIES"] or 0,
+                "threads_per_copy": c["NUMBER_OF_THREADS_PER_COPY"] or 1,
+                "override_total_copies": bool(c["OVERRIDE_TOTAL_NUMBER_OF_COPIES"]),
+                "overridden_total_copies": c["OVERIDDEN_TOTAL_NUMBER_OF_COPIES"] or 0,
+                "delay_ms": c["DELAY_TIME_IN_MS"] or 0,
+            }
+            for c in conn.execute(
+                "SELECT * FROM RUN_PROFILE_COMMANDS_{} ORDER BY COMMANDS_NUMBER".format(pid)
+            ).fetchall()
+        ]
+        total_jobs = sum(
+            c["overridden_total_copies"] if c["override_total_copies"] else c["copies"] for c in commands
+        )
+        profiles.append({
+            "run_profile_id": pid,
+            "name": row["PROFILE_NAME"],
+            "manager_command": row["MANAGER_RUN_COMMAND"] or "$command",
+            "gui_address": row["GUI_ADDRESS"] or "",
+            "controller_address": row["CONTROLLER_ADDRESS"] or "",
+            "run_commands": commands,
+            "total_jobs": total_jobs,
+        })
+    return profiles
+
+
+def load_run_profile_by_name(conn, name):
+    for profile in load_run_profiles(conn):
+        if profile["name"] == name:
+            return profile
+    return None
 
 
 def create_project(name, owner_user_id, owner_username):
@@ -295,11 +397,15 @@ def create_project(name, owner_user_id, owner_username):
             "INSERT INTO MOVIE_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) "
             "VALUES (0, 'All Movies', 0)"
         )
-        for profile_name in RUN_PROFILE_SEED:
+        # MANAGER_RUN_COMMAND is left NULL on purpose: that is the marker
+        # _seed_run_profile_commands() uses to know a profile has never been
+        # given its commands, so one code path serves new and old projects.
+        for profile_name, _manager, _commands in RUN_PROFILE_SEED:
             conn.execute(
                 "INSERT INTO RUN_PROFILES(PROFILE_NAME, MANAGER_RUN_COMMAND) VALUES (?, NULL)",
                 (profile_name,),
             )
+        _seed_run_profile_commands(conn)
     conn.close()
     return project_id
 

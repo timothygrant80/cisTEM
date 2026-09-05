@@ -11,8 +11,9 @@ Keys are the API's stage names (the same ones STAGE_COMMANDS uses); a stage
 with no adapter here still runs, in simulation, exactly as before.
 """
 
-from . import unblur
+from . import ctffind, unblur
 
 ADAPTERS = {
     "motion_correction": unblur,
+    "ctf_estimation": ctffind,
 }

@@ -207,6 +207,7 @@ CREATE TABLE IF NOT EXISTS JOB_LOG_LINES(
 
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON JOBS(STATUS);
 CREATE INDEX IF NOT EXISTS idx_movie_alignment_movie ON MOVIE_ALIGNMENT_LIST(MOVIE_ASSET_ID);
+CREATE INDEX IF NOT EXISTS idx_ctf_estimate_image ON ESTIMATED_CTF_PARAMETERS(IMAGE_ASSET_ID);
 CREATE INDEX IF NOT EXISTS idx_image_assets_parent_movie ON IMAGE_ASSETS(PARENT_MOVIE_ID);
 CREATE INDEX IF NOT EXISTS idx_image_group_members_asset ON IMAGE_GROUP_MEMBERS(IMAGE_ASSET_ID);
 """
@@ -275,6 +276,12 @@ _ALTER_STATEMENTS = [
     # When the project was made (epoch seconds, like DATETIME_OF_RUN). cisTEM's
     # MASTER_SETTINGS has no such column; the project picker shows it.
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN CREATION_DATE INTEGER",
+    # The four columns cisTEM's WriteResultToDataBase() writes that the
+    # copied schema predates (FindCTFPanel.cpp).
+    "ALTER TABLE ESTIMATED_CTF_PARAMETERS ADD COLUMN LARGE_ASTIGMATISM_EXPECTED INTEGER",
+    "ALTER TABLE ESTIMATED_CTF_PARAMETERS ADD COLUMN ICINESS REAL",
+    "ALTER TABLE ESTIMATED_CTF_PARAMETERS ADD COLUMN TILT_ANGLE REAL",
+    "ALTER TABLE ESTIMATED_CTF_PARAMETERS ADD COLUMN TILT_AXIS REAL",
     "ALTER TABLE JOBS ADD COLUMN JOB_NUMBER INTEGER",
     # The job protocol's per-job state, so a controller can reconnect to a
     # restarted server (docs/job-protocol.md section 7.2): the token it must

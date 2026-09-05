@@ -181,6 +181,7 @@ def live_result(conn, task, task_row):
     movie_id = int(task_row["REF"]) if task_row["REF"] is not None else int(task["ref"])
     movie = conn.execute("SELECT NAME FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID=?", (movie_id,)).fetchone()
     return {
+        "kind": "alignment",
         "movie_asset_id": movie_id,
         "movie_name": movie["NAME"] if movie else Path(v[0]).name,
         "exposure_per_frame": float(v[14]),
@@ -199,6 +200,24 @@ def live_result_files(task):
     """The two pictures live_result() refers to, by name: for the PNG routes."""
     v = _arg_values(task)
     return {"sum": v[1], "spectrum": v[26] if v[25] else None}
+
+
+def describe_summary(summary):
+    n = summary.get("alignments_written", 0)
+    return "wrote {} alignment{} to the project database".format(n, "" if n == 1 else "s")
+
+
+def activate_job_results(conn, job_id):
+    """Every alignment of one job becomes its movie's active one."""
+    ids = [r["ALIGNMENT_ID"] for r in conn.execute(
+        "SELECT ALIGNMENT_ID FROM MOVIE_ALIGNMENT_LIST WHERE ALIGNMENT_JOB_ID=? ORDER BY ALIGNMENT_ID", (job_id,))]
+    failed = []
+    for aid in ids:
+        try:
+            activate_alignment(conn, aid)
+        except ValueError as exc:
+            failed.append({"id": aid, "reason": str(exc)})
+    return len(ids), failed
 
 
 def finalize(conn, project_id, job, sent_tasks, task_rows, log):

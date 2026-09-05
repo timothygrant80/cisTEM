@@ -211,8 +211,8 @@ class DbSink(job_runner.Sink):
             try:
                 summary = adapter.finalize(conn, project_id, job, sent_tasks, task_rows, log_here)
                 metrics.update(summary)
-                self.on_log(job_id, "wrote {} alignment{} to the project database".format(
-                    summary.get("alignments_written", 0), "" if summary.get("alignments_written") == 1 else "s"))
+                self.on_log(job_id, adapter.describe_summary(summary) if hasattr(adapter, "describe_summary")
+                            else "wrote results to the project database: {}".format(summary))
             except Exception as exc:  # noqa: BLE001
                 self.on_log(job_id, "could not write results to the project database: {}".format(exc), level="error")
         # cisTEM adds the controller's timing to the project's CPU-hours total.
@@ -623,7 +623,8 @@ def _controller_log_path(project_id, job_id):
 # server/data/auth.db and the rest of the repo.
 # ---------------------------------------------------------------------------
 
-STATIC_FILES = {"cistem3.html", "config.js", "logo.png", "movie-alignment-example.png"}
+STATIC_FILES = {"cistem3.html", "config.js", "logo.png", "movie-alignment-example.png",
+                "ctffind-definitions.png", "ctffind-diagnostic-image.png", "ctffind-example-1dfit.png"}
 
 
 @app.route("/")
@@ -1846,28 +1847,120 @@ def activate_alignment(project_id, alignment_id):
         conn.close()
 
 
+@app.route("/api/projects/<project_id>/jobs/<job_id>/activate-results", methods=["POST"])
 @app.route("/api/projects/<project_id>/jobs/<job_id>/activate-alignments", methods=["POST"])
 @auth.project_access_required
-def activate_job_alignments(project_id, job_id):
-    """Make one job's results active for every movie it aligned -- what a
+def activate_job_results(project_id, job_id):
+    """Make one job's results active for every asset it processed -- what a
     user wants after a re-run with better parameters, and what a finishing
-    job does by itself. Movies whose file has gone are reported, not fatal."""
+    job does by itself. Dispatches on the job's stage adapter
+    (activate_job_results); the old /activate-alignments path is kept as
+    an alias. Assets whose file has gone are reported, not fatal."""
+    row = _fetch_job_row(project_id, job_id)
+    if row is None:
+        return jsonify({"error": "not found"}), 404
+    adapter = stages.ADAPTERS.get(row["STAGE"])
+    if adapter is None or not hasattr(adapter, "activate_job_results"):
+        return jsonify({"error": "this stage has no results to activate"}), 400
     conn = db.get_conn(project_id)
     try:
-        ids = [r["ALIGNMENT_ID"] for r in conn.execute(
-            "SELECT ALIGNMENT_ID FROM MOVIE_ALIGNMENT_LIST WHERE ALIGNMENT_JOB_ID=? ORDER BY ALIGNMENT_ID", (job_id,))]
-        if not ids:
-            return jsonify({"error": "that job has no alignments"}), 404
-        activate = stages.ADAPTERS["motion_correction"].activate_alignment
-        failed = []
-        for aid in ids:
-            try:
-                activate(conn, aid)
-            except ValueError as exc:
-                failed.append({"alignment_id": aid, "reason": str(exc)})
-        return jsonify({"activated": len(ids) - len(failed), "failed": failed})
+        total, failed = adapter.activate_job_results(conn, job_id)
+        if total == 0:
+            return jsonify({"error": "that job has no results"}), 404
+        return jsonify({"activated": total - len(failed), "failed": failed})
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Results: Find CTF (MyFindCTFResultsPanel + ShowCTFResultsPanel)
+# ---------------------------------------------------------------------------
+
+_CTF_COLUMNS = (
+    "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES",
+    "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION",
+    "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM",
+    "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2",
+    "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION",
+    "OUTPUT_DIAGNOSTIC_FILE", "NUMBER_OF_FRAMES_AVERAGED", "LARGE_ASTIGMATISM_EXPECTED", "ICINESS", "TILT_ANGLE", "TILT_AXIS",
+)
+
+_CTF_SELECT = (
+    "SELECT ce.*, ia.NAME AS IMAGE_NAME, ia.FILENAME AS IMAGE_FILENAME, "
+    "(ia.CTF_ESTIMATION_ID = ce.CTF_ESTIMATION_ID) AS IS_ACTIVE, j.JOB_NUMBER "
+    "FROM ESTIMATED_CTF_PARAMETERS ce "
+    "JOIN IMAGE_ASSETS ia ON ia.IMAGE_ASSET_ID = ce.IMAGE_ASSET_ID "
+    "LEFT JOIN JOBS j ON j.JOB_ID = ce.CTF_ESTIMATION_JOB_ID "
+)
+
+
+def _ctf_json(row):
+    d = {c.lower(): row[c] for c in _CTF_COLUMNS}
+    d["image_name"] = row["IMAGE_NAME"]
+    d["image_filename"] = row["IMAGE_FILENAME"]
+    d["is_active"] = bool(row["IS_ACTIVE"])
+    d["job_number"] = row["JOB_NUMBER"]
+    out = d["output_diagnostic_file"] or ""
+    d["diagnostic_file_exists"] = bool(out) and Path(out).is_file()
+    return d
+
+
+@app.route("/api/projects/<project_id>/ctf-estimates", methods=["GET"])
+@auth.project_access_required
+def list_ctf_estimates(project_id):
+    """Every CTF estimate with its image's name, job number, and whether the
+    image asset points at it (the active one). Read-only; feeds the Results
+    tab's Find CTF grid."""
+    conn = db.get_conn(project_id)
+    rows = conn.execute(_CTF_SELECT + "ORDER BY ce.IMAGE_ASSET_ID, ce.CTF_ESTIMATION_ID").fetchall()
+    conn.close()
+    return jsonify({"ctf_estimates": [_ctf_json(r) for r in rows]})
+
+
+@app.route("/api/projects/<project_id>/ctf-estimates/<int:estimate_id>", methods=["GET"])
+@auth.project_access_required
+def get_ctf_estimate(project_id, estimate_id):
+    """One estimate plus `plot` -- the 1D curves from the _avrot.txt beside
+    its diagnostic image (frequency in 1/A, smoothed spectrum, fit,
+    quality), or null if that file is missing."""
+    conn = db.get_conn(project_id)
+    row = conn.execute(_CTF_SELECT + "WHERE ce.CTF_ESTIMATION_ID = ?", (estimate_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such CTF estimate"}), 404
+    d = _ctf_json(row)
+    d["plot"] = stages.ADAPTERS["ctf_estimation"].read_avrot(d["output_diagnostic_file"]) if d["output_diagnostic_file"] else None
+    return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/ctf-estimates/<int:estimate_id>/activate", methods=["POST"])
+@auth.project_access_required
+def activate_ctf_estimate(project_id, estimate_id):
+    """Point the image asset at this estimate -- cisTEM's checked cell in
+    the CTF results grid. Returns the estimate as GET does, is_active true."""
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            image_id = stages.ADAPTERS["ctf_estimation"].activate_estimate(conn, estimate_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 409
+        if image_id is None:
+            return jsonify({"error": "no such CTF estimate"}), 404
+        row = conn.execute(_CTF_SELECT + "WHERE ce.CTF_ESTIMATION_ID = ?", (estimate_id,)).fetchone()
+        return jsonify(_ctf_json(row))
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/ctf-estimates/<int:estimate_id>/diagnostic.png", methods=["GET"])
+@auth.project_access_required
+def ctf_diagnostic_preview(project_id, estimate_id):
+    conn = db.get_conn(project_id)
+    row = conn.execute("SELECT OUTPUT_DIAGNOSTIC_FILE FROM ESTIMATED_CTF_PARAMETERS WHERE CTF_ESTIMATION_ID=?", (estimate_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such CTF estimate"}), 404
+    return _file_preview_response(row["OUTPUT_DIAGNOSTIC_FILE"], "ctf-diagnostic-{}".format(estimate_id), "diagnostic image")
 
 
 def _file_preview_response(path, etag_key, what):
@@ -2063,6 +2156,20 @@ def create_job(project_id):
         conn.close()
         if count == 0:
             return jsonify({"error": "movie group has no movies"}), 400
+    elif stage == "ctf_estimation":
+        # Find CTF consumes images the way Align Movies consumes movies:
+        # a group, whose members' metadata (voltage, Cs, pixel size, parent
+        # movie) is what the tasks are built from.
+        image_group_id = params.get("image_group_id")
+        if image_group_id is None:
+            return jsonify({"error": "image_group_id is required"}), 400
+        conn = db.get_conn(project_id)
+        count = conn.execute(
+            "SELECT COUNT(*) FROM IMAGE_GROUP_MEMBERS WHERE GROUP_ID=?", (image_group_id,)
+        ).fetchone()[0]
+        conn.close()
+        if count == 0:
+            return jsonify({"error": "image group has no images"}), 400
 
     job_id = uuid.uuid4().hex[:10]
     conn = db.get_conn(project_id)
@@ -2219,12 +2326,14 @@ def get_latest_result(project_id, job_id):
         conn.close()
 
 
-@app.route("/api/projects/<project_id>/jobs/<job_id>/tasks/<int:task_index>/<any(sum, spectrum):which>.png")
+@app.route("/api/projects/<project_id>/jobs/<job_id>/tasks/<int:task_index>/<which>.png")
 @auth.project_access_required
 def task_result_preview(project_id, job_id, task_index, which):
-    """PNG of one task's aligned sum or spectrum, from the file names the
-    task was sent with -- available as soon as the worker has written them,
-    before the job finishes and the alignment routes know about them."""
+    """PNG of one task's output picture -- `which` is a key of the adapter's
+    live_result_files() (unblur: sum, spectrum; ctffind: diagnostic) --
+    from the file names the task was sent with, so it is available as soon
+    as the worker has written it, before the job finishes and the results
+    routes know about it."""
     row = _fetch_job_row(project_id, job_id)
     if row is None:
         return jsonify({"error": "not found"}), 404
@@ -2233,9 +2342,10 @@ def task_result_preview(project_id, job_id, task_index, which):
     task = next((t for t in sent_tasks if t["index"] == task_index), None)
     if adapter is None or not hasattr(adapter, "live_result_files") or task is None:
         return jsonify({"error": "no such task"}), 404
-    path = adapter.live_result_files(task).get(which)
-    return _file_preview_response(path, "task-{}-{}-{}".format(which, job_id, task_index),
-                                  "aligned sum" if which == "sum" else "amplitude spectrum")
+    files = adapter.live_result_files(task)
+    if which not in files:
+        return jsonify({"error": "no such picture: {}".format(which)}), 404
+    return _file_preview_response(files[which], "task-{}-{}-{}".format(which, job_id, task_index), which.replace("_", " "))
 
 
 @app.route("/api/projects/<project_id>/jobs/<job_id>/cancel", methods=["POST"])

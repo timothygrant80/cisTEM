@@ -1013,7 +1013,7 @@ From branch : <span id="versionBranch">—</span></p>
               </div>
               <p class="form-note" id="ppListNote" hidden></p>
               <div class="asset-toolbar">
-                <button class="small" disabled title="Importing coordinate files isn’t implemented yet.">Import</button>
+                <button class="small" id="ppImportBtn" title="Import positions from a text file of image, X, Y lines.">Import</button>
                 <button class="small" id="ppRemoveBtn" disabled title="Select one or more positions first.">Remove</button>
                 <button class="small" id="ppRemoveAllBtn" disabled title="No positions in this group yet.">Remove All</button>
                 <button class="small" id="ppAddToGroupBtn" disabled title="Select one or more positions first.">Add To Group</button>
@@ -1222,6 +1222,35 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
 </div>
 
+<div class="scrim" id="importPositionsScrim"></div>
+<!-- MyParticlePositionAssetPanel::ImportAssetClick(): a text file of
+     "<image asset id or filename> <x> <y>" lines, Angstroms, one position
+     each. cisTEM opens a file on its own machine; here the file can come from
+     the browser's machine (read here, sent as text) or from the server's. -->
+<div class="modal" id="importPositionsModal">
+  <div class="modal-head">
+    <div class="modal-title">Import Particle Positions</div>
+    <button class="log-close" id="importPositionsModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">A text file with one position per line: the image asset I.D. (or the image's filename), then X and Y in &Aring;ngstroms. Lines starting with <code>#</code> are skipped. Imported positions carry no pick job and join All Particle Positions.</p>
+    <div class="field">
+      <label for="importPositionsFile">File on this computer</label>
+      <input type="file" id="importPositionsFile" accept=".txt,.plt,.dat,.coords,.box,.csv,text/plain" />
+    </div>
+    <div class="field">
+      <label for="importPositionsPath">&hellip; or a file on the server</label>
+      <div class="field-row">
+        <input type="text" id="importPositionsPath" placeholder="/data/session01/picks/coordinates.txt" />
+        <button type="button" class="small" id="importPositionsBrowseBtn">Browse&hellip;</button>
+      </div>
+    </div>
+    <div class="submit-row">
+      <button class="primary" id="importPositionsBtn">Import</button>
+    </div>
+    <p class="form-note" id="importPositionsNote"></p>
+  </div>
+</div>
 <div class="scrim" id="importImagesScrim"></div>
 <div class="modal" id="importImagesModal">
   <div class="modal-head">
@@ -1663,6 +1692,7 @@ From branch : <span id="versionBranch">—</span></p>
    "resultsTabs","resultsPages","resultspagePlaceholder","resultsPlaceholderLabel","resultsPlaceholderNote",
    "movieDetailsLabel","imageDetailsLabel","dMovieName","dMovieFilename","dMovieId","dMovieXSize","dMovieYSize","dMovieFrames","dMoviePixelSize",
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
+   "importPositionsScrim","importPositionsModal","importPositionsModalClose","importPositionsFile","importPositionsPath","importPositionsBrowseBtn","importPositionsBtn","importPositionsNote","ppImportBtn",
    "importImagesScrim","importImagesModal","importImagesModalClose","importImagesFields",
    "importImagesBtn","importImagesNote","importImagesValidationNote",
    "imageListBody","imageGroupList","imageImportOpenBtn","imageSelectAllCheckbox",
@@ -5010,6 +5040,54 @@ From branch : <span id="versionBranch">—</span></p>
     var page = RESULT_PAGES.particle_picking;
     var tryOnce = function(){ if (page.entries.some(function(e){ return e.rowId === p.PARENT_IMAGE_ASSET_ID; })) page.select(p.PARENT_IMAGE_ASSET_ID, null); };
     tryOnce(); setTimeout(tryOnce, 700);
+  });
+
+  // ---- import (ImportAssetClick) ----
+  function openImportPositionsModal(){
+    els.importPositionsModal.classList.add("open"); els.importPositionsScrim.classList.add("open");
+    els.importPositionsNote.textContent = ""; els.importPositionsNote.classList.remove("blocked");
+    els.importPositionsFile.value = "";
+  }
+  function closeImportPositionsModal(){
+    els.importPositionsModal.classList.remove("open"); els.importPositionsScrim.classList.remove("open");
+  }
+  els.ppImportBtn.addEventListener("click", function(){ if (state.projectId) openImportPositionsModal(); });
+  els.importPositionsModalClose.addEventListener("click", closeImportPositionsModal);
+  els.importPositionsScrim.addEventListener("click", closeImportPositionsModal);
+  els.importPositionsBrowseBtn.addEventListener("click", function(){
+    openBrowseModal({input: els.importPositionsPath, noun: "coordinate file", article: "a", types: "text"});
+  });
+  function submitPositionsImport(body){
+    els.importPositionsBtn.disabled = true;
+    els.importPositionsNote.classList.remove("blocked"); els.importPositionsNote.textContent = "Importing\u2026";
+    apiFetch(projectApiUrl("/particle-positions/import"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+      .then(function(res){
+        var d = res.data || {};
+        if (!res.ok) throw new Error((d.error || "import failed") + (d.failed && d.failed.length ? " \u2014 line " + d.failed[0].line + ": " + d.failed[0].reason : ""));
+        var parts = ["Imported " + d.imported + " position" + (d.imported === 1 ? "" : "s") + "."];
+        if (d.failed && d.failed.length) parts.push(d.failed.length + " line" + (d.failed.length === 1 ? "" : "s") + " skipped (line " + d.failed[0].line + ": " + d.failed[0].reason + (d.failed.length > 1 ? ", \u2026" : "") + ").");
+        if (d.warnings && d.warnings.length) parts.push(d.warnings[0] + (d.warnings.length > 1 ? " (+" + (d.warnings.length - 1) + " more)" : ""));
+        els.importPositionsNote.textContent = parts.join(" ");
+        loadPositionGroups(); loadPositions(); loadResults("particle_picking");
+      })
+      .catch(function(err){ els.importPositionsNote.classList.add("blocked"); els.importPositionsNote.textContent = err.message; })
+      .finally(function(){ els.importPositionsBtn.disabled = false; });
+  }
+  els.importPositionsBtn.addEventListener("click", function(){
+    if (!state.projectId) return;
+    var file = els.importPositionsFile.files && els.importPositionsFile.files[0];
+    var path = els.importPositionsPath.value.trim();
+    if (file){
+      var reader = new FileReader();
+      reader.onload = function(){ submitPositionsImport({text: String(reader.result)}); };
+      reader.onerror = function(){ els.importPositionsNote.classList.add("blocked"); els.importPositionsNote.textContent = "Could not read the file."; };
+      reader.readAsText(file);
+    } else if (path){
+      submitPositionsImport({path: path});
+    } else {
+      els.importPositionsNote.classList.add("blocked"); els.importPositionsNote.textContent = "Choose a file on this computer, or give a path on the server.";
+    }
   });
 
   // ---- particle position groups ----

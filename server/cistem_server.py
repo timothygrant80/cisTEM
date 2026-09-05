@@ -664,7 +664,8 @@ MOVIE_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff", ".eer"}
 # What each Import dialog's "Browse..." picker will show. Images never
 # include .eer -- see IMAGE_IMPORT_EXTENSIONS, which the import route
 # enforces on the resolved files regardless of what the picker offered.
-BROWSABLE_EXTENSIONS = {"movie": MOVIE_EXTENSIONS, "image": {".mrc", ".mrcs", ".tif", ".tiff"}}
+BROWSABLE_EXTENSIONS = {"movie": MOVIE_EXTENSIONS, "image": {".mrc", ".mrcs", ".tif", ".tiff"},
+                        "text": {".txt", ".plt", ".dat", ".coords", ".box", ".csv"}}
 
 
 @app.route("/api/browse")
@@ -1777,6 +1778,86 @@ def list_particle_positions(project_id):
         " ORDER BY pp.PARTICLE_POSITION_ASSET_ID LIMIT ?", args + [POSITION_LIST_LIMIT]).fetchall()
     conn.close()
     return jsonify({"particle_positions": [dict(r) for r in rows], "total": total, "truncated": total > len(rows)})
+
+
+def _import_particle_positions(conn, text):
+    """MyParticlePositionAssetPanel::ImportAssetClick(): one position per
+    line, `<image asset id or image filename> <x> <y>` in Angstroms, `#`
+    comments and blank lines skipped. Extra columns are ignored with a
+    warning; a line that doesn't parse is skipped and reported, as
+    cisTEM's error dialog does. Imported positions carry no pick job
+    (PICKING_ID -1, cisTEM's sentinel) and join All Particle Positions."""
+    images = conn.execute("SELECT IMAGE_ASSET_ID, FILENAME, NAME FROM IMAGE_ASSETS").fetchall()
+    by_id = {r["IMAGE_ASSET_ID"] for r in images}
+    by_name = {}
+    for r in images:
+        for key in (r["FILENAME"], os.path.basename(r["FILENAME"] or ""), r["NAME"],
+                    os.path.splitext(os.path.basename(r["FILENAME"] or ""))[0]):
+            if key:
+                by_name.setdefault(key, r["IMAGE_ASSET_ID"])
+    imported, failed, warnings = 0, [], []
+    with conn:
+        for number, raw in enumerate(text.splitlines(), start=1):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.replace(",", " ").split()
+            if len(parts) < 3:
+                failed.append({"line": number, "reason": "contains fewer than 3 values"})
+                continue
+            if len(parts) > 3:
+                warnings.append("line {} has more than 3 values; only the first 3 were used".format(number))
+            try:
+                image_id = int(parts[0])
+                if image_id not in by_id:
+                    failed.append({"line": number, "reason": "{} is not an existing image asset".format(image_id)})
+                    continue
+            except ValueError:
+                image_id = by_name.get(parts[0])
+                if image_id is None:
+                    failed.append({"line": number, "reason": "column 1 is neither an image asset id nor the filename of one"})
+                    continue
+            try:
+                x, y = float(parts[1]), float(parts[2])
+            except ValueError:
+                failed.append({"line": number, "reason": "columns 2 and 3 must be the X and Y positions in Angstroms"})
+                continue
+            cur = conn.execute(
+                "INSERT INTO PARTICLE_POSITION_ASSETS(PARENT_IMAGE_ASSET_ID, PICKING_ID, PICK_JOB_ID, X_POSITION, Y_POSITION, "
+                "PEAK_HEIGHT, TEMPLATE_ASSET_ID, TEMPLATE_PSI, TEMPLATE_THETA, TEMPLATE_PHI) VALUES (?, -1, NULL, ?, ?, NULL, 0, 0, 0, 0)",
+                (image_id, x, y))
+            conn.execute("INSERT OR IGNORE INTO PARTICLE_POSITION_GROUP_MEMBERS(GROUP_ID, PARTICLE_POSITION_ASSET_ID) VALUES (0, ?)", (cur.lastrowid,))
+            imported += 1
+    return {"imported": imported, "failed": failed, "warnings": warnings}
+
+
+@app.route("/api/projects/<project_id>/particle-positions/import", methods=["POST"])
+@auth.project_access_required
+def import_particle_positions(project_id):
+    """Body `{text}` (the file's contents, read in the browser) or `{path}`
+    (a text file on this server, as the movie and image imports take) --
+    lines of `<image asset id or filename> <x> <y>`, Angstroms.
+    -> {imported, failed: [{line, reason}], warnings}."""
+    body = request.get_json(force=True, silent=True) or {}
+    text = body.get("text")
+    if text is None and body.get("path"):
+        path = Path(str(body["path"])).expanduser()
+        if not path.is_file():
+            return jsonify({"error": "no such file: {}".format(path)}), 400
+        try:
+            text = path.read_text(errors="replace")
+        except OSError as exc:
+            return jsonify({"error": str(exc)}), 400
+    if text is None:
+        return jsonify({"error": "text or path is required"}), 400
+    conn = db.get_conn(project_id)
+    try:
+        result = _import_particle_positions(conn, text)
+    finally:
+        conn.close()
+    if result["imported"] == 0 and result["failed"]:
+        return jsonify(dict(result, error="no line could be imported")), 400
+    return jsonify(result), 201
 
 
 @app.route("/api/projects/<project_id>/particle-position-groups", methods=["GET"])

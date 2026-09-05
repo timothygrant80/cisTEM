@@ -115,6 +115,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/preview/pick` | Run the particle picker on one image with the given parameters, without a job → the picks |
 | `GET` | `/projects/:id/particle-positions` | Particle position assets (`?group_id=`, `?image_id=`), with parent image name and pick job number; capped at 5000 rows |
 | `GET`/`POST`/`PATCH`/`DELETE` | `/projects/:id/particle-position-groups[/:gid]`, `.../invert`, `.../remove-particle-positions`, `/particle-positions/delete`, `/particle-positions/add-to-group` | The same group routes movies and images have |
+| `POST` | `/projects/:id/particle-positions/import` | Body `{text}` or `{path}`: lines of `<image id or filename> <x> <y>` in Å → `{imported, failed, warnings}` |
 | `POST` | `/projects/:id/particle-position-groups/from-image-group` | A position group holding the positions of every image in an image group |
 | `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |
 | `GET` | `/projects/:id/picks/:pid` | One picking plus `positions` (Å from the image origin) |

@@ -57,7 +57,7 @@ Everything except `/health`, `/auth/login`, and `/auth/logout` requires auth (se
 | `GET` | `/auth/me` | any user | `{user}` — used to silently re-validate a stored token on load |
 | `GET` | `/users` | admin | `{ "users": [{id, username, role, display_name, ...}, ...] }` |
 | `POST` | `/users` | admin | Body `{username, password, role, display_name}` → creates a user |
-| `GET` | `/projects` | any user | `{ "projects": [...] }` — own projects only, unless admin (then all, with `owner_username`) |
+| `GET` | `/projects` | any user | `{ "projects": [...] }` — own projects only, unless admin (then all). Each carries `owner_username` and `creation_date` (epoch seconds; `MASTER_SETTINGS.CREATION_DATE`, a column cisTEM doesn't have — set at creation, and back-filled once for older projects from the project directory's birth time, else the first job's time). The picker shows Name / Owner / Created / Jobs Run for everyone; the owner column used to be admin-only. |
 | `POST` | `/projects` | any user | Body `{ "name" }` → creates a project owned by the caller |
 | `GET` | `/projects/:id` | owner or admin | One project's summary |
 | `DELETE` | `/projects/:id` | owner or admin | Deletes a project (and its `.db` file) permanently |

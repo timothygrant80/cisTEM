@@ -22,10 +22,12 @@ user data -- if a column ever needs to change, add an ALTER TABLE guarded by
 try/except sqlite3.OperationalError rather than reaching for a migration tool.
 """
 
+import datetime
 import os
 import re
 import shutil
 import sqlite3
+import subprocess
 import time
 import uuid
 from pathlib import Path
@@ -264,6 +266,9 @@ def project_exists(project_id):
 _ALTER_STATEMENTS = [
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USER_ID INTEGER",
     "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USERNAME TEXT",
+    # When the project was made (epoch seconds, like DATETIME_OF_RUN). cisTEM's
+    # MASTER_SETTINGS has no such column; the project picker shows it.
+    "ALTER TABLE MASTER_SETTINGS ADD COLUMN CREATION_DATE INTEGER",
     "ALTER TABLE JOBS ADD COLUMN JOB_NUMBER INTEGER",
     # The job protocol's per-job state, so a controller can reconnect to a
     # restarted server (docs/job-protocol.md section 7.2): the token it must
@@ -318,7 +323,31 @@ def get_conn(project_id):
         for stmt in _SEED_STATEMENTS:
             conn.execute(stmt)
         _seed_run_profile_commands(conn)
+        # Projects made before CREATION_DATE existed get a best guess once.
+        if conn.execute("SELECT 1 FROM MASTER_SETTINGS WHERE NUMBER=1 AND CREATION_DATE IS NULL").fetchone():
+            conn.execute("UPDATE MASTER_SETTINGS SET CREATION_DATE=? WHERE NUMBER=1", (_guess_creation_time(path.parent, conn),))
     return conn
+
+
+def _guess_creation_time(pdir, conn):
+    """For a project made before CREATION_DATE existed: the project
+    directory's birth time if the filesystem records one (Python's os.stat
+    doesn't expose it on Linux, GNU stat does), else the first job's
+    creation time, else the directory's mtime. Not st_ctime -- that is the
+    inode change time and moves with every write to the database."""
+    try:
+        birth = int(subprocess.run(["stat", "-c", "%W", str(pdir)], capture_output=True, text=True, timeout=5).stdout.strip() or 0)
+        if birth > 0:
+            return birth
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    first_job = conn.execute("SELECT MIN(CREATED_AT) FROM JOBS").fetchone()[0]
+    if first_job:
+        try:
+            return int(datetime.datetime.fromisoformat(first_job).timestamp())
+        except ValueError:
+            pass
+    return int(pdir.stat().st_mtime)
 
 
 def _seed_run_profile_commands(conn):
@@ -564,9 +593,9 @@ def create_project(name, owner_user_id, owner_username):
         conn.execute(
             "INSERT INTO MASTER_SETTINGS(NUMBER, PROJECT_DIRECTORY, PROJECT_NAME, "
             "CURRENT_VERSION, TOTAL_CPU_HOURS, TOTAL_JOBS_RUN, CISTEM_VERSION_TEXT, "
-            "CURRENT_WORKFLOW, OWNER_USER_ID, OWNER_USERNAME) "
-            "VALUES (1, ?, ?, 1, 0, 0, ?, 'SINGLE_PARTICLE', ?, ?)",
-            (str(pdir), name, "cistem3 web 0.1", owner_user_id, owner_username),
+            "CURRENT_WORKFLOW, OWNER_USER_ID, OWNER_USERNAME, CREATION_DATE) "
+            "VALUES (1, ?, ?, 1, 0, 0, ?, 'SINGLE_PARTICLE', ?, ?, ?)",
+            (str(pdir), name, "cistem3 web 0.1", owner_user_id, owner_username, now_epoch()),
         )
         conn.execute("INSERT INTO MOVIE_IMPORT_DEFAULTS(NUMBER) VALUES (1)")
         conn.execute(
@@ -592,7 +621,7 @@ def get_project_summary(project_id):
     conn = get_conn(project_id)
     row = conn.execute(
         "SELECT PROJECT_NAME, TOTAL_JOBS_RUN, CISTEM_VERSION_TEXT, CURRENT_WORKFLOW, "
-        "OWNER_USER_ID, OWNER_USERNAME FROM MASTER_SETTINGS WHERE NUMBER=1"
+        "OWNER_USER_ID, OWNER_USERNAME, CREATION_DATE FROM MASTER_SETTINGS WHERE NUMBER=1"
     ).fetchone()
     conn.close()
     if row is None:
@@ -605,6 +634,7 @@ def get_project_summary(project_id):
         "current_workflow": row["CURRENT_WORKFLOW"],
         "owner_user_id": row["OWNER_USER_ID"],
         "owner_username": row["OWNER_USERNAME"],
+        "creation_date": row["CREATION_DATE"],
     }
 
 

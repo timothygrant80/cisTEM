@@ -163,6 +163,7 @@ button.link:hover{background:none;text-decoration:underline;}
 }
 .stage-inventory td{padding:8px 10px;border:1px solid var(--border);font-size:12px;}
 .stage-inventory td.num{font-family:var(--font-mono);text-align:right;}
+.stage-inventory td.mono{font-family:var(--font-mono);color:var(--text-secondary);white-space:nowrap;}
 .stage-inventory tbody tr.clickable{cursor:pointer;}
 .stage-inventory tbody tr.clickable:hover td{background:var(--accent-soft);}
 
@@ -623,9 +624,9 @@ From branch : <span id="versionBranch">—</span></p>
       <div class="groupbox">
         <span class="groupbox-label">Open Existing Project</span>
         <table class="stage-inventory">
-          <thead><tr><th>Name</th><th class="num">Jobs Run</th><th id="projectOwnerHeader" hidden>Owner</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Owner</th><th>Created</th><th class="num">Jobs Run</th><th></th></tr></thead>
           <tbody id="projectListBody">
-            <tr><td colspan="4"><div class="empty-note">Not connected<span class="hint">Enter an API base URL above and connect.</span></div></td></tr>
+            <tr><td colspan="5"><div class="empty-note">Not connected<span class="hint">Enter an API base URL above and connect.</span></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -1440,7 +1441,7 @@ From branch : <span id="versionBranch">—</span></p>
    "homeUserStrip","homeUserLabel","homeUserRole","logoutBtn",
    "changePasswordToggleBtn","changePasswordForm","currentPassword","newPassword","confirmPassword",
    "savePasswordBtn","changePasswordNote",
-   "homeProjectPanels","projectOwnerHeader",
+   "homeProjectPanels",
    "homeManageUsers","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
    "topConnStatus","topConnDot","topConnLabel","topSub",
@@ -2648,7 +2649,6 @@ From branch : <span id="versionBranch">—</span></p>
     els.homeUserStrip.hidden = !loggedIn;
     els.homeProjectPanels.hidden = !loggedIn;
     els.homeManageUsers.hidden = !isAdmin;
-    els.projectOwnerHeader.hidden = !isAdmin;
 
     if (loggedIn){
       els.homeUserLabel.textContent = state.currentUser.display_name || state.currentUser.username;
@@ -2879,12 +2879,11 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   function renderProjectList(projects){
-    var isAdmin = state.currentUser && state.currentUser.role === "admin";
     els.projectListBody.innerHTML = "";
     if (!projects.length){
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = isAdmin ? 4 : 3;
+      td.colSpan = 5;
       var box = document.createElement("div");
       box.className = "empty-note";
       box.textContent = "No projects yet";
@@ -2911,16 +2910,19 @@ From branch : <span id="versionBranch">—</span></p>
       tdName.textContent = p.name;
       tr.appendChild(tdName);
 
+      var tdOwner = document.createElement("td");
+      tdOwner.textContent = p.owner_username || "\u2014";
+      tr.appendChild(tdOwner);
+
+      var tdCreated = document.createElement("td");
+      tdCreated.className = "mono";
+      tdCreated.textContent = p.creation_date ? fmtDate(p.creation_date * 1000) : "\u2014";
+      tr.appendChild(tdCreated);
+
       var tdJobs = document.createElement("td");
       tdJobs.className = "num";
       tdJobs.textContent = p.total_jobs_run;
       tr.appendChild(tdJobs);
-
-      if (isAdmin){
-        var tdOwner = document.createElement("td");
-        tdOwner.textContent = p.owner_username || "—";
-        tr.appendChild(tdOwner);
-      }
 
       var tdActions = document.createElement("td");
       var delBtn = document.createElement("button");
@@ -4436,6 +4438,14 @@ From branch : <span id="versionBranch">—</span></p>
     els.queueBody.appendChild(tr);
   }
 
+  // Date first, for things that happened days or months ago (a project's
+  // creation); fmtTime leads with the time, for today's job submissions.
+  function fmtDate(ms){
+    try{
+      var d = new Date(ms);
+      return d.toLocaleDateString() + " \u00b7 " + d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    }catch(e){ return String(ms); }
+  }
   function fmtTime(iso){
     if (!iso) return "—";
     try{

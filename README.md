@@ -106,6 +106,8 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/image-groups/:gid/invert` | Invert a group against All Images (self-reversing; `400` for All Images) |
 | `GET` | `/projects/:id/alignments` | `{ "alignments": [...] }` — every movie alignment with movie name, produced image asset id, job number, and whether its sum/spectrum files exist |
 | `GET` | `/projects/:id/alignments/:aid` | One alignment plus `shifts: [{frame, x, y}]` in Å |
+| `POST` | `/projects/:id/alignments/:aid/activate` | Make this alignment the movie's active one (its image asset now points at it) |
+| `POST` | `/projects/:id/jobs/:id/activate-alignments` | Make one job's alignments active for every movie it aligned → `{activated, failed}` |
 | `GET` | `/projects/:id/alignments/:aid/sum.png`, `/spectrum.png` | PNG renders of the aligned sum and its amplitude spectrum |
 | `GET` | `/projects/:id/run-profiles` | `{ "run_profiles": [{run_profile_id, profile_name, manager_run_command, gui_address, controller_address, run_commands: [...], total_jobs}, ...] }` — fills the Run Profile picker and the Settings editor; `total_jobs == 0` greys the start button |
 | `POST` | `/projects/:id/run-profiles` | Add a profile: `{}` for cisTEM's "Default Local", `{ "copy_of": id }` to duplicate, or a full profile (the `GET` shape) to import → `201` with the new profile |

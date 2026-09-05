@@ -1754,7 +1754,11 @@ def _alignment_json(row, conn=None):
     d = {c.lower(): row[c] for c in _ALIGNMENT_COLUMNS}
     d["movie_name"] = row["MOVIE_NAME"]
     d["movie_filename"] = row["MOVIE_FILENAME"]
+    # ia.IMAGE_ASSET_ID joins on ALIGNMENT_ID, so it is set only for the
+    # alignment the movie's image asset currently points at: the active one.
     d["image_asset_id"] = row["IMAGE_ASSET_ID"]
+    d["is_active"] = row["IMAGE_ASSET_ID"] is not None
+    d["movie_image_asset_id"] = row["MOVIE_IMAGE_ASSET_ID"]
     d["job_number"] = row["JOB_NUMBER"]
     out = d["output_file"] or ""
     d["output_file_exists"] = bool(out) and Path(out).is_file()
@@ -1769,7 +1773,8 @@ def _alignment_json(row, conn=None):
 
 
 _ALIGNMENT_SELECT = (
-    "SELECT al.*, ma.NAME AS MOVIE_NAME, ma.FILENAME AS MOVIE_FILENAME, ia.IMAGE_ASSET_ID, j.JOB_NUMBER "
+    "SELECT al.*, ma.NAME AS MOVIE_NAME, ma.FILENAME AS MOVIE_FILENAME, ia.IMAGE_ASSET_ID, j.JOB_NUMBER, "
+    "(SELECT MIN(IMAGE_ASSET_ID) FROM IMAGE_ASSETS mi WHERE mi.PARENT_MOVIE_ID = al.MOVIE_ASSET_ID) AS MOVIE_IMAGE_ASSET_ID "
     "FROM MOVIE_ALIGNMENT_LIST al "
     "JOIN MOVIE_ASSETS ma ON ma.MOVIE_ASSET_ID = al.MOVIE_ASSET_ID "
     "LEFT JOIN IMAGE_ASSETS ia ON ia.ALIGNMENT_ID = al.ALIGNMENT_ID "
@@ -1817,6 +1822,50 @@ def get_alignment(project_id, alignment_id):
         d["shifts"] = []
     conn.close()
     return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/alignments/<int:alignment_id>/activate", methods=["POST"])
+@auth.project_access_required
+def activate_alignment(project_id, alignment_id):
+    """Make this alignment the one the movie's image asset points at --
+    cisTEM's checked cell in the Movie Alignment Results grid. Returns the
+    alignment as GET does, now with is_active true."""
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            image_asset_id = stages.ADAPTERS["motion_correction"].activate_alignment(conn, alignment_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 409
+        if image_asset_id is None:
+            return jsonify({"error": "no such alignment"}), 404
+        row = conn.execute(_ALIGNMENT_SELECT + "WHERE al.ALIGNMENT_ID = ?", (alignment_id,)).fetchone()
+        return jsonify(_alignment_json(row, conn))
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/activate-alignments", methods=["POST"])
+@auth.project_access_required
+def activate_job_alignments(project_id, job_id):
+    """Make one job's results active for every movie it aligned -- what a
+    user wants after a re-run with better parameters, and what a finishing
+    job does by itself. Movies whose file has gone are reported, not fatal."""
+    conn = db.get_conn(project_id)
+    try:
+        ids = [r["ALIGNMENT_ID"] for r in conn.execute(
+            "SELECT ALIGNMENT_ID FROM MOVIE_ALIGNMENT_LIST WHERE ALIGNMENT_JOB_ID=? ORDER BY ALIGNMENT_ID", (job_id,))]
+        if not ids:
+            return jsonify({"error": "that job has no alignments"}), 404
+        activate = stages.ADAPTERS["motion_correction"].activate_alignment
+        failed = []
+        for aid in ids:
+            try:
+                activate(conn, aid)
+            except ValueError as exc:
+                failed.append({"alignment_id": aid, "reason": str(exc)})
+        return jsonify({"activated": len(ids) - len(failed), "failed": failed})
+    finally:
+        conn.close()
 
 
 def _file_preview_response(path, etag_key, what):

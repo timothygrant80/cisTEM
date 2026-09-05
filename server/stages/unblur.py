@@ -288,30 +288,61 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log):
             # unblur has now actually opened the movie, so this count is authoritative.
             conn.execute("UPDATE MOVIE_ASSETS SET NUMBER_OF_FRAMES=? WHERE MOVIE_ASSET_ID=?", (n_frames, movie_id))
 
-            existing = conn.execute(
-                "SELECT IMAGE_ASSET_ID FROM IMAGE_ASSETS WHERE PARENT_MOVIE_ID=? ORDER BY IMAGE_ASSET_ID LIMIT 1",
-                (movie_id,),
-            ).fetchone()
-            if existing:
-                conn.execute(
-                    "UPDATE IMAGE_ASSETS SET FILENAME=?, POSITION_IN_STACK=1, ALIGNMENT_ID=?, X_SIZE=?, Y_SIZE=?, "
-                    "PIXEL_SIZE=?, VOLTAGE=? WHERE IMAGE_ASSET_ID=?",
-                    (output_file, alignment_id, x_size, y_size, final_pixel_size, v[13], existing["IMAGE_ASSET_ID"]),
-                )
-            else:
-                cur = conn.execute(
-                    "INSERT INTO IMAGE_ASSETS(NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "
-                    "CTF_ESTIMATION_ID, X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) "
-                    "VALUES (?,?,1,?,?,-1,?,?,?,?,?,?)",
-                    (
-                        movie["NAME"] + "_aligned", output_file, movie_id, alignment_id, x_size, y_size,
-                        final_pixel_size, v[13], movie["SPHERICAL_ABERRATION"], movie["PROTEIN_IS_WHITE"],
-                    ),
-                )
-                conn.execute(
-                    "INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) VALUES (0, ?)",
-                    (cur.lastrowid,),
-                )
+            _point_image_asset(conn, movie, alignment_id, output_file, x_size, y_size, final_pixel_size, v[13])
             written += 1
 
     return {"alignments_written": written, "tasks_skipped": skipped}
+
+
+def _point_image_asset(conn, movie, alignment_id, output_file, x_size, y_size, pixel_size, voltage):
+    """Make `alignment_id` the movie's *active* alignment: the movie's one
+    image asset now *is* this aligned sum. cisTEM keeps the active choice
+    on the asset (IMAGE_ASSETS.ALIGNMENT_ID), and that is what downstream
+    stages consume, so this is the whole of "which run counts". Updates the
+    asset in place if the movie has one, else creates it in All Images."""
+    movie_id = movie["MOVIE_ASSET_ID"]
+    existing = conn.execute(
+        "SELECT IMAGE_ASSET_ID FROM IMAGE_ASSETS WHERE PARENT_MOVIE_ID=? ORDER BY IMAGE_ASSET_ID LIMIT 1",
+        (movie_id,),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE IMAGE_ASSETS SET FILENAME=?, POSITION_IN_STACK=1, ALIGNMENT_ID=?, X_SIZE=?, Y_SIZE=?, "
+            "PIXEL_SIZE=?, VOLTAGE=? WHERE IMAGE_ASSET_ID=?",
+            (output_file, alignment_id, x_size, y_size, pixel_size, voltage, existing["IMAGE_ASSET_ID"]),
+        )
+        return existing["IMAGE_ASSET_ID"]
+    cur = conn.execute(
+        "INSERT INTO IMAGE_ASSETS(NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "
+        "CTF_ESTIMATION_ID, X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) "
+        "VALUES (?,?,1,?,?,-1,?,?,?,?,?,?)",
+        (
+            movie["NAME"] + "_aligned", output_file, movie_id, alignment_id, x_size, y_size,
+            pixel_size, voltage, movie["SPHERICAL_ABERRATION"], movie["PROTEIN_IS_WHITE"],
+        ),
+    )
+    conn.execute("INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) VALUES (0, ?)", (cur.lastrowid,))
+    return cur.lastrowid
+
+
+def activate_alignment(conn, alignment_id):
+    """MyMovieAlignResultsPanel::OnValueChanged() -- checking a different
+    job's cell for a movie: point the image asset at that alignment. Unlike
+    cisTEM, the size and pixel size come from *this* alignment's file, not
+    copied from the asset, so two runs with different binning stay honest.
+    Returns the image asset id, or None if the alignment doesn't exist."""
+    al = conn.execute("SELECT * FROM MOVIE_ALIGNMENT_LIST WHERE ALIGNMENT_ID=?", (alignment_id,)).fetchone()
+    if al is None:
+        return None
+    movie = conn.execute("SELECT * FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID=?", (al["MOVIE_ASSET_ID"],)).fetchone()
+    if movie is None:
+        raise ValueError("the movie this alignment belongs to no longer exists")
+    try:
+        hdr = read_image_header(al["OUTPUT_FILE"])
+        x_size, y_size = hdr["x_size"], hdr["y_size"]
+    except (HeaderError, OSError):
+        raise ValueError("the aligned sum {} is missing or unreadable".format(
+            os.path.basename(al["OUTPUT_FILE"]) if al["OUTPUT_FILE"] else "(none was recorded for this run)"))
+    with conn:
+        return _point_image_asset(conn, movie, alignment_id, al["OUTPUT_FILE"], x_size, y_size,
+                                  al["FINAL_PIXEL_SIZE"] or al["PIXEL_SIZE"], al["VOLTAGE"])

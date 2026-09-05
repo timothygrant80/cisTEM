@@ -1971,22 +1971,36 @@ From branch : <span id="versionBranch">—</span></p>
   showResultsStage("motion_correction");
 
   // ---------- Align Movies results (MyMovieAlignResultsPanel) ----------
-  // The list holds one entry per movie: its latest alignment, with a count
-  // of earlier ones. Selecting an entry fetches that alignment's per-frame
-  // shifts for the drift plot (UnblurResultsPanel) and renders the aligned
-  // sum and the amplitude spectrum unblur wrote beside it. Job Details is
-  // cisTEM's toggle: hidden by default, the parameters of the run when on.
-  var ra = { alignments: [], entries: [], selectedMovieId: null, current: null, showDetails: false, urls: [] };
+  // One entry per movie, holding every alignment it has had. Each movie has
+  // one *active* alignment -- the one its image asset points at, which is
+  // what downstream stages consume (cisTEM keeps that on IMAGE_ASSETS, and
+  // so does this) -- and that is what is shown by default; a finished job
+  // makes itself active, and raActivate() lets the user pick another run.
+  // Viewing and activating are separate, as in cisTEM's grid (the eye vs
+  // the check). Selecting fetches the alignment's per-frame shifts for the
+  // drift plot (UnblurResultsPanel) and renders the aligned sum and the
+  // amplitude spectrum unblur wrote beside it. Job Details is cisTEM's
+  // toggle: hidden by default, the parameters of the run when on.
+  var ra = { alignments: [], entries: [], selectedMovieId: null, selectedAlignmentId: null, current: null, showDetails: false, urls: [] };
 
-  function raLatestPerMovie(alignments){
+  function raGroupByMovie(alignments){
     var byMovie = {};
     alignments.forEach(function(a){
       var e = byMovie[a.movie_asset_id];
-      if (!e){ byMovie[a.movie_asset_id] = {movie_asset_id: a.movie_asset_id, movie_name: a.movie_name, latest: a, count: 1}; }
-      else { e.count++; if (a.alignment_id > e.latest.alignment_id) e.latest = a; }
+      if (!e){ e = byMovie[a.movie_asset_id] = {movie_asset_id: a.movie_asset_id, movie_name: a.movie_name, movie_image_asset_id: a.movie_image_asset_id, alignments: [], active: null, latest: null}; }
+      e.alignments.push(a);
+      if (a.is_active) e.active = a;
+      if (!e.latest || a.alignment_id > e.latest.alignment_id) e.latest = a;
     });
-    return Object.keys(byMovie).map(function(k){ return byMovie[k]; }).sort(function(p, q){ return p.movie_asset_id - q.movie_asset_id; });
+    return Object.keys(byMovie).map(function(k){
+      var e = byMovie[k];
+      e.alignments.sort(function(p, q){ return p.alignment_id - q.alignment_id; });
+      return e;
+    }).sort(function(p, q){ return p.movie_asset_id - q.movie_asset_id; });
   }
+  function raEntry(movieId){ return ra.entries.filter(function(e){ return e.movie_asset_id === movieId; })[0]; }
+  function raDefaultAlignment(entry){ return entry.active || entry.latest; }
+  function raAlignmentById(id){ return ra.alignments.filter(function(a){ return a.alignment_id === id; })[0]; }
 
   function loadAlignments(){
     if (!state.projectId || !state.connected) return;
@@ -1995,12 +2009,57 @@ From branch : <span id="versionBranch">—</span></p>
       return r.json();
     }).then(function(data){
       ra.alignments = (data && data.alignments) || [];
-      ra.entries = raLatestPerMovie(ra.alignments);
-      var still = ra.entries.some(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
-      if (!still) ra.selectedMovieId = ra.entries.length ? ra.entries[0].movie_asset_id : null;
+      ra.entries = raGroupByMovie(ra.alignments);
+      var entry = raEntry(ra.selectedMovieId);
+      if (!entry){
+        entry = ra.entries[0] || null;
+        ra.selectedMovieId = entry ? entry.movie_asset_id : null;
+        ra.selectedAlignmentId = entry ? raDefaultAlignment(entry).alignment_id : null;
+      } else if (!entry.alignments.some(function(a){ return a.alignment_id === ra.selectedAlignmentId; })){
+        ra.selectedAlignmentId = raDefaultAlignment(entry).alignment_id;
+      }
       raRenderList();
       raShowSelected();
     }).catch(function(){});
+  }
+
+  function raSelect(movieId, alignmentId){
+    var entry = raEntry(movieId);
+    if (!entry) return;
+    ra.selectedMovieId = movieId;
+    ra.selectedAlignmentId = alignmentId != null ? alignmentId : raDefaultAlignment(entry).alignment_id;
+    raRenderList();
+    raShowSelected();
+  }
+
+  // Make an alignment the movie's active one (its image asset now is that
+  // sum), then reload both this page and the Images panel, whose row for
+  // the movie just changed file.
+  function raActivate(alignmentId, done){
+    apiFetch(projectApiUrl("/alignments/" + alignmentId + "/activate"), {method: "POST"}).then(function(r){
+      return r.json().then(function(d){ return {ok: r.ok, data: d}; });
+    }).then(function(res){
+      if (!res.ok) throw new Error((res.data && res.data.error) || ("HTTP " + res.status));
+      loadAlignments(); loadImages();
+      if (done) done(null, res.data);
+    }).catch(function(err){
+      alert("Could not make that alignment active: " + err.message);
+      if (done) done(err);
+    });
+  }
+  // The bulk form: one job's results become active for every movie it aligned.
+  function raActivateJob(jobId, done){
+    apiFetch(projectApiUrl("/jobs/" + jobId + "/activate-alignments"), {method: "POST"}).then(function(r){
+      return r.json().then(function(d){ return {ok: r.ok, data: d}; });
+    }).then(function(res){
+      if (!res.ok) throw new Error((res.data && res.data.error) || ("HTTP " + res.status));
+      loadAlignments(); loadImages();
+      if (res.data.failed && res.data.failed.length) alert(res.data.failed.length + " movie(s) could not be switched: " + res.data.failed[0].reason);
+      if (done) done(null, res.data);
+    }).catch(function(err){
+      alert("Could not make that job active: " + err.message);
+      if (done) done(err);
+    });
   }
 
   function raRenderList(){
@@ -2010,11 +2069,11 @@ From branch : <span id="versionBranch">—</span></p>
       li.classList.toggle("selected", e.movie_asset_id === ra.selectedMovieId);
       var name = document.createElement("span"); name.textContent = e.movie_name || ("Movie " + e.movie_asset_id);
       li.appendChild(name);
-      if (e.count > 1){
-        var n = document.createElement("span"); n.className = "ra-count"; n.title = e.count + " alignments; the latest is shown"; n.textContent = "\u00d7" + e.count;
+      if (e.alignments.length > 1){
+        var n = document.createElement("span"); n.className = "ra-count"; n.title = e.alignments.length + " alignments; the active one is shown first"; n.textContent = "\u00d7" + e.alignments.length;
         li.appendChild(n);
       }
-      li.addEventListener("click", function(){ ra.selectedMovieId = e.movie_asset_id; raRenderList(); raShowSelected(); });
+      li.addEventListener("click", function(){ raSelect(e.movie_asset_id, null); });
       els.raMovieList.appendChild(li);
     });
     var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
@@ -2026,9 +2085,10 @@ From branch : <span id="versionBranch">—</span></p>
   function raReleaseUrls(){ ra.urls.forEach(function(u){ URL.revokeObjectURL(u); }); ra.urls = []; }
 
   function raShowSelected(){
-    var entry = ra.entries.filter(function(e){ return e.movie_asset_id === ra.selectedMovieId; })[0];
+    var entry = raEntry(ra.selectedMovieId);
+    var shown = entry ? raAlignmentById(ra.selectedAlignmentId) : null;
     raReleaseUrls();
-    if (!entry){
+    if (!entry || !shown){
       ra.current = null;
       els.raEmpty.hidden = false;
       els.raResult.hidden = true;
@@ -2039,15 +2099,16 @@ From branch : <span id="versionBranch">—</span></p>
     els.raEmpty.hidden = true;
     els.raResult.hidden = false;
     els.raJobDetails.hidden = !ra.showDetails;
-    els.raRightLabel.textContent = "Alignment \u2014 " + (entry.movie_name || entry.movie_asset_id);
-    var id = entry.latest.alignment_id;
+    els.raRightLabel.textContent = "Alignment \u2014 " + (entry.movie_name || entry.movie_asset_id) +
+      (shown.job_number ? " \u00b7 Job " + shown.job_number : "") + (shown.is_active ? " (active)" : " (not active)");
+    var id = shown.alignment_id;
     els.raSumImg.hidden = true; els.raSumStatus.hidden = false; els.raSumStatus.textContent = "Loading\u2026";
     els.raSpectrumImg.hidden = true; els.raSpectrumStatus.hidden = false; els.raSpectrumStatus.textContent = "Loading\u2026";
     apiFetch(projectApiUrl("/alignments/" + id)).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(a){
-      if (!ra.entries.some(function(e){ return e.movie_asset_id === ra.selectedMovieId && e.latest.alignment_id === a.alignment_id; })) return; // selection moved on
+      if (a.alignment_id !== ra.selectedAlignmentId) return; // selection moved on
       ra.current = a;
       raRenderDetails(a);
       raDrawPlot(a);
@@ -2186,14 +2247,13 @@ From branch : <span id="versionBranch">—</span></p>
   function raStep(delta){
     var idx = ra.entries.findIndex(function(e){ return e.movie_asset_id === ra.selectedMovieId; });
     var next = ra.entries[idx + delta];
-    if (!next) return;
-    ra.selectedMovieId = next.movie_asset_id; raRenderList(); raShowSelected();
+    if (next) raSelect(next.movie_asset_id, null);
   }
   els.raPrevBtn.addEventListener("click", function(){ raStep(-1); });
   els.raNextBtn.addEventListener("click", function(){ raStep(1); });
   els.raAddAllBtn.addEventListener("click", function(){
-    var ids = ra.entries.map(function(e){ return e.latest.image_asset_id; }).filter(function(id){ return id != null; });
-    if (!ids.length){ alert("None of these alignments has an image asset to add."); return; }
+    var ids = ra.entries.map(function(e){ return e.movie_image_asset_id; }).filter(function(id){ return id != null; });
+    if (!ids.length){ alert("None of these movies has an image asset to add."); return; }
     var name = prompt("Add the " + ids.length + " aligned image" + (ids.length === 1 ? "" : "s") + " to which image group? (a new name creates the group)");
     name = name ? name.trim() : "";
     if (!name) return;

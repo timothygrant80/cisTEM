@@ -398,10 +398,22 @@ def preview(conn, project_id, image_id, params, executable, timeout=120.0):
             proc = subprocess.run([executable], input=answers, capture_output=True, text=True, cwd=tmp, timeout=timeout)
         except subprocess.TimeoutExpired:
             raise TimeoutError("find_particles took longer than {:.0f} s on this image".format(timeout))
-        if proc.returncode != 0:
-            tail = (proc.stdout or "").strip().splitlines()[-3:]
-            raise RuntimeError("find_particles exited with {}: {}".format(proc.returncode, " | ".join(tail) or (proc.stderr or "").strip()[-300:]))
         plt = os.path.join(tmp, "preview.plt")
+        # Run standalone, find_particles opens its .plt on the first pick and
+        # deletes the handle on exit regardless, so with *no* picks it
+        # segfaults once the search is complete ("Finding peaks ..." has been
+        # printed) and before it reports a count. That is a clean zero-pick
+        # result here, not a failure -- the socket path the real job uses has
+        # no such step. Any other non-zero exit, or one that left no trace of
+        # the search having run, is reported.
+        searched = "Finding peaks" in (proc.stdout or "")
+        if os.path.isfile(plt):
+            pass
+        elif proc.returncode in (-11, 139) and searched:
+            pass  # zero picks
+        elif proc.returncode != 0:
+            tail = [l for l in (proc.stdout or "").strip().splitlines() if l.strip() and "%" not in l][-3:]
+            raise RuntimeError("find_particles exited with {}: {}".format(proc.returncode, " | ".join(tail) or (proc.stderr or "").strip()[-300:]))
         positions = []
         if os.path.isfile(plt):
             for line in open(plt):

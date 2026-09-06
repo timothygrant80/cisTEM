@@ -4918,9 +4918,48 @@ From branch : <span id="versionBranch">—</span></p>
         });
       });
       tdAction.appendChild(resetBtn);
+      // Delete: not your own account (the server refuses it too). An owner
+      // of projects is asked whether they should pass to you first.
+      if (u.id !== me){
+        var delBtn = document.createElement("button");
+        delBtn.className = "small danger";
+        delBtn.textContent = "Delete";
+        delBtn.style.marginLeft = "6px";
+        delBtn.title = 'Delete the account "' + u.username + '" and log them out everywhere.';
+        delBtn.addEventListener("click", function(){ deleteUser(u, delBtn); });
+        tdAction.appendChild(delBtn);
+      }
       tr.appendChild(tdAction);
 
       els.userListBody.appendChild(tr);
+    });
+  }
+
+  function deleteUser(u, btn, transferTo){
+    if (transferTo === undefined && !confirm('Delete the account "' + u.username + '"? They are logged out everywhere and cannot log in again.')) return;
+    btn.disabled = true;
+    apiFetch(apiUrl("/users/" + u.id), {
+      method: "DELETE", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(transferTo !== undefined ? {transfer_to: transferTo} : {})
+    }).then(function(r){
+      return r.json().then(function(data){ return {status: r.status, ok: r.ok, data: data}; });
+    }).then(function(res){
+      if (res.status === 409 && res.data && res.data.owned_project_count){
+        var names = (res.data.projects || []).map(function(p){ return p.name; });
+        var n = res.data.owned_project_count;
+        if (confirm('"' + u.username + '" owns ' + n + " project" + (n === 1 ? "" : "s") + " (" + names.slice(0, 5).join(", ") + (names.length > 5 ? ", …" : "") + ").\n\nTransfer " + (n === 1 ? "it" : "them") + " to you and delete the account?")){
+          deleteUser(u, btn, state.currentUser.id);
+        } else {
+          btn.disabled = false;
+        }
+        return;
+      }
+      if (!res.ok) throw new Error((res.data && res.data.error) || "Could not delete user");
+      loadUsers();
+      if (res.data.transferred && typeof loadProjectList === "function") loadProjectList();
+    }).catch(function(err){
+      alert("Could not delete user: " + err.message);
+      btn.disabled = false;
     });
   }
 

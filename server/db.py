@@ -744,6 +744,15 @@ def get_project_summary(project_id):
     }
 
 
+def set_project_owner(project_id, user_id, username):
+    """Hand a project to another account -- what deleting an owner does with
+    the projects they leave behind."""
+    conn = get_conn(project_id)
+    with conn:
+        conn.execute("UPDATE MASTER_SETTINGS SET OWNER_USER_ID=?, OWNER_USERNAME=? WHERE NUMBER=1", (user_id, username))
+    conn.close()
+
+
 def get_project_owner(project_id):
     conn = get_conn(project_id)
     row = conn.execute("SELECT OWNER_USER_ID FROM MASTER_SETTINGS WHERE NUMBER=1").fetchone()

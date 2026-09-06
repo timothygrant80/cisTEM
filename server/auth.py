@@ -274,6 +274,20 @@ def set_role(user_id, role):
     return get_user_by_id(user_id)
 
 
+def delete_user(user_id):
+    """Remove an account and every session it holds. The route decides what
+    happens to the projects the account owns before calling this (they
+    live in the projects' own files, not here)."""
+    conn = get_conn()
+    with conn:
+        conn.execute("DELETE FROM SESSIONS WHERE USER_ID=?", (user_id,))
+        cur = conn.execute("DELETE FROM USERS WHERE USER_ID=?", (user_id,))
+    found = cur.rowcount > 0
+    conn.close()
+    if not found:
+        raise ValueError("user not found")
+
+
 def admin_count():
     conn = get_conn()
     n = conn.execute("SELECT COUNT(*) FROM USERS WHERE ROLE='admin'").fetchone()[0]

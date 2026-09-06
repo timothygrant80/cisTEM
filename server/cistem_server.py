@@ -721,6 +721,47 @@ def static_file(filename):
 
 
 # ---------------------------------------------------------------------------
+@app.route("/api/users/<int:user_id>", methods=["DELETE"])
+@auth.admin_required
+def delete_user_route(user_id):
+    """Remove an account. Refused for your own account and for the last
+    admin. An account that owns projects can't simply vanish and leave them
+    ownerless (only admins would see them): without `transfer_to` the
+    request is answered 409 with the projects listed, and with
+    `transfer_to` (another user's id) they are handed over first."""
+    me = g.current_user
+    target = auth.get_user_by_id(user_id)
+    if target is None:
+        return jsonify({"error": "user not found"}), 404
+    if user_id == me["id"]:
+        return jsonify({"error": "you can't delete your own account -- have another admin do it"}), 400
+    if target["role"] == "admin" and auth.admin_count() <= 1:
+        return jsonify({"error": "that is the only admin account; promote someone else first"}), 400
+    owned = [p for p in db.list_projects() if p["owner_user_id"] == user_id]
+    body = request.get_json(force=True, silent=True) or {}
+    transfer_to = body.get("transfer_to")
+    recipient = None
+    if owned:
+        if transfer_to in (None, ""):
+            return jsonify({"error": "{} owns {} project{}; say who gets them (transfer_to) or delete them first".format(
+                target["username"], len(owned), "" if len(owned) == 1 else "s"),
+                "owned_project_count": len(owned), "projects": [{"id": p["id"], "name": p["name"]} for p in owned]}), 409
+        try:
+            recipient = auth.get_user_by_id(int(transfer_to))
+        except (TypeError, ValueError):
+            recipient = None
+        if recipient is None or recipient["id"] == user_id:
+            return jsonify({"error": "transfer_to must be another existing user"}), 400
+        for p in owned:
+            db.set_project_owner(p["id"], recipient["id"], recipient["username"])
+    try:
+        auth.delete_user(user_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    return jsonify({"ok": True, "deleted": target["username"], "transferred": len(owned),
+                    "transferred_to": recipient["username"] if recipient else None})
+
+
 # Project routes
 # ---------------------------------------------------------------------------
 

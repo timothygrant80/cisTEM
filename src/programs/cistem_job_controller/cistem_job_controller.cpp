@@ -71,6 +71,22 @@
 #include "../../core/core_headers.h"
 #include "../../core/socket_codes.h"
 
+// wxJSON's AsInt() only accepts values it stored as SHORT (or as LONG on a
+// 32-bit build), so on 64-bit Linux any integer above 32767 -- a particle
+// range in a big stack, a beam-tilt search position -- trips its assertion.
+// Read every integer through the widest signed accessor instead.
+static int JsonToInt(const wxJSONValue& value) {
+    if ( value.IsInt( ) )
+        return value.AsInt( );
+    if ( value.IsInt64( ) )
+        return int(value.AsInt64( ));
+    if ( value.IsUInt64( ) )
+        return int(value.AsUInt64( ));
+    if ( value.IsDouble( ) )
+        return int(value.AsDouble( ));
+    return value.AsInt( );
+}
+
 SETUP_SOCKET_CODES
 
 // ---------------------------------------------------------------------------
@@ -853,7 +869,7 @@ void JobControllerApp::HandlePackage(wxJSONValue message) {
         return;
     }
     package_started     = true;
-    expected_task_count = message["task_count"].AsInt( );
+    expected_task_count = JsonToInt(message["task_count"]);
     if ( expected_task_count <= 0 ) {
         ProtocolFailure("package has no tasks");
         return;
@@ -870,11 +886,11 @@ void JobControllerApp::HandlePackage(wxJSONValue message) {
         for ( unsigned counter = 0; counter < unsigned(commands.Size( )); counter++ ) {
             wxJSONValue c = commands[counter];
             profile.AddCommand(c.HasMember("command") ? c["command"].AsString( ) : "$command",
-                               c.HasMember("copies") ? c["copies"].AsInt( ) : 1,
-                               c.HasMember("threads_per_copy") ? c["threads_per_copy"].AsInt( ) : 1,
+                               c.HasMember("copies") ? JsonToInt(c["copies"]) : 1,
+                               c.HasMember("threads_per_copy") ? JsonToInt(c["threads_per_copy"]) : 1,
                                c.HasMember("override_total_copies") ? c["override_total_copies"].AsBool( ) : false,
-                               c.HasMember("overridden_total_copies") ? c["overridden_total_copies"].AsInt( ) : 0,
-                               c.HasMember("delay_ms") ? c["delay_ms"].AsInt( ) : 0);
+                               c.HasMember("overridden_total_copies") ? JsonToInt(c["overridden_total_copies"]) : 0,
+                               c.HasMember("delay_ms") ? JsonToInt(c["delay_ms"]) : 0);
         }
     }
     wxString executable = message["program"].HasMember("executable") ? message["program"]["executable"].AsString( )
@@ -892,7 +908,7 @@ void JobControllerApp::HandleTasks(wxJSONValue message) {
         ProtocolFailure("tasks outside a package");
         return;
     }
-    int first_index = message.HasMember("first_index") ? message["first_index"].AsInt( ) : -1;
+    int first_index = message.HasMember("first_index") ? JsonToInt(message["first_index"]) : -1;
     if ( first_index != tasks_received ) {
         ProtocolFailure(wxString::Format("tasks out of order: expected first_index %i, got %i", tasks_received, first_index));
         return;
@@ -904,7 +920,7 @@ void JobControllerApp::HandleTasks(wxJSONValue message) {
     wxJSONValue tasks = message["tasks"];
     for ( unsigned counter = 0; counter < unsigned(tasks.Size( )); counter++ ) {
         wxJSONValue task  = tasks[counter];
-        int         index = task.HasMember("index") ? task["index"].AsInt( ) : -1;
+        int         index = task.HasMember("index") ? JsonToInt(task["index"]) : -1;
         if ( index != tasks_received || index >= expected_task_count ) {
             ProtocolFailure(wxString::Format("task index %i where %i was expected", index, tasks_received));
             return;
@@ -927,7 +943,7 @@ void JobControllerApp::HandleTasks(wxJSONValue message) {
             if ( atype == "text" )
                 job.arguments[a].SetStringArgument(arg["value"].AsString( ).ToUTF8( ).data( ));
             else if ( atype == "int" )
-                job.arguments[a].SetIntArgument(arg["value"].AsInt( ));
+                job.arguments[a].SetIntArgument(JsonToInt(arg["value"]));
             else if ( atype == "float" )
                 job.arguments[a].SetFloatArgument(float(arg["value"].AsDouble( )));
             else if ( atype == "bool" )

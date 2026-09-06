@@ -386,3 +386,64 @@ class SharpenTests(unittest.TestCase):
         self.assertEqual(both.shape, (40, 60))
         self.assertEqual(slices.shape, (20, 60))
         self.assertTrue(np.allclose(slices, both[20:]))
+
+
+class Generate3DAndRefineCTFTests(unittest.TestCase):
+    def test_generate3d_settings_and_ewald(self):
+        import generate3d
+        self.assertEqual(generate3d.package_defaults({"PARTICLE_SIZE": 100.0}), {"mask_radius_a": 60.0})
+        s = generate3d.settings_from_params({"save_half_maps": "true", "overwrite_statistics": "false"}, {"PARTICLE_SIZE": 100.0})
+        self.assertTrue(s["save_half_maps"]); self.assertFalse(s["overwrite_statistics"]); self.assertEqual(s["mask_radius_a"], 60.0)
+        # reconstruct3d's flag: 0 = no, 1 = correct hand, -1 = wrong hand (cisTEM's panel has these crossed).
+        self.assertEqual(generate3d.ewald_flag(False, False), 0)
+        self.assertEqual(generate3d.ewald_flag(False, True), 0)
+        self.assertEqual(generate3d.ewald_flag(True, False), 1)
+        self.assertEqual(generate3d.ewald_flag(True, True), -1)
+
+    def test_refinectf_names_histogram_and_merged_rows(self):
+        import refinectf
+        self.assertEqual(refinectf.refinement_name(7, True, True), "Defocus & Beam Tilt Refinement #7")
+        self.assertEqual(refinectf.refinement_name(7, True, False), "Defocus Refinement #7")
+        self.assertEqual(refinectf.refinement_name(7, False, True), "Beam Tilt Refinement #7")
+        centres, counts = refinectf.defocus_histogram([0.0, 19.0, 41.0, -500.0, 900.0], 500.0, 20.0)
+        self.assertEqual(len(centres), 51)
+        self.assertEqual(centres[0], -500.0)
+        self.assertEqual(counts[25], 1)   # 0 A
+        self.assertEqual(counts[26], 1)   # 19 -> the 20 A bin
+        self.assertEqual(counts[27], 1)   # 41 -> the 40 A bin
+        self.assertEqual(counts[0], 1)    # -500 at the edge
+        self.assertEqual(sum(counts), 4)  # 900 is out of range
+        s = refinectf.settings_from_params({"use_mask": "true"}, {"PARTICLE_SIZE": 100.0})
+        self.assertFalse(s["auto_mask"]); self.assertEqual(s["mask_radius_a"], 65.0); self.assertEqual(s["defocus_search_step_a"], 20.0)
+        cls1 = [{"position_in_stack": 1, "occupancy": 80.0, "defocus_1": 1.0}, {"position_in_stack": 2, "occupancy": 20.0, "defocus_1": 2.0}]
+        cls2 = [{"position_in_stack": 1, "occupancy": 20.0, "defocus_1": 3.0}, {"position_in_stack": 2, "occupancy": 80.0, "defocus_1": 4.0}]
+        merged = refinectf.merged_input_rows([cls1, cls2], ["a.mrc", "b.mrc"])
+        self.assertEqual([(r["defocus_1"], r["reference_3d_filename"]) for r in merged], [(1.0, "a.mrc"), (4.0, "b.mrc")])
+
+    def test_beam_tilt_phase_image_and_significance(self):
+        import refinectf
+        shape = (64, 64)
+        zero = refinectf.beam_tilt_phase_image(shape, 1.0, 300.0, 2.7, 0.0, 0.0, 0.0, 0.0)
+        self.assertTrue(np.all(zero == 0.0))
+        img = refinectf.beam_tilt_phase_image(shape, 1.0, 300.0, 2.7, 0.002, 0.001, 0.3, -0.2)
+        # Antisymmetric under inversion of the frequency (a real image's phases are), and within (-pi, pi].
+        self.assertTrue(np.allclose(img[32 + 5, 32 + 7], -img[32 - 5, 32 - 7], atol=1e-4))
+        self.assertTrue(np.all(img <= math.pi) and np.all(img > -math.pi))
+        # A phase-difference image whose Fourier phases *are* the predicted pattern scores as highly significant...
+        F = np.exp(1j * img.astype(np.float64)) * np.hanning(64)[:, None] * np.hanning(64)[None, :]
+        real_image = np.real(np.fft.ifft2(np.fft.ifftshift(F)))
+        sig, spectrum, predicted = refinectf.beam_tilt_significance(real_image, 1.0, 300.0, 2.7, 0.002, 0.001, 0.3, -0.2)
+        self.assertGreater(sig, refinectf.MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE)
+        self.assertEqual(spectrum.shape, shape); self.assertEqual(predicted.shape, shape)
+        # ...and a random one does not.
+        noise = np.random.RandomState(3).randn(64, 64)
+        sig_noise, _s, _p = refinectf.beam_tilt_significance(noise, 1.0, 300.0, 2.7, 0.002, 0.001, 0.3, -0.2)
+        self.assertLess(sig_noise, sig)
+
+    def test_cosine_ring_mask_2d(self):
+        import refinectf
+        img = np.ones((32, 32), dtype=np.float32) * 3.0
+        img[16, 16] = 100.0
+        out = refinectf.cosine_ring_mask_2d(img, 5.0, 32.0, 2.0)
+        self.assertNotEqual(float(out[16, 16]), 100.0)   # the centre is replaced by the inner edge's average
+        self.assertEqual(float(out[16, 26]), 3.0)         # 10 px out is untouched

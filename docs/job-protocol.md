@@ -236,6 +236,7 @@ The server sends the package immediately after `welcome` when `resume` is
 | `program` | object | yes | `{"name": "unblur", "executable": "unblur"}` — `executable` is what the run commands launch and may differ from `name` (e.g. `unblur_gpu`) |
 | `profile` | object | yes | see below |
 | `task_count` | int | yes | total number of tasks that will follow in `tasks` frames |
+| `forward_progress` | bool | no | whether the controller should forward the workers' intermediate results as `task_progress` frames (default `true`). A server sets it `false` for programs whose intermediate results are progress ticks it does not need -- `estimate_beamtilt` sends one per search position, 290 880 of them -- and `true` where they carry data (`refine_ctf`'s per-particle defocus). A controller that does not know the field forwards everything, as before. |
 
 `profile` mirrors cisTEM's `RunProfile`, minus anything the controller does not
 need:

@@ -212,3 +212,13 @@ class TokenTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ForwardProgressTests(unittest.TestCase):
+    def test_package_carries_forward_progress(self):
+        seq = jp.Sequencer()
+        msg = jp.package(seq, {"id": "j"}, {"name": "x", "executable": "x"}, {"name": "p"}, 3)
+        self.assertIs(msg["forward_progress"], True)
+        msg = jp.package(seq, {"id": "j"}, {"name": "x", "executable": "x"}, {"name": "p"}, 3, forward_progress=False)
+        self.assertIs(msg["forward_progress"], False)
+        self.assertEqual(jp.validate(msg), "package")

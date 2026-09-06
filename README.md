@@ -1,6 +1,6 @@
 # cisTEM3
 
-A local, project-based job-submission UI for a single-particle cryo-EM processing pipeline (Align Movies → Find CTF → Find Particles → 2D Classification → Ab-Initio 3D → Auto Refine / Refine 3D → Sharpen 3D), styled after cisTEM's desktop interface.
+A local, project-based job-submission UI for a single-particle cryo-EM processing pipeline (Align Movies → Find CTF → Find Particles → 2D Classification → Ab-Initio 3D → Auto Refine / Refine 3D → Refine CTF → Generate 3D → Sharpen 3D), styled after cisTEM's desktop interface.
 
 Two pieces:
 
@@ -132,12 +132,13 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/jobs/:jid/abinitio/current.png` | Orthogonal views of a running or finished ab-initio or Refine 3D job's current reconstruction (`?class=`) |
 | `GET` | `/projects/:id/refinements` | Every 3D refinement (`?refinement_package_id=`) with per-class estimated resolution, occupancy and reconstructed volume |
 | `GET` | `/projects/:id/refinements/:rid` | One refinement with each class's FSC / SSNR curve and angular distribution |
+| `GET` | `/projects/:id/jobs/:jid/refinectf/<which>.png` | A Refine CTF job's beam-tilt pictures: `phase_difference` (the measured phase spectrum) or `beam_tilt` (the pattern the found tilt predicts) |
 | `GET` | `/projects/:id/sharpen/defaults` | `Sharpen3DPanel::OnVolumeComboBox()` for a volume (`?volume_asset_id=`): the mask radii of the reconstruction that made it, whether its refinement's statistics are available (`has_statistics`, `estimated_resolution`), the panel's `defaults`, the volumes a mask can be, and `available` (whether `sharpen_map` is on the server's PATH) |
 | `POST` | `/projects/:id/sharpen` | Body `{volume_asset_id, params}` (the Sharpen 3D panel's fields) → runs `sharpen_map` now and returns `result_id`, the Guinier curves (`guinier.spatial_frequency/original/sharpened`), the central slices of both maps as PNG data URIs, `used_statistics`, `used_mask`, `elapsed_s`. `503` if the binary is missing, `400` for bad parameters, `504` after 900 s. Writes nothing to the project. |
 | `GET` | `/projects/:id/sharpen/:rid/volume.mrc` | Save Result: the sharpened map as an MRC download (results are kept until the server restarts) |
 | `POST` | `/projects/:id/sharpen/:rid/import` | `{name}` (optional) → the sharpened map as a new volume asset (`201`) |
 | `GET` | `/projects/:id/auto-refine3d/defaults` | `AutoRefine3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): the size-derived limits, the volumes the Starting Reference / mask pickers list (with `fits`, whether each matches the package's box and pixel size) and `suggested_reference_id` |
-| `GET` | `/projects/:id/refine3d/defaults` | `MyRefine3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): limits, the refinements that can be the input parameters, each class's current reference, the volumes a mask can be |
+| `GET` | `/projects/:id/refine3d/defaults` | `MyRefine3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): limits, the refinements that can be the input parameters, each class's current reference, the volumes a mask can be; also `particle_size` and the `generate3d` / `refine_ctf` size-derived defaults those two panels share |
 | `PATCH` | `/projects/:id/refinement-packages/:pid/references` | `{class_number, volume_asset_id}` sets a class's current reference volume (-1 = generate from parameters) |
 | `GET`/`POST` | `/projects/:id/classification-selections` | Named selections of class averages (`?classification_id=` / `?refinement_package_id=`), each with `classes` and `particle_count` / create one `{classification_id, name, classes}` |
 | `PATCH`/`DELETE` | `/projects/:id/classification-selections/:sid` | `{name}` renames, `{classes: [...]}` replaces the membership / delete |
@@ -175,7 +176,7 @@ Movies and images share one implementation on the server (`AssetKind` in `cistem
 }
 ```
 
-Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `ab_initio_3d` ("Ab-Initio 3D"), `auto_refine3d` ("Auto Refine": `params` are `refinement_package_id`, `reference_volume_id`, `high_resolution_limit_a`, `reconstruction_run_profile` and the expert options; the run decides its own round count), `refine3d` ("Refine 3D"). The Actions bar also carries **Sharpen 3D**, which is not a job stage: its Run button calls `POST /sharpen` and shows the result in the panel.
+Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `ab_initio_3d` ("Ab-Initio 3D"), `auto_refine3d` ("Auto Refine": `params` are `refinement_package_id`, `reference_volume_id`, `high_resolution_limit_a`, `reconstruction_run_profile` and the expert options; the run decides its own round count), `refine3d` ("Refine 3D"), `refine_ctf` ("Refine CTF": `params` are `refinement_package_id`, `input_refinement_id`, `refine_defocus`, `refine_beam_tilt`, `high_resolution_limit_a`, `reconstruction_run_profile` and the expert options), `generate3d` ("Generate 3D": `refinement_package_id`, `input_refinement_id` and the reconstruction options; the run profile is the reconstruction profile). The Actions bar also carries **Sharpen 3D**, which is not a job stage: its Run button calls `POST /sharpen` and shows the result in the panel.
 
 `number` is per-project and assigned on creation (`MAX(JOB_NUMBER) + 1`), and `name` is just `Job <number>` — the submit form asks for neither, the same way cisTEM doesn't. Output paths are the server's too: a completed Align Movies job writes its aligned sums to `<project dir>/Assets/Images/<movie>_aligned.mrc`, mirroring cisTEM's own project layout, so no job parameter names a directory.
 

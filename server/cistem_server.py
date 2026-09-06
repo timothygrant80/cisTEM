@@ -51,6 +51,8 @@ import classification
 import db
 import refine3d
 import autorefine
+import generate3d
+import refinectf
 import sharpen
 import refinements
 import job_runner
@@ -62,7 +64,8 @@ import volumes
 
 # Stages that are cycles of program runs rather than one: a user-visible
 # parent job drives hidden children. Keyed by the parent's STAGE.
-DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio, refine3d.STAGE: refine3d, autorefine.STAGE: autorefine}
+DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio, refine3d.STAGE: refine3d, autorefine.STAGE: autorefine,
+           refinectf.STAGE: refinectf, generate3d.STAGE: generate3d}
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
@@ -135,6 +138,7 @@ class DbSink(job_runner.Sink):
 
     def __init__(self):
         self._projects = {}
+        self._progress = {}  # job id -> (adapter's on_task_progress or None, {task index: sent task})
         self._lock = threading.Lock()
 
     def register(self, job_id, project_id):
@@ -148,6 +152,7 @@ class DbSink(job_runner.Sink):
     def _forget(self, job_id):
         with self._lock:
             self._projects.pop(job_id, None)
+            self._progress.pop(job_id, None)
 
     def on_status(self, job_id, status, error=None):
         project_id = self._project(job_id)
@@ -187,6 +192,33 @@ class DbSink(job_runner.Sink):
 
     def on_workers(self, job_id, connected, expected):
         self.on_log(job_id, "{} / {} processes connected".format(connected, expected))
+
+    def on_task_progress(self, job_id, task, ref, result_number, expected, result):
+        """Intermediate results are only kept for adapters that ask
+        (`on_task_progress` on the adapter -- refine_ctf, whose refined
+        defocus values come no other way); the job's adapter and sent task
+        list are looked up once and cached, since one job can send one of
+        these per particle."""
+        project_id = self._project(job_id)
+        if project_id is None:
+            return
+        with self._lock:
+            cached = self._progress.get(job_id)
+        if cached is None:
+            row = _fetch_job_row(project_id, job_id)
+            adapter = stages.ADAPTERS.get(row["STAGE"]) if row is not None else None
+            hook = getattr(adapter, "on_task_progress", None)
+            tasks = {t["index"]: t for t in (json.loads(row["TASKS_JSON"]) if row is not None and row["TASKS_JSON"] else [])}
+            cached = (hook, tasks)
+            with self._lock:
+                self._progress[job_id] = cached
+        hook, tasks = cached
+        if hook is None or task not in tasks:
+            return
+        try:
+            hook(project_id, tasks[task], result)
+        except Exception as exc:  # noqa: BLE001
+            self.on_log(job_id, "could not record an intermediate result of task {}: {}".format(task, exc), level="error")
 
     def on_task_done(self, job_id, task, ref, status, result, error, cpu_ms, done_count, task_count):
         project_id = self._project(job_id)
@@ -307,6 +339,8 @@ STAGE_COMMANDS = {
     "ab_initio_3d": {"binary": "refine3d", "command": None},
     "refine3d": {"binary": "relion_refine", "command": None},
     "auto_refine3d": {"binary": "refine3d", "command": None},
+    "refine_ctf": {"binary": "refine_ctf", "command": None},
+    "generate3d": {"binary": "reconstruct3d", "command": None},
 }
 
 
@@ -626,6 +660,7 @@ def _recover_interrupted_jobs():
                 spec = job_runner.JobSpec(
                     job_id, _package_job_info(project_id, row), adapter.PROGRAM, profile,
                     json.loads(row["TASKS_JSON"]), profile["manager_command"], token=row["JOB_TOKEN"],
+                    forward_progress=getattr(adapter, "WANTS_TASK_PROGRESS", False),
                     controller_log=_controller_log_path(project_id, job_id))
                 sys_conn.close()
                 done = [r["TASK_INDEX"] for r in conn.execute(
@@ -2284,6 +2319,11 @@ def refine3d_defaults(project_id):
             return jsonify({"error": "no such refinement package"}), 404
         out = refine3d.package_defaults(pkg)
         out["defaults"] = refine3d.DEFAULTS
+        # The Generate 3D and Refine CTF panels share this route: their own
+        # size-derived defaults ride along.
+        out["particle_size"] = float(pkg["PARTICLE_SIZE"] or 150.0)
+        out["generate3d"] = generate3d.package_defaults(pkg)
+        out["refine_ctf"] = refinectf.package_defaults(pkg)
         out["refinements"] = [{"refinement_id": r["refinement_id"], "name": r["name"], "number_of_classes": r["number_of_classes"],
                                "datetime_of_run": r["datetime_of_run"], "starting_refinement_id": r["starting_refinement_id"]}
                               for r in refinements.list_refinements(conn, package_id)]
@@ -2329,6 +2369,27 @@ def auto_refine3d_defaults(project_id):
         return jsonify(out)
     finally:
         conn.close()
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/refinectf/<which>.png", methods=["GET"])
+@auth.project_access_required
+def refinectf_picture(project_id, job_id, which):
+    """A Refine CTF job's beam-tilt pictures: the measured phase-difference
+    spectrum (`phase_difference`) or the phase pattern the found tilt
+    predicts (`beam_tilt`), from Assets/PhaseDifferences."""
+    if which not in ("phase_difference", "beam_tilt"):
+        return jsonify({"error": "unknown picture"}), 404
+    row = _fetch_job_row(project_id, job_id)
+    if row is None or row["STAGE"] != refinectf.STAGE:
+        return jsonify({"error": "not a Refine CTF job"}), 404
+    conn = db.get_conn(project_id)
+    try:
+        path = refinectf.beam_tilt_picture(conn, row, which)
+    finally:
+        conn.close()
+    if path is None:
+        return jsonify({"error": "no beam-tilt estimate yet"}), 404
+    return _file_preview_response(path, "refinectf-{}-{}".format(which, job_id), which.replace("_", " "))
 
 
 # ---- Sharpen 3D (Sharpen3DPanel) -- not a job: one synchronous run of sharpen_map ----
@@ -3287,7 +3348,8 @@ def _submit_to_runner(project_id, job_id, adapter, params):
 
         row = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (job_id,)).fetchone()
         spec = job_runner.JobSpec(job_id, _package_job_info(project_id, row), adapter.PROGRAM, profile, tasks,
-                                  profile["manager_command"], controller_log=_controller_log_path(project_id, job_id))
+                                  profile["manager_command"], controller_log=_controller_log_path(project_id, job_id),
+                                  forward_progress=getattr(adapter, "WANTS_TASK_PROGRESS", False))
         with conn:
             conn.execute("UPDATE JOBS SET JOB_TOKEN=?, TASKS_JSON=? WHERE JOB_ID=?",
                          (spec.token, json.dumps(tasks), job_id))
@@ -3309,7 +3371,8 @@ def _submit_child_job(project_id, child_job_id, adapter, tasks, profile):
     try:
         row = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (child_job_id,)).fetchone()
         spec = job_runner.JobSpec(child_job_id, _package_job_info(project_id, row), adapter.PROGRAM, profile, tasks,
-                                  profile["manager_command"], controller_log=_controller_log_path(project_id, child_job_id))
+                                  profile["manager_command"], controller_log=_controller_log_path(project_id, child_job_id),
+                                  forward_progress=getattr(adapter, "WANTS_TASK_PROGRESS", False))
         with conn:
             conn.execute("UPDATE JOBS SET JOB_TOKEN=?, TASKS_JSON=? WHERE JOB_ID=?",
                          (spec.token, json.dumps(tasks), child_job_id))
@@ -3332,6 +3395,8 @@ classification.configure(_driver_runtime)
 abinitio.configure(_driver_runtime)
 refine3d.configure(_driver_runtime)
 autorefine.configure(_driver_runtime)
+refinectf.configure(_driver_runtime)
+generate3d.configure(_driver_runtime)
 
 
 def _start_driver(driver, project_id, job_id, params):

@@ -193,6 +193,9 @@ class FakeController:
             pass
         elif t == "package":
             self.package = msg
+            # Whether to relay workers' intermediate results as task_progress
+            # (the fake workers send none, so this only records the field).
+            self.forward_progress = msg.get("forward_progress", True)
             self.tasks = []
         elif t == "tasks":
             if msg["first_index"] != len(self.tasks):

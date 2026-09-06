@@ -98,8 +98,13 @@ class JobSpec:
     objects exactly as they go on the wire (job_protocol.arg builds args)."""
 
     def __init__(self, job_id, job_info, program, profile, tasks, manager_command, token=None,
-                 controller_log=None):
+                 controller_log=None, forward_progress=True):
         self.job_id = job_id
+        # package.forward_progress: whether the controller should relay the
+        # workers' intermediate results (task_progress). Off unless the
+        # stage's adapter wants them -- a program like estimate_beamtilt
+        # sends one per search position, hundreds of thousands per job.
+        self.forward_progress = forward_progress
         self.job_info = job_info          # package.job
         self.program = program            # package.program: {"name", "executable"}
         self.profile = profile            # package.profile (db.load_run_profiles shape)
@@ -598,7 +603,7 @@ class JobRunner:
         spec = session.spec
         conn = session.conn
         self._send(conn, jp.package(session.seq, spec.job_info, spec.program, self._wire_profile(spec.profile),
-                                    len(spec.tasks)))
+                                    len(spec.tasks), forward_progress=spec.forward_progress))
         # Section 6.2: chunk so a frame stays well under the 64 MiB limit.
         # A few thousand 38-argument tasks per frame is a few MB.
         chunk = 2000

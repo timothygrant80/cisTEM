@@ -2244,6 +2244,176 @@ From branch : <span id="versionBranch">—</span></p>
       }
     }
 ,
+    refine_ctf: {
+      // RefineCTFPanel (SetDefaults(), OnUpdateUI(), CTFRefinementManager).
+      // One pass: refine_ctf, an optional beam-tilt search, reconstruct3d,
+      // merge3d -- one refinement and one volume per class. cisTEM's own
+      // SetInfo() for this panel is a placeholder ("Makes stuff better..."),
+      // so the Information text here is written from the panel's tooltips.
+      label: "Refine CTF",
+      startLabel: "Start Refinement",
+      note: "Writes one refinement (the input's angles with refined defocus and beam tilt) and its reconstruction to Assets/Volumes as a volume asset, which becomes the package's current reference.",
+      description: "Refines each particle's defocus against the current reference and estimates the beam tilt of the data set, then reconstructs (refine_ctf, estimate_beamtilt, reconstruct3d, merge3d).",
+      inputKey: "refinement_package_id",
+      emptyReason: "Please create a refinement package (in the assets panel) in order to perform a 3D refinement.",
+      fields: [
+        {key:"refinement_package_id", label:"Input Refinement Package", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
+         dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
+        {key:"input_refinement_id", label:"Input Parameters", unit:"", type:"select", options:[], group:"Input",
+         tooltip:"The refinement whose angles, shifts and occupancies are kept and whose defocus values are refined; the package's current references are the volumes they are refined against."},
+        {key:"use_mask", label:"Use a Mask?", type:"checkbox", default:false, group:"Input",
+         tooltip:"Multiply the reference by a mask volume before the refinement instead of auto-masking it."},
+        {key:"mask_volume_id", label:"Mask Volume", unit:"", type:"select", options:[], group:"Input", enabledBy:"use_mask",
+         tooltip:"Any volume asset of the same box size; voxels above zero are inside the mask."},
+        {key:"refine_beam_tilt", label:"Refine Beam Tilt Parms.", type:"checkbox", default:true, group:"Input",
+         tooltip:"Estimate one beam tilt (and particle shift) for the whole data set from the phase differences between the aligned particles and their projections, and write it into every particle."},
+        {key:"refine_defocus", label:"Refine Defocus Params.", type:"checkbox", default:true, group:"Input",
+         tooltip:"Search each particle's defocus around its current value (Defocus Search Range / Step in the expert options) against the reference at the Hi-Res Limit."},
+        {key:"high_resolution_limit_a", label:"Hi-Res Limit", unit:"Å", type:"number", step:"0.1", min:0, default:"3.5", group:"Input", enabledBy:"refine_defocus",
+         tooltip:"The high-resolution limit of the data used for the defocus search. Defocus refinement only pays off with data that reaches better than about 4 Å; 3.5 Å by default."},
+        {key:"reconstruction_run_profile", label:"Reconstruction Run Profile", unit:"", type:"select", options:[], group:"Run Profiles",
+         tooltip:"The run profile for the reconstruct3d and merge3d steps; the profile in the run bar below runs refine_ctf and estimate_beamtilt (cisTEM's Refinement Run Profile)."}
+      ],
+      expertFields: [
+        {key:"low_resolution_limit_a", label:"Low-Resolution Limit", unit:"Å", type:"number", step:"1", min:0, default:"300", group:"CTF Refinement",
+         tooltip:"The low-resolution limit of the data used in the defocus search; 1.5 x the package's largest dimension by default, at most 300 Å."},
+        {key:"mask_radius_a", label:"Outer Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"CTF Refinement",
+         tooltip:"The radius of the circular mask applied to the input images and the reference; 0.65 x the largest dimension by default."},
+        {key:"inner_mask_radius_a", label:"Inner Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"CTF Refinement",
+         tooltip:"Normally 0.0; a non-zero value removes density inside the particle if it represents largely disordered features."},
+        {key:"defocus_search_range_a", label:"Defocus Search Range", unit:"Å", type:"number", step:"10", min:0, default:"500", group:"CTF Refinement",
+         tooltip:"The range of defocus values to search for each particle, from the current value minus the range to plus the range, keeping the astigmatism constant."},
+        {key:"defocus_search_step_a", label:"Defocus Search Step", unit:"Å", type:"number", step:"5", min:1, default:"20", group:"CTF Refinement",
+         tooltip:"The step of the defocus search."},
+        {key:"score_to_weight_constant", label:"Score to Weight Constant", unit:"Å²", type:"number", step:"0.5", min:0, default:"2", group:"Reconstruction",
+         tooltip:"Particles are weighted in the reconstruction by a B-factor of (score – average score) x constant x 0.25. Values between 0 and 10 are reasonable (0 disables weighting)."},
+        {key:"adjust_score_for_defocus", label:"Adjust Score for Defocus?", type:"checkbox", default:true, group:"Reconstruction",
+         tooltip:"Adjust for the dependence of scores on image defocus so that particles with smaller defocus are not systematically downweighted."},
+        {key:"score_threshold", label:"Score Threshold", unit:"", type:"number", step:"0.1", default:"0", group:"Reconstruction",
+         tooltip:"Particles with a score lower than the threshold are excluded from the reconstruction. 0 selects all; 0 < value <= 1 is a percentage; value > 1 is a fixed score."},
+        {key:"reconstruction_resolution_limit_a", label:"Resolution Limit", unit:"Å", type:"number", step:"0.5", min:0, default:"0", group:"Reconstruction",
+         tooltip:"The reconstruction can be accelerated by limiting its resolution. 0 = maximum."},
+        {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality."},
+        {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Insert each particle at multiple orientations weighted by a likelihood function."},
+        {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
+         tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring."},
+        {key:"auto_mask", label:"Use AutoMasking?", type:"checkbox", default:true, group:"Masking", enabledByNot:"use_mask",
+         tooltip:"Auto-mask the reference before the refinement (ignored when a mask volume is used)."},
+        {key:"mask_edge_a", label:"Mask Edge Width", unit:"Å", type:"number", step:"1", min:0, default:"10", group:"Masking", enabledBy:"use_mask",
+         tooltip:"The cosine edge given to the supplied mask."},
+        {key:"outside_mask_weight", label:"Outside Weight", unit:"", type:"number", step:"0.05", min:0, max:1, default:"0", group:"Masking", enabledBy:"use_mask",
+         tooltip:"How much of the (optionally low-pass filtered) reference to keep outside the mask; 0 replaces it with the background level."},
+        {key:"low_pass_outside_mask", label:"Low-Pass Filter Outside Mask?", type:"checkbox", default:false, group:"Masking", enabledBy:"use_mask",
+         tooltip:"Low-pass filter the density kept outside the mask."},
+        {key:"mask_filter_resolution_a", label:"Filter Resolution", unit:"Å", type:"number", step:"1", min:1, default:"20", group:"Masking", enabledBy:"low_pass_outside_mask",
+         tooltip:"The resolution of the low-pass filter applied outside the mask."}
+      ],
+      info: {
+        title: "CTF Refinement",
+        body: [
+          "Once a reconstruction reaches high resolution, the per-image CTF parameters from Find CTF may limit it: the defocus of an individual particle differs from that of its micrograph by its height in the ice, and the whole data set may carry a beam tilt that shifts phases at high resolution. This panel refines both. Defocus refinement searches each particle's defocus around its current value against the current 3D reference; beam-tilt refinement sums the phase differences between the aligned particles and their matching projections over the whole data set and fits one beam tilt (and particle shift) to that image, applying it only when the fit is significant. The refined parameters are written into a new refinement with the input's alignment, and the particles are reconstructed with them.",
+          "Both are only worthwhile with data that reaches better than about 4 Å (defocus) or 5 Å (beam tilt) and with particles of sufficient molecular mass; for weaker data the search settles on noise. cisTEM's own Information text for this panel is a placeholder, so the description here is written from its controls.",
+          {heading: "Program Options"},
+          {options: [
+            ["Input Refinement Package", "The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."],
+            ["Input Parameters", "The refinement whose angles, shifts and occupancies are kept and whose defocus values are refined. The package's current references (set by the last refinement, or on the Refine 3D panel) are the volumes each particle is compared with; with several classes each particle uses its highest-occupancy class."],
+            ["Refine Beam Tilt Parms.", "Estimate one beam tilt and particle shift for the data set. The beam tilt is written into every particle in milliradians (with the shift in Å) and used by later refinements and reconstructions. A tilt whose predicted phase pattern does not match the measured one well enough is set to zero."],
+            ["Refine Defocus Params.", "Search each particle's defocus (both astigmatic values together, keeping the astigmatism) around its current value, in steps of the Defocus Search Step over the Defocus Search Range."],
+            ["Hi-Res Limit (Å)", "The high-resolution limit of the data used for the defocus search. It should be at or somewhat beyond the resolution of the reference; 3.5 Å by default."],
+            ["Run Profiles", "The refinement profile (the run bar) runs refine_ctf and the beam-tilt search; the reconstruction profile runs reconstruct3d and merge3d."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Low-Resolution Limit (Å)", "The low-resolution limit of the data used in the defocus search."],
+            ["Inner/Outer Mask Radius (Å)", "Radii describing a spherical mask applied to the reference and the particle images, and to the final reconstruction and half maps used for the Fourier Shell Correlation."],
+            ["Defocus Search Range / Step (Å)", "The range of defocus values searched for each particle around the values of the input parameters, and the step of that search."],
+            ["Score to B-factor Constant (Å²)", "The particles inserted into a reconstruction are weighted according to their scores, as a B-factor of (score – average score) x constant x 0.25. Values between 0 and 10 are reasonable (0 disables weighting)."],
+            ["Adjust Score for Defocus?", "Adjust for the dependence of scores on image defocus so that particles with smaller defocus are not systematically downweighted."],
+            ["Score Threshold", "Particles with a score lower than the threshold are excluded from the reconstruction. 0 selects all; 0 < value <= 1 is a percentage; value > 1 is a fixed score threshold."],
+            ["Resolution Limit (Å)", "The reconstruction can be accelerated by limiting its resolution; 0 uses the full resolution."],
+            ["Autocrop Images?", "Crop the particle boxes to speed up the reconstruction, at a slight cost in quality."],
+            ["Apply Likelihood Blurring? / Smoothing Factor", "Insert each particle at multiple orientations weighted by a likelihood function; the factor narrows the range of likelihoods used."],
+            ["Use AutoMasking?", "Auto-mask the reference before the refinement. With a supplied mask volume the mask's edge width, outside weight and optional low-pass filter outside the mask apply instead."]
+          ]}
+        ],
+        references: [
+          {authors:"Grigorieff N.", text:"2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191–226.", doi:"10.1016/bs.mie.2016.04.013"}
+        ]
+      }
+    },
+    generate3d: {
+      // Generate3DPanel (SetDefaults(), OnUpdateUI(), SetupReconstructionJob())
+      // and its SetInfo(). One reconstruct3d + merge3d from a refinement's
+      // parameters; the run bar's profile is cisTEM's Reconstruction Run
+      // Profile, the only one this panel has.
+      label: "Generate 3D",
+      startLabel: "Start Reconstruction",
+      note: "Reconstructs the chosen refinement's particles once and writes the map to Assets/Volumes as a volume asset (with its half maps when asked); the package's current references are not changed.",
+      description: "Reconstructs a 3D map from a refinement's parameters without refining anything (reconstruct3d, merge3d), to regenerate a map, try reconstruction settings, or save the half maps.",
+      inputKey: "refinement_package_id",
+      emptyReason: "Please create a refinement package (in the assets panel) in order to perform a 3D refinement.",
+      fields: [
+        {key:"refinement_package_id", label:"Input Refinement Package", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
+         dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
+        {key:"input_refinement_id", label:"Input Parameters", unit:"", type:"select", options:[], group:"Input",
+         tooltip:"The source of the starting parameters for this reconstruction run."}
+      ],
+      expertFields: [
+        {key:"mask_radius_a", label:"Outer Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Reconstruction",
+         tooltip:"The outer radius of the spherical mask applied to the final reconstruction and the half maps; 0.6 x the package's largest dimension by default."},
+        {key:"inner_mask_radius_a", label:"Inner Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"Reconstruction",
+         tooltip:"Normally 0.0; a non-zero value removes density inside the particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."},
+        {key:"score_to_weight_constant", label:"Score to Weight Constant", unit:"Å²", type:"number", step:"0.5", min:0, default:"2", group:"Reconstruction",
+         tooltip:"Particles are weighted in the reconstruction by a B-factor of (score – average score) x constant x 0.25. Values between 0 and 10 are reasonable (0 disables weighting)."},
+        {key:"adjust_score_for_defocus", label:"Adjust Score for Defocus?", type:"checkbox", default:true, group:"Reconstruction",
+         tooltip:"Adjust for the dependence of scores on image defocus so that particles with smaller defocus are not systematically downweighted."},
+        {key:"score_threshold", label:"Score Threshold", unit:"", type:"number", step:"0.1", default:"0", group:"Reconstruction",
+         tooltip:"Particles with a score lower than the threshold are excluded from the reconstruction. 0 selects all; 0 < value <= 1 is a percentage; value > 1 is a fixed score."},
+        {key:"reconstruction_resolution_limit_a", label:"Resolution Limit", unit:"Å", type:"number", step:"0.5", min:0, default:"0", group:"Reconstruction",
+         tooltip:"The reconstruction can be accelerated by limiting its resolution. 0 = maximum."},
+        {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality; do not use when finalising."},
+        {key:"save_half_maps", label:"Also Save Half-Maps?", type:"checkbox", default:false, group:"Output",
+         tooltip:"If yes, the reconstruction half maps are also saved as '_map1' and '_map2' beside the map in Assets/Volumes."},
+        {key:"overwrite_statistics", label:"Overwrite Statistics?", type:"checkbox", default:true, group:"Output",
+         tooltip:"If yes, the resolution statistics (essentially the FSC) of the input refinement are replaced by this reconstruction's, and its details point at the new map."},
+        {key:"apply_ewald_correction", label:"Apply Ewald Sphere Correction?", type:"checkbox", default:false, group:"Output",
+         tooltip:"Correct the reconstruction for the curvature of the Ewald sphere, which matters for large particles at high resolution."},
+        {key:"ewald_inverse_hand", label:"Apply For Inverse Hand?", type:"checkbox", default:false, group:"Output", enabledBy:"apply_ewald_correction",
+         tooltip:"Apply the Ewald sphere correction for the opposite handedness (when the map's hand is not the true one)."}
+      ],
+      info: {
+        title: "Generate 3D",
+        body: [
+          "This panel is used to (re-)generate 3D's from a given set of input parameters without running any refinement. It could be used to generate a 3D from imported parameters for example. It can also be used to try different reconstruction parameters to see how they influence the final map. Finally, it can also be used to save the reconstruction half maps.",
+          {heading: "Program Options"},
+          {options: [
+            ["Input Refinement Package", "The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."],
+            ["Input Parameters", "The source of the starting parameters for this reconstruction run."],
+            ["Run Profile", "The run bar's profile is the Reconstruction Run Profile: reconstruct3d and merge3d are split over as many processes as it provides."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Inner/Outer Mask Radius (Å)", "Radii describing a spherical mask with an inner and outer radius that will be applied to the final reconstruction and to the half reconstructions to calculate Fourier Shell Correlation curve. The inner radius is normally set to 0.0 but can assume non-zero values to remove density inside a particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."],
+            ["Score to B-factor Constant (Å²)", "The particles inserted into a reconstruction will be weighted according to their scores. The weighting function is akin to a B-factor, attenuating high-resolution signal of particles with lower scores more strongly than of particles with higher scores. The B-factor applied to each particle prior to insertion into the reconstruction is calculated as B = (score – average score) * constant * 0.25. Users are encouraged to calculate reconstructions with different values to find a value that produces the highest resolution. Values between 0 and 10 are reasonable (0 will disable weighting)."],
+            ["Adjust Score for Defocus?", "Scores sometimes depend on the amount of image defocus. A larger defocus amplifies low-resolution features in the image and this may lead to higher particle scores compared to particles from an image with a small defocus. Adjusting the scores for this difference makes sure that particles with smaller defocus are not systematically downweighted by the above B-factor weighting."],
+            ["Score Threshold", "Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage. A value = 0 will select all particles; 0 < value <= 1 will be interpreted as a percentage; value > 1 will be interpreted as a fixed score threshold."],
+            ["Resolution Limit (Å)", "The reconstruction calculation can be accelerated by limiting its resolution. It is important to make sure that the resolution limit entered here is higher than the resolution used for refinement in the following cycle."],
+            ["Autocrop Images?", "The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."],
+            ["Also Save Half-Maps?", "If yes, the reconstruction half maps will also be saved as '_map1' and '_map2' in the volume assets folder."],
+            ["Overwrite Statistics?", "If yes, the resolution statistics (essentially the FSC) for the input refinement will be overwritten."],
+            ["Apply Ewald Sphere Correction? / Apply For Inverse Hand?", "Correct the reconstruction for the curvature of the Ewald sphere, for the map's hand or for the inverse hand. (cisTEM's own panel hands reconstruct3d the opposite of what its buttons say; here Yes means corrected.)"]
+          ]}
+        ],
+        references: [
+          {authors:"Grigorieff N.", text:"2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191–226.", doi:"10.1016/bs.mie.2016.04.013"}
+        ]
+      }
+    },
     sharpen3d: {
       // Sharpen3DPanel (ResetDefaults(), OnVolumeComboBox(), OnUpdateUI())
       // and its SetInfo(). Not a job: Run calls POST /sharpen, which runs
@@ -2322,11 +2492,11 @@ From branch : <span id="versionBranch">—</span></p>
     }
   };
 
-  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","ab_initio_3d","auto_refine3d","refine3d","sharpen3d"];
+  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","ab_initio_3d","auto_refine3d","refine3d","refine_ctf","generate3d","sharpen3d"];
   // Stages whose results live on another stage's results page: Auto Refine
   // writes refinements like Refine 3D does, and cisTEM shows both in one
   // Refinement results panel.
-  var RESULT_PAGE_ALIAS = {auto_refine3d: "refine3d"};
+  var RESULT_PAGE_ALIAS = {auto_refine3d: "refine3d", refine_ctf: "refine3d", generate3d: "refine3d"};
   // Sharpen 3D's in-panel state (declared here because the first
   // renderParamFields() runs before the panel's own code further down).
   var sv = { running: false, result: null, ctx: null, shownInfo: true, tab: 1 };
@@ -2603,6 +2773,10 @@ From branch : <span id="versionBranch">—</span></p>
     // that cycles itself.
     auto_refine3d: '<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="2.1" ry="5"/><path d="M20.5 12a8.5 8.5 0 0 1-14.6 5.9"/><path d="M5.9 21.2v-3.3h3.3"/><path d="M3.5 12A8.5 8.5 0 0 1 18.1 6.1"/><path d="M18.1 2.8v3.3h-3.3"/>',
     refine3d: '<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/><path d="M3.5 12h17"/>',
+    // Thon rings inside the refinement sphere: the CTF, refined per particle.
+    refine_ctf: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="12" r="5.3" stroke-dasharray="2 2"/>',
+    // A map built up from its half: the reconstruction alone, no refinement.
+    generate3d: '<path d="M12 3.5a8.5 8.5 0 0 1 0 17"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17" stroke-dasharray="2 2.2"/><path d="M12 3.5v17"/><path d="M12 12h8.5"/>',
     // A falling amplitude spectrum lifted back up: the Guinier plot before
     // and after sharpening.
     sharpen3d: '<path d="M3.5 20.5h17"/><path d="M4 18c3-1 5-6 8-9.5" stroke-dasharray="2 2"/><path d="M4 18c4-.5 8-2 16-3"/><path d="M17.5 12.5l2.5 2.5-3 1.5"/>'
@@ -4108,7 +4282,7 @@ From branch : <span id="versionBranch">—</span></p>
       state.runProfiles = rows;
       els.runProfile.innerHTML = "";
       rpSetProfiles(rows);
-      if (state.currentStage === "ab_initio_3d" || state.currentStage === "refine3d" || state.currentStage === "auto_refine3d") abinitioFillProfiles();
+      if (["ab_initio_3d", "refine3d", "auto_refine3d", "refine_ctf"].indexOf(state.currentStage) >= 0) abinitioFillProfiles();
       if (!rows.length){
         var empty = document.createElement("option");
         empty.textContent = "No run profiles";
@@ -6988,6 +7162,57 @@ From branch : <span id="versionBranch">—</span></p>
   };
   STAGES.auto_refine3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") autorefinePackageChanged(); };
 
+  // ---------- Refine CTF and Generate 3D panel wiring (their SetDefaults() / NewRefinementPackageSelected()) ----------
+  // Both share GET /refine3d/defaults: the package's refinements for the
+  // Input Parameters picker, its current references, the volumes a mask can
+  // be, and the size-derived defaults.
+  var cf = { missingReference: null };
+  function refinementInputsPackageChanged(stageKey){
+    var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
+    if (!pkg || !pkg.value || !state.projectId) return;
+    var pkgId = pkg.value;
+    apiFetch(projectApiUrl("/refine3d/defaults?refinement_package_id=" + encodeURIComponent(pkgId))).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (pkg.value !== pkgId || state.currentStage !== stageKey) return;
+      var inputs = els.paramFields.querySelector('[data-key="input_refinement_id"]');
+      if (inputs){
+        inputs.innerHTML = "";
+        (d.refinements || []).forEach(function(r){
+          var o = document.createElement("option"); o.value = r.refinement_id; o.textContent = r.name; o.selected = r.refinement_id === d.last_refinement_id; inputs.appendChild(o);
+        });
+      }
+      var mask = els.paramFields.querySelector('[data-key="mask_volume_id"]');
+      if (mask){
+        mask.innerHTML = "";
+        (d.volumes || []).forEach(function(v){ var o = document.createElement("option"); o.value = v.volume_asset_id; o.textContent = v.name + " (" + v.x_size + " px)"; mask.appendChild(o); });
+        if (!(d.volumes || []).length){ var none = document.createElement("option"); none.value = ""; none.textContent = "No volumes yet"; mask.appendChild(none); }
+      }
+      var defaults = stageKey === "generate3d" ? (d.generate3d || {}) : (d.refine_ctf || {});
+      Object.keys(defaults).forEach(function(k){
+        var input = els.expertFields.querySelector('[data-key="' + k + '"]');
+        if (input && defaults[k] != null) input.value = defaults[k];
+      });
+      // CTFRefinementManager needs a reference for every class; cisTEM would reconstruct one, this build asks for one.
+      cf.missingReference = null;
+      if (stageKey === "refine_ctf"){
+        var missing = (d.references || []).filter(function(r){ return !(r.volume_asset_id >= 0); }).map(function(r){ return r.class_number; });
+        if (missing.length) cf.missingReference = "Class " + missing.join(", ") + " has no reference volume yet — run Ab-Initio 3D, Auto Refine or Refine 3D first, or pick one on the Refine 3D panel.";
+      }
+      updateStartButton();
+    }).catch(function(){});
+  }
+  ["refine_ctf", "generate3d"].forEach(function(stageKey){
+    STAGES[stageKey].wire = function(paramFields){
+      var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
+      if (pkg) pkg.addEventListener("change", function(){ refinementInputsPackageChanged(stageKey); });
+      cf.missingReference = null;
+      if (stageKey === "refine_ctf") abinitioFillProfiles();
+    };
+    STAGES[stageKey].afterDynamicLoad = function(key){ if (key === "refinement_package_id") refinementInputsPackageChanged(stageKey); };
+  });
+
   // ---------- Sharpen 3D (Sharpen3DPanel) ----------
   // OnVolumeComboBox(): the defaults follow the picked volume -- the mask
   // radii of the reconstruction that made it, the cut-off at its estimated
@@ -7170,6 +7395,13 @@ From branch : <span id="versionBranch">—</span></p>
       else if (state.currentStage === "refine3d"){
         var useMask = els.paramFields.querySelector('[data-key="use_mask"]'), maskPick = els.paramFields.querySelector('[data-key="mask_volume_id"]');
         if (useMask && useMask.checked && maskPick && !maskPick.value) reason = "Pick a mask volume, or untick Use a Mask.";
+      }
+      else if (state.currentStage === "refine_ctf"){
+        var useMaskC = els.paramFields.querySelector('[data-key="use_mask"]'), maskPickC = els.paramFields.querySelector('[data-key="mask_volume_id"]');
+        var defocusC = els.paramFields.querySelector('[data-key="refine_defocus"]'), tiltC = els.paramFields.querySelector('[data-key="refine_beam_tilt"]');
+        if (defocusC && tiltC && !defocusC.checked && !tiltC.checked) reason = "Tick Refine Defocus Params., Refine Beam Tilt Parms., or both.";
+        else if (useMaskC && useMaskC.checked && maskPickC && !maskPickC.value) reason = "Pick a mask volume, or untick Use a Mask.";
+        else if (cf.missingReference) reason = cf.missingReference;
       }
       else if (state.currentStage === "auto_refine3d"){
         var refPick = els.paramFields.querySelector('[data-key="reference_volume_id"]');
@@ -7373,7 +7605,9 @@ From branch : <span id="versionBranch">—</span></p>
     class2d: function(){ loadResults("class2d"); },
     ab_initio_3d: function(){ loadResults("ab_initio_3d"); loadVolumes(); loadVolumeGroups(); },
     refine3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); },
-    auto_refine3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); }
+    auto_refine3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); },
+    refine_ctf: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); },
+    generate3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 
@@ -7773,6 +8007,45 @@ From branch : <span id="versionBranch">—</span></p>
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
       };
     },
+    // RefineCTFPanel while it runs: the defocus-change histogram filling
+    // (DefocusHistorgramPlotPanel), the beam tilt once found with its two
+    // phase pictures, then the FSC and the reconstruction.
+    refine_ctf: function(body){
+      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+      var plots = document.createElement("div"); plots.className = "c2d-plots"; box.appendChild(plots);
+      var hist = makePlotBlock("Defocus change", [["ra-swatch-logp", "particles per step"]]); plots.appendChild(hist.root);
+      var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.appendChild(fscPlot.root);
+      var tiltRow = document.createElement("div"); tiltRow.className = "c2d-plots"; tiltRow.style.marginTop = "12px"; box.appendChild(tiltRow);
+      var tiltFigs = ["phase_difference", "beam_tilt"].map(function(which, i){
+        var fig = classMontageFigure(i ? "Phase pattern the found beam tilt predicts" : "Measured phase-difference spectrum"); fig.frame.classList.add("c2d-orth"); tiltRow.appendChild(fig.root);
+        fig.left.textContent = i ? "Predicted beam-tilt phases" : "Measured phase differences"; fig.which = which; return fig;
+      });
+      var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); box.appendChild(fig.root);
+      return function(result, base, urls){
+        var h = result.defocus_histogram;
+        drawLinePlot(hist.svg, h && h.centres && h.centres.length ? [{xs: h.centres, ys: h.counts, cls: "line-x", dots: "dot-x"}] : [],
+          {xLabel: "defocus change (Å)", yLabel: "particles", yMin: 0, emptyText: result.refine_defocus ? "No particle has been refined yet." : "Defocus refinement is off."});
+        hist.title.textContent = "Defocus change" + (h && h.n ? " (" + h.n + " particles)" : "");
+        drawFscPlot(fscPlot.svg, result.fsc || [], result.pixel_size);
+        var bt = result.beam_tilt;
+        tiltRow.hidden = !bt;
+        if (bt){
+          tiltFigs.forEach(function(f){
+            f.right.textContent = f.which === "beam_tilt" ? (bt.significant ? bt.beam_tilt_x_mrad.toFixed(2) + ", " + bt.beam_tilt_y_mrad.toFixed(2) + " mrad · shift " + bt.particle_shift_x_a.toFixed(2) + ", " + bt.particle_shift_y_a.toFixed(2) + " Å" : "not significant — set to zero")
+              : "significance " + Number(bt.significance).toFixed(2);
+            f.img.hidden = true; f.status.hidden = false; f.status.textContent = "Loading…"; f.img.style.maxWidth = "360px";
+            loadFigure(f.img, f.status, "/jobs/" + live.jobId + "/refinectf/" + f.which + ".png", true, "phase image", urls);
+          });
+        }
+        var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
+        fig.left.textContent = result.label + (result.refinement_id ? " — Refinement #" + result.refinement_id : "") + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
+        var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
+        fig.right.textContent = running ? (result.phase || "") : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
+        fig.root.hidden = !result.has_picture && !running;
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = result.has_picture ? "Loading…" : "The reconstruction has not been merged yet."; fig.img.style.maxWidth = "720px";
+        if (result.has_picture) loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", true, "reconstruction", urls);
+      };
+    },
     // MyRefine2DPanel while it runs: the newest class averages
     // (ResultDisplayPanel) and the PlotPanel's three per-round curves.
     class2d: function(body){
@@ -7800,6 +8073,8 @@ From branch : <span id="versionBranch">—</span></p>
       };
     }
   };
+  // Generate3DPanel shows what MyRefine3DPanel shows once merged: the FSC and the reconstruction.
+  LIVE_VIEWS.generate3d = LIVE_VIEWS.refine3d;
   function liveShow(result){
     live.shownTask = result.task_index; live.shownAt = Date.now();
     liveReleaseUrls();

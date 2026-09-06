@@ -11,7 +11,8 @@ Keys are the API's stage names (the same ones STAGE_COMMANDS uses); a stage
 with no adapter here still runs, in simulation, exactly as before.
 """
 
-from . import ctffind, find_particles, merge2d, merge3d, prepare_stack, prepare_stack_classaverage, reconstruct3d, refine2d, refine3d, unblur
+from . import (ctffind, estimate_beamtilt, find_particles, merge2d, merge3d, prepare_stack, prepare_stack_classaverage, reconstruct3d, refine2d,
+               refine3d, refine_ctf, unblur)
 
 ADAPTERS = {
     "motion_correction": unblur,
@@ -29,4 +30,9 @@ ADAPTERS = {
     "abinitio_refine3d": refine3d,
     "abinitio_reconstruct3d": reconstruct3d,
     "abinitio_merge3d": merge3d,
+    # The legs of a CTF refinement (server/refinectf.py): refine_ctf streams
+    # its per-particle results, which the sink hands to the adapter's
+    # on_task_progress(); estimate_beamtilt searches the phase-difference image.
+    "refinectf_refine_ctf": refine_ctf,
+    "refinectf_estimate_beamtilt": estimate_beamtilt,
 }

@@ -220,14 +220,20 @@ def random_angles(rng):
             rng.uniform(-1.0, 1.0) * 180.0)
 
 
-def update_occupancies(class_rows):
-    """Refinement::UpdateOccupancies(use_old_occupancies=true) for
-    class_rows[k][i] (class k, particle i), in place."""
+def update_occupancies(class_rows, use_old_occupancies=True):
+    """Refinement::UpdateOccupancies() for class_rows[k][i] (class k,
+    particle i), in place: each particle's occupancies from its per-class
+    logP, weighted by the classes' old average occupancies (or equally,
+    when `use_old_occupancies` is off -- Auto Refine's choice while it
+    still refines a subset of the particles)."""
     n_classes = len(class_rows)
     if n_classes <= 1:
         return
     n = len(class_rows[0])
-    avg = [sum(r.get("occupancy", 0.0) for r in rows) / max(len(rows), 1) for rows in class_rows]
+    if use_old_occupancies:
+        avg = [sum(r.get("occupancy", 0.0) for r in rows) / max(len(rows), 1) for rows in class_rows]
+    else:
+        avg = [100.0 / n_classes] * n_classes
     for i in range(n):
         logps = [class_rows[k][i].get("logp", 0.0) for k in range(n_classes)]
         max_logp = max(logps)

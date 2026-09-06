@@ -2000,6 +2000,94 @@ From branch : <span id="versionBranch">—</span></p>
         ]
       }
     },
+    auto_refine3d: {
+      // AutoRefine3DPanel (ProjectX_gui_autorefine.cpp, SetDefaults(),
+      // OnUpdateUI()) and its SetInfo(). No input-parameters picker and no
+      // cycle count: the manager randomises the start and decides when it
+      // has converged (server/autorefine.py).
+      label: "Auto Refine",
+      startLabel: "Start Refinement",
+      note: "Each round writes a refinement to the project database and its reconstruction to Assets/Volumes as a volume asset, which becomes the package's current reference; the run stops when the resolution is stable.",
+      description: "Refines a 3D reconstruction to high resolution without setting the manual parameters: a starting reference, an initial resolution limit, and the rest is decided round by round.",
+      inputKey: "refinement_package_id",
+      emptyReason: "Please create a refinement package (in the assets panel) in order to perform a 3D refinement.",
+      fields: [
+        {key:"refinement_package_id", label:"Input Refinement Package", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
+         dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
+        {key:"reference_volume_id", label:"Starting Reference", unit:"", type:"select", options:[], group:"Input",
+         tooltip:"The initial 3D reconstruction used to align particles against. This should be of reasonable quality to ensure successful refinement."},
+        {key:"use_mask", label:"Use a Mask?", type:"checkbox", default:false, group:"Input",
+         tooltip:"Multiply the reference by a mask volume before each round instead of auto-masking it."},
+        {key:"mask_volume_id", label:"Mask Volume", unit:"", type:"select", options:[], group:"Input", enabledBy:"use_mask",
+         tooltip:"Any volume asset of the same box size; voxels above zero are inside the mask."},
+        {key:"high_resolution_limit_a", label:"Initial Res. Limit", unit:"Å", type:"number", step:"0.5", min:0, default:"20", group:"Input",
+         tooltip:"The starting resolution limit used to align particles against the starting reference. In most cases, this should specify a relatively low resolution to remove potential bias in the starting reference."},
+        {key:"reconstruction_run_profile", label:"Reconstruction Run Profile", unit:"", type:"select", options:[], group:"Run Profiles",
+         tooltip:"The run profile for the reconstruct3d and merge3d steps; the profile in the run bar below runs refine3d (cisTEM's Refinement Run Profile)."}
+      ],
+      expertFields: [
+        {key:"low_resolution_limit_a", label:"Low-Resolution Limit", unit:"Å", type:"number", step:"1", min:0, default:"300", group:"General Refinement",
+         tooltip:"It is good practice to set the low-resolution limit to 2.5x the approximate particle mask radius; 1.5 x the package's largest dimension by default, at most 300 Å."},
+        {key:"mask_radius_a", label:"Outer Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"General Refinement",
+         tooltip:"The radius of the circular mask applied to the input images before refinement starts; 0.65 x the largest dimension by default."},
+        {key:"inner_mask_radius_a", label:"Inner Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"General Refinement",
+         tooltip:"Normally 0.0; a non-zero value removes density inside the particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."},
+        {key:"global_mask_radius_a", label:"Global Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"30", group:"Global Search",
+         tooltip:"The radius describing the area within the boxed-out particles that contains the particles; larger than the particle radius (0.8 x the largest dimension by default) to account for particles that are not perfectly centred."},
+        {key:"number_of_results_to_refine", label:"Number of Results to Refine", unit:"", type:"number", step:"1", min:1, max:1000, default:"20", group:"Global Search",
+         tooltip:"For a global search, an angular grid search is performed and the alignment parameters for the N best matching projections are then refined further in a local refinement. A value of 20 is recommended."},
+        {key:"search_range_x_a", label:"Search Range in X", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Global Search",
+         tooltip:"The global search can be limited in X (measured from the box centre) to ensure that only particles close to the box centre are found; 0.15 x the largest dimension by default."},
+        {key:"search_range_y_a", label:"Search Range in Y", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Global Search",
+         tooltip:"The global search can be limited in Y (measured from the box centre); 0.15 x the largest dimension by default."},
+        {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Crop the particle images to a minimum size determined by the mask radius to accelerate 3D reconstruction. Usually not recommended, as it increases interpolation artifacts."},
+        {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Insert each particle at multiple orientations weighted by a likelihood function; enable if the refinement appears to over-fit."},
+        {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
+         tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring; try values between 0.1 and 1."},
+        {key:"autocenter", label:"Autocenter Reconstruction?", type:"checkbox", default:true, group:"Reconstruction", enabledByNot:"use_mask",
+         tooltip:"Centre each reconstruction on its centre of mass (switched off when a mask volume is used, which fixes the frame)."},
+        {key:"auto_mask", label:"Use Auto-Masking?", type:"checkbox", default:true, group:"Masking", enabledByNot:"use_mask",
+         tooltip:"Should the 3D reconstructions be masked? Masking can suppress spurious density features that could be amplified during the iterative refinement. Only disable it if it appears to interfere with the reconstruction process."},
+        {key:"mask_edge_a", label:"Mask Edge Width", unit:"Å", type:"number", step:"1", min:0, default:"10", group:"Masking", enabledBy:"use_mask",
+         tooltip:"The cosine edge given to the supplied mask."},
+        {key:"outside_mask_weight", label:"Outside Weight", unit:"", type:"number", step:"0.05", min:0, max:1, default:"0", group:"Masking", enabledBy:"use_mask",
+         tooltip:"How much of the (optionally low-pass filtered) reference to keep outside the mask; 0 replaces it with the background level."},
+        {key:"low_pass_outside_mask", label:"Low-Pass Filter Outside Mask?", type:"checkbox", default:false, group:"Masking", enabledBy:"use_mask",
+         tooltip:"Low-pass filter the density kept outside the mask."},
+        {key:"mask_filter_resolution_a", label:"Filter Resolution", unit:"Å", type:"number", step:"1", min:1, default:"20", group:"Masking", enabledBy:"low_pass_outside_mask",
+         tooltip:"The resolution of the low-pass filter applied outside the mask."}
+      ],
+      info: {
+        title: "3D Auto Refinement",
+        body: [
+          "This panel allows users to refine a 3D reconstruction to high resolution using Frealign (Grigorieff, 2016) without the need to set many of the parameters that are required for manual refinement (see Refine 3D). In the simplest case, all that is required is the specification of a refinement package (set up under Assets), a starting reference (for example, a reconstruction obtained from the ab-initio procedure) and an initial resolution limit used in the refinement. The resolution should start low, for example at 30 Å, to remove potential bias in the starting reference. However, for particles that are close to spherical, such as apoferritin, a higher resolution should be specified, between 8 and 12 Å (see Expert Options). If the starting reference contains errors, the refinement may finish before converging to the correct answer. This can often be solved by running another auto-refinement beginning with the result of the previous refinement. In some cases multiple rounds may be needed to reach full convergence.",
+          {heading: "Program Options"},
+          {options: [
+            ["Starting Reference", "The initial 3D reconstruction used to align particles against. This should be of reasonable quality to ensure successful refinement."],
+            ["Initial Res. Limit (Å)", "The starting resolution limit used to align particles against the starting reference. In most cases, this should specify a relatively low resolution to remove potential bias in the starting reference."],
+            ["Run Profiles", "The refinement profile (the run bar) runs refine3d; the reconstruction profile runs reconstruct3d and merge3d."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Low/High-Resolution Limit (Å)", "The data used for refinement is usually bandpass-limited to exclude spurious low-resolution features in the particle background (set by the low-resolution limit) and high-resolution noise (set by the high-resolution limit). It is good practice to set the low-resolution limit to 2.5x the approximate particle mask radius. The high-resolution limit should remain significantly below the resolution of the reference used for refinement to enable unbiased resolution estimation using the Fourier Shell Correlation curve."],
+            ["Inner/Outer Mask Radius (Å)", "Radii describing a spherical mask with an inner and outer radius that will be applied to the final reconstruction and to the half reconstructions to calculate Fourier Shell Correlation curve. The inner radius is normally set to 0.0 but can assume non-zero values to remove density inside a particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."],
+            ["Global Mask Radius (Å)", "The radius describing the area within the boxed-out particles that contains the particles. This radius is usually larger than the particle radius to account for particles that are not perfectly centered. The best value will depend on the way the particles were picked."],
+            ["Number of Results to Refine", "For a global search, an angular grid search is performed and the alignment parameters for the N best matching projections are then refined further in a local refinement. Only the set of parameters yielding the best score (correlation coefficient) is kept. Increasing N will increase the chances of finding the correct particle orientations but will slow down the search. A value of 20 is recommended."],
+            ["Search Range in X/Y (Å)", "The global search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are found. This is useful when the particle density is high and particles end up close to each other. In this case, it is usually still possible to align all particles in a cluster of particles (assuming they do not significantly overlap). The values provided here for the search range should be set to exclude the possibility that the same particle is selected twice and counted as two different particles."],
+            ["Autocrop Images?", "Should the particle images be cropped to a minimum size determined by the mask radius to accelerate 3D reconstruction? This is usually not recommended as it increases interpolation artifacts."],
+            ["Apply Likelihood Blurring?", "Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."],
+            ["Smoothing Factor", "A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."],
+            ["Use Auto-Masking?", "Should the 3D reconstructions be masked? Masking can suppress spurious density features that could be amplified during the iterative refinement. Masking should only be disabled if it appears to interfere with the reconstruction process."]
+          ]}
+        ],
+        references: [
+          {authors:"Grigorieff N.", text:"2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191–226.", doi:"10.1016/bs.mie.2016.04.013"}
+        ]
+      }
+    },
     refine3d: {
       // MyRefine3DPanel (ProjectX_gui_refine3d.cpp's Refine3DPanel widgets,
       // SetDefaults(), OnUpdateUI()) and its SetInfo(). The input parameters
@@ -2150,7 +2238,11 @@ From branch : <span id="versionBranch">—</span></p>
     }
   };
 
-  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","ab_initio_3d","refine3d"];
+  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","ab_initio_3d","auto_refine3d","refine3d"];
+  // Stages whose results live on another stage's results page: Auto Refine
+  // writes refinements like Refine 3D does, and cisTEM shows both in one
+  // Refinement results panel.
+  var RESULT_PAGE_ALIAS = {auto_refine3d: "refine3d"};
 
   var els = {};
   ["homeScreen","appShell","connectingScreen","connectingLabel","errorScreen","errorMessage","errorRetryBtn",
@@ -2420,6 +2512,9 @@ From branch : <span id="versionBranch">—</span></p>
     // A reconstruction taking shape from nothing: a dotted sphere with a
     // solid core -- what the ab-initio cycle does to a random start.
     ab_initio_3d: '<circle cx="12" cy="12" r="8.5" stroke-dasharray="2.5 2.5"/><circle cx="12" cy="12" r="4"/>',
+    // The refine3d sphere with a circular arrow round it -- a refinement
+    // that cycles itself.
+    auto_refine3d: '<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="2.1" ry="5"/><path d="M20.5 12a8.5 8.5 0 0 1-14.6 5.9"/><path d="M5.9 21.2v-3.3h3.3"/><path d="M3.5 12A8.5 8.5 0 0 1 18.1 6.1"/><path d="M18.1 2.8v3.3h-3.3"/>',
     refine3d: '<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/><path d="M3.5 12h17"/>'
   };
   var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">';
@@ -2677,6 +2772,7 @@ From branch : <span id="versionBranch">—</span></p>
   var RESULT_PAGES = {};
   state.resultsStage = "motion_correction";
   STAGE_ORDER.forEach(function(key){
+    if (RESULT_PAGE_ALIAS[key]) return;
     var btn = document.createElement("button");
     btn.className = "subtab-btn";
     btn.dataset.stage = key;
@@ -2687,6 +2783,7 @@ From branch : <span id="versionBranch">—</span></p>
     els.resultsTabs.appendChild(btn);
   });
   function showResultsStage(key){
+    key = RESULT_PAGE_ALIAS[key] || key;
     state.resultsStage = key;
     els.resultsTabs.querySelectorAll(".subtab-btn").forEach(function(btn){ btn.classList.toggle("active", btn.dataset.stage === key); });
     Object.keys(RESULT_PAGES).forEach(function(k){ RESULT_PAGES[k].root.hidden = k !== key; });
@@ -2702,7 +2799,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
   // Reload a stage's results (after a job finishes, or on opening the tab).
   function loadResults(stageKey){
-    if (stageKey){ if (RESULT_PAGES[stageKey]) RESULT_PAGES[stageKey].load(); return; }
+    if (stageKey){ stageKey = RESULT_PAGE_ALIAS[stageKey] || stageKey; if (RESULT_PAGES[stageKey]) RESULT_PAGES[stageKey].load(); return; }
     Object.keys(RESULT_PAGES).forEach(function(k){ RESULT_PAGES[k].load(); });
   }
 
@@ -3918,7 +4015,7 @@ From branch : <span id="versionBranch">—</span></p>
       state.runProfiles = rows;
       els.runProfile.innerHTML = "";
       rpSetProfiles(rows);
-      if (state.currentStage === "ab_initio_3d" || state.currentStage === "refine3d") abinitioFillProfiles();
+      if (state.currentStage === "ab_initio_3d" || state.currentStage === "refine3d" || state.currentStage === "auto_refine3d") abinitioFillProfiles();
       if (!rows.length){
         var empty = document.createElement("option");
         empty.textContent = "No run profiles";
@@ -6759,6 +6856,45 @@ From branch : <span id="versionBranch">—</span></p>
   };
   STAGES.refine3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") refine3dPackageChanged(); };
 
+  // ---------- Auto Refine panel wiring (AutoRefine3DPanel::NewRefinementPackageSelected / SetDefaults) ----------
+  function autorefinePackageChanged(){
+    var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
+    if (!pkg || !pkg.value || !state.projectId) return;
+    var pkgId = pkg.value;
+    apiFetch(projectApiUrl("/auto-refine3d/defaults?refinement_package_id=" + encodeURIComponent(pkgId))).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (pkg.value !== pkgId) return;
+      var vols = d.volumes || [];
+      function fillVolumes(sel, preferred, onlyFitting){
+        if (!sel) return;
+        var current = sel.value;
+        sel.innerHTML = "";
+        vols.forEach(function(v){
+          if (onlyFitting && !v.fits) return;
+          var o = document.createElement("option"); o.value = v.volume_asset_id; o.textContent = v.name + " (" + v.x_size + " px, " + Number(v.pixel_size).toFixed(2) + " Å)"; sel.appendChild(o);
+        });
+        if (!sel.options.length){ var none = document.createElement("option"); none.value = ""; none.textContent = onlyFitting ? "No volume of this package's box size yet" : "No volumes yet"; sel.appendChild(none); }
+        else if (current && Array.from(sel.options).some(function(o){ return o.value === current; })) sel.value = current;
+        else if (preferred != null) sel.value = String(preferred);
+      }
+      fillVolumes(els.paramFields.querySelector('[data-key="reference_volume_id"]'), d.suggested_reference_id, true);
+      fillVolumes(els.paramFields.querySelector('[data-key="mask_volume_id"]'), null, false);
+      ["low_resolution_limit_a", "mask_radius_a", "global_mask_radius_a", "search_range_x_a", "search_range_y_a"].forEach(function(k){
+        var input = els.expertFields.querySelector('[data-key="' + k + '"]');
+        if (input && d[k] != null) input.value = d[k];
+      });
+      updateStartButton();
+    }).catch(function(){});
+  }
+  STAGES.auto_refine3d.wire = function(paramFields){
+    var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
+    if (pkg) pkg.addEventListener("change", autorefinePackageChanged);
+    abinitioFillProfiles();
+  };
+  STAGES.auto_refine3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") autorefinePackageChanged(); };
+
   function updateStartButton(){
     var stage = STAGES[state.currentStage];
     var reason = null;
@@ -6776,6 +6912,12 @@ From branch : <span id="versionBranch">—</span></p>
       else if (state.currentStage === "refine3d"){
         var useMask = els.paramFields.querySelector('[data-key="use_mask"]'), maskPick = els.paramFields.querySelector('[data-key="mask_volume_id"]');
         if (useMask && useMask.checked && maskPick && !maskPick.value) reason = "Pick a mask volume, or untick Use a Mask.";
+      }
+      else if (state.currentStage === "auto_refine3d"){
+        var refPick = els.paramFields.querySelector('[data-key="reference_volume_id"]');
+        var useMaskA = els.paramFields.querySelector('[data-key="use_mask"]'), maskPickA = els.paramFields.querySelector('[data-key="mask_volume_id"]');
+        if (refPick && !refPick.value) reason = "Pick a starting reference volume (an ab-initio or earlier refinement result of this package's box size).";
+        else if (useMaskA && useMaskA.checked && maskPickA && !maskPickA.value) reason = "Pick a mask volume, or untick Use a Mask.";
       }
       // MyFindParticlesPanel's PleaseEstimateCTFStaticText, in its words.
       else if (stage.requiresCtf && selectedGroupCtfCount() !== null && selectedGroupCtfCount() < count) reason = "Please run CTF estimation on this group before picking particles.";
@@ -6971,7 +7113,8 @@ From branch : <span id="versionBranch">—</span></p>
     particle_picking: function(){ loadResults("particle_picking"); loadPositionGroups(); loadPositions(); },
     class2d: function(){ loadResults("class2d"); },
     ab_initio_3d: function(){ loadResults("ab_initio_3d"); loadVolumes(); loadVolumeGroups(); },
-    refine3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); }
+    refine3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); },
+    auto_refine3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 
@@ -7339,6 +7482,33 @@ From branch : <span id="versionBranch">—</span></p>
         fig.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
         var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
         fig.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
+        loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
+      };
+    },
+    // AutoRefine3DPanel while it runs: the FSC of the newest refinement, the
+    // estimated resolution and the percentage of particles per round, and
+    // the current reconstruction.
+    auto_refine3d: function(body){
+      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+      var plots = document.createElement("div"); plots.className = "c2d-plots"; box.appendChild(plots);
+      var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.appendChild(fscPlot.root);
+      var resPlot = makePlotBlock("Estimated resolution", [["ra-swatch-logp", "Å per round"]]); plots.appendChild(resPlot.root);
+      var pctPlot = makePlotBlock("Particles used", [["ra-swatch-moved", "% per round"]]); plots.appendChild(pctPlot.root);
+      var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); box.appendChild(fig.root);
+      return function(result, base, urls){
+        drawFscPlot(fscPlot.svg, result.fsc || [], result.pixel_size);
+        var res = result.resolution_per_round || [], pct = result.percent_used_per_round || [];
+        var xs = res.map(function(_, i){ return i + 1; });
+        var opts = {xLabel: "round", xMin: 1, xStep: Math.max(1, Math.ceil(Math.max(res.length, 2) / 10)), xTick: function(v){ return String(Math.round(v)); }, emptyText: "No round has finished yet."};
+        drawLinePlot(resPlot.svg, res.length ? [{xs: xs, ys: res, cls: "line-x", dots: "dot-x"}] : [], Object.assign({}, opts, {yLabel: "Å"}));
+        drawLinePlot(pctPlot.svg, pct.length ? [{xs: pct.map(function(_, i){ return i + 1; }), ys: pct, cls: "line-moved", dots: "dot-moved"}] : [], Object.assign({}, opts, {yLabel: "%", yMin: 0, yMax: 100}));
+        var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
+        fig.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
+        var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
+        fig.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + (result.final_round ? " (final)" : "") +
+          (result.high_res_limits ? " · limit " + result.high_res_limits.map(function(v){ return Number(v).toFixed(1); }).join(" / ") + " Å, " + Number(result.current_percent_used).toFixed(1) + "%" : "")
+          : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
       };

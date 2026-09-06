@@ -1,6 +1,6 @@
 # cisTEM3
 
-A local, project-based job-submission UI for a single-particle cryo-EM processing pipeline (Align Movies → Find CTF → Find Particles → 2D Classification → Refine 3D), styled after cisTEM's desktop interface.
+A local, project-based job-submission UI for a single-particle cryo-EM processing pipeline (Align Movies → Find CTF → Find Particles → 2D Classification → Ab-Initio 3D → Auto Refine / Refine 3D), styled after cisTEM's desktop interface.
 
 Two pieces:
 
@@ -132,6 +132,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/jobs/:jid/abinitio/current.png` | Orthogonal views of a running or finished ab-initio or Refine 3D job's current reconstruction (`?class=`) |
 | `GET` | `/projects/:id/refinements` | Every 3D refinement (`?refinement_package_id=`) with per-class estimated resolution, occupancy and reconstructed volume |
 | `GET` | `/projects/:id/refinements/:rid` | One refinement with each class's FSC / SSNR curve and angular distribution |
+| `GET` | `/projects/:id/auto-refine3d/defaults` | `AutoRefine3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): the size-derived limits, the volumes the Starting Reference / mask pickers list (with `fits`, whether each matches the package's box and pixel size) and `suggested_reference_id` |
 | `GET` | `/projects/:id/refine3d/defaults` | `MyRefine3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): limits, the refinements that can be the input parameters, each class's current reference, the volumes a mask can be |
 | `PATCH` | `/projects/:id/refinement-packages/:pid/references` | `{class_number, volume_asset_id}` sets a class's current reference volume (-1 = generate from parameters) |
 | `GET`/`POST` | `/projects/:id/classification-selections` | Named selections of class averages (`?classification_id=` / `?refinement_package_id=`), each with `classes` and `particle_count` / create one `{classification_id, name, classes}` |
@@ -170,7 +171,7 @@ Movies and images share one implementation on the server (`AssetKind` in `cistem
 }
 ```
 
-Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `ab_initio_3d` ("Ab-Initio 3D"), `refine3d` ("Refine 3D").
+Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `ab_initio_3d` ("Ab-Initio 3D"), `auto_refine3d` ("Auto Refine": `params` are `refinement_package_id`, `reference_volume_id`, `high_resolution_limit_a`, `reconstruction_run_profile` and the expert options; the run decides its own round count), `refine3d` ("Refine 3D").
 
 `number` is per-project and assigned on creation (`MAX(JOB_NUMBER) + 1`), and `name` is just `Job <number>` — the submit form asks for neither, the same way cisTEM doesn't. Output paths are the server's too: a completed Align Movies job writes its aligned sums to `<project dir>/Assets/Images/<movie>_aligned.mrc`, mirroring cisTEM's own project layout, so no job parameter names a directory.
 

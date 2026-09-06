@@ -259,3 +259,82 @@ class VolumeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AutoRefineTests(unittest.TestCase):
+    """AutoRefinementManager's schedules (BeginRefinementCycle / CycleRefinement /
+    SetupRefinementJob), as pure functions."""
+
+    def test_defaults_and_settings(self):
+        import autorefine
+        d = autorefine.package_defaults({"PARTICLE_SIZE": 100.0})
+        self.assertEqual((d["mask_radius_a"], d["global_mask_radius_a"], d["search_range_x_a"], d["low_resolution_limit_a"]), (65.0, 80.0, 15.0, 150.0))
+        s = autorefine.settings_from_params({}, {"PARTICLE_SIZE": 100.0})
+        self.assertEqual(s["high_resolution_limit_a"], 20.0)
+        self.assertTrue(s["auto_mask"] and s["autocenter"] and not s["autocrop_images"])
+        s = autorefine.settings_from_params({"use_mask": "true", "auto_mask": "true"}, {"PARTICLE_SIZE": 100.0})
+        self.assertFalse(s["auto_mask"])   # a supplied mask switches auto-masking (and centring) off
+        self.assertFalse(s["autocenter"])
+
+    def test_asymmetric_units_and_start_percent(self):
+        import autorefine
+        self.assertEqual([autorefine.asymmetric_units(x) for x in ("C1", "C4", "D2", "D7", "T", "O", "I", "I2", "junk")], [1, 4, 4, 14, 12, 24, 60, 60, 1])
+        # 8000 * exp(75 / 20^2) = 9651 asymmetric units wanted at 20 A.
+        wanted = int(round(8000.0 * math.exp(75.0 / 400.0)))
+        self.assertAlmostEqual(autorefine.percent_for_resolution(20.0, 100000, "C1", 1), wanted / 1000.0)
+        self.assertAlmostEqual(autorefine.percent_for_resolution(20.0, 100000, "D2", 1), wanted / 4000.0)
+        self.assertAlmostEqual(autorefine.percent_for_resolution(20.0, 100000, "C1", 2), 2 * wanted / 1000.0)
+        self.assertEqual(autorefine.percent_for_resolution(20.0, 100, "C1", 1), 100.0)  # capped
+
+    def test_resolution_statistics_helpers(self):
+        import autorefine
+        # 10 shells, resolution 100/i; FSC drops below 0.5 between shells 5 and 6, below 0.143 between 8 and 9.
+        stats = [{"shell": i, "resolution": 100.0 / i, "fsc": 1.0 - i * 0.1, "part_fsc": 1.0 - i * 0.1} for i in range(1, 11)]
+        self.assertAlmostEqual(autorefine.resolution_at(stats, 0.5, 1.0), (100.0 / 5 + 100.0 / 6) / 2)
+        self.assertAlmostEqual(autorefine.resolution_at(stats, 0.143, 1.0), (100.0 / 8 + 100.0 / 9) / 2)
+        self.assertEqual(autorefine.resolution_at([{"shell": 1, "resolution": 50.0, "fsc": 1.0, "part_fsc": 1.0}], 0.5, 1.5), 3.0)
+        # NShellsAfter: first shell finer than 30 A is shell 4 (25 A), +2 -> shell 6 (16.67 A).
+        self.assertAlmostEqual(autorefine.resolution_n_shells_after(stats, 30.0, 2, 1.0), 100.0 / 6)
+        self.assertEqual(autorefine.resolution_n_shells_after(stats, 5.0, 2, 1.0), 0.0)       # nothing finer than 5 A
+        self.assertEqual(autorefine.resolution_n_shells_after(stats, 30.0, 20, 1.0), 2.0)     # runs off the end -> Nyquist
+        # NShellsBefore: last shell coarser than 12 A is index 7 (12.5 A), -2 -> index 5 (16.67 A).
+        self.assertAlmostEqual(autorefine.resolution_n_shells_before(stats, 12.0, 2), 100.0 / 6)
+        self.assertEqual(autorefine.resolution_n_shells_before(stats, 12.0, 10), 0.0)
+        # The next limit never gets coarser than the current one.
+        self.assertLessEqual(autorefine.next_class_limit(stats, 30.0, 100, 1.0, 40.0), 30.0)
+        self.assertLessEqual(autorefine.next_class_limit(stats, 8.0, 100, 1.0, 40.0), 8.0)
+
+    def test_choose_global(self):
+        import autorefine, random
+        rng = random.Random(1)
+        # Never aligned globally -> global search, whatever else is true.
+        self.assertEqual(autorefine.choose_global(3, 10.0, 8.0, 100.0, 0, 5, True, False, rng), 0)
+        # Aligned globally this round, or the final round -> local.
+        self.assertEqual(autorefine.choose_global(3, 10.0, 8.0, 20.0, 1, 0, True, False, rng), 1)
+        self.assertEqual(autorefine.choose_global(3, 10.0, 8.0, 20.0, 1, 4, True, True, rng), 1)
+        # Already globally aligned at 5 A or better -> no more global searches.
+        self.assertTrue(all(autorefine.choose_global(5, 4.0, 4.0, 4.5, 2, 3, True, False, rng) == 1 for _ in range(50)))
+        # High resolution, reference from all particles, last global at low res -> global again.
+        self.assertEqual(autorefine.choose_global(4, 4.5, 7.0, 20.0, 1, 3, True, False, rng), 0)
+
+    def test_should_stop(self):
+        import autorefine
+        stable = [20.0, 15.0, 12.0, 11.0, 11.0, 11.0]   # the last two rounds did not beat the one before them
+        self.assertTrue(autorefine.should_stop(stable, 100.0, 0.0, 1))
+        self.assertFalse(autorefine.should_stop(stable, 90.0, 0.0, 1))          # not all particles in use
+        self.assertFalse(autorefine.should_stop(stable[2:], 100.0, 0.0, 1))     # fewer than 5 rounds
+        self.assertFalse(autorefine.should_stop([20.0, 15.0, 12.0, 11.0, 11.0], 100.0, 0.0, 1))  # 11 still beat 12
+        self.assertFalse(autorefine.should_stop([20.0, 15.0, 12.0, 11.0, 11.0, 10.5], 100.0, 0.0, 1))  # still improving
+        self.assertFalse(autorefine.should_stop(stable, 100.0, 2.0, 2))         # occupancies still moving
+        self.assertFalse(autorefine.should_stop(stable, 100.0, 0.0, 2))         # several classes need 10 rounds
+        self.assertTrue(autorefine.should_stop(stable * 2, 100.0, 0.5, 2))
+
+    def test_update_occupancies_flag(self):
+        cls1 = [{"logp": 0.0, "occupancy": 90.0}]
+        cls2 = [{"logp": 0.0, "occupancy": 10.0}]
+        ab.update_occupancies([cls1, cls2], use_old_occupancies=False)
+        self.assertAlmostEqual(cls1[0]["occupancy"], 50.0)   # equal logP, equal prior -> 50/50
+        cls1 = [{"logp": 0.0, "occupancy": 90.0}]
+        cls2 = [{"logp": 0.0, "occupancy": 10.0}]
+        ab.update_occupancies([cls1, cls2])
+        self.assertAlmostEqual(cls1[0]["occupancy"], 90.0)   # the old averages weigh in

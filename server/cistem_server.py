@@ -50,6 +50,7 @@ import auth
 import classification
 import db
 import refine3d
+import autorefine
 import refinements
 import job_runner
 import refinement_packages
@@ -60,7 +61,7 @@ import volumes
 
 # Stages that are cycles of program runs rather than one: a user-visible
 # parent job drives hidden children. Keyed by the parent's STAGE.
-DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio, refine3d.STAGE: refine3d}
+DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio, refine3d.STAGE: refine3d, autorefine.STAGE: autorefine}
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
@@ -304,6 +305,7 @@ STAGE_COMMANDS = {
     "class2d": {"binary": "relion_refine", "command": None},
     "ab_initio_3d": {"binary": "refine3d", "command": None},
     "refine3d": {"binary": "relion_refine", "command": None},
+    "auto_refine3d": {"binary": "refine3d", "command": None},
 }
 
 
@@ -2298,6 +2300,36 @@ def refine3d_defaults(project_id):
         conn.close()
 
 
+@app.route("/api/projects/<project_id>/auto-refine3d/defaults", methods=["GET"])
+@auth.project_access_required
+def auto_refine3d_defaults(project_id):
+    """AutoRefine3DPanel::SetDefaults() for a package (`?refinement_package_id=`):
+    the size-derived limits, the volumes the Starting Reference and mask
+    pickers list, and the volume to preselect (the package's current
+    reference for class 1, else the newest volume)."""
+    package_id = request.args.get("refinement_package_id", type=int)
+    conn = db.get_conn(project_id)
+    try:
+        pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (package_id,)).fetchone() if package_id is not None else None
+        if pkg is None:
+            return jsonify({"error": "no such refinement package"}), 404
+        out = autorefine.package_defaults(pkg)
+        out["defaults"] = autorefine.DEFAULTS
+        out["number_of_classes"] = int(pkg["NUMBER_OF_CLASSES"] or 1)
+        out["volumes"] = [{"volume_asset_id": r["VOLUME_ASSET_ID"], "name": r["NAME"], "x_size": r["X_SIZE"], "pixel_size": r["PIXEL_SIZE"],
+                           "fits": r["X_SIZE"] == pkg["STACK_BOX_SIZE"] and abs(float(r["PIXEL_SIZE"] or 0) - float(pkg["OUTPUT_PIXEL_SIZE"] or 0)) <= 0.01}
+                          for r in conn.execute("SELECT * FROM VOLUME_ASSETS ORDER BY VOLUME_ASSET_ID").fetchall()]
+        refs = refinements.current_references(conn, package_id)
+        suggested = refs.get(1) if refs.get(1) is not None and refs.get(1) >= 0 else None
+        if suggested is None or not any(v["volume_asset_id"] == suggested for v in out["volumes"]):
+            fitting = [v for v in out["volumes"] if v["fits"]]
+            suggested = fitting[-1]["volume_asset_id"] if fitting else None
+        out["suggested_reference_id"] = suggested
+        return jsonify(out)
+    finally:
+        conn.close()
+
+
 @app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/references", methods=["PATCH"])
 @auth.project_access_required
 def set_package_reference(project_id, package_id):
@@ -3210,6 +3242,7 @@ _driver_runtime = classification.Runtime(
 classification.configure(_driver_runtime)
 abinitio.configure(_driver_runtime)
 refine3d.configure(_driver_runtime)
+autorefine.configure(_driver_runtime)
 
 
 def _start_driver(driver, project_id, job_id, params):

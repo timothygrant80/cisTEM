@@ -379,6 +379,7 @@ def _row_to_job(row, conn=None):
         "finished_at": row["FINISHED_AT"],
         "error": row["ERROR"],
         "metrics": json.loads(row["METRICS_JSON"]) if row["METRICS_JSON"] else {},
+        "cancel_requested": bool(row["CANCEL_REQUESTED"]),
     }, **(_task_progress_for(conn, row) if conn is not None and row["STATUS"] in ("queued", "running") else {}))
 
 

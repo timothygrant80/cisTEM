@@ -155,6 +155,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/jobs/:id/latest-result` | Newest finished task's result for the Jobs tab's live panel (`result: null` + `reason` when there is none yet) |
 | `GET` | `/projects/:id/jobs/:id/tasks/:tidx/<name>.png` | PNG of one task's output picture (`sum`, `spectrum`, `diagnostic`), available mid-run |
 | `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
+| `POST` | `/projects/:id/jobs/:id/cancel` | Terminate a queued or running job (cisTEM's Terminate Job): the controller kills its workers, a multi-run job stops at its current step keeping earlier rounds' results. Returns the updated `Job`; `cancel_requested` stays true until the status changes |
 | `POST` | `/projects/:id/jobs/:id/cancel` | Best-effort cancel → returns the updated `Job` |
 
 Movies and images share one implementation on the server (`AssetKind` in `cistem_server.py`), so every group route exists for both kinds under the matching prefix and with the matching body key — `POST /projects/:id/{movies,images}/delete`, `POST /projects/:id/{movies,images}/add-to-group`, `POST|PATCH|DELETE /projects/:id/{movie,image}-groups[/:gid]`, and `POST /projects/:id/{movie,image}-groups/:gid/remove-{movies,images}`, taking `movie_ids` or `image_ids` respectively. Group `0` is the master list ("All Movies" / "All Images") and refuses rename, delete and invert.
@@ -174,7 +175,8 @@ Movies and images share one implementation on the server (`AssetKind` in `cistem
   "started_at": null,
   "finished_at": null,
   "error": null,
-  "metrics": {}
+  "metrics": {},
+  "cancel_requested": false
 }
 ```
 

@@ -464,6 +464,7 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .ang-plot .ang-rim{stroke:var(--border-strong);stroke-width:1.5;}
 .field-static{margin:0;font-size:12px;}
 .ref-list{font-size:12px;}
+.job-actions{white-space:nowrap;} .job-actions .small + .small{margin-left:6px;}
 .sharpen-view{display:flex;flex-direction:column;gap:10px;}
 .sharpen-toolbar{margin-top:0;align-items:center;}
 .sharpen-tabs{display:flex;gap:6px;}
@@ -1317,6 +1318,7 @@ From branch : <span id="versionBranch">—</span></p>
             <div class="live-meta" id="liveMeta"></div>
             <div class="live-actions">
               <button class="small" id="liveLogBtn">Log</button>
+              <button class="small danger" id="liveTerminateBtn" hidden title="Stop this job. Results written so far stay in the project.">Terminate Job</button>
               <button class="small" id="liveCloseBtn" title="Stop following this job">Close</button>
             </div>
           </div>
@@ -2561,7 +2563,7 @@ From branch : <span id="versionBranch">—</span></p>
    "dImageName","dImageFilename","dImageId","dImageParentId","dImageAlignmentId",
    "dImageXSize","dImageYSize","dImagePixelSize","dImageVoltage","dImageCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
-   "livePanel","liveLabel","liveMeta","liveLogBtn","liveCloseBtn","liveEmpty","liveBody",
+   "livePanel","liveLabel","liveMeta","liveLogBtn","liveTerminateBtn","liveCloseBtn","liveEmpty","liveBody",
    "stageInventoryBody","runProfile","submitNote",
    "rpList","rpAddBtn","rpRenameBtn","rpRemoveBtn","rpDuplicateBtn","rpImportBtn","rpExportBtn","rpImportFile",
    "rpCommandsPanel","rpCommandsLabel","rpTotal","rpManager","rpManagerError",
@@ -7900,15 +7902,41 @@ From branch : <span id="versionBranch">—</span></p>
       tr.appendChild(tdTime);
 
       var tdActions = document.createElement("td");
+      tdActions.className = "job-actions";
       var viewBtn = document.createElement("button");
       viewBtn.className = "small";
       viewBtn.textContent = "Log";
       viewBtn.addEventListener("click", function(e){ e.stopPropagation(); openLog(job.id); });
       tdActions.appendChild(viewBtn);
+      // cisTEM's Terminate Job (each panel's CancelAlignmentButton): stops a
+      // queued or running job -- its controller kills the workers; a
+      // multi-run job's driver stops its current step and keeps what earlier
+      // rounds already wrote.
+      if (!TERMINAL_STATUSES[job.status]){
+        var stopBtn = document.createElement("button");
+        stopBtn.className = "small danger";
+        stopBtn.textContent = job.cancel_requested ? "Terminating…" : "Terminate";
+        stopBtn.disabled = !!job.cancel_requested;
+        stopBtn.title = "Stop this job. Results written so far stay in the project.";
+        stopBtn.addEventListener("click", function(e){ e.stopPropagation(); terminateJob(job, stopBtn); });
+        tdActions.appendChild(stopBtn);
+      }
       tr.appendChild(tdActions);
 
       els.queueBody.appendChild(tr);
     });
+  }
+
+  // POST /jobs/:id/cancel, then refresh the table so the row shows the
+  // outcome (a controller job winds down within a minute; a simulated one
+  // at once).
+  function terminateJob(job, btn){
+    if (!state.projectId || !job) return;
+    if (btn){ btn.disabled = true; btn.textContent = "Terminating…"; }
+    apiFetch(projectApiUrl("/jobs/" + encodeURIComponent(job.id) + "/cancel"), {method: "POST"})
+      .then(function(r){ if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error(d.error || ("HTTP " + r.status)); }); return r.json(); })
+      .then(function(){ fetchJobs(); })
+      .catch(function(err){ alert("Could not terminate " + (job.name || job.id) + ": " + err.message); if (btn){ btn.disabled = false; btn.textContent = "Terminate"; } });
   }
 
   // cisTEM's JobTracker::ReturnRemainingTime(): tasks left x seconds per
@@ -8030,6 +8058,9 @@ From branch : <span id="versionBranch">—</span></p>
   function liveRenderMeta(data){
     var job = selectedJob();
     els.liveLabel.textContent = "Latest Result" + (job ? " \u2014 " + (job.name || job.id) : "");
+    els.liveTerminateBtn.hidden = !(job && !TERMINAL_STATUSES[job.status]);
+    els.liveTerminateBtn.disabled = !!(job && job.cancel_requested);
+    els.liveTerminateBtn.textContent = job && job.cancel_requested ? "Terminating…" : "Terminate Job";
     if (!data){ els.liveMeta.textContent = job ? job.status : ""; return; }
     var parts = [];
     if (data.task_count != null) parts.push((data.done_count || 0) + " of " + data.task_count + " finished");
@@ -8223,6 +8254,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   els.liveCloseBtn.addEventListener("click", closeLive);
+  els.liveTerminateBtn.addEventListener("click", function(){ var job = selectedJob(); if (job) terminateJob(job, els.liveTerminateBtn); });
   els.liveLogBtn.addEventListener("click", function(){ if (state.selectedJobId) openLog(state.selectedJobId); });
 
   // ---------- log drawer ----------

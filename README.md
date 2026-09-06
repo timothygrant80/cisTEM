@@ -125,6 +125,11 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET`/`DELETE` | `/projects/:id/classifications/:cid` | One classification with per-class member counts and the montage geometry / delete it (results table and class averages file) |
 | `GET` | `/projects/:id/classifications/:cid/averages.png` | The class averages tiled into one PNG |
 | `GET` | `/projects/:id/classifications/:cid/class/:k` | The members of class k (`?limit=`, active ones first); `.../class/:k/members.png` tiles them from the particle stack |
+| `GET` | `/projects/:id/volumes`, `/volume-groups` | 3D volume assets (`?group_id=`) and their groups; the usual group routes (`POST|PATCH|DELETE /volume-groups[/:gid]`, `/:gid/invert`, `/:gid/remove-volumes`, `POST /volumes/delete`, `/volumes/add-to-group`, keyed on `volume_ids`) |
+| `GET` | `/projects/:id/volumes/:vid/preview.png` | Orthogonal projections (top) and central slices (bottom) of the volume |
+| `GET` | `/projects/:id/startups` | Every ab-initio run (`STARTUP_LIST`) with its settings and result volumes |
+| `GET` | `/projects/:id/abinitio/defaults` | `AbInitio3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): symmetry, mask radius, search ranges |
+| `GET` | `/projects/:id/jobs/:jid/abinitio/current.png` | Orthogonal views of a running or finished ab-initio job's current reconstruction (`?class=`) |
 | `GET`/`POST` | `/projects/:id/classification-selections` | Named selections of class averages (`?classification_id=` / `?refinement_package_id=`), each with `classes` and `particle_count` / create one `{classification_id, name, classes}` |
 | `PATCH`/`DELETE` | `/projects/:id/classification-selections/:sid` | `{name}` renames, `{classes: [...]}` replaces the membership / delete |
 | `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |
@@ -161,7 +166,7 @@ Movies and images share one implementation on the server (`AssetKind` in `cistem
 }
 ```
 
-Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `refine3d` ("Refine 3D").
+Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `ab_initio_3d` ("Ab-Initio 3D"), `refine3d` ("Refine 3D").
 
 `number` is per-project and assigned on creation (`MAX(JOB_NUMBER) + 1`), and `name` is just `Job <number>` — the submit form asks for neither, the same way cisTEM doesn't. Output paths are the server's too: a completed Align Movies job writes its aligned sums to `<project dir>/Assets/Images/<movie>_aligned.mrc`, mirroring cisTEM's own project layout, so no job parameter names a directory.
 

@@ -458,6 +458,7 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .c2d-frame .ra-figure-status{position:absolute;left:0;right:0;top:40%;text-align:center;color:#ddd;}
 .c2d-overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;}
 .c2d-frame img{max-width:100%;}
+.c2d-frame.c2d-orth{background:#000;display:inline-block;max-width:100%;}
 .c2d-overlay rect{fill:none;stroke:#ffd23f;stroke-width:3;}
 .c2d-caption{font-size:12px;color:var(--text-secondary);margin:6px 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
@@ -1123,7 +1124,44 @@ From branch : <span id="versionBranch">—</span></p>
           </div>
         </div>
 
-        <!-- 3D VOLUMES: no backend data model yet -->
+        <!-- 3D VOLUMES: MyVolumeAssetPanel. Reconstructions written by
+             Ab-Initio 3D (and later Refine 3D); Display shows orthogonal
+             projections and slices. Import is not built. -->
+        <div class="asset-subpage" id="assetpageVolumes" hidden>
+          <div class="assets-layout">
+            <div class="groupbox">
+              <span class="groupbox-label">Groups</span>
+              <ul class="group-list" id="volGroupList"></ul>
+              <div class="asset-toolbar">
+                <button class="small" id="volGroupAddBtn">Add</button>
+                <button class="small" id="volGroupRenameBtn" disabled title="Select a group other than All Volumes first.">Rename</button>
+                <button class="small" id="volGroupRemoveBtn" disabled title="Select a group other than All Volumes first.">Remove</button>
+                <button class="small" id="volGroupInvertBtn" disabled title="Select a group other than All Volumes first.">Invert</button>
+              </div>
+            </div>
+            <div class="groupbox">
+              <span class="groupbox-label">3D Volumes</span>
+              <div class="table-scroll">
+                <table class="queue">
+                  <thead><tr>
+                    <th class="check-col"><input type="checkbox" id="volSelectAllCheckbox" title="Select all"></th>
+                    <th>Name</th><th>I.D.</th><th class="num">Reconstruction Job I.D.</th><th class="num">Pixel Size</th>
+                    <th class="num">X Size</th><th class="num">Y Size</th><th class="num">Z Size</th><th>Filename</th>
+                  </tr></thead>
+                  <tbody id="volListBody"><tr><td colspan="9"><div class="empty-note">No volumes yet</div></td></tr></tbody>
+                </table>
+              </div>
+              <div class="asset-toolbar">
+                <button class="small" disabled title="Importing volumes from files isn’t built yet.">Import</button>
+                <button class="small" id="volRemoveBtn" disabled title="Select one or more volumes first.">Remove</button>
+                <button class="small" id="volAddToGroupBtn" disabled title="Select one or more volumes first.">Add To Group</button>
+                <button class="small" id="volDisplayBtn" disabled title="Select a volume first.">Display</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- placeholder shell, no longer shown for any asset type -->
         <div class="asset-subpage" id="assetpagePlaceholder" hidden>
           <div class="assets-layout">
             <div class="groupbox">
@@ -1853,6 +1891,93 @@ From branch : <span id="versionBranch">—</span></p>
         ]
       }
     },
+    ab_initio_3d: {
+      // AbInitio3DPanel (ProjectX_gui_abinitio.cpp's widgets, SetDefaults(),
+      // SetInfo()). Images mode only: the input is a refinement package,
+      // whose symmetry and class count the run takes (the class-average
+      // input, from a 2D selection, is not built). cisTEM has two run
+      // profile pickers, refinement and reconstruction; the run bar's is the
+      // refinement one and the second is a field here.
+      label: "Ab-Initio 3D",
+      startLabel: "Start Refinement",
+      note: "The final reconstruction of each class is resampled to the package's box and written to the project's Assets/Volumes directory as a volume asset; the run is recorded in the project database.",
+      description: "Builds a 3D reconstruction from a refinement package with no starting model, by iterating random-angle reconstructions against a rising resolution limit (Grigorieff, 2016).",
+      inputKey: "refinement_package_id",
+      emptyReason: "Please create a refinement package (in the assets panel) in order to perform a 3D refinement.",
+      fields: [
+        {key:"refinement_package_id", label:"Input Refinement Package", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
+         dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
+        {key:"symmetry", label:"Symmetry", unit:"", type:"select", options:["C1","C2","C3","C4","D2","D3","D4","I","I2","O","T","T2"], default:"C1", group:"Input",
+         tooltip:"The package's point-group symmetry. Unless Always Apply Symmetry is set, the first three quarters of the first start run without it, then the reconstruction is aligned to the symmetry axes and it is applied from there on."},
+        {key:"number_of_starts", label:"No. of Starts", unit:"", type:"number", step:"1", min:1, max:20, default:"2", group:"Cycle",
+         tooltip:"The number of times the ab-initio reconstruction is restarted, using the result from the previous run in each restart."},
+        {key:"number_of_rounds", label:"No. of Cycles per Start", unit:"", type:"number", step:"1", min:1, max:200, default:"40", group:"Cycle",
+         tooltip:"The number of refinement cycles to run for each start. The percentage of particles and the refinement resolution limit will be adjusted automatically from cycle to cycle using initial and final values specified under Expert Options."},
+        {key:"reconstruction_run_profile", label:"Reconstruction Run Profile", unit:"", type:"select", options:[], group:"Run Profiles",
+         tooltip:"The run profile for the reconstruct3d and merge3d steps; the profile in the run bar below is used for prepare_stack and refine3d (cisTEM's Refinement Run Profile)."}
+      ],
+      expertFields: [
+        {key:"initial_resolution_limit_a", label:"Initial Resolution Limit", unit:"Å", type:"number", step:"1", min:0, max:300, default:"20", group:"Refinement",
+         tooltip:"The starting resolution limit used to align particles against the current 3D reconstruction. In most cases, this should specify a relatively low resolution to make sure the reconstructions generated in the initial refinement cycles do not develop spurious high-resolution features."},
+        {key:"final_resolution_limit_a", label:"Final Resolution Limit", unit:"Å", type:"number", step:"1", min:0, max:300, default:"8", group:"Refinement",
+         tooltip:"The resolution limit used in the final refinement cycle. In most cases, this should specify a resolution at which expected secondary structure becomes apparent, i.e. around 9 Å."},
+        {key:"mask_radius_a", label:"Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"75", group:"Refinement",
+         tooltip:"The radius of the mask applied to the reconstruction and the particles; 0.75 x the package's largest dimension by default, and never more than 45% of the box."},
+        {key:"inner_mask_radius_a", label:"Inner Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"Refinement",
+         tooltip:"Radius of a circular mask applied to the centre of the reconstruction, for hollow particles."},
+        {key:"search_range_x_a", label:"Search Range in X", unit:"Å", type:"number", step:"1", min:0, default:"40", group:"Refinement",
+         tooltip:"The maximum global peak search distance along X from the particle box centre; 0.4 x the largest dimension by default."},
+        {key:"search_range_y_a", label:"Search Range in Y", unit:"Å", type:"number", step:"1", min:0, default:"40", group:"Refinement",
+         tooltip:"The maximum global peak search distance along Y from the particle box centre; 0.4 x the largest dimension by default."},
+        {key:"auto_mask", label:"Use Auto-Masking?", type:"checkbox", default:true, group:"Refinement",
+         tooltip:"Should the 3D reconstructions be masked? Masking is important to suppress weak density features that usually appear in the early stages of ab-initio reconstruction, thus preventing them to get amplified during the iterative refinement. Masking should only be disabled if it appears to interfere with the reconstruction process."},
+        {key:"auto_percent_used", label:"Auto Percent Used?", type:"checkbox", default:true, group:"Refinement",
+         tooltip:"Should the percentage of particles used in each refinement cycle be set automatically? By default, the initial percentage is set to include an equivalent of 2500 asymmetric units and the final percentage corresponds to 10,000 asymmetric units used."},
+        {key:"start_percent_used", label:"Initial % Used", unit:"%", type:"number", step:"0.1", min:0.001, max:100, default:"10", group:"Refinement", enabledByNot:"auto_percent_used",
+         tooltip:"User-specified percentage of particles used in the first cycle when Auto Percent Used is disabled."},
+        {key:"end_percent_used", label:"Final % Used", unit:"%", type:"number", step:"0.1", min:0.001, max:100, default:"10", group:"Refinement", enabledByNot:"auto_percent_used",
+         tooltip:"User-specified percentage of particles used in the last cycle when Auto Percent Used is disabled."},
+        {key:"always_apply_symmetry", label:"Always Apply Symmetry?", type:"checkbox", default:false, group:"Refinement",
+         tooltip:"Apply the symmetry from the first cycle rather than aligning to the symmetry axes three quarters of the way through the first start."},
+        {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"3D Reconstruction",
+         tooltip:"Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."},
+        {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"3D Reconstruction", enabledBy:"apply_blurring",
+         tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."}
+      ],
+      info: {
+        title: "Ab-Initio 3D Reconstruction",
+        body: [
+          "When a prior 3D reconstruction of a molecule or complex is available that has a closely related structure, it is usually fastest and safest to use it to initialize 3D refinement and reconstruction of a new dataset. However, in many cases such a structure is not available, or an independently determined structure is desired. Ab-initio 3D reconstruction offers a way to start refinement and reconstruction without any prior structural information. The following figure shows an ab-initio 3D reconstruction of VSV polymerase (Liang et al. 2015):",
+          {image: "abinitio-example.png", alt: "An ab-initio 3D reconstruction of VSV polymerase, shown as orthogonal views over the cycles."},
+          "It is advisable to precede the ab-initio step with a 2D classification step to remove junk particles and select a high-quality subset of the data. Furthermore, it may be helpful to select particles from images that are defocused by 1.5 µm or more. A refinement package has to be created (in Assets) that will be used with the ab-initio procedure, either from selected 2D classes or using picked particle position. The idea of the ab-initio algorithm is to iteratively improve a 3D reconstruction, starting with a reconstruction calculated from random Euler angles, by aligning a small percentage of the data against the current reconstruction and increasing the refinement resolution and percentage at each iteration (Grigorieff, 2016). This procedure can also be carried out using multiple references that must be specified when creating the refinement package. The procedure stops after a user-specified number of refinement cycles and restarts if more than one starts are specified.",
+          "The progress of the ab-initio reconstruction is displayed as a plot of the average sigma value that measures the average apparent noise-to-signal ratio in the data. The sigma value should decrease as the reconstruction gets closer to the true structure. The current reconstruction is also displayed as three orthogonal central slices and three orthogonal projections.",
+          "If the ab-initio procedure fails on a symmetrical particle, users should repeat it using C1 (no symmetry). This can be specified by creating a new refinement package that is based on the previous refinement package, and changing the symmetry to C1. If a particle is close to spherical, such as apoferritin, it may be necessary to change the initial and final resolution limits from 40 Å and 9 Å (default) to higher resolution, e.g. 15 Å and 6 Å (see Expert Options). Finally, it is worth repeating the procedure a few times if a good reconstruction is not obtained in the first trial.",
+          {heading: "Program Options"},
+          {options: [
+            ["Input Refinement Package", "The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."],
+            ["Number of Starts", "The number of times the ab-initio reconstruction is restarted, using the result from the previous run in each restart."],
+            ["No. of Cycles per Start", "The number of refinement cycles to run for each start. The percentage of particles and the refinement resolution limit will be adjusted automatically from cycle to cycle using initial and final values specified under Expert Options."],
+            ["Run Profiles", "The refinement profile (the run bar) runs prepare_stack and refine3d; the reconstruction profile runs reconstruct3d and merge3d. Each step is split over as many processes as its profile provides."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Initial Resolution Limit (Å)", "The starting resolution limit used to align particles against the current 3D reconstruction. In most cases, this should specify a relatively low resolution to make sure the reconstructions generated in the initial refinement cycles do not develop spurious high-resolution features."],
+            ["Final Resolution Limit (Å)", "The resolution limit used in the final refinement cycle. In most cases, this should specify a resolution at which expected secondary structure becomes apparent, i.e. around 9 Å."],
+            ["Use Auto-Masking?", "Should the 3D reconstructions be masked? Masking is important to suppress weak density features that usually appear in the early stages of ab-initio reconstruction, thus preventing them to get amplified during the iterative refinement. Masking should only be disabled if it appears to interfere with the reconstruction process."],
+            ["Auto Percent used?", "Should the percentage of particles used in each refinement cycle be set automatically? If reconstructions appear very noisy or reconstructions settle into a wrong structure that does not change anymore during iterations, disable this option and specify initial and final percentages manually. To reduce noise, increase the percentage; to make reconstructions more variable, decrease the percentage. By default, the initial percentage is set to include an equivalent of 2500 asymmetric units and the final percentage corresponds to 10,000 asymmetric units used."],
+            ["Initial % Used / Final % Used", "User-specified percentages of particles used when Auto Percent Used is disabled."],
+            ["Apply Likelihood Blurring?", "Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."],
+            ["Smoothing Factor", "A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."]
+          ]}
+        ],
+        references: [
+          {authors:"Grigorieff N.",
+           text:"2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191–226.",
+           doi:"10.1016/bs.mie.2016.04.013"}
+        ]
+      }
+    },
     refine3d: {
       label: "Refine 3D",
       description: "Refines particle orientations against a 3D reference volume to produce a higher-resolution reconstruction.",
@@ -1869,7 +1994,7 @@ From branch : <span id="versionBranch">—</span></p>
     }
   };
 
-  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","refine3d"];
+  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","ab_initio_3d","refine3d"];
 
   var els = {};
   ["homeScreen","appShell","connectingScreen","connectingLabel","errorScreen","errorMessage","errorRetryBtn",
@@ -1891,7 +2016,8 @@ From branch : <span id="versionBranch">—</span></p>
    "browseTitle","browseNote",
    "movieDisplayBtn","previewScrim","previewModal","previewModalClose","previewTitle",
    "previewStage","previewStatus","previewImg","previewNote",
-   "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpagePlaceholder","placeholderPanelLabel",
+   "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
+   "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
    "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel",
@@ -1979,10 +2105,8 @@ From branch : <span id="versionBranch">—</span></p>
   // Movies and Images are backed by real project data (see CLAUDE.md's
   // "Scope note"). The other three share one placeholder shell rather than
   // faking import/list UI for a data model that doesn't exist yet.
-  var REAL_ASSET_TABS = {movies: "assetpageMovies", images: "assetpageImages", particles: "assetpageParticles", refine: "assetpageRefine"};
-  var ASSET_PLACEHOLDER_INFO = {
-    volumes: {label: "3D Volumes", groupLabel: "All Volumes (0)"}
-  };
+  var REAL_ASSET_TABS = {movies: "assetpageMovies", images: "assetpageImages", particles: "assetpageParticles", refine: "assetpageRefine", volumes: "assetpageVolumes"};
+  var ASSET_PLACEHOLDER_INFO = {};
   var assetSubtabBtns = document.querySelectorAll("#assetSubtabs .subtab-btn");
   function showAssetTab(name){
     state.assetTab = name;
@@ -2137,6 +2261,9 @@ From branch : <span id="versionBranch">—</span></p>
     class2d: '<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1"/><rect x="13" y="13" width="7.5" height="7.5" rx="1"/>',
     // A sphere with meridians -- a reconstruction being oriented. Distinct
     // on purpose from the cube the 3D Volumes asset tab uses.
+    // A reconstruction taking shape from nothing: a dotted sphere with a
+    // solid core -- what the ab-initio cycle does to a random start.
+    ab_initio_3d: '<circle cx="12" cy="12" r="8.5" stroke-dasharray="2.5 2.5"/><circle cx="12" cy="12" r="4"/>',
     refine3d: '<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/><path d="M3.5 12h17"/>'
   };
   var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">';
@@ -3346,6 +3473,84 @@ From branch : <span id="versionBranch">—</span></p>
     return page;
   }
   RESULT_PAGES.class2d = makeClassificationResultsPage();
+
+  // ---- Ab-Initio 3D: cisTEM has no results panel for it (the results are
+  // volume assets); this lists each run (STARTUP_LIST) with its settings and
+  // shows the resulting volume's orthogonal views.
+  function makeStartupResultsPage(){
+    var page = {items: [], selectedId: null, urls: []};
+    var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
+    var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
+    var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
+    left.innerHTML = '<span class="groupbox-label">Ab-Initio Runs</span>' +
+      '<div class="c2d-list"><table><thead><tr><th>Run</th><th>Package</th><th>Starts × Cycles</th><th>Res.</th><th>Job</th></tr></thead><tbody></tbody></table></div>';
+    var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
+    var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Reconstruction"; right.appendChild(rightLabel);
+    var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
+    var empty = document.createElement("div"); empty.className = "empty-note"; empty.textContent = "No ab-initio reconstructions in this project yet";
+    var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Ab-Initio 3D from the Actions tab on a refinement package; each run’s volume appears here and under 3D Volumes on the Assets tab."; empty.appendChild(hint);
+    scroll.appendChild(empty);
+    var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
+    var details = document.createElement("div"); details.className = "details-grid ra-details-grid"; resultBox.appendChild(details);
+    var DETAILS = [
+      ["Startup ID", function(r){ return fmtVal(r.startup_id) + (r.job_number ? " (Job " + r.job_number + ")" : ""); }],
+      ["Refinement Package", function(r){ return r.package_name || fmtVal(r.refinement_package_asset_id); }],
+      ["Starts × Cycles", function(r){ return fmtVal(r.number_of_starts) + " × " + fmtVal(r.number_of_cycles); }],
+      ["Resolution Limits", function(r){ return fmtVal(r.initial_res_limit, 1) + " → " + fmtVal(r.final_res_limit, 1) + " Å"; }],
+      ["Mask Radius", function(r){ return fmtVal(r.mask_radius, 1) + " Å"; }],
+      ["Auto-Masking", function(r){ return fmtYesNo(r.auto_mask); }],
+      ["Auto Percent Used", function(r){ return fmtYesNo(r.auto_percent_used) + (r.auto_percent_used ? "" : " (" + fmtVal(r.initial_percent_used, 1) + " → " + fmtVal(r.final_percent_used, 1) + "%)"); }],
+      ["Likelihood Blurring", function(r){ return fmtYesNo(r.apply_likelihood_blurring) + (r.apply_likelihood_blurring ? " (smoothing " + fmtVal(r.smoothing_factor, 2) + ")" : ""); }]
+    ];
+    var cells = DETAILS.map(function(d){
+      var item = document.createElement("div"); item.className = "details-item";
+      var k = document.createElement("span"); k.className = "details-key"; k.textContent = d[0];
+      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
+      item.appendChild(k); item.appendChild(v); details.appendChild(item); return v;
+    });
+    var figures = document.createElement("div"); resultBox.appendChild(figures);
+    els.resultsPages.appendChild(root);
+    page.root = root;
+    var tbody = left.querySelector("tbody");
+    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
+    page.load = function(){
+      if (!state.projectId || !state.connected) return;
+      apiFetch(projectApiUrl("/startups")).then(function(r){ return r.ok ? r.json() : {startups: []}; }).then(function(d){
+        page.items = (d && d.startups) || [];
+        if (!page.items.some(function(r){ return r.startup_id === page.selectedId; })) page.selectedId = page.items.length ? page.items[page.items.length - 1].startup_id : null;
+        render();
+      }).catch(function(){});
+    };
+    function render(){
+      tbody.innerHTML = "";
+      page.items.forEach(function(r){
+        var tr = document.createElement("tr");
+        tr.classList.toggle("selected", r.startup_id === page.selectedId);
+        tr.innerHTML = "<td></td><td></td><td class='num'>" + r.number_of_starts + " × " + r.number_of_cycles + "</td><td class='num'>" + fmtVal(r.initial_res_limit, 0) + "→" + fmtVal(r.final_res_limit, 0) + " Å</td><td>" + (r.job_number ? "#" + r.job_number : "—") + "</td>";
+        tr.children[0].textContent = r.name; tr.children[1].textContent = r.package_name || ("#" + r.refinement_package_asset_id);
+        tr.addEventListener("click", function(){ page.selectedId = r.startup_id; render(); });
+        tbody.appendChild(tr);
+      });
+      show();
+    }
+    function show(){
+      releaseUrls();
+      var r = page.items.filter(function(x){ return x.startup_id === page.selectedId; })[0];
+      if (!r){ empty.hidden = false; resultBox.hidden = true; rightLabel.textContent = "Reconstruction"; return; }
+      empty.hidden = true; resultBox.hidden = false; rightLabel.textContent = "Reconstruction — " + r.name;
+      DETAILS.forEach(function(d, i){ cells[i].textContent = d[1](r); });
+      figures.innerHTML = "";
+      (r.volumes || []).forEach(function(v){
+        var fig = classMontageFigure("Orthogonal projections and slices of " + (v.name || "the volume")); fig.frame.classList.add("c2d-orth"); fig.root.style.marginTop = "12px";
+        fig.left.textContent = (v.name || "Volume") + " (asset #" + v.volume_asset_id + ")"; fig.right.textContent = "projections above, central slices below";
+        fig.img.style.maxWidth = "720px";
+        figures.appendChild(fig.root);
+        loadFigure(fig.img, fig.status, "/volumes/" + v.volume_asset_id + "/preview.png", v.file_exists, "volume", page.urls);
+      });
+    }
+    return page;
+  }
+  RESULT_PAGES.ab_initio_3d = makeStartupResultsPage();
   showResultsStage("motion_correction");
 
   // ---------- run profile ----------
@@ -3373,6 +3578,7 @@ From branch : <span id="versionBranch">—</span></p>
       state.runProfiles = rows;
       els.runProfile.innerHTML = "";
       rpSetProfiles(rows);
+      if (state.currentStage === "ab_initio_3d") abinitioFillProfiles();
       if (!rows.length){
         var empty = document.createElement("option");
         empty.textContent = "No run profiles";
@@ -4042,6 +4248,8 @@ From branch : <span id="versionBranch">—</span></p>
     loadPositionGroups();
     loadPositions();
     loadPackages();
+    loadVolumeGroups();
+    loadVolumes();
     loadRunProfiles();
     state.jobs = [];
     state.jobsSeen = false;
@@ -5699,6 +5907,118 @@ From branch : <span id="versionBranch">—</span></p>
     updatePositionGroupButtons();
   }
 
+  // ---------- 3D volumes (MyVolumeAssetPanel) ----------
+  // The Images panel's shape once more: groups on the left, volumes on the
+  // right; Display shows the volume as orthogonal projections and slices.
+  state.selectedVolumeGroupId = 0; state.selectedVolumeId = null; state.selectedVolumeIds = new Set(); state.volumes = []; state.volumeGroups = [];
+  function loadVolumeGroups(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/volume-groups")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(data){ renderVolumeGroupList((data && data.volume_groups) || []); }).catch(function(){});
+  }
+  function renderVolumeGroupList(groups){
+    state.volumeGroups = groups;
+    els.volGroupList.innerHTML = "";
+    if (!groups.some(function(g){ return g.group_id === state.selectedVolumeGroupId; })) state.selectedVolumeGroupId = 0;
+    groups.forEach(function(g){
+      var li = document.createElement("li");
+      li.textContent = g.group_name + " (" + g.volume_count + ")";
+      li.classList.toggle("selected", g.group_id === state.selectedVolumeGroupId);
+      li.addEventListener("click", function(){ state.selectedVolumeGroupId = g.group_id; renderVolumeGroupList(state.volumeGroups); loadVolumes(); });
+      els.volGroupList.appendChild(li);
+    });
+    var special = state.selectedVolumeGroupId === 0;
+    els.volGroupRenameBtn.disabled = els.volGroupRemoveBtn.disabled = els.volGroupInvertBtn.disabled = special;
+  }
+  function loadVolumes(){
+    if (!state.projectId) return;
+    apiFetch(projectApiUrl("/volumes?group_id=" + state.selectedVolumeGroupId)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(data){ renderVolumeList((data && data.volumes) || []); }).catch(function(){});
+  }
+  function renderVolumeList(rows){
+    state.volumes = rows;
+    var present = new Set(rows.map(function(v){ return v.VOLUME_ASSET_ID; }));
+    state.selectedVolumeIds = new Set(Array.from(state.selectedVolumeIds).filter(function(id){ return present.has(id); }));
+    if (!present.has(state.selectedVolumeId)) state.selectedVolumeId = null;
+    els.volListBody.innerHTML = "";
+    if (!rows.length){
+      var tr0 = document.createElement("tr"); var td0 = document.createElement("td"); td0.colSpan = 9;
+      var box = document.createElement("div"); box.className = "empty-note"; box.textContent = "No volumes in this group";
+      var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Ab-Initio 3D from the Actions tab — its reconstruction lands here."; box.appendChild(hint);
+      td0.appendChild(box); tr0.appendChild(td0); els.volListBody.appendChild(tr0);
+      updateVolumeButtons(); return;
+    }
+    rows.forEach(function(v){
+      var tr = document.createElement("tr");
+      tr.className = "clickable" + (v.VOLUME_ASSET_ID === state.selectedVolumeId ? " selected" : "");
+      tr.innerHTML = "<td class='check-col'><input type='checkbox' class='vol-check'></td><td></td><td>" + v.VOLUME_ASSET_ID + "</td>" +
+        "<td class='num'>" + fmtAssetRef(v.RECONSTRUCTION_JOB_ID) + "</td><td class='num'>" + (v.PIXEL_SIZE != null ? Number(v.PIXEL_SIZE).toFixed(4) : "—") + "</td>" +
+        "<td class='num'>" + fmtNum(v.X_SIZE) + "</td><td class='num'>" + fmtNum(v.Y_SIZE) + "</td><td class='num'>" + fmtNum(v.Z_SIZE) + "</td><td></td>";
+      tr.children[1].textContent = v.NAME || ""; tr.children[8].textContent = v.FILENAME || "—";
+      tr.addEventListener("click", function(){ state.selectedVolumeId = v.VOLUME_ASSET_ID; renderVolumeList(state.volumes); });
+      var cb = tr.querySelector(".vol-check"); cb.checked = state.selectedVolumeIds.has(v.VOLUME_ASSET_ID);
+      cb.addEventListener("click", function(e){ e.stopPropagation(); });
+      cb.addEventListener("change", function(){ if (cb.checked) state.selectedVolumeIds.add(v.VOLUME_ASSET_ID); else state.selectedVolumeIds.delete(v.VOLUME_ASSET_ID); updateVolumeButtons(); });
+      els.volListBody.appendChild(tr);
+    });
+    updateVolumeButtons();
+  }
+  function updateVolumeButtons(){
+    var any = state.selectedVolumeIds.size > 0;
+    els.volRemoveBtn.disabled = els.volAddToGroupBtn.disabled = !any;
+    els.volDisplayBtn.disabled = state.selectedVolumeId == null;
+  }
+  els.volSelectAllCheckbox.addEventListener("change", function(){
+    state.selectedVolumeIds = new Set(els.volSelectAllCheckbox.checked ? state.volumes.map(function(v){ return v.VOLUME_ASSET_ID; }) : []);
+    renderVolumeList(state.volumes);
+  });
+  els.volDisplayBtn.addEventListener("click", function(){
+    var v = state.volumes.filter(function(x){ return x.VOLUME_ASSET_ID === state.selectedVolumeId; })[0]; if (!v) return;
+    openPreviewModal({title: (v.NAME || "Volume") + " — orthogonal projections (top) and central slices (bottom)", status: "Rendering\u2026", path: "/volumes/" + v.VOLUME_ASSET_ID + "/preview.png"});
+  });
+  els.volRemoveBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedVolumeIds); if (!ids.length) return;
+    var fromAll = state.selectedVolumeGroupId === 0;
+    if (fromAll && !confirm("Remove " + ids.length + " volume" + (ids.length === 1 ? "" : "s") + " from the project? The asset rows are deleted; the files stay on disk.")) return;
+    var path = fromAll ? "/volumes/delete" : "/volume-groups/" + state.selectedVolumeGroupId + "/remove-volumes";
+    apiFetch(projectApiUrl(path), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({volume_ids: ids})})
+      .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); state.selectedVolumeIds = new Set(); loadVolumeGroups(); loadVolumes(); })
+      .catch(function(err){ alert("Could not remove: " + err.message); });
+  });
+  els.volAddToGroupBtn.addEventListener("click", function(){
+    var ids = Array.from(state.selectedVolumeIds); if (!ids.length) return;
+    var name = prompt("Add the " + ids.length + " volume" + (ids.length === 1 ? "" : "s") + " to which group? (a new name creates the group)"); name = name ? name.trim() : ""; if (!name) return;
+    apiFetch(projectApiUrl("/volumes/add-to-group"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({volume_ids: ids, group_name: name})})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); loadVolumeGroups(); })
+      .catch(function(err){ alert("Could not add to group: " + err.message); });
+  });
+  els.volGroupAddBtn.addEventListener("click", function(){
+    var name = prompt("Name for the new volume group:"); name = name ? name.trim() : ""; if (!name) return;
+    apiFetch(projectApiUrl("/volume-groups"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: name})})
+      .then(function(r){ return r.json().then(function(d){ if (!r.ok) throw new Error((d && d.error) || ("HTTP " + r.status)); return d; }); })
+      .then(function(d){ state.selectedVolumeGroupId = d.group_id; loadVolumeGroups(); loadVolumes(); }).catch(function(err){ alert("Could not add group: " + err.message); });
+  });
+  els.volGroupRenameBtn.addEventListener("click", function(){
+    var g = state.volumeGroups.filter(function(x){ return x.group_id === state.selectedVolumeGroupId; })[0]; if (!g || g.group_id === 0) return;
+    var name = prompt("Rename \u201c" + g.group_name + "\u201d to:", g.group_name); name = name ? name.trim() : ""; if (!name) return;
+    apiFetch(projectApiUrl("/volume-groups/" + g.group_id), {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: name})})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); loadVolumeGroups(); })
+      .catch(function(err){ alert("Could not rename: " + err.message); });
+  });
+  els.volGroupRemoveBtn.addEventListener("click", function(){
+    var g = state.volumeGroups.filter(function(x){ return x.group_id === state.selectedVolumeGroupId; })[0]; if (!g || g.group_id === 0) return;
+    if (!confirm("Remove the group \u201c" + g.group_name + "\u201d? Its volumes stay in the project.")) return;
+    apiFetch(projectApiUrl("/volume-groups/" + g.group_id), {method: "DELETE"})
+      .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); state.selectedVolumeGroupId = 0; loadVolumeGroups(); loadVolumes(); })
+      .catch(function(err){ alert("Could not remove group: " + err.message); });
+  });
+  els.volGroupInvertBtn.addEventListener("click", function(){
+    if (state.selectedVolumeGroupId === 0) return;
+    apiFetch(projectApiUrl("/volume-groups/" + state.selectedVolumeGroupId + "/invert"), {method: "POST"})
+      .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); loadVolumeGroups(); loadVolumes(); })
+      .catch(function(err){ alert("Could not invert: " + err.message); });
+  });
+
   // ---------- refinement packages (MyRefinementPackageAssetPanel) ----------
   function loadPackages(){
     if (!state.projectId) return;
@@ -5948,6 +6268,44 @@ From branch : <span id="versionBranch">—</span></p>
   };
   STAGES.class2d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") class2dPackageChanged(); };
 
+  // ---------- ab-initio panel wiring (AbInitio3DPanel::NewRefinementPackageSelected / SetDefaults) ----------
+  // The package sets the symmetry, and the mask radius and search ranges
+  // (0.75 x and 0.4 x its largest dimension); the reconstruction profile
+  // picker is filled from the same run profiles as the run bar.
+  function abinitioPackageChanged(){
+    var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
+    if (!pkg || !pkg.value || !state.projectId) return;
+    var pkgId = pkg.value;
+    apiFetch(projectApiUrl("/abinitio/defaults?refinement_package_id=" + encodeURIComponent(pkgId))).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (pkg.value !== pkgId) return;
+      var sym = els.paramFields.querySelector('[data-key="symmetry"]');
+      if (sym && d.symmetry) sym.value = d.symmetry;
+      [["mask_radius_a", d.mask_radius_a], ["search_range_x_a", d.search_range_x_a], ["search_range_y_a", d.search_range_y_a]].forEach(function(pair){
+        var input = els.expertFields.querySelector('[data-key="' + pair[0] + '"]');
+        if (input && pair[1] != null) input.value = pair[1];
+      });
+    }).catch(function(){});
+  }
+  function abinitioFillProfiles(){
+    var sel = els.paramFields.querySelector('[data-key="reconstruction_run_profile"]');
+    if (!sel) return;
+    var current = sel.value || els.runProfile.value;
+    sel.innerHTML = "";
+    (state.runProfiles || []).forEach(function(p){
+      var o = document.createElement("option"); o.value = p.profile_name; o.textContent = p.profile_name + (p.total_jobs ? " (" + p.total_jobs + " processes)" : ""); sel.appendChild(o);
+    });
+    if (Array.from(sel.options).some(function(o){ return o.value === current; })) sel.value = current;
+  }
+  STAGES.ab_initio_3d.wire = function(paramFields){
+    var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
+    if (pkg) pkg.addEventListener("change", abinitioPackageChanged);
+    abinitioFillProfiles();
+  };
+  STAGES.ab_initio_3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") abinitioPackageChanged(); };
+
   function updateStartButton(){
     var stage = STAGES[state.currentStage];
     var reason = null;
@@ -6148,7 +6506,8 @@ From branch : <span id="versionBranch">—</span></p>
     // Find CTF changes each image's active estimate, which the Images panel shows.
     ctf_estimation: function(){ loadImages(); loadResults("ctf_estimation"); },
     particle_picking: function(){ loadResults("particle_picking"); loadPositionGroups(); loadPositions(); },
-    class2d: function(){ loadResults("class2d"); }
+    class2d: function(){ loadResults("class2d"); },
+    ab_initio_3d: function(){ loadResults("ab_initio_3d"); loadVolumes(); loadVolumeGroups(); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 
@@ -6481,6 +6840,27 @@ From branch : <span id="versionBranch">—</span></p>
       return function(result, base, urls){
         view.loading();
         view.update(result, urls, base + "image.png");
+      };
+    },
+    // AbInitio3DPanel while it runs: the sigma plot (PlotPanel) and the
+    // current reconstruction's orthogonal views (OrthResultsPanel).
+    ab_initio_3d: function(body){
+      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+      var plot = makePlotBlock("Average sigma", [["ra-swatch-sigma", "per iteration"]]); box.appendChild(plot.root);
+      var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.root.style.marginTop = "12px"; box.appendChild(fig.root);
+      fig.frame.classList.add("c2d-orth");
+      return function(result, base, urls){
+        var h = result.history || [];
+        drawLinePlot(plot.svg, h.length ? [{xs: h.map(function(e){ return e.iteration; }), ys: h.map(function(e){ return e.average_sigma; }), cls: "line-y", dots: "dot-y"}] : [],
+          {xLabel: "iteration", xMin: 1, xStep: Math.max(1, Math.ceil(((result.starts || 1) * (result.rounds || 1)) / 10)), xTick: function(v){ return String(Math.round(v)); }, yLabel: "sigma", emptyText: "No refinement cycle has finished yet."});
+        var job = selectedJob();
+        var running = job && !TERMINAL_STATUSES[job.status];
+        fig.left.textContent = result.label + (result.number_of_classes > 1 ? " · class 1 of " + result.number_of_classes : "");
+        fig.right.textContent = running ? (result.phase || "") + " · start " + (result.start + 1) + " of " + result.starts + ", round " + (result.round + 1) + " of " + result.rounds +
+          (result.high_res ? " · " + Number(result.high_res).toFixed(1) + " Å, " + Number(result.percent_used).toFixed(1) + "%" : "") : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+        fig.img.style.maxWidth = "720px";
+        loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
       };
     },
     // MyRefine2DPanel while it runs: the newest class averages

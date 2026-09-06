@@ -45,6 +45,7 @@ from pathlib import Path
 from flask import Flask, abort, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 
+import abinitio
 import auth
 import classification
 import db
@@ -53,6 +54,11 @@ import refinement_packages
 import stages
 import imageheaders
 import preview
+import volumes
+
+# Stages that are cycles of program runs rather than one: a user-visible
+# parent job drives hidden children. Keyed by the parent's STAGE.
+DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio}
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
@@ -162,10 +168,12 @@ class DbSink(job_runner.Sink):
             _update_job(project_id, job_id, **fields)
             append_log(project_id, job_id, "[{}] job {}{}".format(now_iso(), status, ": " + error if error else ""))
             self._forget(job_id)
-            # A step of a 2D classification: its parent decides what comes next.
+            # A step of a multi-run stage: its parent decides what comes next.
             row = _fetch_job_row(project_id, job_id)
             if row is not None and row["PARENT_JOB_ID"]:
-                classification.child_finished(project_id, row, status, error)
+                driver = _driver_for_parent(project_id, row["PARENT_JOB_ID"])
+                if driver is not None:
+                    driver.child_finished(project_id, row, status, error)
 
     def on_log(self, job_id, text, level="info"):
         project_id = self._project(job_id)
@@ -190,9 +198,9 @@ class DbSink(job_runner.Sink):
             )
             conn.execute("UPDATE JOBS SET PROGRESS=? WHERE JOB_ID=?",
                          (int(done_count * 100 / task_count) if task_count else 0, job_id))
-        parent = conn.execute("SELECT PARENT_JOB_ID FROM JOBS WHERE JOB_ID=?", (job_id,)).fetchone()
-        if parent is not None and parent["PARENT_JOB_ID"]:
-            classification.child_progress(conn, parent["PARENT_JOB_ID"], job_id, done_count, task_count)
+        parent = conn.execute("SELECT p.JOB_ID, p.STAGE FROM JOBS c JOIN JOBS p ON p.JOB_ID = c.PARENT_JOB_ID WHERE c.JOB_ID=?", (job_id,)).fetchone()
+        if parent is not None and parent["STAGE"] in DRIVERS:
+            DRIVERS[parent["STAGE"]].child_progress(conn, parent["JOB_ID"], job_id, done_count, task_count)
         conn.close()
         if status == "failed":
             self.on_log(job_id, "task {} failed: {}".format(task, error), level="error")
@@ -238,6 +246,11 @@ class DbSink(job_runner.Sink):
 
 
 _db_sink = DbSink()
+
+
+def _driver_for_parent(project_id, parent_id):
+    row = _fetch_job_row(project_id, parent_id)
+    return DRIVERS.get(row["STAGE"]) if row is not None else None
 
 
 def start_job_runner():
@@ -287,6 +300,7 @@ STAGE_COMMANDS = {
     "ctf_estimation": {"binary": "ctffind", "command": None},
     "particle_picking": {"binary": "relion_autopick", "command": None},
     "class2d": {"binary": "relion_refine", "command": None},
+    "ab_initio_3d": {"binary": "refine3d", "command": None},
     "refine3d": {"binary": "relion_refine", "command": None},
 }
 
@@ -329,8 +343,8 @@ def _row_to_job(row, conn=None):
 
 
 def _task_progress_for(conn, row):
-    if row["STAGE"] == classification.STAGE:
-        return classification.progress_info(json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None)
+    if row["STAGE"] in DRIVERS:
+        return DRIVERS[row["STAGE"]].progress_info(json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None)
     return _task_progress(conn, row)
 
 
@@ -593,7 +607,7 @@ def _recover_interrupted_jobs():
         for row in rows:
             job_id = row["JOB_ID"]
             adapter = stages.ADAPTERS.get(row["STAGE"])
-            if row["STAGE"] == classification.STAGE and _job_runner is not None and row["STATE_JSON"]:
+            if row["STAGE"] in DRIVERS and _job_runner is not None and row["STATE_JSON"]:
                 # Its children are restored by the branch below; it picks
                 # up from whichever of them is (or has already) finished.
                 parents.append(row)
@@ -622,7 +636,7 @@ def _recover_interrupted_jobs():
                 )
         conn.close()
         for row in parents:
-            classification.resume(project_id, row)
+            DRIVERS[row["STAGE"]].resume(project_id, row)
 
 
 def _package_job_info(project_id, row):
@@ -648,7 +662,8 @@ def _controller_log_path(project_id, job_id):
 
 STATIC_FILES = {"cistem3.html", "config.js", "logo.png", "movie-alignment-example.png",
                 "ctffind-definitions.png", "ctffind-diagnostic-image.png", "ctffind-example-1dfit.png",
-                "class2d-example-1.png", "class2d-example-2.png", "class2d-example-3.png", "class2d-example-4.png"}
+                "class2d-example-1.png", "class2d-example-2.png", "class2d-example-3.png", "class2d-example-4.png",
+                "abinitio-example.png"}
 
 
 @app.route("/")
@@ -931,6 +946,11 @@ IMAGE_KIND = AssetKind("image", "IMAGE_ASSETS", "IMAGE_ASSET_ID",
 # picked particle, written by Find Particles. Same group machinery.
 POSITION_KIND = AssetKind("particle_position", "PARTICLE_POSITION_ASSETS", "PARTICLE_POSITION_ASSET_ID",
                           "PARTICLE_POSITION_GROUP_LIST", "PARTICLE_POSITION_GROUP_MEMBERS", "All Particle Positions")
+
+# 3D volumes (cisTEM's MyVolumeAssetPanel): reconstructions written by
+# Ab-Initio 3D (and, later, Refine 3D). Same group machinery.
+VOLUME_KIND = AssetKind("volume", "VOLUME_ASSETS", "VOLUME_ASSET_ID",
+                        "VOLUME_GROUP_LIST", "VOLUME_GROUP_MEMBERS", "All Volumes")
 
 # Group 0 is the master list db.py seeds into every project -- every asset is
 # a member of it, and the app treats it as the source of truth for what
@@ -2069,6 +2089,142 @@ def delete_refinement_package(project_id, package_id):
 
 
 # ---------------------------------------------------------------------------
+# 3D volumes (VOLUME_ASSETS) -- MyVolumeAssetPanel -- and the ab-initio runs
+# (STARTUP_LIST) that make them.
+# ---------------------------------------------------------------------------
+
+@app.route("/api/projects/<project_id>/volumes", methods=["GET"])
+@auth.project_access_required
+def list_volumes(project_id):
+    return _list_assets(project_id, VOLUME_KIND)
+
+
+@app.route("/api/projects/<project_id>/volume-groups", methods=["GET"])
+@auth.project_access_required
+def list_volume_groups(project_id):
+    return _list_groups(project_id, VOLUME_KIND)
+
+
+@app.route("/api/projects/<project_id>/volume-groups", methods=["POST"])
+@auth.project_access_required
+def create_volume_group(project_id):
+    return _create_group(project_id, VOLUME_KIND)
+
+
+@app.route("/api/projects/<project_id>/volume-groups/<int:group_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_volume_group(project_id, group_id):
+    return _rename_group(project_id, VOLUME_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/volume-groups/<int:group_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_volume_group(project_id, group_id):
+    return _delete_group(project_id, VOLUME_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/volume-groups/<int:group_id>/invert", methods=["POST"])
+@auth.project_access_required
+def invert_volume_group(project_id, group_id):
+    return _invert_group(project_id, VOLUME_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/volumes/delete", methods=["POST"])
+@auth.project_access_required
+def delete_volumes(project_id):
+    return _delete_assets(project_id, VOLUME_KIND)
+
+
+@app.route("/api/projects/<project_id>/volume-groups/<int:group_id>/remove-volumes", methods=["POST"])
+@auth.project_access_required
+def remove_volumes_from_group(project_id, group_id):
+    return _remove_from_group(project_id, VOLUME_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/volumes/add-to-group", methods=["POST"])
+@auth.project_access_required
+def add_volumes_to_group(project_id):
+    return _add_to_group(project_id, VOLUME_KIND)
+
+
+@app.route("/api/projects/<project_id>/volumes/<int:volume_id>/preview.png", methods=["GET"])
+@auth.project_access_required
+def volume_preview(project_id, volume_id):
+    """The Display button: three orthogonal projections over three central
+    slices (Image::CreateOrthogonalProjectionsImage), the way the ab-initio
+    panel shows a reconstruction."""
+    conn = db.get_conn(project_id)
+    row = conn.execute("SELECT * FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (volume_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such volume"}), 404
+    path = row["FILENAME"]
+    if not path or not Path(path).is_file():
+        return jsonify({"error": "volume file is missing: {}".format(path)}), 404
+    stat = Path(path).stat()
+    etag = '"r{}-orth-{}-{}-{}"'.format(preview.RENDER_VERSION, volume_id, int(stat.st_mtime), stat.st_size)
+    if request.headers.get("If-None-Match") == etag:
+        return "", 304
+    try:
+        png, _meta = volumes.orthogonal_views_png(path)
+    except (ValueError, OSError) as exc:
+        return jsonify({"error": str(exc)}), 422
+    response = app.response_class(png, mimetype="image/png")
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "private, no-cache"
+    return response
+
+
+@app.route("/api/projects/<project_id>/startups", methods=["GET"])
+@auth.project_access_required
+def list_startups(project_id):
+    """Every ab-initio run (STARTUP_LIST) with its settings and result volumes."""
+    conn = db.get_conn(project_id)
+    out = volumes.list_startups(conn)
+    conn.close()
+    return jsonify({"startups": out})
+
+
+@app.route("/api/projects/<project_id>/abinitio/defaults", methods=["GET"])
+@auth.project_access_required
+def abinitio_defaults(project_id):
+    """AbInitio3DPanel::SetDefaults() for a package: symmetry, mask radius
+    (0.75 x largest dimension), search range (0.4 x), class count."""
+    package_id = request.args.get("refinement_package_id", type=int)
+    conn = db.get_conn(project_id)
+    pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (package_id,)).fetchone() if package_id is not None else None
+    conn.close()
+    if pkg is None:
+        return jsonify({"error": "no such refinement package"}), 404
+    out = abinitio.package_defaults(pkg)
+    out["defaults"] = abinitio.DEFAULTS
+    return jsonify(out)
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/abinitio/current.png", methods=["GET"])
+@auth.project_access_required
+def abinitio_current_picture(project_id, job_id):
+    """Orthogonal views of the running (or finished) ab-initio job's current
+    reconstruction, for the Jobs tab's live view."""
+    row = _fetch_job_row(project_id, job_id)
+    if row is None or row["STAGE"] != abinitio.STAGE:
+        return jsonify({"error": "not an ab-initio job"}), 404
+    conn = db.get_conn(project_id)
+    try:
+        got = abinitio.current_picture(conn, row, request.args.get("class", default=0, type=int))
+    finally:
+        conn.close()
+    if got is None:
+        return jsonify({"error": "no reconstruction yet"}), 404
+    png, _meta, path = got
+    stat = Path(path).stat()
+    response = app.response_class(png, mimetype="image/png")
+    response.headers["ETag"] = '"r{}-abinitio-{}-{}-{}"'.format(preview.RENDER_VERSION, job_id, int(stat.st_mtime), stat.st_size)
+    response.headers["Cache-Control"] = "private, no-cache"
+    return response
+
+
+# ---------------------------------------------------------------------------
 # 2D classifications (CLASSIFICATION_LIST) -- what Refine2DResultsPanel
 # reads, plus the pictures it shows: the class averages as a montage and
 # the members of one class cut from the package's stack.
@@ -2836,10 +2992,10 @@ def create_job(project_id):
             return jsonify({"error": "image group has no images"}), 400
         if missing_ctf:
             return jsonify({"error": stages.find_particles.CTF_REQUIRED_MESSAGE}), 400
-    elif stage == classification.STAGE:
+    elif stage in DRIVERS:
         conn = db.get_conn(project_id)
         try:
-            classification.validate(conn, params)
+            DRIVERS[stage].validate(conn, params)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
         finally:
@@ -2867,9 +3023,9 @@ def create_job(project_id):
     adapter = stages.ADAPTERS.get(stage)
     if adapter is not None and _job_runner is not None and _controller_available():
         return _submit_to_runner(project_id, job_id, adapter, params)
-    if stage == classification.STAGE and _job_runner is not None and _controller_available():
-        return _start_classification(project_id, job_id, params)
-    if adapter is not None or stage == classification.STAGE:
+    if stage in DRIVERS and _job_runner is not None and _controller_available():
+        return _start_driver(DRIVERS[stage], project_id, job_id, params)
+    if adapter is not None or stage in DRIVERS:
         # This stage *can* run for real; say exactly what is stopping it,
         # rather than the generic simulation note about a stage binary.
         if _job_runner is None:
@@ -2951,19 +3107,20 @@ def _submit_child_job(project_id, child_job_id, adapter, tasks, profile):
     _job_runner.submit(spec)
 
 
-classification.configure(classification.Runtime(
+_driver_runtime = classification.Runtime(
     submit_child=_submit_child_job,
     cancel=lambda job_id: _job_runner is not None and _job_runner.cancel(job_id),
     append_log=lambda project_id, job_id, text, level="info": append_log(
         project_id, job_id, "[{}] {}{}".format(now_iso(), "ERROR: " if level == "error" else "", text)),
     update_job=_update_job,
-))
+)
+classification.configure(_driver_runtime)
+abinitio.configure(_driver_runtime)
 
 
-def _start_classification(project_id, job_id, params):
-    """The class2d path: no single task list to hand the runner -- the
-    driver in classification.py launches the first step and follows up
-    from the sink's callbacks."""
+def _start_driver(driver, project_id, job_id, params):
+    """The multi-run path: no single task list to hand the runner -- the
+    driver launches the first step and follows up from the sink's callbacks."""
     conn = db.get_conn(project_id)
     try:
         sys_conn = db.get_system_conn()
@@ -2974,7 +3131,7 @@ def _start_classification(project_id, job_id, params):
             error = "unknown run profile {!r}".format(params.get("run_profile"))
         else:
             try:
-                classification.start(conn, project_id, job_id, params, profile)
+                driver.start(conn, project_id, job_id, params, profile)
             except ValueError as exc:
                 error = str(exc)
         if error is not None:
@@ -3032,18 +3189,19 @@ def get_latest_result(project_id, job_id):
         return jsonify({"error": "not found"}), 404
     adapter = stages.ADAPTERS.get(row["STAGE"])
     out = {"job_id": job_id, "status": row["STATUS"], "progress": row["PROGRESS"], "result": None}
-    if row["STAGE"] == classification.STAGE:
+    if row["STAGE"] in DRIVERS:
+        driver = DRIVERS[row["STAGE"]]
         conn = db.get_conn(project_id)
         try:
-            result = classification.live_result(conn, row)
-            info = classification.progress_info(json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None)
+            result = driver.live_result(conn, row)
+            info = driver.progress_info(json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None)
         finally:
             conn.close()
         out["task_count"] = info.get("task_count")
         out["done_count"] = info.get("tasks_done")
         if result is None:
-            out["reason"] = "The starting references are being created." if row["STATUS"] in ("queued", "running") \
-                else "This job recorded no classifications."
+            out["reason"] = "The first result is still being computed." if row["STATUS"] in ("queued", "running") \
+                else "This job recorded no results."
         else:
             out["result"] = result
         return jsonify(out)
@@ -3105,10 +3263,10 @@ def cancel_job(project_id, job_id):
     if job["status"] not in ("queued", "running"):
         return jsonify(job)
 
-    if row["STAGE"] == classification.STAGE and row["STATE_JSON"]:
+    if row["STAGE"] in DRIVERS and row["STATE_JSON"]:
         conn = db.get_conn(project_id)
         try:
-            classification.cancel(conn, project_id, job_id)
+            DRIVERS[row["STAGE"]].cancel(conn, project_id, job_id)
         finally:
             conn.close()
         return jsonify(_row_to_job(_fetch_job_row(project_id, job_id)))

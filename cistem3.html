@@ -1905,11 +1905,17 @@ From branch : <span id="versionBranch">—</span></p>
       inputKey: "refinement_package_id",
       emptyReason: "Please create a refinement package (in the assets panel) in order to perform a 3D refinement.",
       fields: [
+        {key:"input_mode", label:"Use Images or Class Averages?", unit:"", type:"select", options:["Class Averages","Images"], default:"Class Averages", group:"Input",
+         tooltip:"Images: the package's particles. Class Averages: CTF-corrected averages of randomly drawn members of the selected 2D classes, made by prepare_stack_classaverage — far fewer, far cleaner images, the usual choice."},
         {key:"refinement_package_id", label:"Input Refinement Package", unit:"", type:"asset_select", group:"Input",
          tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
          dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
+        {key:"classification_selection_id", label:"Input Classification Selection", unit:"", type:"select", options:[], group:"Input", enabledWhen:{key:"input_mode", value:"Class Averages"},
+         tooltip:"A selection of class averages made on the 2D Classification results page; the reconstruction is built from averages of their members."},
+        {key:"number_of_classes", label:"No. Classes", unit:"", type:"number", step:"1", min:1, max:50, default:"1", group:"Input", enabledWhen:{key:"input_mode", value:"Class Averages"},
+         tooltip:"The number of 3D classes to reconstruct. With Images this is the refinement package's class count."},
         {key:"symmetry", label:"Symmetry", unit:"", type:"select", options:["C1","C2","C3","C4","D2","D3","D4","I","I2","O","T","T2"], default:"C1", group:"Input",
-         tooltip:"The package's point-group symmetry. Unless Always Apply Symmetry is set, the first three quarters of the first start run without it, then the reconstruction is aligned to the symmetry axes and it is applied from there on."},
+         tooltip:"The point-group symmetry (the package's, with Images). Unless Always Apply Symmetry is set, the first three quarters of the first start run without it, then the reconstruction is aligned to the symmetry axes and it is applied from there on."},
         {key:"number_of_starts", label:"No. of Starts", unit:"", type:"number", step:"1", min:1, max:20, default:"2", group:"Cycle",
          tooltip:"The number of times the ab-initio reconstruction is restarted, using the result from the previous run in each restart."},
         {key:"number_of_rounds", label:"No. of Cycles per Start", unit:"", type:"number", step:"1", min:1, max:200, default:"40", group:"Cycle",
@@ -1943,7 +1949,9 @@ From branch : <span id="versionBranch">—</span></p>
         {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"3D Reconstruction",
          tooltip:"Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"3D Reconstruction", enabledBy:"apply_blurring",
-         tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."}
+         tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."},
+        {key:"images_per_class", label:"Images per Class", unit:"", type:"number", step:"1", min:1, max:500, default:"5", group:"Class Averages",
+         tooltip:"How many randomly drawn members go into each class average made for the reconstruction. The number of averages per selected class is the smallest class's size divided by this, kept between 2500 and 20000 averages in all."}
       ],
       info: {
         title: "Ab-Initio 3D Reconstruction",
@@ -1955,7 +1963,10 @@ From branch : <span id="versionBranch">—</span></p>
           "If the ab-initio procedure fails on a symmetrical particle, users should repeat it using C1 (no symmetry). This can be specified by creating a new refinement package that is based on the previous refinement package, and changing the symmetry to C1. If a particle is close to spherical, such as apoferritin, it may be necessary to change the initial and final resolution limits from 40 Å and 9 Å (default) to higher resolution, e.g. 15 Å and 6 Å (see Expert Options). Finally, it is worth repeating the procedure a few times if a good reconstruction is not obtained in the first trial.",
           {heading: "Program Options"},
           {options: [
+            ["Use Images or Class Averages?", "Whether to reconstruct from the package's particle images or from averages of randomly drawn members of selected 2D classes. Class averages are far fewer and far cleaner, and are the usual choice."],
             ["Input Refinement Package", "The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."],
+            ["Input Classification Selection", "With Class Averages: a selection of class averages made on the 2D Classification results page. For each selected class, averages of Images per Class randomly drawn members are made, whitened and CTF-corrected, and those averages are refined."],
+            ["No. Classes", "The number of 3D classes to reconstruct (with Class Averages; with Images the package's class count is used)."],
             ["Number of Starts", "The number of times the ab-initio reconstruction is restarted, using the result from the previous run in each restart."],
             ["No. of Cycles per Start", "The number of refinement cycles to run for each start. The percentage of particles and the refinement resolution limit will be adjusted automatically from cycle to cycle using initial and final values specified under Expert Options."],
             ["Run Profiles", "The refinement profile (the run bar) runs prepare_stack and refine3d; the reconstruction profile runs reconstruct3d and merge3d. Each step is split over as many processes as its profile provides."]
@@ -1968,7 +1979,8 @@ From branch : <span id="versionBranch">—</span></p>
             ["Auto Percent used?", "Should the percentage of particles used in each refinement cycle be set automatically? If reconstructions appear very noisy or reconstructions settle into a wrong structure that does not change anymore during iterations, disable this option and specify initial and final percentages manually. To reduce noise, increase the percentage; to make reconstructions more variable, decrease the percentage. By default, the initial percentage is set to include an equivalent of 2500 asymmetric units and the final percentage corresponds to 10,000 asymmetric units used."],
             ["Initial % Used / Final % Used", "User-specified percentages of particles used when Auto Percent Used is disabled."],
             ["Apply Likelihood Blurring?", "Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."],
-            ["Smoothing Factor", "A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."]
+            ["Smoothing Factor", "A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."],
+            ["Images per Class", "With Class Averages: how many randomly drawn members go into each average. The number of averages per selected class is the smallest selected class divided by this, kept between 2500 and 20000 averages in all."]
           ]}
         ],
         references: [
@@ -6283,10 +6295,27 @@ From branch : <span id="versionBranch">—</span></p>
       if (pkg.value !== pkgId) return;
       var sym = els.paramFields.querySelector('[data-key="symmetry"]');
       if (sym && d.symmetry) sym.value = d.symmetry;
+      var classes = els.paramFields.querySelector('[data-key="number_of_classes"]');
+      if (classes && d.number_of_classes) classes.value = d.number_of_classes;
       [["mask_radius_a", d.mask_radius_a], ["search_range_x_a", d.search_range_x_a], ["search_range_y_a", d.search_range_y_a]].forEach(function(pair){
         var input = els.expertFields.querySelector('[data-key="' + pair[0] + '"]');
         if (input && pair[1] != null) input.value = pair[1];
       });
+      var selSelect = els.paramFields.querySelector('[data-key="classification_selection_id"]');
+      if (selSelect){
+        selSelect.innerHTML = "";
+        var sels = d.selections || [];
+        if (!sels.length){
+          var none = document.createElement("option"); none.value = ""; none.textContent = "No class selections on this package — make one on the Results tab (2D Classification)"; selSelect.appendChild(none);
+        }
+        sels.forEach(function(sel){
+          var o = document.createElement("option"); o.value = sel.selection_id;
+          o.textContent = sel.name + " — " + sel.classes.length + " class" + (sel.classes.length === 1 ? "" : "es") + ", " + sel.particle_count + " particles (" + (sel.classification_name || "classification " + sel.classification_id) + ")";
+          selSelect.appendChild(o);
+        });
+        selSelect.dataset.count = String(sels.length);
+      }
+      updateStartButton();
     }).catch(function(){});
   }
   function abinitioFillProfiles(){
@@ -6316,6 +6345,10 @@ From branch : <span id="versionBranch">—</span></p>
       var count = selectedGroupCount();
       var profile = state.runProfiles.filter(function(p){ return p.profile_name === els.runProfile.value; })[0];
       if (count === 0) reason = stage.emptyReason || ("The selected group is empty — add " + (stage.fields.some(function(f){ return f.key === "image_group_id"; }) ? "images" : "movies") + " to it on the Assets tab.");
+      else if (state.currentStage === "ab_initio_3d"){
+        var mode = els.paramFields.querySelector('[data-key="input_mode"]'), selPick = els.paramFields.querySelector('[data-key="classification_selection_id"]');
+        if (mode && mode.value === "Class Averages" && selPick && !selPick.value) reason = "Pick a class selection, or switch to Images. Selections are made on the Results tab under 2D Classification.";
+      }
       // MyFindParticlesPanel's PleaseEstimateCTFStaticText, in its words.
       else if (stage.requiresCtf && selectedGroupCtfCount() !== null && selectedGroupCtfCount() < count) reason = "Please run CTF estimation on this group before picking particles.";
       // cisTEM's OnUpdateUI: a profile whose commands add up to zero

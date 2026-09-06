@@ -33,8 +33,17 @@ resume from JOBS.STATE_JSON after a restart. The schedules (resolution
 ramp, percent used, Wiener nominator, signed-CC limit) follow
 BeginRefinementCycle() / CycleRefinement() / Setup*Job() line for line.
 
-Not built: the class-average input (prepare_stack_classaverage), which
-needs a program our controller does not yet package.
+The panel's other input is a **2D class selection** (classification.py's
+selection manager): prepare_stack_classaverage then builds, for each
+selected class, `number_of_2d_classes` CTF-corrected averages of
+`images_per_class` randomly drawn members -- whitened, aligned by the
+classification's angles and shifts, binned to the final resolution -- and
+those averages are the "particles" the cycle refines (no CTF: defocus 0,
+300 kV, 2.7 mm, 0.07, alternating half-sets), with the 3D class count and
+symmetry taken from the panel rather than the package. The count of
+averages per class follows BeginRefinementCycle(): the smallest selected
+class divided by images-per-class, clamped so the whole stack holds
+between 2500 and 20000 averages.
 """
 import json
 import math
@@ -55,10 +64,11 @@ import job_protocol as jp
 import refinement_packages
 import starfile
 import volumes
-from stages import merge3d, prepare_stack, reconstruct3d, refine3d
+from stages import merge3d, prepare_stack, prepare_stack_classaverage, reconstruct3d, refine3d
 
 STAGE = "ab_initio_3d"
 CHILD_PREPARE = "abinitio_prepare_stack"
+CHILD_PREPARE_CLASSAVG = "abinitio_prepare_stack_classaverage"
 CHILD_REFINE = "abinitio_refine3d"
 CHILD_RECON = "abinitio_reconstruct3d"
 CHILD_MERGE = "abinitio_merge3d"
@@ -77,6 +87,8 @@ DEFAULTS = {
     "always_apply_symmetry": False,
     "apply_blurring": False,
     "smoothing_factor": 1.0,
+    "images_per_class": 5,
+    "number_of_classes": 1,
 }
 PLEASE_CREATE_PACKAGE_MESSAGE = ("Please create a refinement package (in the assets panel) in order to perform a "
                                  "3D refinement.")
@@ -176,6 +188,28 @@ def binned_box_size(box_size, binning_factor):
     """ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(box, bin), 3, true)."""
     safe = int(math.floor(float(box_size) / binning_factor + 0.5))
     return refinement_packages.closest_factorized_upper(safe, 3, True)
+
+
+def class_averages_per_class(smallest_class_size, images_per_class, number_of_selected_classes):
+    """BeginRefinementCycle(), class-average input: how many averages to
+    make of each selected class -- the smallest class's members divided by
+    the images per average, kept between 2500 and 20000 averages in all."""
+    n = int(smallest_class_size) // max(int(images_per_class), 1)
+    lo = 2500 // max(int(number_of_selected_classes), 1)
+    hi = 20000 // max(int(number_of_selected_classes), 1)
+    return max(lo, min(hi, n))
+
+
+def classaverage_job_ranges(number_of_selected_classes, total_jobs):
+    """SetupPrepareStackJob(): the selected classes (0-based indices into
+    the selection) split over the run profile's processes, at least one
+    class per job -> [(first, last)]."""
+    jobs = max(1, min(int(total_jobs), int(number_of_selected_classes)))
+    ranges = []
+    for j in range(1, jobs + 1):
+        first, last = particle_range(j, jobs, number_of_selected_classes)
+        ranges.append((first - 1, last - 1))
+    return ranges
 
 
 def random_angles(rng):
@@ -329,6 +363,9 @@ def settings_from_params(params, pkg):
         "apply_blurring": _flag(params, "apply_blurring", DEFAULTS["apply_blurring"]),
         "smoothing_factor": _num(params, "smoothing_factor", DEFAULTS["smoothing_factor"]),
         "symmetry": str(params.get("symmetry") or pkg["SYMMETRY"] or "C1").strip().upper(),
+        "use_class_averages": str(params.get("input_mode") or "images").strip().lower().startswith("class"),
+        "images_per_class": max(1, _num(params, "images_per_class", DEFAULTS["images_per_class"], int)),
+        "number_of_classes": max(1, _num(params, "number_of_classes", pkg["NUMBER_OF_CLASSES"] or 1, int)),
     }
 
 
@@ -408,8 +445,32 @@ def _task(adapter, index, ref, values):
     return {"index": index, "ref": ref, "args": [jp.arg(kinds[t], v) for t, v in zip(adapter.ARGUMENT_TYPES, values)]}
 
 
+def selection_for(conn, params):
+    """The class selection of a class-average run: (selection dict with its
+    classes, the member count of each class, the classification row)."""
+    import classification
+    sid = params.get("classification_selection_id")
+    if sid in (None, ""):
+        raise ValueError("Pick a class selection to build the reconstruction from.")
+    sel = classification.get_selection(conn, int(sid))
+    if sel is None:
+        raise ValueError("class selection {} does not exist".format(sid))
+    if not sel["classes"]:
+        raise ValueError("the class selection {!r} has no classes in it".format(sel["name"]))
+    table = classification.results_table(sel["classification_id"])
+    counts = {k: conn.execute("SELECT COUNT(*) FROM {} WHERE BEST_CLASS = ?".format(table), (k,)).fetchone()[0] for k in sel["classes"]}
+    if min(counts.values()) == 0:
+        raise ValueError("a selected class of {!r} has no members".format(sel["name"]))
+    cls = conn.execute("SELECT * FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=?", (sel["classification_id"],)).fetchone()
+    return sel, counts, cls
+
+
 def validate(conn, params):
+    use_class_averages = str(params.get("input_mode") or "images").strip().lower().startswith("class")
     package_id = params.get("refinement_package_id")
+    if use_class_averages:
+        sel, _counts, _cls = selection_for(conn, params)
+        package_id = sel["refinement_package_id"]
     if package_id in (None, ""):
         raise ValueError(PLEASE_CREATE_PACKAGE_MESSAGE)
     pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (int(package_id),)).fetchone()
@@ -464,13 +525,23 @@ def start(conn, project_id, job_id, params, profile):
     """BeginRefinementCycle()."""
     pkg, contained = validate(conn, params)
     recon_profile = _profile(params.get("reconstruction_run_profile") or params.get("run_profile")) or profile
+    use_class_averages = str(params.get("input_mode") or "images").strip().lower().startswith("class")
+    selection = counts = classification_row = None
+    if use_class_averages:
+        selection, counts, classification_row = selection_for(conn, params)
     if not profile or profile.get("total_jobs", 0) <= 0:
         raise ValueError("run profile {!r} has no run commands, so it can't launch anything".format((profile or {}).get("name")))
     if not recon_profile or recon_profile.get("total_jobs", 0) <= 0:
         raise ValueError("reconstruction run profile {!r} has no run commands".format((recon_profile or {}).get("name")))
     s = settings_from_params(params, pkg)
-    n = len(contained)
-    classes = max(1, int(pkg["NUMBER_OF_CLASSES"] or 1))
+    if use_class_averages:
+        n2d = class_averages_per_class(min(counts.values()), s["images_per_class"], len(selection["classes"]))
+        n = len(selection["classes"]) * n2d
+        classes = s["number_of_classes"]
+    else:
+        n2d = 0
+        n = len(contained)
+        classes = max(1, int(pkg["NUMBER_OF_CLASSES"] or 1))
     scratch = scratch_dir(project_id, job_id)
     for p in scratch.iterdir():
         try:
@@ -497,23 +568,89 @@ def start(conn, project_id, job_id, params, profile):
         "reference_files": [None] * classes, "display_files": [None] * classes, "stats_files": [None] * classes,
         "child_job_id": None, "child_task_count": 0, "child_done": 0, "history": [], "started_at": now_iso(),
         "scratch": str(scratch), "initial": True, "iteration": 0,
+        "use_class_averages": use_class_averages, "selection_id": selection["selection_id"] if selection else None,
+        "selection_classes": selection["classes"] if selection else None, "classification_id": selection["classification_id"] if selection else None,
+        "class_averages_per_class": n2d,
     }
     rng = random.Random()
-    _store_rows(state, "input", [_initial_rows(contained, pixel_size, rng) for _ in range(classes)])
+    if use_class_averages:
+        rows = _classaverage_rows(n, pixel_size, rng)
+        _store_rows(state, "input", [list(r) for r in ([rows] * classes)])
+    else:
+        _store_rows(state, "input", [_initial_rows(contained, pixel_size, rng) for _ in range(classes)])
     with conn:
         conn.execute("UPDATE JOBS SET STATUS='running', STARTED_AT=?, PROGRESS=0 WHERE JOB_ID=?", (now_iso(), job_id))
-    _log(project_id, job_id, "Ab-initio 3D of {!r}: {} particles, {} class{}, symmetry {}, {} start{} x {} round{}, refinement profile {!r}, reconstruction profile {!r}".format(
-        pkg["NAME"], n, classes, "" if classes == 1 else "es", s["symmetry"], s["number_of_starts"], "" if s["number_of_starts"] == 1 else "s",
-        s["number_of_rounds"], "" if s["number_of_rounds"] == 1 else "s", profile["name"], recon_profile["name"]))
+    _log(project_id, job_id, "Ab-initio 3D of {!r}: {} {}, {} class{}, symmetry {}, {} start{} x {} round{}, refinement profile {!r}, reconstruction profile {!r}".format(
+        pkg["NAME"], n, "class averages" if use_class_averages else "particles", classes, "" if classes == 1 else "es", s["symmetry"],
+        s["number_of_starts"], "" if s["number_of_starts"] == 1 else "s", s["number_of_rounds"], "" if s["number_of_rounds"] == 1 else "s",
+        profile["name"], recon_profile["name"]))
+    if use_class_averages:
+        _log(project_id, job_id, "From selection {!r} of {}: {} class{} ({} members in the smallest), {} averages of {} images per class".format(
+            selection["name"], classification_row["NAME"] if classification_row else "classification {}".format(selection["classification_id"]),
+            len(selection["classes"]), "" if len(selection["classes"]) == 1 else "es", min(counts.values()), n2d, s["images_per_class"]))
     if s["auto_percent_used"]:
         _log(project_id, job_id, "Percent used: {:.2f}% at the start, {:.2f}% at the end{}".format(
             plan["start"], plan["end"], " ({:.2f}% -> {:.2f}% once symmetry is applied)".format(plan["sym_start"], plan["sym_end"]) if s["symmetry"] != "C1" else ""))
-    if s["final_resolution_limit"] > pixel_size * 3.0:
+    if use_class_averages:
+        _launch_prepare_classaverages(conn, project_id, job_id, state)
+    elif s["final_resolution_limit"] > pixel_size * 3.0:
         _launch_prepare_stack(conn, project_id, job_id, state)
     else:
         _launch_reconstruction(conn, project_id, job_id, state)
     _save(conn, job_id, state)
     return state
+
+
+def _classaverage_rows(n, pixel_size, rng):
+    """The refinement a class-average run starts from: n averages, no CTF
+    (they are CTF-corrected sums), 300 kV / 2.7 mm / 0.07, half-sets
+    alternating (SetAssignedSubsetToEvenOdd), random angles."""
+    rows = []
+    for i in range(1, n + 1):
+        phi, theta, psi = random_angles(rng)
+        rows.append({
+            "position_in_stack": i, "image_is_active": 1, "psi": psi, "theta": theta, "phi": phi,
+            "x_shift": rng.uniform(-1.0, 1.0) * 5.0, "y_shift": rng.uniform(-1.0, 1.0) * 5.0,
+            "defocus_1": 0.0, "defocus_2": 0.0, "defocus_angle": 0.0, "phase_shift": 0.0, "occupancy": 100.0, "logp": 0.0,
+            "sigma": 1.0, "score": 0.0, "pixel_size": pixel_size, "voltage": 300.0, "cs": 2.7, "amplitude_contrast": 0.07,
+            "beam_tilt_x": 0.0, "beam_tilt_y": 0.0, "image_shift_x": 0.0, "image_shift_y": 0.0, "assigned_subset": 1 if (i - 1) % 2 == 0 else 2,
+        })
+    return rows
+
+
+def _launch_prepare_classaverages(conn, project_id, job_id, state):
+    """SetupPrepareStackJob(), class-average branch: the selection as a text
+    file of class numbers, the classification as a star file, and one
+    prepare_stack_classaverage task per share of the selected classes."""
+    import classification
+    s = state["settings"]
+    scratch = Path(state["scratch"])
+    classes = state["selection_classes"]
+    selection_file = str(scratch / "class_average_selection.txt")
+    with open(selection_file, "w") as fh:
+        for k in classes:
+            fh.write("{:f}\n".format(float(k)))
+    particles = classification.package_particles(conn, state["package_id"])
+    star = classification.write_star(scratch / "classification_star_{}.star".format(state["classification_id"]),
+                                     classification.classification_rows(conn, state["classification_id"], particles))
+    binning = (s["final_resolution_limit"] / 2.0) / state["pixel_size"]
+    wanted_box = binned_box_size(state["box_size"], binning)
+    resample = wanted_box < state["box_size"]
+    out_stack = str(scratch / "temp_stack.mrc")
+    if os.path.exists(out_stack):
+        os.remove(out_stack)
+    tasks = []
+    for idx, (first, last) in enumerate(classaverage_job_ranges(len(classes), state["refinement_jobs"])):
+        tasks.append(_task(prepare_stack_classaverage, idx, idx + 1, [state["stack_filename"], out_stack, star, selection_file, state["pixel_size"],
+                                                                     state["particle_size"] * 0.6, resample, wanted_box, state["class_averages_per_class"],
+                                                                     s["images_per_class"], True, True, first, last]))
+    parent = _parent_row(conn, job_id)
+    child = _new_child(conn, job_id, CHILD_PREPARE_CLASSAVG, "{} · prepare class averages".format(parent["NAME"]), parent)
+    state.update({"phase": "prepare", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0, "temp_stack": out_stack,
+                  "wanted_box": wanted_box if resample else state["box_size"]})
+    _log(project_id, job_id, "Preparing {} class averages ({} task{}, box {} -> {} px) — child job {}".format(
+        state["number_of_particles"], len(tasks), "" if len(tasks) == 1 else "s", state["box_size"], wanted_box if resample else state["box_size"], child))
+    _runtime.submit_child(project_id, child, prepare_stack_classaverage, tasks, _profile(state["refinement_profile"]))
 
 
 def _launch_prepare_stack(conn, project_id, job_id, state):
@@ -581,7 +718,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       "/dev/null", "/dev/null", "/dev/null", "/dev/null", symmetry, first, last,
                       state["active_pixel_size"], state["molecular_weight"], s["inner_mask_radius"], s["mask_radius"],
                       state["next_high_res"], state["current_high_res"], 0.0, score_threshold, s["smoothing_factor"], 1.0,
-                      not state["stack_precomputed"], False, state["invert_contrast"], False, False, False, True,
+                      (not state["stack_precomputed"]) or state.get("use_class_averages", False), False, state["invert_contrast"], False, False, False, True,
                       use_ref, False, True,
                       str(scratch / "startup_dump_file_{}_odd_{}.dump".format(k, j)),
                       str(scratch / "startup_dump_file_{}_even_{}.dump".format(k, j)), 0, 1]
@@ -663,7 +800,7 @@ def _launch_refinement(conn, project_id, job_id, state):
                       state["current_high_res"], angular_step(state["current_high_res"]), -100000, s["search_range_x"], s["search_range_y"],
                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
                       True, False, True, True, True, True, True, False, False, False,
-                      not (state["stack_precomputed"]), state["invert_contrast"], False, not s["apply_blurring"], False,
+                      (not state["stack_precomputed"]) or state.get("use_class_averages", False), state["invert_contrast"], False, not s["apply_blurring"], False,
                       1, False, k, False, False]
             tasks.append(_task(refine3d, index, k * 1000 + j, values))
             index += 1

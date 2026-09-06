@@ -2198,6 +2198,20 @@ def abinitio_defaults(project_id):
         return jsonify({"error": "no such refinement package"}), 404
     out = abinitio.package_defaults(pkg)
     out["defaults"] = abinitio.DEFAULTS
+    # The class selections a class-average run can start from, with what
+    # BeginRefinementCycle() derives from each: the smallest class and the
+    # number of averages it would make per class at the default 5 images.
+    conn = db.get_conn(project_id)
+    try:
+        sels = classification.list_selections(conn, package_id=package_id)
+        for sel in sels:
+            counts = [classification.selection_particle_count(conn, sel["classification_id"], [k]) for k in sel["classes"]]
+            sel["smallest_class"] = min(counts) if counts else 0
+            cls = conn.execute("SELECT NAME FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=?", (sel["classification_id"],)).fetchone()
+            sel["classification_name"] = cls["NAME"] if cls else None
+        out["selections"] = [s for s in sels if s["classes"] and s["smallest_class"] > 0]
+    finally:
+        conn.close()
     return jsonify(out)
 
 

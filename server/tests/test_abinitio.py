@@ -60,6 +60,14 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual([ab.signed_cc_limit(i, 4) for i in range(4)], [15.0, 0.0, 15.0, 0.0])
         self.assertAlmostEqual(ab.angular_step(20.0), math.degrees(40.0 / 75.0))
 
+    def test_class_averages_per_class(self):
+        # 43 members / 5 per average = 8, but at least 2500 averages over 2 classes.
+        self.assertEqual(ab.class_averages_per_class(43, 5, 2), 1250)
+        self.assertEqual(ab.class_averages_per_class(100000, 5, 2), 10000)   # capped at 20000 in all
+        self.assertEqual(ab.class_averages_per_class(30000, 5, 4), 5000)
+        self.assertEqual(ab.classaverage_job_ranges(2, 8), [(0, 0), (1, 1)])
+        self.assertEqual(ab.classaverage_job_ranges(5, 2), [(0, 2), (3, 4)])
+
     def test_prepare_stack_jobs_and_box(self):
         self.assertEqual(ab.prepare_stack_jobs(100, 8), 1)
         self.assertEqual(ab.prepare_stack_jobs(7821, 8), 8)

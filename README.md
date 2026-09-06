@@ -128,7 +128,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/volumes`, `/volume-groups` | 3D volume assets (`?group_id=`) and their groups; the usual group routes (`POST|PATCH|DELETE /volume-groups[/:gid]`, `/:gid/invert`, `/:gid/remove-volumes`, `POST /volumes/delete`, `/volumes/add-to-group`, keyed on `volume_ids`) |
 | `GET` | `/projects/:id/volumes/:vid/preview.png` | Orthogonal projections (top) and central slices (bottom) of the volume |
 | `GET` | `/projects/:id/startups` | Every ab-initio run (`STARTUP_LIST`) with its settings and result volumes |
-| `GET` | `/projects/:id/abinitio/defaults` | `AbInitio3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): symmetry, mask radius, search ranges |
+| `GET` | `/projects/:id/abinitio/defaults` | `AbInitio3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): symmetry, mask radius, search ranges, class count, and the class selections a class-average run can start from |
 | `GET` | `/projects/:id/jobs/:jid/abinitio/current.png` | Orthogonal views of a running or finished ab-initio job's current reconstruction (`?class=`) |
 | `GET`/`POST` | `/projects/:id/classification-selections` | Named selections of class averages (`?classification_id=` / `?refinement_package_id=`), each with `classes` and `particle_count` / create one `{classification_id, name, classes}` |
 | `PATCH`/`DELETE` | `/projects/:id/classification-selections/:sid` | `{name}` renames, `{classes: [...]}` replaces the membership / delete |

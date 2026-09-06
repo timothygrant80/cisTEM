@@ -121,6 +121,51 @@ class RefinementBookkeepingTests(unittest.TestCase):
         self.assertEqual([r["assigned_subset"] for r in back], [2, 1, 2])
 
 
+class Refine3DTests(unittest.TestCase):
+    def test_package_defaults_follow_the_particle_size(self):
+        import refine3d
+        d = refine3d.package_defaults({"PARTICLE_SIZE": 100.0})
+        self.assertEqual(d["mask_radius_a"], 65.0)
+        self.assertEqual(d["global_mask_radius_a"], 80.0)
+        self.assertEqual(d["search_range_x_a"], 15.0)
+        self.assertEqual(d["low_resolution_limit_a"], 150.0)
+        self.assertAlmostEqual(d["angular_step_deg"], math.degrees(60.0 / 65.0), places=2)
+        self.assertEqual(refine3d.package_defaults({"PARTICLE_SIZE": 300.0})["low_resolution_limit_a"], 300.0)
+
+    def test_settings_global_flag_and_bools(self):
+        import refine3d
+        s = refine3d.settings_from_params({"refinement_type": "Global Search", "refine_ctf": "true", "number_of_rounds": "3"}, {"PARTICLE_SIZE": 100.0})
+        self.assertTrue(s["global"])
+        self.assertTrue(s["refine_ctf"])
+        self.assertEqual(s["number_of_rounds"], 3)
+        self.assertFalse(refine3d.settings_from_params({}, {"PARTICLE_SIZE": 100.0})["global"])
+
+    def test_estimated_resolution_and_angular_histogram(self):
+        import refinements
+        stats = [{"shell": i, "resolution": 100.0 / i, "fsc": 1.0 - i * 0.1, "part_fsc": 1.0 - i * 0.1} for i in range(1, 11)]
+        # FSC drops below 0.143 at shell 9 (0.1): midway between 100/8 and 100/9.
+        self.assertAlmostEqual(refinements.estimated_resolution(stats, 1.0), (100.0 / 8 + 100.0 / 9) / 2)
+        self.assertEqual(refinements.estimated_resolution([{"shell": 1, "resolution": 50.0, "fsc": 1.0, "part_fsc": 1.0}], 1.5), 3.0)  # never better than Nyquist
+        rows = [{"theta": 0.0, "phi": 0.0, "image_is_active": 1}, {"theta": 170.0, "phi": 10.0, "image_is_active": 1}, {"theta": 45.0, "phi": 90.0, "image_is_active": -1}]
+        hist = refinements.angular_histogram(rows)
+        self.assertEqual(len(hist), 18 * 72)
+        self.assertEqual(sum(hist), 2)          # the inactive particle is not counted
+        self.assertEqual(hist[0] + hist[18 * 38], 2)  # theta 170 folds to 10 deg with phi + 180 (bin 38)
+
+    def test_apply_mask_keeps_inside_and_replaces_outside(self):
+        n = 32
+        z, y, x = np.indices((n, n, n))
+        vol = np.ones((n, n, n), dtype=np.float32) * 5.0
+        vol[(z - 16) ** 2 + (y - 16) ** 2 + (x - 16) ** 2 > 12 ** 2] = 1.0
+        mask = ((z - 16) ** 2 + (y - 16) ** 2 + (x - 16) ** 2 <= 6 ** 2).astype(np.float32)
+        out = V.apply_mask(vol, mask, 2.0, 0.0)
+        self.assertAlmostEqual(float(out[16, 16, 16]), 5.0, places=3)
+        self.assertAlmostEqual(float(out[0, 0, 0]), 1.0, places=3)   # the average beyond 0.4 of the box
+        kept = V.apply_mask(vol, mask, 2.0, 0.5, 0.25, 0.05)
+        self.assertGreater(float(kept[16, 16, 30]), 0.0)
+        self.assertLess(float(kept[16, 16, 30]), 5.0)
+
+
 class VolumeTests(unittest.TestCase):
     def setUp(self):
         n = 48

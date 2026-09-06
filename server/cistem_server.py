@@ -49,6 +49,8 @@ import abinitio
 import auth
 import classification
 import db
+import refine3d
+import refinements
 import job_runner
 import refinement_packages
 import stages
@@ -58,7 +60,7 @@ import volumes
 
 # Stages that are cycles of program runs rather than one: a user-visible
 # parent job drives hidden children. Keyed by the parent's STAGE.
-DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio}
+DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio, refine3d.STAGE: refine3d}
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
@@ -663,7 +665,7 @@ def _controller_log_path(project_id, job_id):
 STATIC_FILES = {"cistem3.html", "config.js", "logo.png", "movie-alignment-example.png",
                 "ctffind-definitions.png", "ctffind-diagnostic-image.png", "ctffind-example-1dfit.png",
                 "class2d-example-1.png", "class2d-example-2.png", "class2d-example-3.png", "class2d-example-4.png",
-                "abinitio-example.png"}
+                "abinitio-example.png", "refine3d-strategy.png"}
 
 
 @app.route("/")
@@ -2218,14 +2220,15 @@ def abinitio_defaults(project_id):
 @app.route("/api/projects/<project_id>/jobs/<job_id>/abinitio/current.png", methods=["GET"])
 @auth.project_access_required
 def abinitio_current_picture(project_id, job_id):
-    """Orthogonal views of the running (or finished) ab-initio job's current
-    reconstruction, for the Jobs tab's live view."""
+    """Orthogonal views of a running (or finished) ab-initio or Refine 3D
+    job's current reconstruction, for the Jobs tab's live view."""
     row = _fetch_job_row(project_id, job_id)
-    if row is None or row["STAGE"] != abinitio.STAGE:
-        return jsonify({"error": "not an ab-initio job"}), 404
+    driver = DRIVERS.get(row["STAGE"]) if row is not None else None
+    if driver is None or not hasattr(driver, "current_picture"):
+        return jsonify({"error": "not a 3D job"}), 404
     conn = db.get_conn(project_id)
     try:
-        got = abinitio.current_picture(conn, row, request.args.get("class", default=0, type=int))
+        got = driver.current_picture(conn, row, request.args.get("class", default=0, type=int))
     finally:
         conn.close()
     if got is None:
@@ -2236,6 +2239,82 @@ def abinitio_current_picture(project_id, job_id):
     response.headers["ETag"] = '"r{}-abinitio-{}-{}-{}"'.format(preview.RENDER_VERSION, job_id, int(stat.st_mtime), stat.st_size)
     response.headers["Cache-Control"] = "private, no-cache"
     return response
+
+
+# ---- 3D refinements (REFINEMENT_LIST) -- MyRefinementResultsPanel ----
+
+@app.route("/api/projects/<project_id>/refinements", methods=["GET"])
+@auth.project_access_required
+def list_refinements(project_id):
+    """Every refinement, or one package's (`?refinement_package_id=`), with
+    per-class estimated resolution, occupancy and reconstructed volume."""
+    conn = db.get_conn(project_id)
+    out = refinements.list_refinements(conn, request.args.get("refinement_package_id", type=int))
+    conn.close()
+    return jsonify({"refinements": out})
+
+
+@app.route("/api/projects/<project_id>/refinements/<int:refinement_id>", methods=["GET"])
+@auth.project_access_required
+def get_refinement(project_id, refinement_id):
+    """One refinement with each class's FSC / SSNR curve and angular distribution."""
+    conn = db.get_conn(project_id)
+    d = refinements.get_refinement(conn, refinement_id)
+    conn.close()
+    if d is None:
+        return jsonify({"error": "no such refinement"}), 404
+    return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/refine3d/defaults", methods=["GET"])
+@auth.project_access_required
+def refine3d_defaults(project_id):
+    """MyRefine3DPanel::SetDefaults() for a package (`?refinement_package_id=`):
+    the size-derived limits, the refinements that can be the input
+    parameters, the current reference volume of each class, and the volumes
+    a mask can be picked from."""
+    package_id = request.args.get("refinement_package_id", type=int)
+    conn = db.get_conn(project_id)
+    try:
+        pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (package_id,)).fetchone() if package_id is not None else None
+        if pkg is None:
+            return jsonify({"error": "no such refinement package"}), 404
+        out = refine3d.package_defaults(pkg)
+        out["defaults"] = refine3d.DEFAULTS
+        out["refinements"] = [{"refinement_id": r["refinement_id"], "name": r["name"], "number_of_classes": r["number_of_classes"],
+                               "datetime_of_run": r["datetime_of_run"], "starting_refinement_id": r["starting_refinement_id"]}
+                              for r in refinements.list_refinements(conn, package_id)]
+        out["last_refinement_id"] = pkg["LAST_REFINEMENT_ID"]
+        refs = refinements.current_references(conn, package_id)
+        out["references"] = []
+        for k in range(1, int(pkg["NUMBER_OF_CLASSES"] or 1) + 1):
+            vid = refs.get(k, -1)
+            vol = conn.execute("SELECT NAME, FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (vid,)).fetchone() if vid is not None and vid >= 0 else None
+            out["references"].append({"class_number": k, "volume_asset_id": vid if vol else -1, "volume_name": vol["NAME"] if vol else None})
+        out["volumes"] = [{"volume_asset_id": r["VOLUME_ASSET_ID"], "name": r["NAME"], "x_size": r["X_SIZE"], "pixel_size": r["PIXEL_SIZE"]}
+                          for r in conn.execute("SELECT * FROM VOLUME_ASSETS ORDER BY VOLUME_ASSET_ID").fetchall()]
+        return jsonify(out)
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/references", methods=["PATCH"])
+@auth.project_access_required
+def set_package_reference(project_id, package_id):
+    """MyRefine3DPanel's Active 3D References list: `{class_number, volume_asset_id}`
+    (-1 for "generate from parameters") sets a class's current reference."""
+    body = request.get_json(force=True, silent=True) or {}
+    k, vid = body.get("class_number"), body.get("volume_asset_id")
+    if k is None or vid is None:
+        return jsonify({"error": "class_number and volume_asset_id are required"}), 400
+    conn = db.get_conn(project_id)
+    try:
+        if int(vid) >= 0 and conn.execute("SELECT 1 FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (int(vid),)).fetchone() is None:
+            return jsonify({"error": "no such volume"}), 404
+        refinements.set_current_reference(conn, package_id, int(k), int(vid))
+        return jsonify({"class_number": int(k), "volume_asset_id": int(vid)})
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -3130,6 +3209,7 @@ _driver_runtime = classification.Runtime(
 )
 classification.configure(_driver_runtime)
 abinitio.configure(_driver_runtime)
+refine3d.configure(_driver_runtime)
 
 
 def _start_driver(driver, project_id, job_id, params):

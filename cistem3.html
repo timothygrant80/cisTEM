@@ -459,6 +459,10 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .c2d-overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;}
 .c2d-frame img{max-width:100%;}
 .c2d-frame.c2d-orth{background:#000;display:inline-block;max-width:100%;}
+.ra-plot .fsc-threshold{stroke:var(--text-tertiary);stroke-dasharray:4 3;stroke-width:1;}
+.ang-plot{aspect-ratio:1/1;max-width:260px;}
+.ang-plot .ang-rim{stroke:var(--border-strong);stroke-width:1.5;}
+.field-static{margin:0;font-size:12px;}
 .c2d-overlay rect{fill:none;stroke:#ffd23f;stroke-width:3;}
 .c2d-caption{font-size:12px;color:var(--text-secondary);margin:6px 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
@@ -1991,18 +1995,152 @@ From branch : <span id="versionBranch">—</span></p>
       }
     },
     refine3d: {
+      // MyRefine3DPanel (ProjectX_gui_refine3d.cpp's Refine3DPanel widgets,
+      // SetDefaults(), OnUpdateUI()) and its SetInfo(). The input parameters
+      // picker lists the package's refinements; the reference volumes are the
+      // package's current references (shown read-only, changed on the
+      // Assets tab is not built -- they follow the last refinement); a mask
+      // is any volume asset.
       label: "Refine 3D",
-      description: "Refines particle orientations against a 3D reference volume to produce a higher-resolution reconstruction.",
+      startLabel: "Start Refinement",
+      note: "Each round writes a refinement to the project database and its reconstruction to Assets/Volumes as a volume asset, which becomes the package's current reference.",
+      description: "Refines particle orientations against the package's current 3D reference (refine3d), reconstructs (reconstruct3d, merge3d) and repeats for a set number of cycles.",
+      inputKey: "refinement_package_id",
+      emptyReason: "Please create a refinement package (in the assets panel) in order to perform a 3D refinement.",
       fields: [
-        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/selected.star", group:"Input"},
-        {key:"initial_model_path", label:"Initial model", unit:"", type:"text", placeholder:"/data/session01/refs/initial.mrc", group:"Input"},
-        {key:"mask_path", label:"Mask", unit:"", type:"text", placeholder:"/data/session01/refs/mask.mrc (optional)", group:"Input"},
-        {key:"symmetry", label:"Symmetry", unit:"", type:"text", placeholder:"C1", group:"Refinement Parameters"}
+        {key:"refinement_package_id", label:"Input Refinement Package", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
+         dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
+        {key:"input_refinement_id", label:"Input Parameters", unit:"", type:"select", options:[], group:"Input",
+         tooltip:"The source of the starting parameters for this refinement run. These can be either set to be random Euler angles and zero X,Y shifts, or they can be the output of a previous refinement (if available)."},
+        {key:"reference_note", label:"Active 3D References", unit:"", type:"static", group:"Input",
+         tooltip:"The volume each class is refined against: the package's current references, set by the last ab-initio or refinement run. A class without one gets an initial reconstruction from the input parameters first."},
+        {key:"use_mask", label:"Use a Mask?", type:"checkbox", default:false, group:"Input",
+         tooltip:"Multiply the reference by a mask volume before each round instead of auto-masking it."},
+        {key:"mask_volume_id", label:"Mask Volume", unit:"", type:"select", options:[], group:"Input", enabledBy:"use_mask",
+         tooltip:"Any volume asset of the same box size; voxels above zero are inside the mask."},
+        {key:"refinement_type", label:"Refinement Type", unit:"", type:"select", options:["Local Refinement","Global Search"], default:"Local Refinement", group:"Refinement",
+         tooltip:"If no starting parameters from a previous refinement are available, they have to be determined in a global search (slow); otherwise it is usually sufficient to perform local refinement (fast)."},
+        {key:"number_of_rounds", label:"No. of Cycles to Run", unit:"", type:"number", step:"1", min:1, max:100, default:"1", group:"Refinement",
+         tooltip:"The number of refinement cycles to run. For a global search, one is usually sufficient. For local refinement of a single class, typically 3 to 5 cycles are sufficient. If multiple classes are refined, between 30 and 50 cycles should be run."},
+        {key:"high_resolution_limit_a", label:"Hi-Res Limit", unit:"Å", type:"number", step:"0.5", min:0, default:"30", group:"Refinement",
+         tooltip:"The high-resolution limit should remain significantly below the resolution of the reference used for refinement to enable unbiased resolution estimation using the Fourier Shell Correlation curve."},
+        {key:"reconstruction_run_profile", label:"Reconstruction Run Profile", unit:"", type:"select", options:[], group:"Run Profiles",
+         tooltip:"The run profile for the reconstruct3d and merge3d steps; the profile in the run bar below runs refine3d (cisTEM's Refinement Run Profile)."}
       ],
       expertFields: [
-        {key:"global_search", label:"Global search", unit:"", type:"select", options:["Yes","No"]},
-        {key:"inner_mask_radius_a", label:"Inner mask radius", unit:"Å", type:"number", placeholder:"0"}
-      ]
+        {key:"refine_psi", label:"Psi", type:"checkbox", default:true, group:"Parameters To Refine"},
+        {key:"refine_theta", label:"Theta", type:"checkbox", default:true, group:"Parameters To Refine"},
+        {key:"refine_phi", label:"Phi", type:"checkbox", default:true, group:"Parameters To Refine"},
+        {key:"refine_x_shift", label:"X Shift", type:"checkbox", default:true, group:"Parameters To Refine"},
+        {key:"refine_y_shift", label:"Y Shift", type:"checkbox", default:true, group:"Parameters To Refine"},
+        {key:"refine_occupancies", label:"Occupancy", type:"checkbox", default:true, group:"Parameters To Refine",
+         tooltip:"With several classes, recompute each particle's class occupancies from its scores after each round."},
+        {key:"low_resolution_limit_a", label:"Low-Resolution Limit", unit:"Å", type:"number", step:"1", min:0, default:"300", group:"General Refinement",
+         tooltip:"It is good practice to set the low-resolution limit to 2.5x the approximate particle mask radius; 1.5 x the package's largest dimension by default, at most 300 Å."},
+        {key:"mask_radius_a", label:"Outer Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"General Refinement",
+         tooltip:"The radius of the circular mask applied to the input images before refinement starts. This mask should be sufficiently large to include the largest dimension of the particle; 0.65 x the largest dimension by default."},
+        {key:"inner_mask_radius_a", label:"Inner Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"General Refinement",
+         tooltip:"Normally 0.0; a non-zero value removes density inside the particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."},
+        {key:"signed_cc_resolution_limit_a", label:"Signed CC Resolution Limit", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"General Refinement",
+         tooltip:"Maximize the unsigned correlation coefficient starting at this limit to reduce overfitting (Stewart and Grigorieff, 2004). Set to 0.0 to maximize the signed correlation at all resolutions. (Formerly “FBOOST”.)"},
+        {key:"percent_used", label:"Percent Used", unit:"%", type:"number", step:"1", min:0.1, max:100, default:"100", group:"General Refinement",
+         tooltip:"The percentage of randomly selected particles refined and reconstructed in each round."},
+        {key:"global_mask_radius_a", label:"Global Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"30", group:"Global Search", enabledWhen:{key:"refinement_type", value:"Global Search"},
+         tooltip:"The mask radius for the global search; larger than the outer mask radius (0.8 x the largest dimension by default) because particles may not be precisely centred."},
+        {key:"number_of_results_to_refine", label:"Number of Results to Refine", unit:"", type:"number", step:"1", min:1, max:1000, default:"20", group:"Global Search", enabledWhen:{key:"refinement_type", value:"Global Search"},
+         tooltip:"For a global search, an angular grid search is performed and the alignment parameters for the N best matching projections are then refined further in a local refinement. A value of 20 is recommended."},
+        {key:"also_refine_input", label:"Also Refine Input Parameters?", type:"checkbox", default:true, group:"Global Search", enabledWhen:{key:"refinement_type", value:"Global Search"},
+         tooltip:"In addition to the N best sets of parameter values found during the grid search, the input set of parameters is also locally refined. Switching this off can help reduce over-fitting that may have biased the input parameters."},
+        {key:"angular_step_deg", label:"Angular Search Step", unit:"°", type:"number", step:"0.5", min:0, default:"20", group:"Global Search", enabledWhen:{key:"refinement_type", value:"Global Search"},
+         tooltip:"The angular step used to generate the search grid for the global search. An appropriate value is suggested by default (depending on particle size and high-resolution limit)."},
+        {key:"search_range_x_a", label:"Search Range in X", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Global Search", enabledWhen:{key:"refinement_type", value:"Global Search"},
+         tooltip:"The global search can be limited in X (measured from the box centre) to ensure that only particles close to the box centre are found; 0.15 x the largest dimension by default."},
+        {key:"search_range_y_a", label:"Search Range in Y", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Global Search", enabledWhen:{key:"refinement_type", value:"Global Search"},
+         tooltip:"The global search can be limited in Y (measured from the box centre); 0.15 x the largest dimension by default."},
+        {key:"classification_high_resolution_limit_a", label:"High-Resolution Limit", unit:"Å", type:"number", step:"0.5", min:0, default:"30", group:"Classification",
+         tooltip:"The limit set here is analogous to the high-resolution limit set for refinement. It cannot exceed the refinement limit. Setting it to a lower resolution may increase the useful SNR for classification."},
+        {key:"focused_classification", label:"Focused Classification?", type:"checkbox", default:false, group:"Classification",
+         tooltip:"Classification based on structural variability in a defined spherical region of the particle (formerly “focus_mask”)."},
+        {key:"sphere_x_a", label:"Sphere X Co-ordinate", unit:"Å", type:"number", step:"1", default:"0", group:"Classification", enabledBy:"focused_classification"},
+        {key:"sphere_y_a", label:"Sphere Y Co-ordinate", unit:"Å", type:"number", step:"1", default:"0", group:"Classification", enabledBy:"focused_classification"},
+        {key:"sphere_z_a", label:"Sphere Z Co-ordinate", unit:"Å", type:"number", step:"1", default:"0", group:"Classification", enabledBy:"focused_classification"},
+        {key:"sphere_radius_a", label:"Sphere Radius", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"Classification", enabledBy:"focused_classification"},
+        {key:"refine_ctf", label:"Refine Defocus?", type:"checkbox", default:false, group:"CTF Refinement",
+         tooltip:"Should the CTF be refined as well? Only recommended for high-resolution data that yield reconstructions of better than 4 Å resolution, and for particles of 500 kDa and higher."},
+        {key:"defocus_search_range_a", label:"Defocus Search Range", unit:"Å", type:"number", step:"10", min:0, default:"500", group:"CTF Refinement", enabledBy:"refine_ctf",
+         tooltip:"The range of defocus values to search over for each particle, around the values of the previous cycle."},
+        {key:"defocus_search_step_a", label:"Defocus Search Step", unit:"Å", type:"number", step:"10", min:1, default:"50", group:"CTF Refinement", enabledBy:"refine_ctf",
+         tooltip:"The search step for the defocus search."},
+        {key:"score_to_weight_constant", label:"Score to Weight Constant", unit:"Å²", type:"number", step:"0.5", min:0, default:"2", group:"Reconstruction",
+         tooltip:"Particles are weighted in the reconstruction by a B-factor of (score – average score) x constant x 0.25. Values between 0 and 10 are reasonable (0 disables weighting)."},
+        {key:"adjust_score_for_defocus", label:"Adjust Score for Defocus?", type:"checkbox", default:true, group:"Reconstruction",
+         tooltip:"Adjust for the dependence of scores on image defocus so that particles with smaller defocus are not systematically downweighted."},
+        {key:"score_threshold", label:"Score Threshold", unit:"", type:"number", step:"0.1", default:"0", group:"Reconstruction",
+         tooltip:"Particles with a score lower than the threshold are excluded from the reconstruction. 0 selects all; 0 < value <= 1 is a percentage; value > 1 is a fixed score."},
+        {key:"reconstruction_resolution_limit_a", label:"Resolution Limit", unit:"Å", type:"number", step:"0.5", min:0, default:"0", group:"Reconstruction",
+         tooltip:"The reconstruction can be accelerated by limiting its resolution; keep it higher than the refinement resolution of the following cycle. 0 = maximum."},
+        {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality; do not use when finalising."},
+        {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Insert each particle at multiple orientations weighted by a likelihood function."},
+        {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
+         tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring."},
+        {key:"autocenter", label:"Autocenter Reconstruction?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Centre the reconstruction on its centre of mass (C symmetry only)."},
+        {key:"auto_mask", label:"Use AutoMasking?", type:"checkbox", default:true, group:"Masking", enabledByNot:"use_mask",
+         tooltip:"Auto-mask the reference before each round (ignored when a mask volume is used)."},
+        {key:"mask_edge_a", label:"Mask Edge Width", unit:"Å", type:"number", step:"1", min:0, default:"10", group:"Masking", enabledBy:"use_mask",
+         tooltip:"The cosine edge given to the supplied mask."},
+        {key:"outside_mask_weight", label:"Outside Weight", unit:"", type:"number", step:"0.05", min:0, max:1, default:"0", group:"Masking", enabledBy:"use_mask",
+         tooltip:"How much of the (optionally low-pass filtered) reference to keep outside the mask; 0 replaces it with the background level."},
+        {key:"low_pass_outside_mask", label:"Low-Pass Filter Outside Mask?", type:"checkbox", default:false, group:"Masking", enabledBy:"use_mask",
+         tooltip:"Low-pass filter the density kept outside the mask."},
+        {key:"mask_filter_resolution_a", label:"Filter Resolution", unit:"Å", type:"number", step:"1", min:1, default:"20", group:"Masking", enabledBy:"low_pass_outside_mask",
+         tooltip:"The resolution of the low-pass filter applied outside the mask."}
+      ],
+      info: {
+        title: "3D Refinement & Reconstruction (FrealignX)",
+        body: [
+          "The goal of refinement and reconstruction is to obtain 3D maps of the imaged particle at the highest possible resolution. Refinement typically starts with a preexisting structure that serves as a reference to determine initial particle alignment parameters using a global parameter search. In subsequent iterations, these parameters are refined and (optionally) the dataset can be classified into several classes with distinct structural features. This panel allows the user to define a refinement job that includes a set number of iterations (refinement cycles) and number of desired classes to be generated (Lyumkis et al. 2013). The general refinement strategies and options are similar to those available with Frealign and are described in Grigorieff, 2016:",
+          {image: "refine3d-strategy.png", alt: "Frealign's refinement strategy: a flow chart of global search, local refinement, classification and reconstruction cycles."},
+          {heading: "Program Options"},
+          {options: [
+            ["Input Refinement Package", "The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."],
+            ["Input Parameters", "The source of the starting parameters for this refinement run. These can be either set to be random Euler angles and zero X,Y shifts, or they can be the output of a previous refinement (if available)."],
+            ["Local Refinement/Global Search", "If no starting parameters from a previous refinement are available, they have to be determined in a global search (slow); otherwise it is usually sufficient to perform local refinement (fast)."],
+            ["No. of Cycles to Run", "The number of refinement cycles to run. For a global search, one is usually sufficient, possibly followed by another one at a later stage in the refinement if the user suspects that the initial reference was limited in quality such that a significant number of particles were misaligned. For local refinement of a single class, typically 3 to 5 cycles are sufficient, possibly followed by another local refinement at increased resolution (see below). If multiple classes are refined, between 30 and 50 cycles should be run to ensure convergence of the classes."],
+            ["Run Profiles", "The refinement profile (the run bar) runs refine3d; the reconstruction profile runs reconstruct3d and merge3d."]
+          ]},
+          {heading: "Expert Options"},
+          {options: [
+            ["Low/High-Resolution Limit (Å)", "The data used for refinement is usually bandpass-limited to exclude spurious low-resolution features in the particle background (set by the low-resolution limit) and high-resolution noise (set by the high-resolution limit). It is good practice to set the low-resolution limit to 2.5x the approximate particle mask radius. The high-resolution limit should remain significantly below the resolution of the reference used for refinement to enable unbiased resolution estimation using the Fourier Shell Correlation curve."],
+            ["Mask Radius (Å)", "The radius of the circular mask applied to the input images before refinement starts. This mask should be sufficiently large to include the largest dimension of the particle. When a global search is performed, the radius should be set to include the expected area containing the particle. This area is usually larger than the area defined by the largest dimension of the particle because particles may not be precisely centered."],
+            ["Signed CC Resolution Limit (Å)", "Particle alignment is done by maximizing a correlation coefficient with the reference. The user has the option to maximize the unsigned correlation coefficient instead (starting at the limit set here) to reduce overfitting (Stewart and Grigorieff, 2004). Overfitting is also reduced by appropriate weighting of the data and this is usually sufficient to achieve good refinement results. The limit set here should therefore be set to 0.0 to maximize the signed correlation at all resolutions, unless there is evidence that there is overfitting. (This feature was formerly known as “FBOOST”.)"],
+            ["Number of Results to Refine", "For a global search, an angular grid search is performed and the alignment parameters for the N best matching projections are then refined further in a local refinement. Only the set of parameters yielding the best score (correlation coefficient) is kept. Increasing N will increase the chances of finding the correct particle orientations but will slow down the search. A value of 20 is recommended."],
+            ["Also Refine Input Parameters", "In addition to the N best sets of parameter values found during the grid search, the input set of parameters is also locally refined. Switching this off can help reduce over-fitting that may have biased the input parameters."],
+            ["Angular Search Step (°)", "The angular step used to generate the search grid for the global search. An appropriate value is suggested by default (depending on particle size and high-resolution limit) but smaller values can be tried if the user suspects that the search misses orientations found in the particle dataset. The smaller the value, the finer the search grid and the slower the search."],
+            ["Search Range in X/Y (Å)", "The global search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are found. This is useful when the particle density is high and particles end up close to each other. The values provided here for the search range should be set to exclude the possibility that the same particle is selected twice and counted as two different particles."],
+            ["Classification: High-Resolution Limit (Å)", "The limit set here is analogous to the high-resolution limit set for refinement. It cannot exceed the refinement limit. Setting it to a lower resolution may increase the useful SNR for classification and lead to better separation of particles with different structural features. However, at lower resolution the classification may also become less sensitive to heterogeneity represented by smaller structural features."],
+            ["Focused Classification?", "Classification can be performed based on structural variability in a defined region of the particle. This is useful when there are multiple regions that have uncorrelated structural variability. Using focused classification, each of these regions can be classified in turn. The focus feature can also be used to reduce noise from other parts of the images and increase the useful SNR for classification. The focus region is defined by a sphere with coordinates and radius in the following four inputs. (This feature was formerly known as “focus_mask”.)"],
+            ["Sphere X/Y/Z Co-ordinate and Radius (Å)", "These values describe a spherical region inside the particle that contains the structural variability to focus on."],
+            ["Refine CTF?", "Should the CTF be refined as well? This is only recommended for high-resolution data that yield reconstructions of better than 4 Å resolution, and for particles of sufficient molecular mass (500 kDa and higher)."],
+            ["Defocus Search Range / Step (Å)", "The range of defocus values to search over for each particle, in steps of the given size, starting at the defocus values determined in the previous refinement cycle minus the range up to plus the range, keeping the estimated astigmatism constant."],
+            ["Inner/Outer Mask Radius (Å)", "Radii describing a spherical mask with an inner and outer radius that will be applied to the final reconstruction and to the half reconstructions to calculate Fourier Shell Correlation curve. The inner radius is normally set to 0.0 but can assume non-zero values to remove density inside a particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."],
+            ["Score to B-factor Constant (Å²)", "The particles inserted into a reconstruction will be weighted according to their scores. The weighting function is akin to a B-factor, attenuating high-resolution signal of particles with lower scores more strongly than of particles with higher scores. The B-factor applied to each particle prior to insertion into the reconstruction is calculated as B = (score – average score) * constant * 0.25. Users are encouraged to calculate reconstructions with different values to find a value that produces the highest resolution. Values between 0 and 10 are reasonable (0 will disable weighting)."],
+            ["Adjust Score for Defocus?", "Scores sometimes depend on the amount of image defocus. A larger defocus amplifies low-resolution features in the image and this may lead to higher particle scores compared to particles from an image with a small defocus. Adjusting the scores for this difference makes sure that particles with smaller defocus are not systematically downweighted by the above B-factor weighting."],
+            ["Score Threshold", "Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage. A value = 0 will select all particles; 0 < value <= 1 will be interpreted as a percentage; value > 1 will be interpreted as a fixed score threshold."],
+            ["Resolution Limit (Å)", "The reconstruction calculation can be accelerated by limiting its resolution. It is important to make sure that the resolution limit entered here is higher than the resolution used for refinement in the following cycle."],
+            ["Autocrop Images?", "The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."]
+          ]}
+        ],
+        references: [
+          {authors:"Stewart A., Grigorieff N.", text:"2004. Noise bias in the refinement of structures derived from single particles. Ultramicroscopy 102, 67–84.", doi:"10.1016/j.ultramic.2004.08.008"},
+          {authors:"Sindelar C.V., Grigorieff N.", text:"2012. Optimal noise reduction in 3D reconstructions of single particles using a volume-normalized filter. J. Struct. Biol. 180, 26–38.", doi:"10.1016/j.jsb.2012.05.005"},
+          {authors:"Lyumkis D., Brilot A.F., Theobald D.L., Grigorieff N.", text:"2013. Likelihood-based classification of cryo-EM images using FREALIGN. J. Struct. Biol. 183, 377–388.", doi:"10.1016/j.jsb.2013.07.005"},
+          {authors:"Grigorieff N.", text:"2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191–226.", doi:"10.1016/bs.mie.2016.04.013"}
+        ]
+      }
     }
   };
 
@@ -2334,6 +2472,11 @@ From branch : <span id="versionBranch">—</span></p>
       var loadingOpt = document.createElement("option");
       loadingOpt.textContent = "Loading…";
       input.appendChild(loadingOpt);
+    } else if (f.type === "static"){
+      // Read-only text the stage's wiring fills in (Refine 3D's Active 3D References list).
+      input = document.createElement("div");
+      input.className = "form-note field-static";
+      input.textContent = "—";
     } else {
       input = document.createElement("input");
       input.type = f.type;
@@ -3563,6 +3706,183 @@ From branch : <span id="versionBranch">—</span></p>
     return page;
   }
   RESULT_PAGES.ab_initio_3d = makeStartupResultsPage();
+
+  // FSC against spatial frequency (1/A), as cisTEM's FSCPanel draws it: the
+  // 0.143 and 0.5 lines, resolution ticks in A.
+  function drawFscPlot(svg, curve, pixelSize){
+    var pts = (curve || []).filter(function(s){ return s.resolution > 0; });
+    var xs = pts.map(function(s){ return 1 / s.resolution; });
+    var series = pts.length ? [{xs: xs, ys: pts.map(function(s){ return s.fsc; }), cls: "line-x"}, {xs: xs, ys: pts.map(function(s){ return s.part_fsc; }), cls: "line-y"}] : [];
+    drawLinePlot(svg, series, {xLabel: "spatial frequency (1/Å)", yLabel: "FSC", yMin: -0.1, yMax: 1.05, xMin: 0, emptyText: "No resolution statistics yet.",
+      xTick: function(v){ return v > 0 ? (1 / v).toFixed(1) + " Å" : "∞"; }});
+    if (!pts.length) return;
+    // Threshold lines at 0.143 and 0.5, drawn in the plot's own coordinate frame.
+    var vb = svg.getAttribute("viewBox").split(" ").map(Number), W = vb[2], H = vb[3], L = 52, R = 14, T = 12, B = 34;
+    var pw = W - L - R, ph = H - T - B, yMin = -0.1, yMax = 1.05;
+    [0.143, 0.5].forEach(function(th){
+      var y = T + ph - (th - yMin) / (yMax - yMin) * ph;
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", L); line.setAttribute("x2", L + pw); line.setAttribute("y1", y); line.setAttribute("y2", y); line.setAttribute("class", "fsc-threshold");
+      svg.appendChild(line);
+      var t = document.createElementNS("http://www.w3.org/2000/svg", "text"); t.setAttribute("x", L + pw - 4); t.setAttribute("y", y - 3); t.setAttribute("text-anchor", "end"); t.setAttribute("class", "tick"); t.textContent = String(th);
+      svg.appendChild(t);
+    });
+  }
+
+  // ---- Refine 3D: MyRefinementResultsPanel -- a package's refinements, the FSC
+  // curves, the angular distribution and the reconstruction of the shown class.
+  function makeRefinementResultsPage(){
+    var page = {items: [], packages: [], packageId: null, selectedId: null, classIndex: 0, current: null, showDetails: false, urls: []};
+    var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
+    var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
+    var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
+    left.innerHTML = '<span class="groupbox-label">Refinements</span>' +
+      '<div class="c2d-pkg-row"><label>Refinement Package</label><select data-role="package"></select></div>' +
+      '<div class="c2d-list"><table><thead><tr><th>Refinement</th><th>Classes</th><th>Est. Res.</th><th>Job</th></tr></thead><tbody></tbody></table></div>' +
+      '<div class="asset-toolbar"><button class="small ra-toggle" data-role="details" aria-pressed="false">Show Job Details</button></div>';
+    var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
+    var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Refinement"; right.appendChild(rightLabel);
+    var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
+    var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
+    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
+    var DETAILS = [
+      ["Refinement ID", function(r, c){ return fmtVal(r.refinement_id) + (r.job_number ? " (Job " + r.job_number + ")" : ""); }],
+      ["Date of Run", function(r){ return fmtWhenDate(r.datetime_of_run); }],
+      ["Refinement Package", function(r){ return r.package_name || fmtVal(r.refinement_package_asset_id); }],
+      ["Starting Refinement", function(r){ return r.starting_refinement_id != null && r.starting_refinement_id >= 0 ? "#" + r.starting_refinement_id : "—"; }],
+      ["Reference Volume", function(r, c){ return c && c.reference_volume_asset_id >= 0 ? "#" + c.reference_volume_asset_id : "generated from parameters"; }],
+      ["Low / High Res. Limit", function(r, c){ return c ? fmtVal(c.low_resolution_limit, 1) + " / " + fmtVal(c.high_resolution_limit, 1) + " Å" : "—"; }],
+      ["Mask Radius", function(r, c){ return c ? fmtVal(c.mask_radius, 1) + " Å" : "—"; }],
+      ["Signed CC Limit", function(r, c){ return c ? fmtVal(c.signed_cc_resolution_limit, 1) + " Å" : "—"; }],
+      ["Global Mask / Step", function(r, c){ return c ? fmtVal(c.global_mask_radius, 1) + " Å / " + fmtVal(c.angular_search_step, 2) + "°" : "—"; }],
+      ["Results to Refine", function(r, c){ return c ? fmtVal(c.number_results_to_refine) : "—"; }],
+      ["Search Range X / Y", function(r, c){ return c ? fmtVal(c.search_range_x, 1) + " / " + fmtVal(c.search_range_y, 1) + " Å" : "—"; }],
+      ["Percent Used", function(r){ return fmtVal(r.percent_used, 1) + " %"; }],
+      ["Refine CTF", function(r, c){ return c ? fmtYesNo(c.should_refine_ctf) : "—"; }],
+      ["Auto-Mask / Mask", function(r, c){ return c ? fmtYesNo(c.should_automask) + " / " + (c.should_use_supplied_mask ? "volume #" + c.mask_asset_id : "none") : "—"; }],
+      ["Average Occupancy", function(r, c){ return c ? fmtVal(c.average_occupancy, 2) + " %" : "—"; }],
+      ["Estimated Resolution", function(r, c){ return c ? fmtVal(c.estimated_resolution, 2) + " Å" : "—"; }],
+      ["Reconstructed Volume", function(r, c){ return c && c.reconstructed_volume_asset_id >= 0 ? (c.volume_name || "#" + c.reconstructed_volume_asset_id) : "—"; }],
+      ["Particles", function(r){ return fmtVal(r.number_of_particles); }]
+    ];
+    var cells = DETAILS.map(function(d){
+      var item = document.createElement("div"); item.className = "details-item";
+      var k = document.createElement("span"); k.className = "details-key"; k.textContent = d[0];
+      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
+      item.appendChild(k); item.appendChild(v); grid.appendChild(item); return v;
+    });
+    var empty = document.createElement("div"); empty.className = "empty-note"; empty.textContent = "No 3D refinements in this project yet";
+    var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Refine 3D from the Actions tab; each round’s refinement appears here with its FSC curve and reconstruction."; empty.appendChild(hint);
+    scroll.appendChild(empty);
+    var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
+    var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
+    var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
+    var pair = document.createElement("div"); pair.className = "c2d-plots"; pair.style.gridTemplateColumns = "minmax(0,2fr) minmax(0,1fr)"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
+    var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); pair.appendChild(fig.root);
+    var angBlock = document.createElement("div");
+    var angHead = document.createElement("div"); angHead.className = "ra-plot-head"; angHead.innerHTML = '<span class="ra-plot-title">Angular Distribution</span><span class="ra-legend">theta out, phi around</span>'; angBlock.appendChild(angHead);
+    var ang = document.createElementNS("http://www.w3.org/2000/svg", "svg"); ang.setAttribute("class", "ra-plot ang-plot"); ang.setAttribute("viewBox", "0 0 240 240"); angBlock.appendChild(ang);
+    pair.appendChild(angBlock);
+    els.resultsPages.appendChild(root);
+    page.root = root;
+    var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody"), classSelect = classRow.querySelector("select");
+    var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
+    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
+    page.load = function(){
+      if (!state.projectId || !state.connected) return;
+      Promise.all([
+        apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
+        apiFetch(projectApiUrl("/refinements")).then(function(r){ return r.ok ? r.json() : {refinements: []}; })
+      ]).then(function(res){
+        page.packages = (res[0] && res[0].refinement_packages) || [];
+        page.items = ((res[1] && res[1].refinements) || []).filter(function(r){ return r.classes.some(function(c){ return c.reconstructed_volume_asset_id >= 0; }) || r.starting_refinement_id >= 0; });
+        if (!page.packages.some(function(p){ return p.refinement_package_asset_id === page.packageId; })){
+          var withResults = {}; page.items.forEach(function(r){ withResults[r.refinement_package_asset_id] = true; });
+          var first = page.packages.filter(function(p){ return withResults[p.refinement_package_asset_id]; })[0] || page.packages[0];
+          page.packageId = first ? first.refinement_package_asset_id : null;
+        }
+        pkgSelect.innerHTML = "";
+        page.packages.forEach(function(p){
+          var o = document.createElement("option"); o.value = p.refinement_package_asset_id;
+          var n = page.items.filter(function(r){ return r.refinement_package_asset_id === p.refinement_package_asset_id; }).length;
+          o.textContent = p.name + " (" + n + " refinement" + (n === 1 ? "" : "s") + ")"; o.selected = p.refinement_package_asset_id === page.packageId; pkgSelect.appendChild(o);
+        });
+        renderList();
+      }).catch(function(){});
+    };
+    function visible(){ return page.items.filter(function(r){ return r.refinement_package_asset_id === page.packageId; }); }
+    function renderList(){
+      var rows = visible();
+      if (!rows.some(function(r){ return r.refinement_id === page.selectedId; })){ page.selectedId = rows.length ? rows[rows.length - 1].refinement_id : null; page.classIndex = 0; }
+      tbody.innerHTML = "";
+      rows.forEach(function(r){
+        var tr = document.createElement("tr"); tr.classList.toggle("selected", r.refinement_id === page.selectedId);
+        var est = r.classes.map(function(c){ return c.estimated_resolution ? Number(c.estimated_resolution).toFixed(1) : "—"; }).join(" / ");
+        tr.innerHTML = "<td></td><td class='num'>" + r.number_of_classes + "</td><td class='num'>" + est + " Å</td><td>" + (r.job_number ? "#" + r.job_number : "—") + "</td>";
+        tr.firstChild.textContent = r.name; tr.firstChild.title = r.name;
+        tr.addEventListener("click", function(){ page.selectedId = r.refinement_id; page.classIndex = 0; renderList(); });
+        tbody.appendChild(tr);
+      });
+      show();
+    }
+    function drawAngular(hist){
+      while (ang.firstChild) ang.removeChild(ang.firstChild);
+      var NS = "http://www.w3.org/2000/svg";
+      if (!hist || !hist.length){ var t = document.createElementNS(NS, "text"); t.setAttribute("x", 120); t.setAttribute("y", 120); t.setAttribute("text-anchor", "middle"); t.setAttribute("class", "axis-label"); t.textContent = "No angular distribution."; ang.appendChild(t); return; }
+      var T = 18, P = 72, cx = 120, cy = 120, R = 110, mx = Math.max.apply(null, hist) || 1;
+      for (var pb = 0; pb < P; pb++){
+        for (var tb = 0; tb < T; tb++){
+          var v = hist[T * pb + tb]; if (!v) continue;
+          // theta bins are equal-area in cos(theta): radius ~ sqrt(bin fraction) keeps the picture equal-area too.
+          var r0 = R * Math.sqrt(tb / T), r1 = R * Math.sqrt((tb + 1) / T), a0 = 2 * Math.PI * pb / P, a1 = 2 * Math.PI * (pb + 1) / P;
+          var d = "M" + (cx + r0 * Math.cos(a0)) + "," + (cy + r0 * Math.sin(a0)) + " L" + (cx + r1 * Math.cos(a0)) + "," + (cy + r1 * Math.sin(a0)) +
+            " A" + r1 + "," + r1 + " 0 0 1 " + (cx + r1 * Math.cos(a1)) + "," + (cy + r1 * Math.sin(a1)) + " L" + (cx + r0 * Math.cos(a1)) + "," + (cy + r0 * Math.sin(a1)) +
+            " A" + r0 + "," + r0 + " 0 0 0 " + (cx + r0 * Math.cos(a0)) + "," + (cy + r0 * Math.sin(a0)) + " Z";
+          var path = document.createElementNS(NS, "path"); path.setAttribute("d", d); path.setAttribute("fill", "rgba(47,95,166," + (0.15 + 0.85 * v / mx).toFixed(3) + ")"); path.setAttribute("stroke", "none");
+          path.setAttribute("title", v + " particle" + (v === 1 ? "" : "s")); ang.appendChild(path);
+        }
+      }
+      var circle = document.createElementNS(NS, "circle"); circle.setAttribute("cx", cx); circle.setAttribute("cy", cy); circle.setAttribute("r", R); circle.setAttribute("fill", "none"); circle.setAttribute("class", "ang-rim"); ang.appendChild(circle);
+    }
+    function show(){
+      releaseUrls();
+      var item = page.items.filter(function(r){ return r.refinement_id === page.selectedId; })[0];
+      if (!item){ page.current = null; empty.hidden = false; resultBox.hidden = true; details.hidden = true; rightLabel.textContent = "Refinement"; return; }
+      empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
+      rightLabel.textContent = "Refinement — " + item.name;
+      fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+      apiFetch(projectApiUrl("/refinements/" + item.refinement_id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
+        if (full.refinement_id !== page.selectedId) return;
+        page.current = full;
+        classSelect.innerHTML = "";
+        full.classes.forEach(function(c, i){ var o = document.createElement("option"); o.value = i; o.textContent = "#" + c.class_number + (c.estimated_resolution ? " (" + Number(c.estimated_resolution).toFixed(2) + " Å" + (full.classes.length > 1 ? ", " + Number(c.average_occupancy).toFixed(1) + "%" : "") + ")" : ""); o.selected = i === page.classIndex; classSelect.appendChild(o); });
+        classRow.hidden = full.classes.length <= 1;
+        showClass();
+      }).catch(function(err){ fig.status.textContent = "Could not load this refinement: " + err.message; });
+    }
+    function showClass(){
+      var full = page.current; if (!full) return;
+      var c = full.classes[page.classIndex] || full.classes[0];
+      DETAILS.forEach(function(d, i){ cells[i].textContent = d[1](full, c); });
+      drawFscPlot(plot.svg, c.statistics || [], full.resolution_statistics_pixel_size);
+      drawAngular(c.angular_distribution);
+      fig.left.textContent = (c.volume_name || "Reconstruction") + (c.reconstructed_volume_asset_id >= 0 ? " (asset #" + c.reconstructed_volume_asset_id + ")" : "");
+      fig.right.textContent = c.estimated_resolution ? "est. " + Number(c.estimated_resolution).toFixed(2) + " Å" : "";
+      fig.img.style.maxWidth = "720px"; fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+      if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "volume", page.urls);
+      else fig.status.textContent = "No reconstruction for this class.";
+    }
+    classSelect.addEventListener("change", function(){ page.classIndex = Number(classSelect.value) || 0; releaseUrls(); showClass(); });
+    pkgSelect.addEventListener("change", function(){ page.packageId = Number(pkgSelect.value); page.selectedId = null; renderList(); });
+    btn("details").addEventListener("click", function(){
+      page.showDetails = !page.showDetails;
+      btn("details").setAttribute("aria-pressed", String(page.showDetails));
+      btn("details").textContent = page.showDetails ? "Hide Job Details" : "Show Job Details";
+      details.hidden = !page.showDetails || !page.current;
+    });
+    return page;
+  }
+  RESULT_PAGES.refine3d = makeRefinementResultsPage();
   showResultsStage("motion_correction");
 
   // ---------- run profile ----------
@@ -3590,7 +3910,7 @@ From branch : <span id="versionBranch">—</span></p>
       state.runProfiles = rows;
       els.runProfile.innerHTML = "";
       rpSetProfiles(rows);
-      if (state.currentStage === "ab_initio_3d") abinitioFillProfiles();
+      if (state.currentStage === "ab_initio_3d" || state.currentStage === "refine3d") abinitioFillProfiles();
       if (!rows.length){
         var empty = document.createElement("option");
         empty.textContent = "No run profiles";
@@ -6335,6 +6655,62 @@ From branch : <span id="versionBranch">—</span></p>
   };
   STAGES.ab_initio_3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") abinitioPackageChanged(); };
 
+  // ---------- Refine 3D panel wiring (MyRefine3DPanel::NewRefinementPackageSelected / SetDefaults / OnHighResLimitChange) ----------
+  function refine3dPackageChanged(){
+    var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
+    if (!pkg || !pkg.value || !state.projectId) return;
+    var pkgId = pkg.value;
+    apiFetch(projectApiUrl("/refine3d/defaults?refinement_package_id=" + encodeURIComponent(pkgId))).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (pkg.value !== pkgId) return;
+      var inputs = els.paramFields.querySelector('[data-key="input_refinement_id"]');
+      if (inputs){
+        inputs.innerHTML = "";
+        (d.refinements || []).forEach(function(r){
+          var o = document.createElement("option"); o.value = r.refinement_id; o.textContent = r.name; o.selected = r.refinement_id === d.last_refinement_id; inputs.appendChild(o);
+        });
+      }
+      var note = els.paramFields.querySelector('[data-key="reference_note"]');
+      if (note){
+        note.textContent = (d.references || []).map(function(r){ return "Class " + r.class_number + ": " + (r.volume_asset_id >= 0 ? (r.volume_name || ("volume #" + r.volume_asset_id)) : "generate from parameters (an initial reconstruction is made first)"); }).join(" · ") || "—";
+      }
+      var mask = els.paramFields.querySelector('[data-key="mask_volume_id"]');
+      if (mask){
+        mask.innerHTML = "";
+        (d.volumes || []).forEach(function(v){ var o = document.createElement("option"); o.value = v.volume_asset_id; o.textContent = v.name + " (" + v.x_size + " px)"; mask.appendChild(o); });
+        if (!(d.volumes || []).length){ var none = document.createElement("option"); none.value = ""; none.textContent = "No volumes yet"; mask.appendChild(none); }
+      }
+      var hi = els.paramFields.querySelector('[data-key="high_resolution_limit_a"]');
+      if (hi) hi.value = d.high_resolution_limit_a;
+      ["low_resolution_limit_a", "mask_radius_a", "global_mask_radius_a", "angular_step_deg", "search_range_x_a", "search_range_y_a", "classification_high_resolution_limit_a"].forEach(function(k){
+        var input = els.expertFields.querySelector('[data-key="' + k + '"]');
+        if (input && d[k] != null) input.value = d[k];
+      });
+      updateStartButton();
+    }).catch(function(){});
+  }
+  // OnHighResLimitChange(): the angular step and the classification limit follow the hi-res limit.
+  function refine3dHighResChanged(){
+    var hi = els.paramFields.querySelector('[data-key="high_resolution_limit_a"]');
+    var mask = els.expertFields.querySelector('[data-key="mask_radius_a"]');
+    var step = els.expertFields.querySelector('[data-key="angular_step_deg"]');
+    var cls = els.expertFields.querySelector('[data-key="classification_high_resolution_limit_a"]');
+    if (!hi) return;
+    var res = Number(hi.value), radius = mask ? Number(mask.value) : 0;
+    if (step && res > 0 && radius > 0) step.value = (2 * res / radius * 180 / Math.PI).toFixed(2);
+    if (cls && res > 0) cls.value = res.toFixed(2);
+  }
+  STAGES.refine3d.wire = function(paramFields){
+    var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
+    if (pkg) pkg.addEventListener("change", refine3dPackageChanged);
+    var hi = paramFields.querySelector('[data-key="high_resolution_limit_a"]');
+    if (hi) hi.addEventListener("change", refine3dHighResChanged);
+    abinitioFillProfiles();
+  };
+  STAGES.refine3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") refine3dPackageChanged(); };
+
   function updateStartButton(){
     var stage = STAGES[state.currentStage];
     var reason = null;
@@ -6348,6 +6724,10 @@ From branch : <span id="versionBranch">—</span></p>
       else if (state.currentStage === "ab_initio_3d"){
         var mode = els.paramFields.querySelector('[data-key="input_mode"]'), selPick = els.paramFields.querySelector('[data-key="classification_selection_id"]');
         if (mode && mode.value === "Class Averages" && selPick && !selPick.value) reason = "Pick a class selection, or switch to Images. Selections are made on the Results tab under 2D Classification.";
+      }
+      else if (state.currentStage === "refine3d"){
+        var useMask = els.paramFields.querySelector('[data-key="use_mask"]'), maskPick = els.paramFields.querySelector('[data-key="mask_volume_id"]');
+        if (useMask && useMask.checked && maskPick && !maskPick.value) reason = "Pick a mask volume, or untick Use a Mask.";
       }
       // MyFindParticlesPanel's PleaseEstimateCTFStaticText, in its words.
       else if (stage.requiresCtf && selectedGroupCtfCount() !== null && selectedGroupCtfCount() < count) reason = "Please run CTF estimation on this group before picking particles.";
@@ -6368,6 +6748,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   els.paramFields.addEventListener("change", updateStartButton);
+  els.paramFields.addEventListener("change", function(){ if (state.currentStage === "refine3d" && document.activeElement && document.activeElement.dataset.key === "mask_radius_a") refine3dHighResChanged(); });
 
   // ---------- preview (MyFindParticlesPanel: Select preview image / Preview / Auto preview) ----------
   // POST /preview/pick runs the picker on one image with the form's current
@@ -6513,6 +6894,7 @@ From branch : <span id="versionBranch">—</span></p>
     return params;
   }
   function readInto(params, input){
+    if (input.tagName === "DIV") return;  // a static, read-only field
     var v = input.value;
     if (input.type === "checkbox") v = input.checked;
     else if (input.type === "number") v = v === "" ? null : Number(v);
@@ -6540,7 +6922,8 @@ From branch : <span id="versionBranch">—</span></p>
     ctf_estimation: function(){ loadImages(); loadResults("ctf_estimation"); },
     particle_picking: function(){ loadResults("particle_picking"); loadPositionGroups(); loadPositions(); },
     class2d: function(){ loadResults("class2d"); },
-    ab_initio_3d: function(){ loadResults("ab_initio_3d"); loadVolumes(); loadVolumeGroups(); }
+    ab_initio_3d: function(){ loadResults("ab_initio_3d"); loadVolumes(); loadVolumeGroups(); },
+    refine3d: function(){ loadResults("refine3d"); loadVolumes(); loadVolumeGroups(); loadPackages(); }
   };
   var TERMINAL_STATUSES = {completed: true, failed: true, cancelled: true};
 
@@ -6893,6 +7276,22 @@ From branch : <span id="versionBranch">—</span></p>
           (result.high_res ? " · " + Number(result.high_res).toFixed(1) + " Å, " + Number(result.percent_used).toFixed(1) + "%" : "") : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
         fig.img.style.maxWidth = "720px";
+        loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
+      };
+    },
+    // MyRefine3DPanel while it runs: the FSC of the newest refinement and the
+    // current reconstruction (ShowRefinementResultsPanel).
+    refine3d: function(body){
+      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+      var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); box.appendChild(plot.root);
+      var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); box.appendChild(fig.root);
+      return function(result, base, urls){
+        drawFscPlot(plot.svg, result.fsc || [], result.pixel_size);
+        var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
+        fig.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
+        var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
+        fig.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
       };
     },

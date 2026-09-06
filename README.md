@@ -129,7 +129,11 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/volumes/:vid/preview.png` | Orthogonal projections (top) and central slices (bottom) of the volume |
 | `GET` | `/projects/:id/startups` | Every ab-initio run (`STARTUP_LIST`) with its settings and result volumes |
 | `GET` | `/projects/:id/abinitio/defaults` | `AbInitio3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): symmetry, mask radius, search ranges, class count, and the class selections a class-average run can start from |
-| `GET` | `/projects/:id/jobs/:jid/abinitio/current.png` | Orthogonal views of a running or finished ab-initio job's current reconstruction (`?class=`) |
+| `GET` | `/projects/:id/jobs/:jid/abinitio/current.png` | Orthogonal views of a running or finished ab-initio or Refine 3D job's current reconstruction (`?class=`) |
+| `GET` | `/projects/:id/refinements` | Every 3D refinement (`?refinement_package_id=`) with per-class estimated resolution, occupancy and reconstructed volume |
+| `GET` | `/projects/:id/refinements/:rid` | One refinement with each class's FSC / SSNR curve and angular distribution |
+| `GET` | `/projects/:id/refine3d/defaults` | `MyRefine3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): limits, the refinements that can be the input parameters, each class's current reference, the volumes a mask can be |
+| `PATCH` | `/projects/:id/refinement-packages/:pid/references` | `{class_number, volume_asset_id}` sets a class's current reference volume (-1 = generate from parameters) |
 | `GET`/`POST` | `/projects/:id/classification-selections` | Named selections of class averages (`?classification_id=` / `?refinement_package_id=`), each with `classes` and `particle_count` / create one `{classification_id, name, classes}` |
 | `PATCH`/`DELETE` | `/projects/:id/classification-selections/:sid` | `{name}` renames, `{classes: [...]}` replaces the membership / delete |
 | `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |

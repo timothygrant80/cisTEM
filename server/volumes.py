@@ -220,6 +220,44 @@ def auto_mask(volume, pixel_size, mask_radius_a):
     return cosine_mask(out, r_px, 1.0, value=0.0)
 
 
+def apply_mask(volume, mask, cosine_edge_px, weight_outside, low_pass_radius=0.0, filter_edge=0.0):
+    """Image::ApplyMask(mask, edge, weight_outside, low_pass_radius, filter_edge)
+    as Refine 3D's Multiply3DMaskerThread calls it: the mask is binarised
+    (> 0), given a cosine edge of `cosine_edge_px` by convolution with a
+    normalised cosine kernel, and the volume is kept inside it; outside it
+    is replaced by the average density beyond 0.4 of the box, or -- with a
+    weight and a low-pass radius (cycles/pixel) -- by that weight times a
+    low-pass-filtered copy of the volume."""
+    volume = np.asarray(volume, dtype=np.float32)
+    n = volume.shape[0]
+    binary = (np.asarray(mask) > 0.0).astype(np.float32)
+
+    def cosine_blur(img):
+        if cosine_edge_px <= 0.0:
+            return img
+        r = np.sqrt(_radius_grid(img.shape))
+        kernel = np.where(r <= cosine_edge_px, (1.0 + np.cos(np.pi * r / cosine_edge_px)) / 2.0, 0.0).astype(np.float32)
+        kernel /= kernel.sum()
+        out = np.real(np.fft.ifftn(np.fft.fftn(img) * np.fft.fftn(np.fft.ifftshift(kernel))))
+        out[np.abs(out) < 1e-3] = 0.0
+        return out.astype(np.float32)
+
+    soft = cosine_blur(binary)
+    edge_value = average_outside(volume, 0.4 * n)
+    if low_pass_radius > 0.0 and weight_outside > 0.0 and cosine_edge_px > 0.0:
+        double = cosine_blur((soft > 0.1).astype(np.float32))
+        blend = double * edge_value + (1.0 - double) * volume
+        ft = np.fft.fftshift(np.fft.fftn(blend))
+        freqs = [np.fft.fftshift(np.fft.fftfreq(m)) for m in volume.shape]
+        f = np.sqrt(sum(np.meshgrid(*[q ** 2 for q in freqs], indexing="ij")))
+        inner = max(low_pass_radius - filter_edge * 0.5, 0.0)
+        w = np.clip((f - inner) / max(filter_edge, 1e-6), 0.0, 1.0)
+        ft *= (0.5 + 0.5 * np.cos(np.pi * w))
+        filtered = np.real(np.fft.ifftn(np.fft.ifftshift(ft))).astype(np.float32)
+        return (soft * volume + weight_outside * (1.0 - soft) * filtered).astype(np.float32)
+    return ((1.0 - soft) * edge_value + soft * volume).astype(np.float32)
+
+
 def _circle_mask_with_edge_average(image, radius_px):
     """CircleMaskWithValue(radius, ReturnAverageOfRealValuesAtRadius(radius))."""
     h, w = image.shape

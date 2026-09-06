@@ -1139,9 +1139,9 @@ From branch : <span id="versionBranch">—</span></p>
           </div>
         </div>
 
-        <!-- 3D VOLUMES: MyVolumeAssetPanel. Reconstructions written by
-             Ab-Initio 3D (and later Refine 3D); Display shows orthogonal
-             projections and slices. Import is not built. -->
+        <!-- 3D VOLUMES: MyVolumeAssetPanel. Reconstructions written by the 3D
+             stages, or MRC files imported from outside the project (a starting
+             reference, a mask); Display shows orthogonal projections and slices. -->
         <div class="asset-subpage" id="assetpageVolumes" hidden>
           <div class="assets-layout">
             <div class="groupbox">
@@ -1167,7 +1167,7 @@ From branch : <span id="versionBranch">—</span></p>
                 </table>
               </div>
               <div class="asset-toolbar">
-                <button class="small" disabled title="Importing volumes from files isn’t built yet.">Import</button>
+                <button class="small" id="volImportOpenBtn" title="Import MRC volumes from files on the server (a starting reference, a mask).">Import</button>
                 <button class="small" id="volRemoveBtn" disabled title="Select one or more volumes first.">Remove</button>
                 <button class="small" id="volAddToGroupBtn" disabled title="Select one or more volumes first.">Add To Group</button>
                 <button class="small" id="volDisplayBtn" disabled title="Select a volume first.">Display</button>
@@ -1430,6 +1430,23 @@ From branch : <span id="versionBranch">—</span></p>
     <p class="form-note" id="importPositionsNote"></p>
   </div>
 </div>
+<div class="scrim" id="importVolumesScrim"></div>
+<div class="modal" id="importVolumesModal">
+  <div class="modal-head">
+    <div class="modal-title">Import Volumes</div>
+    <button class="log-close" id="importVolumesModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">MRC volumes from outside the project &mdash; a starting reference, a mask &mdash; at one pixel size. Reconstructions made here arrive on their own.</p>
+    <div id="importVolumesFields"></div>
+    <p class="form-note validation-note" id="importVolumesValidationNote"></p>
+    <div class="submit-row">
+      <button class="primary" id="importVolumesBtn" disabled>Import</button>
+    </div>
+    <p class="form-note" id="importVolumesNote"></p>
+  </div>
+</div>
+
 <div class="scrim" id="importImagesScrim"></div>
 <div class="modal" id="importImagesModal">
   <div class="modal-head">
@@ -2536,6 +2553,7 @@ From branch : <span id="versionBranch">—</span></p>
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
    "importPositionsScrim","importPositionsModal","importPositionsModalClose","importPositionsFile","importPositionsPath","importPositionsBrowseBtn","importPositionsBtn","importPositionsNote","ppImportBtn",
    "importImagesScrim","importImagesModal","importImagesModalClose","importImagesFields",
+   "importVolumesScrim","importVolumesModal","importVolumesModalClose","importVolumesFields","importVolumesValidationNote","importVolumesBtn","importVolumesNote","volImportOpenBtn",
    "importImagesBtn","importImagesNote","importImagesValidationNote",
    "imageListBody","imageGroupList","imageImportOpenBtn","imageSelectAllCheckbox",
    "imageGroupAddBtn","imageGroupRenameBtn","imageGroupRemoveBtn","imageGroupInvertBtn",
@@ -6024,6 +6042,120 @@ From branch : <span id="versionBranch">—</span></p>
       imageImportPaths.glob = null;
       scheduleImageImportCheck();
     });
+  });
+
+  // ---------- Import Volumes (MyVolumeImportDialog) ----------
+  // Files plus one pixel size, as cisTEM's dialog: CheckImportButtonStatus()
+  // wants at least one file and a pixel size. The header's pixel size is
+  // offered as the default when the files are chosen.
+  var VOLUME_IMPORT_FIELDS = [
+    {key:"input_glob", label:"Volume files", unit:"", type:"text", placeholder:"/data/maps/*.mrc", group:"Input",
+     tooltip:"MRC volumes on the machine running the API server; a wildcard imports every match."},
+    {key:"pixel_size_a", label:"Pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"1.00", group:"Volume",
+     tooltip:"The pixel size recorded for every imported volume. Prefilled from the first file's header when it carries one."}
+  ];
+  renderGroupedFields(els.importVolumesFields, VOLUME_IMPORT_FIELDS);
+  (function(){
+    var globInput = els.importVolumesFields.querySelector('[data-key="input_glob"]');
+    var row = document.createElement("div"); row.className = "field-row";
+    globInput.parentNode.insertBefore(row, globInput); row.appendChild(globInput);
+    var browseBtn = document.createElement("button"); browseBtn.type = "button"; browseBtn.className = "small"; browseBtn.textContent = "Browse…";
+    browseBtn.addEventListener("click", function(){ openBrowseModal({input: globInput, noun: "volume", article: "a", types: "volume"}); });
+    row.appendChild(browseBtn);
+  })();
+  var volumeImportPaths = {seq: 0, glob: null, globCount: 0, newCount: 0, dupCount: 0, hint: null, boxSizes: []};
+  var volumeImportCheckTimer = null;
+  function volumeImportFieldValue(key){
+    var el = els.importVolumesFields.querySelector('[data-key="' + key + '"]');
+    return el ? (el.value || "").trim() : "";
+  }
+  function openImportVolumesModal(){
+    els.importVolumesModal.classList.add("open"); els.importVolumesScrim.classList.add("open");
+    els.importVolumesNote.textContent = "";
+    var glob = els.importVolumesFields.querySelector('[data-key="input_glob"]');
+    if (glob) glob.focus();
+    scheduleVolumeImportCheck();
+  }
+  function closeImportVolumesModal(){ els.importVolumesModal.classList.remove("open"); els.importVolumesScrim.classList.remove("open"); }
+  els.volImportOpenBtn.addEventListener("click", openImportVolumesModal);
+  els.importVolumesModalClose.addEventListener("click", closeImportVolumesModal);
+  els.importVolumesScrim.addEventListener("click", closeImportVolumesModal);
+  function scheduleVolumeImportCheck(){
+    if (volumeImportCheckTimer) clearTimeout(volumeImportCheckTimer);
+    volumeImportCheckTimer = setTimeout(runVolumeImportCheck, 300);
+    validateVolumeImportForm();
+  }
+  function runVolumeImportCheck(){
+    var glob = volumeImportFieldValue("input_glob");
+    if (!glob || !state.projectId){
+      volumeImportPaths.glob = null; volumeImportPaths.globCount = 0; volumeImportPaths.newCount = 0; volumeImportPaths.dupCount = 0;
+      validateVolumeImportForm(); return;
+    }
+    var seq = ++volumeImportPaths.seq;
+    apiFetch(projectApiUrl("/volumes/check-import"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({glob: glob, files: []})})
+      .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(d){
+        if (seq !== volumeImportPaths.seq) return;
+        volumeImportPaths.glob = glob; volumeImportPaths.globCount = d.glob_match_count || 0;
+        volumeImportPaths.newCount = d.new_count || 0; volumeImportPaths.dupCount = d.already_imported_count || 0;
+        volumeImportPaths.hint = d.pixel_size_hint; volumeImportPaths.boxSizes = d.box_sizes || []; volumeImportPaths.notVolumes = d.not_volumes || 0;
+        var ps = els.importVolumesFields.querySelector('[data-key="pixel_size_a"]');
+        if (ps && !ps.value && d.pixel_size_hint) ps.value = d.pixel_size_hint;
+        validateVolumeImportForm();
+      }).catch(function(){ if (seq === volumeImportPaths.seq) validateVolumeImportForm(); });
+  }
+  function validateVolumeImportForm(){
+    var problems = [];
+    var glob = volumeImportFieldValue("input_glob");
+    if (!glob) problems.push("choose the volume files to import");
+    else if (volumeImportPaths.glob !== glob) problems.push("checking that path…");
+    else if (!volumeImportPaths.globCount) problems.push("no MRC files match that path");
+    else if (!volumeImportPaths.newCount && volumeImportPaths.notVolumes && !volumeImportPaths.dupCount) problems.push(volumeImportPaths.notVolumes === 1 ? "that file is not an MRC volume" : "none of the " + volumeImportPaths.notVolumes + " matching files is an MRC volume");
+    else if (!volumeImportPaths.newCount) problems.push(volumeImportPaths.dupCount === 1 ? "that file is already imported" : "all " + volumeImportPaths.dupCount + " matching files are already imported");
+    if (!volumeImportFieldValue("pixel_size_a")) problems.push("pixel size is required");
+    var ok = problems.length === 0;
+    els.importVolumesBtn.disabled = !ok;
+    els.importVolumesBtn.title = ok ? "" : problems.join("; ");
+    var msg;
+    if (!ok) msg = problems[0].charAt(0).toUpperCase() + problems[0].slice(1);
+    else {
+      msg = volumeImportPaths.newCount + " new file" + (volumeImportPaths.newCount === 1 ? "" : "s") + " to import";
+      if (volumeImportPaths.boxSizes.length) msg += " (" + volumeImportPaths.boxSizes.join(", ") + " px)";
+      if (volumeImportPaths.dupCount) msg += "; " + volumeImportPaths.dupCount + " already imported, will be skipped";
+      if (volumeImportPaths.notVolumes) msg += "; " + volumeImportPaths.notVolumes + " not " + (volumeImportPaths.notVolumes === 1 ? "an MRC volume" : "MRC volumes") + ", will be skipped";
+      msg += ".";
+    }
+    els.importVolumesValidationNote.textContent = msg;
+    els.importVolumesValidationNote.className = "form-note validation-note " + (ok ? "ready" : "blocked");
+    return ok;
+  }
+  els.importVolumesFields.addEventListener("input", function(e){
+    var key = e.target && e.target.dataset ? e.target.dataset.key : null;
+    if (key === "input_glob") scheduleVolumeImportCheck(); else validateVolumeImportForm();
+  });
+  els.importVolumesFields.addEventListener("change", function(e){
+    var key = e.target && e.target.dataset ? e.target.dataset.key : null;
+    if (key === "input_glob") scheduleVolumeImportCheck(); else validateVolumeImportForm();
+  });
+  els.importVolumesBtn.addEventListener("click", function(){
+    if (!state.projectId || !validateVolumeImportForm()) return;
+    var body = {};
+    els.importVolumesFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
+    els.importVolumesBtn.disabled = true; els.importVolumesBtn.textContent = "Importing…";
+    apiFetch(projectApiUrl("/volumes/import"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+      .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+      .then(function(result){
+        var msg = "Imported " + result.volume_count + " volume" + (result.volume_count === 1 ? "" : "s") + " into All Volumes."
+          + (result.skipped_count ? " Skipped " + result.skipped_count + " already imported." : "");
+        var notCubic = (result.volumes || []).filter(function(v){ return !v.cubic; });
+        if (notCubic.length) msg += " " + notCubic.length + " " + (notCubic.length === 1 ? "is" : "are") + " not cubic and cannot be used as a reference or mask.";
+        var failed = result.failed || [];
+        if (failed.length) msg += " " + failed.length + " could not be read: " + failed.slice(0, 3).map(function(f){ return f.path.split("/").pop() + " (" + f.reason + ")"; }).join(", ") + (failed.length > 3 ? ", …" : "") + ".";
+        els.importVolumesNote.textContent = msg;
+        state.selectedVolumeGroupId = 0;
+        loadVolumeGroups(); loadVolumes();
+      }).catch(function(err){ alert("Import failed: " + err.message); })
+      .finally(function(){ els.importVolumesBtn.textContent = "Import"; volumeImportPaths.glob = null; scheduleVolumeImportCheck(); });
   });
 
   // ---------- image list ----------

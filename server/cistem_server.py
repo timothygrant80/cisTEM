@@ -35,6 +35,7 @@ import json
 import os
 import shlex
 import shutil
+import struct
 import subprocess
 import threading
 import time
@@ -743,7 +744,7 @@ MOVIE_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff", ".eer"}
 # What each Import dialog's "Browse..." picker will show. Images never
 # include .eer -- see IMAGE_IMPORT_EXTENSIONS, which the import route
 # enforces on the resolved files regardless of what the picker offered.
-BROWSABLE_EXTENSIONS = {"movie": MOVIE_EXTENSIONS, "image": {".mrc", ".mrcs", ".tif", ".tiff"},
+BROWSABLE_EXTENSIONS = {"movie": MOVIE_EXTENSIONS, "image": {".mrc", ".mrcs", ".tif", ".tiff"}, "volume": {".mrc", ".mrcs"},
                         "text": {".txt", ".plt", ".dat", ".coords", ".box", ".csv"}}
 
 
@@ -1001,6 +1002,8 @@ ALL_GROUP_ID = 0
 # Images are 2D micrographs, so unlike movies they are never EER: an EER file
 # is a raw movie container by construction. Cf. imageheaders.read_image_header().
 IMAGE_IMPORT_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff"}
+# MyVolumeImportDialog's file filter: "MRC files (*.mrc)|*.mrc;*.mrcs".
+VOLUME_IMPORT_EXTENSIONS = {".mrc", ".mrcs"}
 
 
 def _canonical_path(path):
@@ -1689,6 +1692,97 @@ def get_image_import_defaults(project_id):
     row = conn.execute("SELECT * FROM IMAGE_IMPORT_DEFAULTS WHERE NUMBER=1").fetchone()
     conn.close()
     return jsonify(dict(row) if row else {})
+
+
+@app.route("/api/projects/<project_id>/volumes/check-import", methods=["POST"])
+@auth.project_access_required
+def check_volume_import(project_id):
+    """The volume counterpart of /images/check-import, plus `pixel_size_hint`
+    and `box_sizes` read from the new files' MRC headers -- cisTEM's dialog
+    leaves the pixel size blank for the user to type, but the header
+    usually knows it."""
+    response = _check_import(project_id, VOLUME_KIND, allowed_extensions=VOLUME_IMPORT_EXTENSIONS)
+    body = request.get_json(force=True, silent=True) or {}
+    input_glob = (body.get("glob") or "").strip()
+    out = response.get_json()
+    out["pixel_size_hint"] = None
+    out["box_sizes"] = []
+    if input_glob:
+        conn = db.get_conn(project_id)
+        try:
+            new_paths, _dups = _partition_matches(conn, VOLUME_KIND, input_glob, allowed_extensions=VOLUME_IMPORT_EXTENSIONS)
+        finally:
+            conn.close()
+        sizes = set()
+        not_volumes = 0
+        for path in new_paths:
+            try:
+                h = volumes.read_mrc_header(path)
+            except (OSError, ValueError, struct.error):
+                not_volumes += 1
+                continue
+            if h["nz"] <= 1 or h["nx"] <= 0 or h["ny"] <= 0:
+                not_volumes += 1  # matched the glob but is no volume; import() would skip it
+                continue
+            if out["pixel_size_hint"] is None and h["pixel_size"] > 0:
+                out["pixel_size_hint"] = round(h["pixel_size"], 4)
+            sizes.add(h["nx"])
+        out["box_sizes"] = sorted(sizes)
+        out["not_volumes"] = not_volumes
+        out["new_count"] = max(0, out["new_count"] - not_volumes)
+    return jsonify(out)
+
+
+@app.route("/api/projects/<project_id>/volumes/import", methods=["POST"])
+@auth.project_access_required
+def import_volumes(project_id):
+    """MyVolumeImportDialog::ImportClick(): every matching MRC file not yet
+    an asset becomes a volume asset named after the file, with the one pixel
+    size typed in the dialog and its sizes from the header, no
+    reconstruction (-1) and no half maps -- an imported volume comes from
+    outside the project. A file that is not a 3D MRC volume is skipped and
+    reported, as the dialog's error list does."""
+    body = request.get_json(force=True, silent=True) or {}
+    input_glob = (body.get("input_glob") or "").strip()
+    pixel_size = body.get("pixel_size_a")
+    if not input_glob:
+        return jsonify({"error": "volume files path is required"}), 400
+    try:
+        pixel_size = float(pixel_size)
+    except (TypeError, ValueError):
+        return jsonify({"error": "pixel size is required"}), 400
+    if pixel_size <= 0:
+        return jsonify({"error": "pixel size must be positive"}), 400
+    conn = db.get_conn(project_id)
+    try:
+        matched, already_imported = _partition_matches(conn, VOLUME_KIND, input_glob, allowed_extensions=VOLUME_IMPORT_EXTENSIONS)
+        if not matched and not already_imported:
+            return jsonify({"error": "no MRC files match that path: {}".format(input_glob)}), 400
+        if not matched:
+            return jsonify({"error": "all {} matching file{} already imported".format(len(already_imported), "" if len(already_imported) == 1 else "s are")}), 400
+        imported, failed = [], []
+        for path in matched:
+            try:
+                h = volumes.read_mrc_header(path)
+            except (OSError, ValueError, struct.error) as exc:
+                failed.append({"path": path, "reason": "not a valid MRC file ({})".format(exc)})
+                continue
+            if h["nz"] <= 1:
+                failed.append({"path": path, "reason": "not a volume (one section)"})
+                continue
+            if h["mode"] not in (0, 1, 2, 6, 12):
+                failed.append({"path": path, "reason": "unsupported MRC mode {}".format(h["mode"])})
+                continue
+            name = Path(path).stem
+            vid = volumes.add_volume_asset(conn, name, path, pixel_size, h["nx"], h["ny"], h["nz"])
+            imported.append({"volume_asset_id": vid, "name": name, "x_size": h["nx"], "y_size": h["ny"], "z_size": h["nz"],
+                             "cubic": h["nx"] == h["ny"] == h["nz"]})
+        if not imported and failed:
+            return jsonify({"error": "none of the {} matching file{} could be imported: {}".format(
+                len(failed), "" if len(failed) == 1 else "s", failed[0]["reason"]), "failed": failed}), 400
+        return jsonify({"volume_count": len(imported), "skipped_count": len(already_imported), "failed": failed, "volumes": imported})
+    finally:
+        conn.close()
 
 
 @app.route("/api/projects/<project_id>/images/import", methods=["POST"])

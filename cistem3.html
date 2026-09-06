@@ -463,6 +463,12 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .ang-plot{aspect-ratio:1/1;max-width:260px;}
 .ang-plot .ang-rim{stroke:var(--border-strong);stroke-width:1.5;}
 .field-static{margin:0;font-size:12px;}
+.ref-list{font-size:12px;}
+.ref-list table{width:100%;border-collapse:collapse;border:1px solid var(--border);}
+.ref-list th{background:var(--chrome);font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);}
+.ref-list td{padding:3px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.ref-list td:first-child{width:70px;text-align:center;}
+.ref-list select{width:100%;}
 .c2d-overlay rect{fill:none;stroke:#ffd23f;stroke-width:3;}
 .c2d-caption{font-size:12px;color:var(--text-secondary);margin:6px 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
@@ -2013,8 +2019,8 @@ From branch : <span id="versionBranch">—</span></p>
          dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
         {key:"input_refinement_id", label:"Input Parameters", unit:"", type:"select", options:[], group:"Input",
          tooltip:"The source of the starting parameters for this refinement run. These can be either set to be random Euler angles and zero X,Y shifts, or they can be the output of a previous refinement (if available)."},
-        {key:"reference_note", label:"Active 3D References", unit:"", type:"static", group:"Input",
-         tooltip:"The volume each class is refined against: the package's current references, set by the last ab-initio or refinement run. A class without one gets an initial reconstruction from the input parameters first."},
+        {key:"reference_note", label:"Active 3D References", unit:"", type:"references", group:"Input",
+         tooltip:"The volume each class is refined against: the package's current references, set by the last ab-initio or refinement run and changed here per class. A class set to generate from parameters gets an initial reconstruction from the input parameters first."},
         {key:"use_mask", label:"Use a Mask?", type:"checkbox", default:false, group:"Input",
          tooltip:"Multiply the reference by a mask volume before each round instead of auto-masking it."},
         {key:"mask_volume_id", label:"Mask Volume", unit:"", type:"select", options:[], group:"Input", enabledBy:"use_mask",
@@ -2472,10 +2478,12 @@ From branch : <span id="versionBranch">—</span></p>
       var loadingOpt = document.createElement("option");
       loadingOpt.textContent = "Loading…";
       input.appendChild(loadingOpt);
-    } else if (f.type === "static"){
-      // Read-only text the stage's wiring fills in (Refine 3D's Active 3D References list).
+    } else if (f.type === "static" || f.type === "references"){
+      // A block the stage's wiring fills in: read-only text, or Refine 3D's
+      // Active 3D References list (cisTEM's ReferenceVolumesListControl: a
+      // Class No. / Active Reference Volume table, each row a volume picker).
       input = document.createElement("div");
-      input.className = "form-note field-static";
+      input.className = f.type === "references" ? "ref-list" : "form-note field-static";
       input.textContent = "—";
     } else {
       input = document.createElement("input");
@@ -6673,9 +6681,7 @@ From branch : <span id="versionBranch">—</span></p>
         });
       }
       var note = els.paramFields.querySelector('[data-key="reference_note"]');
-      if (note){
-        note.textContent = (d.references || []).map(function(r){ return "Class " + r.class_number + ": " + (r.volume_asset_id >= 0 ? (r.volume_name || ("volume #" + r.volume_asset_id)) : "generate from parameters (an initial reconstruction is made first)"); }).join(" · ") || "—";
-      }
+      if (note) refine3dFillReferences(note, pkgId, d.references || [], d.volumes || []);
       var mask = els.paramFields.querySelector('[data-key="mask_volume_id"]');
       if (mask){
         mask.innerHTML = "";
@@ -6690,6 +6696,48 @@ From branch : <span id="versionBranch">—</span></p>
       });
       updateStartButton();
     }).catch(function(){});
+  }
+  // The Active 3D References table: one row per class, its reference a
+  // <select> over the project's volumes plus "generate from parameters";
+  // a change is saved at once through PATCH /refinement-packages/:id/references
+  // (cisTEM edits references_for_next_refinement in memory and writes it to
+  // the same table when the refinement starts).
+  function refine3dFillReferences(container, pkgId, references, volumes){
+    container.innerHTML = "";
+    if (!references.length){ container.textContent = "—"; return; }
+    var table = document.createElement("table");
+    var thead = document.createElement("thead"), hr = document.createElement("tr");
+    ["Class No.", "Active Reference Volume"].forEach(function(t){ var th = document.createElement("th"); th.textContent = t; hr.appendChild(th); });
+    thead.appendChild(hr); table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    references.forEach(function(r){
+      var tr = document.createElement("tr");
+      var td1 = document.createElement("td"); td1.textContent = r.class_number; tr.appendChild(td1);
+      var td2 = document.createElement("td");
+      var sel = document.createElement("select");
+      var gen = document.createElement("option"); gen.value = "-1"; gen.textContent = "Generate from parameters"; sel.appendChild(gen);
+      volumes.forEach(function(v){
+        var o = document.createElement("option"); o.value = v.volume_asset_id; o.textContent = v.name + " (" + v.x_size + " px, " + Number(v.pixel_size).toFixed(2) + " Å)"; sel.appendChild(o);
+      });
+      sel.value = String(r.volume_asset_id >= 0 ? r.volume_asset_id : -1);
+      if (sel.value !== String(r.volume_asset_id >= 0 ? r.volume_asset_id : -1)) sel.value = "-1";
+      sel.title = "The reference volume class " + r.class_number + " is refined against";
+      sel.addEventListener("change", function(){
+        sel.disabled = true;
+        apiFetch(projectApiUrl("/refinement-packages/" + encodeURIComponent(pkgId) + "/references"), {
+          method: "PATCH", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({class_number: r.class_number, volume_asset_id: Number(sel.value)})
+        }).then(function(resp){
+          if (!resp.ok) return resp.json().catch(function(){ return {}; }).then(function(e){ throw new Error(e.error || ("HTTP " + resp.status)); });
+        }).catch(function(err){
+          alert("Could not change the reference: " + err.message);
+        }).then(function(){ refine3dPackageChanged(); });
+      });
+      td2.appendChild(sel); tr.appendChild(td2);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
   }
   // OnHighResLimitChange(): the angular step and the classification limit follow the hi-res limit.
   function refine3dHighResChanged(){

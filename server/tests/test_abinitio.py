@@ -152,6 +152,48 @@ class Refine3DTests(unittest.TestCase):
         self.assertEqual(sum(hist), 2)          # the inactive particle is not counted
         self.assertEqual(hist[0] + hist[18 * 38], 2)  # theta 170 folds to 10 deg with phi + 180 (bin 38)
 
+    def test_symmetry_matrices(self):
+        import symmetry
+        for symbol, n in (("C1", 1), ("C4", 4), ("D2", 4), ("D7", 14), ("T", 12), ("T2", 12), ("O", 24), ("I", 60), ("I2", 60)):
+            mats = symmetry.matrices(symbol)
+            self.assertEqual(len(mats), n, symbol)
+            for m in mats:  # every one a proper rotation
+                mt = tuple(zip(*m))
+                p = symmetry.matmul(m, mt)
+                for i in range(3):
+                    for j in range(3):
+                        self.assertAlmostEqual(p[i][j], 1.0 if i == j else 0.0, places=4)
+        with self.assertRaises(ValueError):
+            symmetry.matrices("X3")
+        with self.assertRaises(ValueError):
+            symmetry.matrices("C")
+        # The C2 mate of a view is the same tilt, phi + 180.
+        views = symmetry.symmetry_related_views(30.0, 40.0, 50.0, "C2")
+        self.assertAlmostEqual(views[0][0], 40.0)
+        self.assertAlmostEqual(views[0][1], 30.0)
+        self.assertAlmostEqual(views[1][0], 40.0)
+        self.assertAlmostEqual(views[1][1] % 360.0, 210.0)
+
+    def test_angular_histogram_expands_symmetry(self):
+        import refinements
+        rows = [{"theta": 0.0, "phi": 0.0, "psi": 0.0, "image_is_active": 1}]
+        self.assertEqual(sum(refinements.angular_histogram(rows, 1, "C4")), 4)
+        self.assertEqual(refinements.angular_histogram(rows, 1, "D2")[0], 4)  # the pole stays at the pole under D2
+        rows = [{"theta": 40.0, "phi": 32.0, "psi": 50.0, "image_is_active": 1}]
+        c1, d2, ico = (refinements.angular_histogram(rows, 1, s) for s in ("C1", "D2", "I"))
+        self.assertEqual((sum(c1), sum(d2), sum(ico)), (1, 4, 60))
+        self.assertEqual([i for i, v in enumerate(c1) if v], [18 * 6 + 4])  # phi 32 -> bin 6; theta 40 -> bin 4 (equal-area bins: 38.9-43.8 deg)
+        self.assertTrue(all(d2[b] for b in (18 * 6 + 4, 18 * 42 + 4)))       # its C2 mate at phi 212
+        self.assertEqual(sum(refinements.angular_histogram(rows, 1, "nonsense")), 1)  # unknown symbols fall back to C1
+        # Several classes: a particle counts only for its highest-occupancy class.
+        cls1 = [{"position_in_stack": 1, "theta": 10.0, "phi": 0.0, "psi": 0.0, "occupancy": 80.0, "image_is_active": 1},
+                {"position_in_stack": 2, "theta": 10.0, "phi": 0.0, "psi": 0.0, "occupancy": 20.0, "image_is_active": 1}]
+        cls2 = [{"position_in_stack": 1, "theta": 50.0, "phi": 0.0, "psi": 0.0, "occupancy": 20.0, "image_is_active": 1},
+                {"position_in_stack": 2, "theta": 50.0, "phi": 0.0, "psi": 0.0, "occupancy": 80.0, "image_is_active": 1}]
+        self.assertEqual(refinements.best_class_per_particle([cls1, cls2]), {1: 1, 2: 2})
+        self.assertEqual(sum(refinements.angular_histogram([cls1, cls2], 1, "C1")), 1)
+        self.assertEqual(sum(refinements.angular_histogram([cls1, cls2], 2, "C3")), 3)
+
     def test_apply_mask_keeps_inside_and_replaces_outside(self):
         n = 32
         z, y, x = np.indices((n, n, n))

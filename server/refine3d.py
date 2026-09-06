@@ -589,7 +589,7 @@ def _record_round(conn, project_id, parent_id, state):
            "starting_refinement_id": state["input_refinement_id"], "number_of_particles": state["number_of_particles"], "number_of_classes": classes,
            "resolution_statistics_box_size": state["box_size"], "resolution_statistics_pixel_size": state["pixel_size"], "percent_used": s["percent_used"],
            "job_id": parent_id}
-    refinements.add_refinement(conn, ref, class_rows, stats, details)
+    refinements.add_refinement(conn, ref, class_rows, stats, details, symmetry=state["symmetry"])
     state["history"].append({"round": state["round"] + 1, "refinement_id": rid, "label": "Iter. #{}".format(state["round"] + 1), "estimated_resolution": est_res,
                              "average_sigma": average_sigma(class_rows), "finished_at": now_iso()})
     _log(project_id, parent_id, "Refinement #{} written ({}); volume asset{} {}".format(rid, ref["name"], "" if classes == 1 else "s", ", ".join("#{}".format(v) for v in volume_ids)))

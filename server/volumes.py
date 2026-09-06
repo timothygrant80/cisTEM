@@ -270,12 +270,13 @@ def _circle_mask_with_edge_average(image, radius_px):
     return out
 
 
-def orthogonal_views(volume, mask_radius_px=0.0, max_edge=160):
-    """Image::CreateOrthogonalProjectionsImage(include_projections=true): a
-    3 x 2 picture -- the three orthogonal projections on top, the three
-    central slices below -- each row normalised to its own range, each
-    panel circle-masked at the mask radius. Returned in display order
-    (first row on top). Panels are binned to at most `max_edge` px."""
+def orthogonal_views(volume, mask_radius_px=0.0, max_edge=160, include_projections=True):
+    """Image::CreateOrthogonalProjectionsImage(): a 3 x 2 picture -- the
+    three orthogonal projections on top, the three central slices below --
+    each row normalised to its own range, each panel circle-masked at the
+    mask radius. Returned in display order (first row on top). Panels are
+    binned to at most `max_edge` px. Without `include_projections` (the
+    Sharpen 3D panel's pictures) it is the single row of slices."""
     v = np.asarray(volume, dtype=np.float32)
     nz, ny, nx = v.shape
     cz, cy, cx = _centre(nz), _centre(ny), _centre(nx)
@@ -305,6 +306,11 @@ def orthogonal_views(volume, mask_radius_px=0.0, max_edge=160):
         slices = [_circle_mask_with_edge_average(s, r) for s in slices]
         projections = [_circle_mask_with_edge_average(p, r) for p in projections]
     th, tw = slices[0].shape
+    if not include_projections:
+        canvas = np.zeros((th, 3 * tw), dtype=np.float32)
+        for i, sl in enumerate(slices):
+            canvas[:, i * tw:(i + 1) * tw] = sl[:th, :tw]
+        return canvas
     canvas = np.zeros((2 * th, 3 * tw), dtype=np.float32)
     for i, p in enumerate(projections):
         canvas[0:th, i * tw:(i + 1) * tw] = p[:th, :tw]

@@ -464,6 +464,11 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .ang-plot .ang-rim{stroke:var(--border-strong);stroke-width:1.5;}
 .field-static{margin:0;font-size:12px;}
 .ref-list{font-size:12px;}
+.sharpen-view{display:flex;flex-direction:column;gap:10px;}
+.sharpen-toolbar{margin-top:0;align-items:center;}
+.sharpen-tabs{display:flex;gap:6px;}
+.ra-swatch-orig{border-top-color:var(--critical);}
+.ra-plot .line-orig{fill:none;stroke:var(--critical);stroke-width:1.8;stroke-linejoin:round;}
 .ref-list table{width:100%;border-collapse:collapse;border:1px solid var(--border);}
 .ref-list th{background:var(--chrome);font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);}
 .ref-list td{padding:3px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
@@ -1247,6 +1252,8 @@ From branch : <span id="versionBranch">—</span></p>
             <span class="groupbox-label" id="stageInfoLabel">Information</span>
             <div class="info-body" id="stageInfoBody"></div>
             <div class="info-body preview-view" id="previewView" hidden></div>
+            <!-- Sharpen 3D's result (Sharpen3DPanel's GuinierPlot + ResultDisplayPanel), shown in place of the Information text. -->
+            <div class="info-body sharpen-view" id="sharpenView" hidden></div>
           </div>
         </div>
       </section>
@@ -2236,13 +2243,93 @@ From branch : <span id="versionBranch">—</span></p>
         ]
       }
     }
+,
+    sharpen3d: {
+      // Sharpen3DPanel (ResetDefaults(), OnVolumeComboBox(), OnUpdateUI())
+      // and its SetInfo(). Not a job: Run calls POST /sharpen, which runs
+      // sharpen_map once and returns the Guinier curves and slices; the
+      // result replaces the Information text, with Save / Import buttons.
+      label: "Sharpen 3D",
+      startLabel: "Run",
+      action: "sharpen",
+      noRunProfile: true,
+      noResults: true,
+      note: "Runs on the server now, without a run profile; nothing is written to the project until the result is imported as a volume asset.",
+      description: "Sharpens a reconstruction by B-factor and spectral flattening, with optional figure-of-merit weighting, masking, handedness flip and gridding correction.",
+      inputKey: "volume_asset_id",
+      emptyReason: "Import or reconstruct a 3D volume first (Ab-Initio 3D, Auto Refine or Refine 3D write volume assets).",
+      fields: [
+        {key:"volume_asset_id", label:"Input Volume", unit:"", type:"asset_select", group:"Input",
+         tooltip:"The volume (reconstruction) to be sharpened.",
+         dynamicOptions:{endpoint:"/volumes", listKey:"volumes", value:"VOLUME_ASSET_ID", label:"NAME", countKey:"X_SIZE", countLabel:"px", emptyText:"No volumes yet — run Ab-Initio 3D or a refinement first"}},
+        {key:"use_mask", label:"Supply a Mask?", type:"checkbox", default:false, group:"Input",
+         tooltip:"Should the volume be masked to make sharpening more accurate? If checked, a volume containing the 3D mask must be selected."},
+        {key:"mask_volume_id", label:"Mask Volume", unit:"", type:"select", options:[], group:"Input", enabledBy:"use_mask",
+         tooltip:"Any volume asset of the same box size; voxels above zero are inside the mask."},
+        {key:"flatten_from_res_a", label:"Flatten From Res.", unit:"Å", type:"number", step:"0.5", min:0, default:"12", group:"Sharpening",
+         tooltip:"The low-resolution limit of the part of the amplitude spectrum to be flattened (whitened). This should normally be a resolution beyond which the influence of the shape transform of the particle is negligible, between 8 – 10 Å."},
+        {key:"cutoff_res_a", label:"Resolution Cut-Off", unit:"Å", type:"number", step:"0.1", min:0, default:"3.5", group:"Sharpening",
+         tooltip:"The high-resolution limit applied to the sharpened map. The filter edge is given by a cosine function of width specified by 'Filter Edge-Width.'"},
+        {key:"pre_cutoff_bfactor", label:"Pre-Cut-Off B-Factor", unit:"Å²", type:"number", step:"5", default:"-90", group:"Sharpening",
+         tooltip:"The B-factor to be applied to the low-resolution end of the amplitude spectrum, up to the point given as “Flatten From Res.” A B-factor of -90 Å² is usually appropriate for cryo-EM maps calculated using data collected on direct detectors."},
+        {key:"post_cutoff_bfactor", label:"Post-Cut-Off B-Factor", unit:"Å²", type:"number", step:"5", default:"0", group:"Sharpening",
+         tooltip:"The B-factor to be applied to the high-resolution end of the amplitude spectrum, from the point given as “Flatten From Res.” This will apply a B-factor after flattening the spectrum. A value between 0 and 25 Å² is usually appropriate."},
+        {key:"filter_edge_width_a", label:"Filter Edge-Width", unit:"Å", type:"number", step:"1", min:0, default:"20", group:"Sharpening",
+         tooltip:"The width of the cosine edge of the resolution cut-off applied to the final sharpened map. The width of the cosine is given as 1/w, where w is the value entered here."},
+        {key:"use_fom_weighting", label:"Use FOM Weighting?", type:"checkbox", default:true, group:"Weighting",
+         tooltip:"Should the sharpened map be weighted using a figure of merit (FOM) derived from the resolution statistics describing the map? (see Rosenthal & Henderson, 2003). Only available for a volume whose refinement still points at it."},
+        {key:"ssnr_scale_factor", label:"SSNR Scale Factor", unit:"", type:"number", step:"0.1", min:0.1, max:10, default:"1", group:"Weighting", enabledBy:"use_fom_weighting",
+         tooltip:"The FOM values are calculated as SSNR/(1+SSNR). The scale factor changes the effective SSNR used in this calculation; a higher SSNR leads to less filtering, which may suit the better parts of a map."},
+        {key:"inner_mask_radius_a", label:"Inner Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"0", group:"Masking", enabledByNot:"use_mask",
+         tooltip:"The radius describing the inner bounds of the particle. This is usually set to 0 unless the particle is hollow or has largely disordered density in its center, such as the genome of a spherical virus."},
+        {key:"outer_mask_radius_a", label:"Outer Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Masking", enabledByNot:"use_mask",
+         tooltip:"The radius describing the outer bounds of the particle. A spherical mask with this radius will be applied to the map before sharpening unless a 3D mask volume is supplied."},
+        {key:"auto_mask", label:"Use Auto-Masking?", type:"checkbox", default:true, group:"Masking", enabledByNot:"use_mask",
+         tooltip:"Build a mask from the map itself (at 10 Å) and apply it before sharpening, instead of the spherical mask."},
+        {key:"invert_handedness", label:"Invert Handedness?", type:"checkbox", default:false, group:"Output",
+         tooltip:"Should the handedness of the sharpened map be inverted? If a reconstruction was initiated using the ab-initio procedure, the handedness will be undetermined and may have to be inverted if found incorrect."},
+        {key:"correct_gridding", label:"Correct Gridding Error?", type:"checkbox", default:true, group:"Output",
+         tooltip:"Should the reconstruction be corrected for interpolation errors that attenuate the density towards the edges?"}
+      ],
+      expertFields: [],
+      info: {
+        title: "Sharpen 3D",
+        body: [
+          "The high-resolution signal in 3D reconstructions is usually dampened by various factors, including the envelope function affecting the CTF of the microscope, the modulation transfer function (MTF) of the detector, beam-induced motion, and alignment and interpolation errors introduced during image processing. Structural heterogeneity present in the particles may also contribute. It is common practice to express this dampening by a B-factor, expressed in Å² and given as exp(-0.25 B/d²) where d is the resolution (in Å) at which the dampening occurs. To visualize the high-resolution details in a reconstructed map, its amplitudes have to be restored by applying a negative B-factor, thereby sharpening the map.",
+          "This panel provides the user with a few parameters to sharpen a map. In the simplest case, a map can be sharpened by providing a negative B-factor. However, because B-factor sharpening involves multiplication with an exponential function, the noise at high resolution can easily be over-amplified. A more robust method to restore the amplitudes at high resolution that also works if the dampening cannot be described with a simple B-factor can be achieved by flattening (i.e. whitening) the amplitude spectrum at high resolution. The panel provides a flexible way to combine B-factor sharpening and spectral flattening to optimize the visibility of high-resolution details in the final map. Optionally, the resolution statistics can be used to apply figure-of-merit (FOM) weighting (Rosenthal & Henderson, 2003) and a 3D mask can be supplied to remove background noise from the map for more accurate sharpening. Finally, the handedness of the map can be inverted if it is wrong and the real-space dampening of densities near the edge of the reconstruction box due to trilinear interpolation used during reconstruction can be corrected.",
+          {heading: "Program Options"},
+          {options: [
+            ["Input Volume", "The volume (reconstruction) to be sharpened."],
+            ["Supply a Mask?", "Should the volume be masked to make sharpening more accurate? If checked, a volume containing the 3D mask must be selected."],
+            ["Flatten From Res. (Å)", "The low-resolution limit of the part of the amplitude spectrum to be flattened (whitened). This should normally be a resolution beyond which the influence of the shape transform of the particle is negligible, between 8 – 10 Å."],
+            ["Resolution Cut-Off (Å)", "The high-resolution limit applied to the sharpened map. The filter edge is given by a cosine function of width specified by 'Filter Edge-Width.'"],
+            ["Pre-Cut-Off B-Factor (Å²)", "The B-factor to be applied to the low-resolution end of the amplitude spectrum, up to the point given as “Flatten From Res.” A B-factor of -90 Å² is usually appropriate for cryo-EM maps calculated using data collected on direct detectors."],
+            ["Post-Cut-Off B-Factor (Å²)", "The B-factor to be applied to the high-resolution end of the amplitude spectrum, from the point given as “Flatten From Res.” This will apply a B-factor after flattening the spectrum. A value between 0 and 25 Å² is usually appropriate since the flattening should restore most of the high-resolution signal without the need for further amplification."],
+            ["Filter Edge-Width (Å)", "The width of the cosine edge of the resolution cut-off applied to the final sharpened map. The width of the cosine is given as 1/w, where w is the value entered here."],
+            ["Use FOM Weighting?", "Should the sharpened map be weighted using a figure of merit (FOM) derived from the resolution statistics describing the map? (see Rosenthal & Henderson, 2003)"],
+            ["SSNR Scale Factor", "The FOM values are calculated as SSNR/(1+SSNR) where SSNR is the spectral signal-to-noise ratio of the map to be sharpened (calculated as part of the reconstruction). The scale factor allows users to change the effective SSNR values used in this calculation. This can be useful, for example, if the SSNR represents the average signal in a reconstruction but FOM weighting should be performed using a higher SSNR that represents the signal when more disordered parts are excluded from the map. A higher SSNR leads to less filtering that may be more appropriate for high-resolution details in the better parts of a map."],
+            ["Inner Mask Radius (Å)", "The radius describing the inner bounds of the particle. This is usually set to 0 unless the particle is hollow or has largely disordered density in its center, such as the genome of a spherical virus."],
+            ["Outer Mask Radius (Å)", "The radius describing the outer bounds of the particle. A spherical mask with this radius will be applied to the map before sharpening unless a 3D mask volume is supplied."],
+            ["Invert Handedness?", "Should the handedness of the sharpened map be inverted? If a reconstruction was initiated using the ab-initio procedure, the handedness will be undetermined and may have to be inverted if found incorrect."],
+            ["Correct Gridding Error?", "Should the reconstruction be corrected for interpolation errors that attenuate the density towards the edges?"]
+          ]}
+        ],
+        references: [
+          {authors:"Rosenthal P.B., Henderson R.", text:"2003. Optimal determination of particle orientation, absolute hand, and contrast loss in single-particle electron cryomicroscopy. J. Mol. Biol. 333, 721–745.", doi:"10.1016/j.jmb.2003.07.013"},
+          {authors:"Liang B., Li Z., Jenni S., Rahmeh A.A., Morin B.M., Grant T., Grigorieff N., Harrison S.C., Whelan S.P.", text:"2015. Structure of the L protein of vesicular stomatitis virus from electron cryomicroscopy. Cell 162, 314–327.", doi:"10.1016/j.cell.2015.06.018"}
+        ]
+      }
+    }
   };
 
-  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","ab_initio_3d","auto_refine3d","refine3d"];
+  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","ab_initio_3d","auto_refine3d","refine3d","sharpen3d"];
   // Stages whose results live on another stage's results page: Auto Refine
   // writes refinements like Refine 3D does, and cisTEM shows both in one
   // Refinement results panel.
   var RESULT_PAGE_ALIAS = {auto_refine3d: "refine3d"};
+  // Sharpen 3D's in-panel state (declared here because the first
+  // renderParamFields() runs before the panel's own code further down).
+  var sv = { running: false, result: null, ctx: null, shownInfo: true, tab: 1 };
 
   var els = {};
   ["homeScreen","appShell","connectingScreen","connectingLabel","errorScreen","errorMessage","errorRetryBtn",
@@ -2294,7 +2381,7 @@ From branch : <span id="versionBranch">—</span></p>
    "rpCommandsBody","rpCmdAddBtn","rpCmdEditBtn","rpCmdRemoveBtn","rpSaveBtn",
    "rpCmdScrim","rpCmdModal","rpCmdModalClose","rpCmdCommand","rpCmdCopies","rpCmdThreads","rpCmdDelay",
    "rpCmdOverride","rpCmdOverridden","rpCmdError","rpCmdOkBtn","rpCmdCancelBtn",
-   "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody","previewBar","previewImage","previewBtn","previewAuto","previewStatus","previewView","previewInfoBtn",
+   "actionsLayout","stageInfo","stageInfoLabel","stageInfoBody","previewBar","previewImage","previewBtn","previewAuto","previewStatus","previewView","previewInfoBtn","sharpenView",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
   ].forEach(function(id){ els[id] = document.getElementById(id); });
 
@@ -2515,7 +2602,10 @@ From branch : <span id="versionBranch">—</span></p>
     // The refine3d sphere with a circular arrow round it -- a refinement
     // that cycles itself.
     auto_refine3d: '<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="2.1" ry="5"/><path d="M20.5 12a8.5 8.5 0 0 1-14.6 5.9"/><path d="M5.9 21.2v-3.3h3.3"/><path d="M3.5 12A8.5 8.5 0 0 1 18.1 6.1"/><path d="M18.1 2.8v3.3h-3.3"/>',
-    refine3d: '<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/><path d="M3.5 12h17"/>'
+    refine3d: '<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/><path d="M3.5 12h17"/>',
+    // A falling amplitude spectrum lifted back up: the Guinier plot before
+    // and after sharpening.
+    sharpen3d: '<path d="M3.5 20.5h17"/><path d="M4 18c3-1 5-6 8-9.5" stroke-dasharray="2 2"/><path d="M4 18c4-.5 8-2 16-3"/><path d="M17.5 12.5l2.5 2.5-3 1.5"/>'
   };
   var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">';
 
@@ -2628,6 +2718,9 @@ From branch : <span id="versionBranch">—</span></p>
     els.expertFields.hidden = !state.expertOpen;
     els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
     els.submitBtn.textContent = stage.startLabel || "Run";
+    // Sharpen 3D runs on the server at once, without a run profile.
+    els.runProfile.closest(".run-profile-field").hidden = !!stage.noRunProfile;
+    if (typeof resetSharpenView === "function") resetSharpenView();
     renderStageInfo(stage);
     populateDynamicFields(stage.fields);
     updateStartButton();
@@ -2772,7 +2865,7 @@ From branch : <span id="versionBranch">—</span></p>
   var RESULT_PAGES = {};
   state.resultsStage = "motion_correction";
   STAGE_ORDER.forEach(function(key){
-    if (RESULT_PAGE_ALIAS[key]) return;
+    if (RESULT_PAGE_ALIAS[key] || STAGES[key].noResults) return;
     var btn = document.createElement("button");
     btn.className = "subtab-btn";
     btn.dataset.stage = key;
@@ -6895,11 +6988,176 @@ From branch : <span id="versionBranch">—</span></p>
   };
   STAGES.auto_refine3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") autorefinePackageChanged(); };
 
+  // ---------- Sharpen 3D (Sharpen3DPanel) ----------
+  // OnVolumeComboBox(): the defaults follow the picked volume -- the mask
+  // radii of the reconstruction that made it, the cut-off at its estimated
+  // resolution with FOM weighting on when its refinement's statistics are
+  // there, else 3.5 A with weighting off and greyed.
+  function sharpenVolumeChanged(){
+    var vol = els.paramFields.querySelector('[data-key="volume_asset_id"]');
+    if (!vol || !vol.value || vol.disabled || !state.projectId) return;
+    var vid = vol.value;
+    apiFetch(projectApiUrl("/sharpen/defaults?volume_asset_id=" + encodeURIComponent(vid))).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (vol.value !== vid) return;
+      sv.ctx = d;
+      var mask = els.paramFields.querySelector('[data-key="mask_volume_id"]');
+      if (mask){
+        var keep = mask.value;
+        mask.innerHTML = "";
+        (d.volumes || []).forEach(function(v){
+          if (String(v.volume_asset_id) === vid || v.x_size !== d.x_size) return;
+          var o = document.createElement("option"); o.value = v.volume_asset_id; o.textContent = v.name + " (" + v.x_size + " px)"; mask.appendChild(o);
+        });
+        if (!mask.options.length){ var none = document.createElement("option"); none.value = ""; none.textContent = "No other volume of this box size"; mask.appendChild(none); }
+        else if (keep && Array.from(mask.options).some(function(o){ return o.value === keep; })) mask.value = keep;
+      }
+      var defs = d.defaults || {};
+      Object.keys(defs).forEach(function(k){
+        var input = els.paramFields.querySelector('[data-key="' + k + '"]');
+        if (!input) return;
+        if (input.type === "checkbox") input.checked = !!defs[k]; else input.value = defs[k];
+      });
+      var fom = els.paramFields.querySelector('[data-key="use_fom_weighting"]');
+      if (fom){
+        fom.disabled = !d.has_statistics;
+        fom.closest(".field").title = d.has_statistics ? fom.closest(".field").title.replace(/ No resolution statistics.*$/, "")
+          : (fom.closest(".field").title.replace(/ No resolution statistics.*$/, "") + " No resolution statistics are recorded for this volume, so weighting is not available.");
+        fom.dispatchEvent(new Event("change", {bubbles: true}));
+      }
+      var useMask = els.paramFields.querySelector('[data-key="use_mask"]');
+      if (useMask) useMask.dispatchEvent(new Event("change", {bubbles: true}));
+      resetSharpenView();
+      updateStartButton();
+    }).catch(function(){});
+  }
+  STAGES.sharpen3d.wire = function(paramFields){
+    var vol = paramFields.querySelector('[data-key="volume_asset_id"]');
+    if (vol) vol.addEventListener("change", sharpenVolumeChanged);
+    // OnUseMaskCheckBox(): a supplied mask switches auto-masking off (and back when unticked).
+    var useMask = paramFields.querySelector('[data-key="use_mask"]');
+    if (useMask) useMask.addEventListener("change", function(){
+      var auto = paramFields.querySelector('[data-key="auto_mask"]');
+      if (!auto) return;
+      if (useMask.checked){ sv.autoMaskValue = auto.checked; auto.checked = false; }
+      else if (sv.autoMaskValue !== undefined) auto.checked = sv.autoMaskValue;
+    });
+  };
+  STAGES.sharpen3d.afterDynamicLoad = function(key){ if (key === "volume_asset_id") sharpenVolumeChanged(); };
+
+  function sharpenShowInfo(showInfo){
+    sv.shownInfo = showInfo;
+    if (!sv.result){ els.sharpenView.hidden = true; if (STAGES[state.currentStage].action === "sharpen") els.stageInfoBody.hidden = false; return; }
+    els.stageInfoBody.hidden = !showInfo;
+    els.sharpenView.hidden = showInfo;
+    var info = STAGES[state.currentStage].info;
+    els.stageInfoLabel.textContent = showInfo ? ((info && info.title) || "Information") : "Sharpening Result";
+    var btn = els.sharpenView.querySelector('[data-role="info"]');
+    if (btn) btn.textContent = showInfo ? "Show Result" : "Show Information";
+  }
+  function resetSharpenView(){
+    sv.result = null; sv.running = false;
+    els.sharpenView.innerHTML = ""; els.sharpenView.hidden = true;
+    if (STAGES[state.currentStage].action === "sharpen") els.stageInfoBody.hidden = false;
+  }
+  // OnRunButtonClick(): the sharpening runs on the server now; the answer
+  // replaces the Information text (OnSharpenThreadComplete()).
+  function runSharpen(){
+    var vol = els.paramFields.querySelector('[data-key="volume_asset_id"]');
+    if (!vol || !vol.value) return;
+    var params = collectParams();
+    sv.running = true;
+    els.submitBtn.disabled = true; els.submitBtn.textContent = "Sharpening…";
+    els.submitNote.textContent = "Running sharpen_map on the server — a few seconds for a small box, longer for a large one.";
+    apiFetch(projectApiUrl("/sharpen"), {method: "POST", headers: {"Content-Type": "application/json"},
+                                         body: JSON.stringify({volume_asset_id: Number(vol.value), params: params})})
+      .then(function(r){ return r.json().then(function(d){ if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); return d; }); })
+      .then(function(d){ sv.result = d; renderSharpenResult(d); })
+      .catch(function(err){ alert("Sharpening failed: " + err.message); })
+      .then(function(){ sv.running = false; els.submitBtn.textContent = "Run"; updateStartButton(); });
+  }
+  function renderSharpenResult(d){
+    var view = els.sharpenView; view.innerHTML = "";
+    var bar = document.createElement("div"); bar.className = "asset-toolbar sharpen-toolbar"; view.appendChild(bar);
+    var infoBtn = document.createElement("button"); infoBtn.className = "small"; infoBtn.dataset.role = "info"; infoBtn.textContent = "Show Information";
+    infoBtn.addEventListener("click", function(){ sharpenShowInfo(!sv.shownInfo); }); bar.appendChild(infoBtn);
+    var saveBtn = document.createElement("button"); saveBtn.className = "small"; saveBtn.textContent = "Save Result";
+    saveBtn.title = "Download the sharpened map as an MRC file (cisTEM's Save Result).";
+    saveBtn.addEventListener("click", function(){
+      saveBtn.disabled = true;
+      apiFetch(projectApiUrl("/sharpen/" + d.result_id + "/volume.mrc")).then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.blob();
+      }).then(function(blob){
+        var url = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = url; a.download = (d.volume_name || "volume").replace(/[^A-Za-z0-9_-]+/g, "_") + "_sharpened.mrc"; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+      }).catch(function(err){ alert("Could not download the result: " + err.message); }).then(function(){ saveBtn.disabled = false; });
+    });
+    bar.appendChild(saveBtn);
+    var importBtn = document.createElement("button"); importBtn.className = "small"; importBtn.textContent = "Import as Volume Asset";
+    importBtn.title = "Add the sharpened map to the project's 3D Volumes.";
+    importBtn.addEventListener("click", function(){
+      var name = prompt("Name for the new volume asset:", d.volume_name + " (sharpened)");
+      if (name === null) return;
+      importBtn.disabled = true;
+      apiFetch(projectApiUrl("/sharpen/" + d.result_id + "/import"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: name})})
+        .then(function(r){ return r.json().then(function(o){ if (!r.ok) throw new Error(o.error || ("HTTP " + r.status)); return o; }); })
+        .then(function(o){ status.textContent = "Imported as volume asset #" + o.volume_asset_id + " (" + o.name + ")."; if (typeof loadVolumes === "function"){ loadVolumes(); loadVolumeGroups(); } populateDynamicFields(STAGES.sharpen3d.fields); })
+        .catch(function(err){ alert("Could not import the result: " + err.message); })
+        .then(function(){ importBtn.disabled = false; });
+    });
+    bar.appendChild(importBtn);
+    var status = document.createElement("span"); status.className = "preview-status";
+    status.textContent = "Sharpened in " + Number(d.elapsed_s).toFixed(1) + " s" + (d.used_statistics ? " with FOM weighting" : "") +
+      (d.used_mask === "auto" ? ", auto-masked" : d.used_mask === "supplied" ? ", with the supplied mask" : "") + ".";
+    bar.appendChild(status);
+    // GuinierPlot: log amplitude against spatial frequency, original and sharpened, the top 10 log units.
+    var plot = makePlotBlock("Guinier plot", [["ra-swatch-logp", "Original"], ["ra-swatch-orig", "Sharpened"]]); view.appendChild(plot.root);
+    var g = d.guinier || {};
+    var xs = g.spatial_frequency || [];
+    var maxY = Math.max.apply(null, (g.original || []).concat(g.sharpened || []).filter(function(v){ return isFinite(v); }));
+    var series = xs.length ? [{xs: xs, ys: g.original, cls: "line-x"}, {xs: xs, ys: g.sharpened, cls: "line-orig"}] : [];
+    drawLinePlot(plot.svg, series, {xLabel: "spatial frequency (1/Å)", xMin: 0, yLabel: "log amplitude", yMin: isFinite(maxY) ? maxY - 10 : undefined, yMax: isFinite(maxY) ? maxY : undefined,
+                                    xTick: function(v){ return v ? (1 / v).toFixed(1) + " Å" : "∞"; }, emptyText: "No spectrum."});
+    // ResultDisplayPanel: "Original 3D" / "Sharpened 3D", the central slices.
+    var tabs = document.createElement("div"); tabs.className = "sharpen-tabs"; view.appendChild(tabs);
+    var frame = document.createElement("div"); frame.className = "c2d-frame c2d-orth"; view.appendChild(frame);
+    var img = document.createElement("img"); img.alt = "Central slices"; img.style.maxWidth = "720px"; frame.appendChild(img);
+    function showTabN(n){
+      sv.tab = n;
+      img.src = n === 0 ? d.original_png : d.sharpened_png;
+      tabs.querySelectorAll("button").forEach(function(b, i){ b.setAttribute("aria-pressed", i === n ? "true" : "false"); });
+    }
+    ["Original 3D", "Sharpened 3D"].forEach(function(label, i){
+      var b = document.createElement("button"); b.className = "small ra-toggle"; b.textContent = label; b.addEventListener("click", function(){ showTabN(i); }); tabs.appendChild(b);
+    });
+    showTabN(1);
+    var caption = document.createElement("div"); caption.className = "c2d-caption";
+    var left = document.createElement("span"), right = document.createElement("span"); caption.appendChild(left); caption.appendChild(right); view.appendChild(caption);
+    var st = d.settings || {};
+    left.textContent = d.volume_name + " — " + d.x_size + " px, " + Number(d.pixel_size).toFixed(2) + " Å";
+    right.textContent = "flatten from " + Number(st.flatten_from_res_a).toFixed(1) + " Å, cut-off " + Number(st.cutoff_res_a).toFixed(2) + " Å, B " + Number(st.pre_cutoff_bfactor).toFixed(0) + " / " + Number(st.post_cutoff_bfactor).toFixed(0) + " Å²" +
+      (st.invert_handedness ? ", hand inverted" : "") + (st.correct_gridding ? ", gridding corrected" : "");
+    sharpenShowInfo(false);
+    setTimeout(function(){ if (plot.svg._redraw) plot.svg._redraw(); }, 0);
+  }
+
   function updateStartButton(){
     var stage = STAGES[state.currentStage];
     var reason = null;
     if (!state.connected) reason = "Connect to a pipeline API first.";
     else if (!state.projectId) reason = "Open a project first.";
+    else if (stage.action === "sharpen"){
+      // Sharpen3DPanel::OnUpdateUI(): a volume picked, and a mask when one is asked for.
+      var volPick = els.paramFields.querySelector('[data-key="volume_asset_id"]');
+      var useMaskS = els.paramFields.querySelector('[data-key="use_mask"]'), maskPickS = els.paramFields.querySelector('[data-key="mask_volume_id"]');
+      if (!volPick || volPick.disabled || !volPick.value) reason = stage.emptyReason;
+      else if (useMaskS && useMaskS.checked && maskPickS && !maskPickS.value) reason = "Pick a mask volume, or untick Supply a Mask.";
+      else if (typeof sv !== "undefined" && sv.running) reason = "Sharpening…";
+    }
     else if (!state.runProfiles || !state.runProfiles.length) reason = "No run profiles are defined \u2014 an administrator adds them on the home page.";
     else {
       var count = selectedGroupCount();
@@ -7054,6 +7312,7 @@ From branch : <span id="versionBranch">—</span></p>
   els.submitBtn.addEventListener("click", function(){
     if (!state.connected){ alert("Connect to a pipeline API first (Settings tab)."); return; }
     if (!state.projectId){ alert("Open a project first."); return; }
+    if (STAGES[state.currentStage].action === "sharpen"){ runSharpen(); return; }
     var params = collectParams();
     params.run_profile = state.runProfile;
 
@@ -7172,6 +7431,7 @@ From branch : <span id="versionBranch">—</span></p>
   function renderStageInventory(){
     els.stageInventoryBody.innerHTML = "";
     STAGE_ORDER.forEach(function(key){
+      if (STAGES[key].noResults) return;  // not a job stage
       var jobsForStage = state.jobs.filter(function(j){ return j.stage === key; });
       var completed = jobsForStage.filter(function(j){ return j.status === "completed"; }).length;
       var failed = jobsForStage.filter(function(j){ return j.status === "failed"; }).length;

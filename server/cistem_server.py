@@ -51,6 +51,7 @@ import classification
 import db
 import refine3d
 import autorefine
+import sharpen
 import refinements
 import job_runner
 import refinement_packages
@@ -2326,6 +2327,94 @@ def auto_refine3d_defaults(project_id):
             suggested = fitting[-1]["volume_asset_id"] if fitting else None
         out["suggested_reference_id"] = suggested
         return jsonify(out)
+    finally:
+        conn.close()
+
+
+# ---- Sharpen 3D (Sharpen3DPanel) -- not a job: one synchronous run of sharpen_map ----
+
+@app.route("/api/projects/<project_id>/sharpen/defaults", methods=["GET"])
+@auth.project_access_required
+def sharpen_defaults(project_id):
+    """Sharpen3DPanel::OnVolumeComboBox() for a volume (`?volume_asset_id=`):
+    the mask radii of the reconstruction that made it, whether its
+    refinement's statistics are available for FOM weighting, the estimated
+    resolution (the cut-off default), and the panel's defaults."""
+    volume_id = request.args.get("volume_asset_id", type=int)
+    if volume_id is None:
+        return jsonify({"error": "volume_asset_id is required"}), 400
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            ctx, _vol = sharpen.volume_context(conn, volume_id)
+        except LookupError as exc:
+            return jsonify({"error": str(exc)}), 404
+        ctx["volumes"] = [{"volume_asset_id": r["VOLUME_ASSET_ID"], "name": r["NAME"], "x_size": r["X_SIZE"], "pixel_size": r["PIXEL_SIZE"]}
+                          for r in conn.execute("SELECT * FROM VOLUME_ASSETS ORDER BY VOLUME_ASSET_ID").fetchall()]
+        ctx["available"] = shutil.which("sharpen_map") is not None
+        return jsonify(ctx)
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/sharpen", methods=["POST"])
+@auth.project_access_required
+def sharpen_run(project_id):
+    """Body `{volume_asset_id, params}` -> the sharpened map's Guinier
+    curves and central slices, plus a `result_id` for Save / Import.
+    Runs `sharpen_map` directly (`503` if it isn't on the server's PATH);
+    writes nothing to the project until the result is imported."""
+    body = request.get_json(force=True, silent=True) or {}
+    volume_id = body.get("volume_asset_id")
+    if volume_id in (None, ""):
+        return jsonify({"error": "volume_asset_id is required"}), 400
+    executable = shutil.which("sharpen_map")
+    if not executable:
+        return jsonify({"error": "sharpen_map is not on the server's PATH, so there is nothing to sharpen with"}), 503
+    conn = db.get_conn(project_id)
+    try:
+        started = time.time()
+        try:
+            out = sharpen.run(conn, project_id, int(volume_id), body.get("params") or {}, executable)
+        except LookupError as exc:
+            return jsonify({"error": str(exc)}), 404
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except TimeoutError as exc:
+            return jsonify({"error": str(exc)}), 504
+        except RuntimeError as exc:
+            return jsonify({"error": str(exc)}), 502
+        out["elapsed_s"] = round(time.time() - started, 2)
+        return jsonify(out)
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/sharpen/<result_id>/volume.mrc", methods=["GET"])
+@auth.project_access_required
+def sharpen_download(project_id, result_id):
+    """Save Result: the sharpened map as an MRC file."""
+    r = sharpen.result(project_id, result_id)
+    if r is None:
+        return jsonify({"error": "no such sharpening result (results are kept until the server restarts)"}), 404
+    directory, name = os.path.split(r["path"])
+    return send_from_directory(directory, name, as_attachment=True,
+                               download_name="{}_sharpened.mrc".format("".join(c if c.isalnum() or c in "-_" else "_" for c in r["volume_name"])),
+                               mimetype="application/octet-stream")
+
+
+@app.route("/api/projects/<project_id>/sharpen/<result_id>/import", methods=["POST"])
+@auth.project_access_required
+def sharpen_import(project_id, result_id):
+    """Import: the sharpened map becomes a volume asset (`{name}` optional)."""
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            out = sharpen.import_result(conn, project_id, result_id, body.get("name"))
+        except LookupError as exc:
+            return jsonify({"error": str(exc)}), 404
+        return jsonify(out), 201
     finally:
         conn.close()
 

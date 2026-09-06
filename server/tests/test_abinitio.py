@@ -338,3 +338,51 @@ class AutoRefineTests(unittest.TestCase):
         cls2 = [{"logp": 0.0, "occupancy": 10.0}]
         ab.update_occupancies([cls1, cls2])
         self.assertAlmostEqual(cls1[0]["occupancy"], 90.0)   # the old averages weigh in
+
+
+class SharpenTests(unittest.TestCase):
+    """The numpy pieces around sharpen_map (Sharpen3DPanel's SharpenMapThread)."""
+
+    def test_correct_sinc_leaves_the_centre_and_lifts_the_edge(self):
+        import sharpen
+        n = 32
+        vol = np.ones((n, n, n), dtype=np.float32) * 2.0   # flat map: background level 2, so nothing changes anywhere
+        out = sharpen.correct_sinc(vol, 12.0)
+        self.assertTrue(np.allclose(out, 2.0, atol=1e-4))
+        vol = np.zeros((n, n, n), dtype=np.float32)
+        vol[16, 16, 16] = 1.0    # at the centre the weight is 1
+        vol[16, 16, 24] = 1.0    # 8 px out the sinc weight is below 1, so the value is lifted
+        out = sharpen.correct_sinc(vol, 12.0)
+        self.assertAlmostEqual(float(out[16, 16, 16]), 1.0, places=4)
+        self.assertGreater(float(out[16, 16, 24]), 1.0)
+
+    def test_cosine_ring_mask(self):
+        import sharpen
+        n = 32
+        vol = np.ones((n, n, n), dtype=np.float32)
+        out = sharpen.cosine_ring_mask(vol, 0.0, 10.0, 2.0)
+        self.assertEqual(float(out[16, 16, 16]), 1.0)
+        self.assertEqual(float(out[16, 16, 30]), 0.0)       # 14 px out: beyond the edge
+        self.assertTrue(0.0 < float(out[16, 16, 26]) < 1.0)  # 10 px out: on the edge
+        out = sharpen.cosine_ring_mask(vol, 4.0, 12.0, 2.0)
+        self.assertEqual(float(out[16, 16, 16]), 0.0)       # inside the inner radius
+        self.assertEqual(float(out[16, 16, 24]), 1.0)       # 8 px out: in the ring
+
+    def test_guinier_curve(self):
+        import sharpen
+        n = 32
+        z, y, x = np.indices((n, n, n))
+        vol = np.exp(-((z - 16) ** 2 + (y - 16) ** 2 + (x - 16) ** 2) / 18.0).astype(np.float32)
+        xs, ys = sharpen.guinier_curve(vol, 1.5)
+        self.assertEqual(len(xs), len(ys))
+        self.assertEqual(len(xs), n // 2)                   # shells 1..16
+        self.assertAlmostEqual(xs[-1], 16 / (n * 1.5))      # Nyquist = 0.5 / pixel size
+        self.assertTrue(all(ys[i] >= ys[i + 1] for i in range(5)))  # a Gaussian's amplitude falls monotonically
+
+    def test_orthogonal_views_slices_only(self):
+        vol = np.random.RandomState(0).rand(20, 20, 20).astype(np.float32)
+        both = V.orthogonal_views(vol)
+        slices = V.orthogonal_views(vol, include_projections=False)
+        self.assertEqual(both.shape, (40, 60))
+        self.assertEqual(slices.shape, (20, 60))
+        self.assertTrue(np.allclose(slices, both[20:]))

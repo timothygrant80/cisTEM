@@ -254,6 +254,7 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     int           tasks_received;
     wxJSONValue   task_refs;                // array: index -> ref (or null)
     std::vector<int> progress_counts;       // per task, for task_progress.result_number
+    bool             forward_progress;      // package.forward_progress: relay intermediate results at all?
 
     // ---- worker side (as in guix_job_control) ----
     bool          have_assigned_master;
@@ -632,6 +633,7 @@ JobControllerApp::JobControllerApp( ) {
     ever_welcomed                       = false;
     link_thread                         = NULL;
     package_started                     = false;
+    forward_progress                    = true;
     package_complete                    = false;
     expected_task_count                 = 0;
     tasks_received                      = 0;
@@ -769,6 +771,10 @@ void JobControllerApp::SendTaskDone(int task, const JobResult* result) {
 }
 
 void JobControllerApp::SendTaskProgress(const JobResult& result) {
+    // The server said it has no use for intermediate results (package.forward_progress
+    // false): estimate_beamtilt sends one per search position, 290 880 per job.
+    if ( ! forward_progress )
+        return;
     int task = result.job_number;
     if ( task < 0 || task >= int(progress_counts.size( )) )
         return;
@@ -896,6 +902,7 @@ void JobControllerApp::HandlePackage(wxJSONValue message) {
     wxString executable = message["program"].HasMember("executable") ? message["program"]["executable"].AsString( )
                                                                        : message["program"]["name"].AsString( );
 
+    forward_progress = ! message.HasMember("forward_progress") || message["forward_progress"].AsBool( );
     current_job_package.Reset(profile, executable, expected_task_count);
     task_refs = wxJSONValue(wxJSONTYPE_ARRAY);
     task_reported.assign(expected_task_count, 0);

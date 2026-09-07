@@ -127,6 +127,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/classifications/:cid/averages.png` | The class averages tiled into one PNG |
 | `GET` | `/projects/:id/classifications/:cid/class/:k` | The members of class k (`?limit=`, active ones first); `.../class/:k/members.png` tiles them from the particle stack |
 | `GET` | `/projects/:id/volumes`, `/volume-groups` | 3D volume assets (`?group_id=`) and their groups; the usual group routes (`POST|PATCH|DELETE /volume-groups[/:gid]`, `/:gid/invert`, `/:gid/remove-volumes`, `POST /volumes/delete`, `/volumes/add-to-group`, keyed on `volume_ids`) |
+| `PATCH` | `/projects/:id/{movies,images,volumes}/:aid` | Body `{name}` renames an asset's display name (cisTEM's `RenameAsset()`; the file keeps its name) → the updated row |
 | `POST` | `/projects/:id/volumes/check-import` | The volume counterpart of `/images/check-import`, plus `pixel_size_hint` (the first new file's header) and `box_sizes` |
 | `POST` | `/projects/:id/volumes/import` | Body `{input_glob, pixel_size_a}` → every matching MRC volume not yet an asset becomes one, named after the file (`{volume_count, skipped_count, failed, volumes: [{volume_asset_id, name, x_size, y_size, z_size, cubic}]}`); files that are not 3D MRC volumes come back in `failed` |
 | `GET` | `/projects/:id/volumes/:vid/preview.png` | Orthogonal projections (top) and central slices (bottom) of the volume |

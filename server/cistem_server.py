@@ -1364,6 +1364,26 @@ def _remove_from_group(project_id, kind, group_id):
     return jsonify({"removed": removed})
 
 
+def _rename_asset(project_id, kind, asset_id):
+    """MyAssetPanelParent::RenameAsset(): the display name only -- the file
+    keeps its name, and nothing else refers to an asset by name."""
+    body = request.get_json(force=True, silent=True) or {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+    conn = db.get_conn(project_id)
+    try:
+        row = conn.execute("SELECT * FROM {t} WHERE {id}=?".format(t=kind.asset_table, id=kind.id_column), (asset_id,)).fetchone()
+        if row is None:
+            return jsonify({"error": "no such {}".format(kind.noun)}), 404
+        with conn:
+            conn.execute("UPDATE {t} SET NAME=? WHERE {id}=?".format(t=kind.asset_table, id=kind.id_column), (name, asset_id))
+        row = conn.execute("SELECT * FROM {t} WHERE {id}=?".format(t=kind.asset_table, id=kind.id_column), (asset_id,)).fetchone()
+        return jsonify(dict(row))
+    finally:
+        conn.close()
+
+
 def _add_to_group(project_id, kind):
     body = request.get_json(force=True, silent=True) or {}
     asset_ids = body.get(kind.ids_key) or []
@@ -1686,6 +1706,12 @@ def invert_movie_group(project_id, group_id):
     return _invert_group(project_id, MOVIE_KIND, group_id)
 
 
+@app.route("/api/projects/<project_id>/movies/<int:asset_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_movies(project_id, asset_id):
+    return _rename_asset(project_id, MOVIE_KIND, asset_id)
+
+
 @app.route("/api/projects/<project_id>/movies/delete", methods=["POST"])
 @auth.project_access_required
 def delete_movies(project_id):
@@ -1956,6 +1982,12 @@ def delete_image_group(project_id, group_id):
 @auth.project_access_required
 def invert_image_group(project_id, group_id):
     return _invert_group(project_id, IMAGE_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/images/<int:asset_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_images(project_id, asset_id):
+    return _rename_asset(project_id, IMAGE_KIND, asset_id)
 
 
 @app.route("/api/projects/<project_id>/images/delete", methods=["POST"])
@@ -2317,6 +2349,12 @@ def delete_volume_group(project_id, group_id):
 @auth.project_access_required
 def invert_volume_group(project_id, group_id):
     return _invert_group(project_id, VOLUME_KIND, group_id)
+
+
+@app.route("/api/projects/<project_id>/volumes/<int:asset_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_volumes(project_id, asset_id):
+    return _rename_asset(project_id, VOLUME_KIND, asset_id)
 
 
 @app.route("/api/projects/<project_id>/volumes/delete", methods=["POST"])

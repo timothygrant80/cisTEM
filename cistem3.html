@@ -936,7 +936,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small" id="movieImportOpenBtn">Import</button>
                 <button class="small" id="movieRemoveBtn" disabled title="Select one or more movies first.">Remove</button>
                 <button class="small" id="movieRemoveAllBtn" disabled title="No movies in this group yet.">Remove All</button>
-                <button class="small" disabled title="Not implemented yet.">Rename</button>
+                <button class="small" id="movieRenameBtn" disabled title="Select exactly one movie first.">Rename</button>
                 <button class="small" id="movieAddToGroupBtn" disabled title="Select one or more movies first.">Add To Group</button>
                 <button class="small" id="movieDisplayBtn" disabled title="Select a movie first.">Display</button>
               </div>
@@ -1003,7 +1003,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small" id="imageImportOpenBtn">Import</button>
                 <button class="small" id="imageRemoveBtn" disabled title="Select one or more images first.">Remove</button>
                 <button class="small" id="imageRemoveAllBtn" disabled title="No images in this group yet.">Remove All</button>
-                <button class="small" disabled title="Not implemented yet.">Rename</button>
+                <button class="small" id="imageRenameBtn" disabled title="Select exactly one image first.">Rename</button>
                 <button class="small" id="imageAddToGroupBtn" disabled title="Select one or more images first.">Add To Group</button>
                 <button class="small" id="imageDisplayBtn" disabled title="Select an image first.">Display</button>
               </div>
@@ -1170,6 +1170,7 @@ From branch : <span id="versionBranch">—</span></p>
               <div class="asset-toolbar">
                 <button class="small" id="volImportOpenBtn" title="Import MRC volumes from files on the server (a starting reference, a mask).">Import</button>
                 <button class="small" id="volRemoveBtn" disabled title="Select one or more volumes first.">Remove</button>
+                <button class="small" id="volRenameBtn" disabled title="Select exactly one volume first.">Rename</button>
                 <button class="small" id="volAddToGroupBtn" disabled title="Select one or more volumes first.">Add To Group</button>
                 <button class="small" id="volDisplayBtn" disabled title="Select a volume first.">Display</button>
               </div>
@@ -2535,7 +2536,7 @@ From branch : <span id="versionBranch">—</span></p>
    "stageTabs","actionFormLabel","paramFields","expertToggle","expertFields","submitBtn",
    "importFields","importBtn","importNote","importValidationNote","movieListBody","movieGroupList","movieImportOpenBtn",
    "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn","movieGroupInvertBtn",
-   "movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
+   "movieRemoveBtn","movieRemoveAllBtn","movieRenameBtn","imageRenameBtn","volRenameBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
    "browseTitle","browseNote",
@@ -5638,6 +5639,8 @@ From branch : <span id="versionBranch">—</span></p>
     els.movieRemoveBtn.title = count === 0 ? "Select one or more movies first." : removeVerb + " " + count + " selected movie" + (count === 1 ? "" : "s") + removeAllSuffix;
     els.movieAddToGroupBtn.disabled = count === 0;
     els.movieAddToGroupBtn.title = count === 0 ? "Select one or more movies first." : "Add " + count + " selected movie" + (count === 1 ? "" : "s") + " to a group.";
+    els.movieRenameBtn.disabled = count !== 1;
+    els.movieRenameBtn.title = count === 1 ? "Rename the selected movie." : "Select exactly one movie first.";
     var total = (state.movies || []).length;
     els.movieSelectAllCheckbox.disabled = total === 0;
     els.movieSelectAllCheckbox.checked = total > 0 && count === total;
@@ -6333,6 +6336,8 @@ From branch : <span id="versionBranch">—</span></p>
     els.imageRemoveBtn.title = count === 0 ? "Select one or more images first." : removeVerb + " " + count + " selected image" + (count === 1 ? "" : "s") + removeAllSuffix;
     els.imageAddToGroupBtn.disabled = count === 0;
     els.imageAddToGroupBtn.title = count === 0 ? "Select one or more images first." : "Add " + count + " selected image" + (count === 1 ? "" : "s") + " to a group.";
+    els.imageRenameBtn.disabled = count !== 1;
+    els.imageRenameBtn.title = count === 1 ? "Rename the selected image." : "Select exactly one image first.";
     var total = (state.images || []).length;
     els.imageSelectAllCheckbox.disabled = total === 0;
     els.imageSelectAllCheckbox.checked = total > 0 && count === total;
@@ -6845,7 +6850,36 @@ From branch : <span id="versionBranch">—</span></p>
     var any = state.selectedVolumeIds.size > 0;
     els.volRemoveBtn.disabled = els.volAddToGroupBtn.disabled = !any;
     els.volDisplayBtn.disabled = state.selectedVolumeId == null;
+    els.volRenameBtn.disabled = state.selectedVolumeIds.size !== 1;
+    els.volRenameBtn.title = state.selectedVolumeIds.size === 1 ? "Rename the selected volume." : "Select exactly one volume first.";
   }
+  // MyAssetPanelParent::RenameAsset() for movies, images and volumes: the
+  // display name, prompted for, saved with PATCH /<kind>/:id.
+  function renameAsset(route, id, currentName, noun, reload){
+    var name = prompt("New name for this " + noun + ":", currentName || "");
+    if (name === null) return;
+    name = name.trim();
+    if (!name || name === currentName) return;
+    apiFetch(projectApiUrl("/" + route + "/" + id), {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: name})})
+      .then(function(r){ return r.json().then(function(d){ if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); }); })
+      .then(reload)
+      .catch(function(err){ alert("Could not rename the " + noun + ": " + err.message); });
+  }
+  els.volRenameBtn.addEventListener("click", function(){
+    var id = Array.from(state.selectedVolumeIds)[0];
+    var v = (state.volumes || []).find(function(x){ return x.VOLUME_ASSET_ID === id; });
+    renameAsset("volumes", id, v ? v.NAME : "", "volume", function(){ loadVolumes(); });
+  });
+  els.movieRenameBtn.addEventListener("click", function(){
+    var id = Array.from(state.selectedMovieIds)[0];
+    var m = (state.movies || []).find(function(x){ return x.MOVIE_ASSET_ID === id; });
+    renameAsset("movies", id, m ? m.NAME : "", "movie", function(){ loadMovies(); });
+  });
+  els.imageRenameBtn.addEventListener("click", function(){
+    var id = Array.from(state.selectedImageIds)[0];
+    var im = (state.images || []).find(function(x){ return x.IMAGE_ASSET_ID === id; });
+    renameAsset("images", id, im ? im.NAME : "", "image", function(){ loadImages(); });
+  });
   els.volSelectAllCheckbox.addEventListener("change", function(){
     state.selectedVolumeIds = new Set(els.volSelectAllCheckbox.checked ? state.volumes.map(function(v){ return v.VOLUME_ASSET_ID; }) : []);
     renderVolumeList(state.volumes);

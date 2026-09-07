@@ -595,6 +595,28 @@ def _record_round(conn, project_id, parent_id, state):
     _log(project_id, parent_id, "Refinement #{} written ({}); volume asset{} {}".format(rid, ref["name"], "" if classes == 1 else "s", ", ".join("#{}".format(v) for v in volume_ids)))
 
 
+ACTIONS = {"finish": "Finish After This Round"}
+
+
+def available_actions(state):
+    """Finish early: the run stops as completed once the round in progress
+    has written its refinement, instead of going on to the next."""
+    if not state or state.get("phase") in (None, "finished") or state.get("finish_requested") or state.get("round", 0) + 1 >= state.get("rounds", 1):
+        return []
+    return [{"name": "finish", "label": ACTIONS["finish"]}]
+
+
+def perform_action(conn, project_id, parent_id, name):
+    if name != "finish":
+        raise ValueError("unknown action {!r}".format(name))
+    state = _load_state(conn, parent_id)
+    if not available_actions(state):
+        raise ValueError("Finish is not available right now")
+    state["finish_requested"] = True
+    _save(conn, parent_id, state)
+    _log(project_id, parent_id, "Finish requested: the run will stop once round {} has written its refinement".format(state["round"] + 1))
+
+
 def _cycle(conn, project_id, parent_id, state):
     """CycleRefinement()."""
     if state["initial"]:
@@ -602,6 +624,9 @@ def _cycle(conn, project_id, parent_id, state):
         _mask_then_refine(conn, project_id, parent_id, state)
         return
     state["round"] += 1
+    if state.get("finish_requested") and state["round"] < state["rounds"]:
+        state["rounds"] = state["round"]
+        _log(project_id, parent_id, "Finished at the user's request after {} round{}.".format(state["round"], "" if state["round"] == 1 else "s"))
     if state["round"] < state["rounds"]:
         state["input_refinement_id"] = state["output_refinement_id"]
         _mask_then_refine(conn, project_id, parent_id, state)

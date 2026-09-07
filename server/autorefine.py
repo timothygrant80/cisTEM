@@ -814,8 +814,38 @@ def plan_next_round(state, output_stats, input_rows, output_rows):
     return False, stop
 
 
+# A Finish that cisTEM's panel only offers once the manager has stopped by
+# itself: here it can be asked for while running, and takes effect once the
+# round in progress has written its refinement.
+ACTIONS = {"finish": "Finish After This Round"}
+
+
+def available_actions(state):
+    if not state or state.get("phase") in (None, "finished") or state.get("finish_requested"):
+        return []
+    return [{"name": "finish", "label": ACTIONS["finish"]}]
+
+
+def perform_action(conn, project_id, parent_id, name):
+    if name != "finish":
+        raise ValueError("unknown action {!r}".format(name))
+    state = _load_state(conn, parent_id)
+    if not available_actions(state):
+        raise ValueError("Finish is not available right now")
+    state["finish_requested"] = True
+    _save(conn, parent_id, state)
+    _log(project_id, parent_id, "Finish requested: the run will stop once round {} has written its refinement".format(state["round"] + 1))
+
+
 def _cycle(conn, project_id, parent_id, state):
     """CycleRefinement()."""
+    if state.get("finish_requested"):
+        state["round"] += 1
+        state["phase"] = "finished"
+        state["child_job_id"] = None
+        _log(project_id, parent_id, "Finished at the user's request after {} round{}.".format(state["round"], "" if state["round"] == 1 else "s"))
+        _finish(conn, project_id, parent_id, state, "completed", None)
+        return
     output_stats = _load_stats(state, "output")
     input_rows = _load_rows(state, "input")
     output_rows = _load_rows(state, "output")

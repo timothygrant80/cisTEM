@@ -447,3 +447,29 @@ class Generate3DAndRefineCTFTests(unittest.TestCase):
         out = refinectf.cosine_ring_mask_2d(img, 5.0, 32.0, 2.0)
         self.assertNotEqual(float(out[16, 16]), 100.0)   # the centre is replaced by the inner edge's average
         self.assertEqual(float(out[16, 26]), 3.0)         # 10 px out is untouched
+
+
+class JobActionTests(unittest.TestCase):
+    """The buttons a running multi-run job offers besides Terminate."""
+
+    def test_abinitio_take_actions(self):
+        base = {"phase": "refine", "round": 0, "start": 0, "rounds": 3, "number_of_classes": 1, "scratch": "/scratch", "display_files": [None]}
+        self.assertEqual(ab.available_actions(base), [])                          # nothing finished yet
+        self.assertEqual(ab.available_actions(None), [])
+        after_round = dict(base, round=1, display_files=["/scratch/startup3d_0_0.mrc"])
+        self.assertEqual([a["name"] for a in ab.available_actions(after_round)], ["take_current"])
+        after_start = dict(after_round, start=1, round=0)
+        self.assertEqual([a["name"] for a in ab.available_actions(after_start)], ["take_current", "take_last_start"])
+        self.assertEqual(ab.available_actions(dict(after_start, pending_action="take_current")), [])
+        self.assertEqual(ab.available_actions(dict(after_start, phase="finished")), [])
+        # TakeLastStart(): startup3d_<rounds * starts_run - 1>_<class>.mrc
+        self.assertEqual(ab.last_start_files(dict(after_start, number_of_classes=2)), ["/scratch/startup3d_2_0.mrc", "/scratch/startup3d_2_1.mrc"])
+
+    def test_finish_actions(self):
+        import autorefine, refine3d
+        self.assertEqual([a["name"] for a in autorefine.available_actions({"phase": "refine", "round": 2})], ["finish"])
+        self.assertEqual(autorefine.available_actions({"phase": "refine", "round": 2, "finish_requested": True}), [])
+        self.assertEqual(autorefine.available_actions({"phase": "finished"}), [])
+        self.assertEqual([a["name"] for a in refine3d.available_actions({"phase": "recon", "round": 0, "rounds": 3})], ["finish"])
+        self.assertEqual(refine3d.available_actions({"phase": "recon", "round": 2, "rounds": 3}), [])   # already the last round
+        self.assertEqual(refine3d.available_actions({"phase": "recon", "round": 0, "rounds": 3, "finish_requested": True}), [])

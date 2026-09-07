@@ -380,7 +380,21 @@ def _row_to_job(row, conn=None):
         "error": row["ERROR"],
         "metrics": json.loads(row["METRICS_JSON"]) if row["METRICS_JSON"] else {},
         "cancel_requested": bool(row["CANCEL_REQUESTED"]),
+        "actions": _job_actions(row),
     }, **(_task_progress_for(conn, row) if conn is not None and row["STATUS"] in ("queued", "running") else {}))
+
+
+def _job_actions(row):
+    """The buttons a running multi-run job offers besides Terminate (cisTEM's
+    Take Current / Take Last Start, and Finish): from the driver's
+    available_actions(state), [] for anything else."""
+    driver = DRIVERS.get(row["STAGE"])
+    if driver is None or row["STATUS"] not in ("queued", "running") or not row["STATE_JSON"] or not hasattr(driver, "available_actions"):
+        return []
+    try:
+        return driver.available_actions(json.loads(row["STATE_JSON"]))
+    except (ValueError, KeyError, TypeError):
+        return []
 
 
 def _task_progress_for(conn, row):
@@ -3668,6 +3682,31 @@ def task_result_preview(project_id, job_id, task_index, which):
     if which not in files:
         return jsonify({"error": "no such picture: {}".format(which)}), 404
     return _file_preview_response(files[which], "task-{}-{}-{}".format(which, job_id, task_index), which.replace("_", " "))
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/actions/<name>", methods=["POST"])
+@auth.project_access_required
+def job_action(project_id, job_id, name):
+    """One of the job's `actions` (see `Job`): ab-initio's Take Current /
+    Take Last Start (stop and keep a reconstruction as the run's result),
+    Auto Refine's and Refine 3D's Finish After This Round."""
+    row = _fetch_job_row(project_id, job_id)
+    if row is None:
+        return jsonify({"error": "not found"}), 404
+    driver = DRIVERS.get(row["STAGE"])
+    if driver is None or not hasattr(driver, "perform_action"):
+        return jsonify({"error": "this job has no actions"}), 400
+    if row["STATUS"] not in ("queued", "running"):
+        return jsonify({"error": "the job is {}".format(row["STATUS"])}), 409
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            driver.perform_action(conn, project_id, job_id, name)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+    finally:
+        conn.close()
+    return jsonify(_row_to_job(_fetch_job_row(project_id, job_id)))
 
 
 @app.route("/api/projects/<project_id>/jobs/<job_id>/cancel", methods=["POST"])

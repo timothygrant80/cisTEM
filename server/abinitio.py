@@ -948,6 +948,10 @@ def _child_finished(project_id, child_id, parent_id, status, error):
             parent = _parent_row(conn, parent_id)
             if not state or parent is None or state.get("child_job_id") != child_id or parent["STATUS"] not in ("queued", "running"):
                 return
+            if state.get("pending_action"):
+                # Take Current / Take Last Start stopped this step on purpose.
+                _perform_pending_action(conn, project_id, parent_id, state)
+                return
             if parent["CANCEL_REQUESTED"] or status == "cancelled":
                 _finish(conn, project_id, parent_id, state, "cancelled", "cancelled during {}".format(state["phase"]))
                 return
@@ -1071,15 +1075,81 @@ def _cycle(conn, project_id, parent_id, state):
     _take_current(conn, project_id, parent_id, state)
 
 
+# The buttons AbInitio3DPanel shows beside Terminate while it runs
+# (TakeCurrentClicked / TakeLastStartClicked): stop the job and keep a
+# reconstruction as the run's result instead of nothing.
+ACTIONS = {"take_current": "Take Current Result", "take_last_start": "Take Last Start Result"}
+
+
+def available_actions(state):
+    """OnUpdateUI()'s rule: Take Current once a round has finished, Take
+    Last Start once a whole start has."""
+    if not state or state.get("phase") in (None, "finished") or state.get("pending_action"):
+        return []
+    out = []
+    if (state.get("round", 0) > 0 or state.get("start", 0) > 0) and any(state.get("display_files") or []):
+        out.append({"name": "take_current", "label": ACTIONS["take_current"]})
+    if state.get("start", 0) > 0:
+        out.append({"name": "take_last_start", "label": ACTIONS["take_last_start"]})
+    return out
+
+
+def last_start_files(state):
+    """TakeLastStart(): the reconstructions at the end of the previous start,
+    startup3d_<rounds * starts_run - 1>_<class>.mrc in the scratch directory."""
+    n = state["rounds"] * state["start"] - 1
+    return [str(Path(state["scratch"]) / "startup3d_{}_{}.mrc".format(n, k)) for k in range(state["number_of_classes"])]
+
+
+def perform_action(conn, project_id, parent_id, name):
+    """Record the wish and stop the running step; _child_finished() carries it
+    out once the controller has wound down (or now, if nothing is running)."""
+    if name not in ACTIONS:
+        raise ValueError("unknown action {!r}".format(name))
+    state = _load_state(conn, parent_id)
+    if not any(a["name"] == name for a in available_actions(state)):
+        raise ValueError("{} is not available right now".format(ACTIONS[name]))
+    state["pending_action"] = name
+    _save(conn, parent_id, state)
+    _log(project_id, parent_id, "Terminating job, and importing the {}.".format("current result" if name == "take_current" else "result at the end of the previous start"))
+    child_id = state.get("child_job_id")
+    if child_id and _runtime.cancel(child_id):
+        return
+    _perform_pending_action(conn, project_id, parent_id, state)
+
+
+def _perform_pending_action(conn, project_id, parent_id, state):
+    name = state.pop("pending_action", None)
+    if name == "take_last_start":
+        files = last_start_files(state)
+        missing = [f for f in files if not os.path.isfile(f)]
+        if missing:
+            _finish(conn, project_id, parent_id, state, "failed", "the previous start's reconstruction is gone: {}".format(missing[0]))
+            return
+        _take_files(conn, project_id, parent_id, state, files, "the reconstruction at the end of start {}".format(state["start"]))
+    else:
+        files = [f for f in (state.get("display_files") or []) if f and os.path.isfile(f)]
+        if len(files) != state["number_of_classes"]:
+            _finish(conn, project_id, parent_id, state, "failed", "no current reconstruction to keep")
+            return
+        _take_files(conn, project_id, parent_id, state, files, "the current reconstruction")
+
+
 def _take_current(conn, project_id, parent_id, state):
-    """TakeCurrent() + OnVolumeResampled(): the final reconstructions
-    resampled to the package's box, registered as volume assets, and the
-    run recorded in STARTUP_LIST."""
+    """TakeCurrent() at the natural end of the run."""
+    _take_files(conn, project_id, parent_id, state, list(state["display_files"]), None)
+
+
+def _take_files(conn, project_id, parent_id, state, files, what):
+    """TakeCurrent() + OnVolumeResampled(): reconstructions resampled to the
+    package's box, registered as volume assets, and the run recorded in
+    STARTUP_LIST. `what` names an early result in the log; None is the
+    natural end of the run."""
     s = state["settings"]
     startup_id = volumes.next_startup_id(conn)
     vol_dir = volumes.volume_dir(project_id)
     volume_ids = []
-    for k, ref in enumerate(state["display_files"]):
+    for k, ref in enumerate(files):
         vol, _ps = volumes.read_mrc_volume(ref)
         resampled = volumes.fourier_resize(vol, state["box_size"])
         out = str(vol_dir / "startup_volume_{}_{}.mrc".format(startup_id, k + 1))
@@ -1095,7 +1165,8 @@ def _take_current(conn, project_id, parent_id, state):
                 p.unlink()
             except OSError:
                 pass
-    _log(project_id, parent_id, "All refinement cycles are finished! Volume{} {} written to Assets/Volumes (Startup #{})".format(
+    _log(project_id, parent_id, "{} Volume{} {} written to Assets/Volumes (Startup #{})".format(
+        "All refinement cycles are finished!" if what is None else "Kept {} at the user's request.".format(what),
         "" if len(volume_ids) == 1 else "s", ", ".join("#{}".format(v) for v in volume_ids), startup_id))
     _finish(conn, project_id, parent_id, state, "completed", None)
 

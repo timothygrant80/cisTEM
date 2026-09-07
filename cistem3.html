@@ -1318,6 +1318,7 @@ From branch : <span id="versionBranch">—</span></p>
             <div class="live-meta" id="liveMeta"></div>
             <div class="live-actions">
               <button class="small" id="liveLogBtn">Log</button>
+              <span id="liveJobActions"></span>
               <button class="small danger" id="liveTerminateBtn" hidden title="Stop this job. Results written so far stay in the project.">Terminate Job</button>
               <button class="small" id="liveCloseBtn" title="Stop following this job">Close</button>
             </div>
@@ -2563,7 +2564,7 @@ From branch : <span id="versionBranch">—</span></p>
    "dImageName","dImageFilename","dImageId","dImageParentId","dImageAlignmentId",
    "dImageXSize","dImageYSize","dImagePixelSize","dImageVoltage","dImageCs",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
-   "livePanel","liveLabel","liveMeta","liveLogBtn","liveTerminateBtn","liveCloseBtn","liveEmpty","liveBody",
+   "livePanel","liveLabel","liveMeta","liveLogBtn","liveJobActions","liveTerminateBtn","liveCloseBtn","liveEmpty","liveBody",
    "stageInventoryBody","runProfile","submitNote",
    "rpList","rpAddBtn","rpRenameBtn","rpRemoveBtn","rpDuplicateBtn","rpImportBtn","rpExportBtn","rpImportFile",
    "rpCommandsPanel","rpCommandsLabel","rpTotal","rpManager","rpManagerError",
@@ -8100,6 +8101,28 @@ From branch : <span id="versionBranch">—</span></p>
     els.liveTerminateBtn.hidden = !(job && !TERMINAL_STATUSES[job.status]);
     els.liveTerminateBtn.disabled = !!(job && job.cancel_requested);
     els.liveTerminateBtn.textContent = job && job.cancel_requested ? "Terminating…" : "Terminate Job";
+    // cisTEM's Take Current / Take Last Start (ab-initio) and Finish: the
+    // driver says which apply right now (Job.actions); each is one POST.
+    var actions = (job && !TERMINAL_STATUSES[job.status] && job.actions) || [];
+    var key = actions.map(function(a){ return a.name; }).join(",") + "|" + (job ? job.id : "");
+    if (els.liveJobActions.dataset.key !== key){
+      els.liveJobActions.dataset.key = key;
+      els.liveJobActions.innerHTML = "";
+      actions.forEach(function(a){
+        var b = document.createElement("button"); b.className = "small"; b.textContent = a.label;
+        b.title = a.name === "finish" ? "Stop once the round in progress has written its refinement, and finish as completed."
+          : a.name === "take_current" ? "Stop now and keep the current reconstruction as this run's result."
+          : "Stop now and keep the reconstruction from the end of the previous start as this run's result.";
+        b.addEventListener("click", function(){
+          b.disabled = true;
+          apiFetch(projectApiUrl("/jobs/" + encodeURIComponent(job.id) + "/actions/" + a.name), {method: "POST"})
+            .then(function(r){ return r.json().then(function(d){ if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); }); })
+            .then(function(){ fetchJobs(); })
+            .catch(function(err){ alert("Could not " + a.label.toLowerCase() + ": " + err.message); b.disabled = false; });
+        });
+        els.liveJobActions.appendChild(b);
+      });
+    }
     if (!data){ els.liveMeta.textContent = job ? job.status : ""; return; }
     var parts = [];
     if (data.task_count != null) parts.push((data.done_count || 0) + " of " + data.task_count + " finished");

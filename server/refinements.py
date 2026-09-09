@@ -99,10 +99,13 @@ def load_details(conn, refinement_id):
     return [dict(r) for r in conn.execute("SELECT * FROM {} ORDER BY CLASS_NUMBER".format(table)).fetchall()]
 
 
-def estimated_resolution(stats, pixel_size, use_part_fsc=False):
+def estimated_resolution(stats, pixel_size, use_part_fsc=True):
     """ResolutionStatistics::ReturnEstimatedResolution(): the resolution
-    where the (part) FSC first drops below 0.143, midway between shells,
-    never better than Nyquist."""
+    where the FSC first drops below 0.143, midway between shells, never
+    better than Nyquist. Reported from the **particle** FSC here (cisTEM's
+    GUI reports the plain FSC; the part FSC, corrected for the mask and
+    the particle count, is the one this app records and shows, at the
+    author's request)."""
     key = "part_fsc" if use_part_fsc else "fsc"
     est = 0.0
     for i in range(1, len(stats)):
@@ -291,6 +294,12 @@ def _refinement_json(conn, row, with_classes=False):
         vid = det.get("RECONSTRUCTED_VOLUME_ASSET_ID", -1)
         vol = conn.execute("SELECT NAME, FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (vid,)).fetchone() if vid is not None and vid >= 0 else None
         c["class_number"] = k
+        # The reported estimate follows the stored statistics, so refinements
+        # written before the estimate moved to the part FSC read the same way.
+        if vid is not None and vid >= 0:
+            stats_k = load_statistics(conn, row["REFINEMENT_ID"], k)
+            if stats_k:
+                c["estimated_resolution"] = estimated_resolution(stats_k, row["RESOLUTION_STATISTICS_PIXEL_SIZE"] or 1.0)
         c["volume_name"] = vol["NAME"] if vol else None
         c["volume_filename"] = vol["FILENAME"] if vol else None
         c["volume_file_exists"] = bool(vol and vol["FILENAME"] and os.path.isfile(vol["FILENAME"]))

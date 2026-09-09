@@ -142,9 +142,10 @@ class Refine3DTests(unittest.TestCase):
 
     def test_estimated_resolution_and_angular_histogram(self):
         import refinements
-        stats = [{"shell": i, "resolution": 100.0 / i, "fsc": 1.0 - i * 0.1, "part_fsc": 1.0 - i * 0.1} for i in range(1, 11)]
-        # FSC drops below 0.143 at shell 9 (0.1): midway between 100/8 and 100/9.
-        self.assertAlmostEqual(refinements.estimated_resolution(stats, 1.0), (100.0 / 8 + 100.0 / 9) / 2)
+        # The part FSC drops below 0.143 at shell 9 (0.1): midway between 100/8 and 100/9; the plain FSC one shell earlier.
+        stats = [{"shell": i, "resolution": 100.0 / i, "fsc": 1.0 - i * 0.11, "part_fsc": 1.0 - i * 0.1} for i in range(1, 11)]
+        self.assertAlmostEqual(refinements.estimated_resolution(stats, 1.0), (100.0 / 8 + 100.0 / 9) / 2)        # reported: part FSC
+        self.assertAlmostEqual(refinements.estimated_resolution(stats, 1.0, use_part_fsc=False), (100.0 / 7 + 100.0 / 8) / 2)
         self.assertEqual(refinements.estimated_resolution([{"shell": 1, "resolution": 50.0, "fsc": 1.0, "part_fsc": 1.0}], 1.5), 3.0)  # never better than Nyquist
         rows = [{"theta": 0.0, "phi": 0.0, "image_is_active": 1}, {"theta": 170.0, "phi": 10.0, "image_is_active": 1}, {"theta": 45.0, "phi": 90.0, "image_is_active": -1}]
         hist = refinements.angular_histogram(rows)

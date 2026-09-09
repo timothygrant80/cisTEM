@@ -433,14 +433,41 @@ def create_package(conn, project_id, params, log=None):
         c["subset"] = s
 
     # ---- the database: Database::AddRefinementPackageAsset() + AddRefinement() ----
-    now = db.now_epoch()
+    insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
+                   number_of_classes, contained, refinement_id)
     rng = random.Random()
+    class_rows = []
+    for k in range(1, number_of_classes + 1):
+        rows = []
+        for c in contained:
+            # Random Euler angles, uniform over the sphere for theta (the wizard's formula).
+            phi = rng.uniform(-1.0, 1.0) * 180.0
+            theta = math.degrees(math.acos(max(-1.0, min(1.0, 2.0 * abs(rng.uniform(-1.0, 1.0)) - 1.0))))
+            psi = rng.uniform(-1.0, 1.0) * 180.0
+            occupancy = 100.0 if number_of_classes == 1 else abs(rng.uniform(-1.0, 1.0) * (200.0 / number_of_classes))
+            rows.append((c["position_in_stack"], psi, theta, phi, 0.0, 0.0, c["defocus1"], c["defocus2"], c["defocus_angle"], c["phase_shift"],
+                         occupancy, 0.0, 1.0, 0.0, 1, c["pixel_size"], c["voltage"], c["cs"], c["amplitude_contrast"], 0.0, 0.0, 0.0, 0.0, c["subset"]))
+        class_rows.append(rows)
+    insert_initial_refinement(conn, refinement_id, package_id, "Random Parameters", class_rows, box_size, output_pixel_size, molecular_weight)
+    return dict(source, refinement_package_asset_id=package_id, name=name, particles=len(contained), stack_filename=stack_path,
+                box_size=box_size, output_pixel_size=output_pixel_size, refinement_id=refinement_id)
+
+
+def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
+                   number_of_classes, contained, refinement_id, white_protein=False):
+    """Database::AddRefinementPackageAsset(): the REFINEMENT_PACKAGE_ASSETS row
+    and the package's four tables. `contained` are dicts with position_id,
+    image_id, position_in_stack, x, y, pixel_size, defocus1/2, defocus_angle,
+    phase_shift, cs, voltage, amplitude_contrast, subset. Every class starts
+    at "generate from parameters" (reference -1) and `refinement_id` is the
+    package's first refinement, which the caller writes."""
     with conn:
         conn.execute(
             "INSERT INTO REFINEMENT_PACKAGE_ASSETS(REFINEMENT_PACKAGE_ASSET_ID, NAME, STACK_FILENAME, STACK_BOX_SIZE, OUTPUT_PIXEL_SIZE, "
             "SYMMETRY, MOLECULAR_WEIGHT, PARTICLE_SIZE, NUMBER_OF_CLASSES, NUMBER_OF_REFINEMENTS, LAST_REFINEMENT_ID, STACK_HAS_WHITE_PROTEIN) "
-            "VALUES (?,?,?,?,?,?,?,?,?,0,?,0)",
-            (package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension, number_of_classes, refinement_id))
+            "VALUES (?,?,?,?,?,?,?,?,?,0,?,?)",
+            (package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension, number_of_classes, refinement_id,
+             1 if white_protein else 0))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}(ORIGINAL_PARTICLE_POSITION_ASSET_ID INTEGER PRIMARY KEY, "
                      "PARENT_IMAGE_ASSET_ID INTEGER, POSITION_IN_STACK INTEGER, X_POSITION REAL, Y_POSITION REAL, PIXEL_SIZE REAL, DEFOCUS_1 REAL, "
                      "DEFOCUS_2 REAL, DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, SPHERICAL_ABERRATION REAL, MICROSCOPE_VOLTAGE REAL, AMPLITUDE_CONTRAST REAL, "
@@ -457,11 +484,23 @@ def create_package(conn, project_id, params, log=None):
                          [(k,) for k in range(1, number_of_classes + 1)])
         conn.execute("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_{} VALUES (1, ?)".format(package_id), (refinement_id,))
 
+
+def insert_initial_refinement(conn, refinement_id, package_id, name, class_rows, box_size, pixel_size, molecular_weight, angular=False):
+    """Database::AddRefinement() for a package's first refinement: the
+    REFINEMENT_LIST row, a REFINEMENT_DETAILS_<id> row per class with
+    ClassRefinementResults' constructor values (occupancy split evenly),
+    REFINEMENT_RESULT_<id>_<k> from `class_rows` (tuples in the table's
+    column order) and GenerateDefaultStatistics()' curve. The wizard writes
+    no angular distribution for random angles; an import does (`angular`)."""
+    number_of_classes = len(class_rows)
+    number_of_particles = len(class_rows[0]) if class_rows else 0
+    now = db.now_epoch()
+    with conn:
         conn.execute(
             "INSERT INTO REFINEMENT_LIST(REFINEMENT_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, RESOLUTION_STATISTICS_ARE_GENERATED, DATETIME_OF_RUN, "
             "STARTING_REFINEMENT_ID, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES, RESOLUTION_STATISTICS_BOX_SIZE, RESOLUTION_STATISTICS_PIXEL_SIZE, PERCENT_USED) "
-            "VALUES (?,?,'Random Parameters',1,?,-1,?,?,?,?,100.0)",
-            (refinement_id, package_id, now, len(contained), number_of_classes, box_size, output_pixel_size))
+            "VALUES (?,?,?,1,?,-1,?,?,?,?,100.0)",
+            (refinement_id, package_id, name, now, number_of_particles, number_of_classes, box_size, pixel_size))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_DETAILS_{}(CLASS_NUMBER INTEGER PRIMARY KEY, REFERENCE_VOLUME_ASSET_ID INTEGER, LOW_RESOLUTION_LIMIT REAL, "
                      "HIGH_RESOLUTION_LIMIT REAL, MASK_RADIUS REAL, SIGNED_CC_RESOLUTION_LIMIT REAL, GLOBAL_RESOLUTION_LIMIT REAL, GLOBAL_MASK_RADIUS REAL, "
                      "NUMBER_RESULTS_TO_REFINE INTEGER, ANGULAR_SEARCH_STEP REAL, SEARCH_RANGE_X REAL, SEARCH_RANGE_Y REAL, CLASSIFICATION_RESOLUTION_LIMIT REAL, "
@@ -469,30 +508,21 @@ def create_package(conn, project_id, params, log=None):
                      "DEFOCUS_SEARCH_RANGE REAL, DEFOCUS_SEARCH_STEP REAL, AVERAGE_OCCUPANCY REAL, ESTIMATED_RESOLUTION REAL, RECONSTRUCTED_VOLUME_ASSET_ID INTEGER, "
                      "RECONSTRUCTION_ID INTEGER, SHOULD_AUTOMASK INTEGER, SHOULD_REFINE_INPUT_PARAMS INTEGER, SHOULD_USE_SUPPLIED_MASK INTEGER, MASK_ASSET_ID INTEGER, "
                      "MASK_EDGE_WIDTH REAL, OUTSIDE_MASK_WEIGHT REAL, SHOULD_LOWPASS_OUTSIDE_MASK INTEGER, MASK_FILTER_RESOLUTION REAL)".format(refinement_id))
-        stats = default_statistics(molecular_weight, output_pixel_size, box_size)
-        for k in range(1, number_of_classes + 1):
-            # ClassRefinementResults' constructor values, with the occupancy split evenly.
+        stats = default_statistics(molecular_weight, pixel_size, box_size)
+        for k, rows in enumerate(class_rows, 1):
             conn.execute("INSERT INTO REFINEMENT_DETAILS_{} VALUES (?, -1, 0,0,0,0,0,0, 0, 0,0,0,0, 0, 0,0,0,0, 0, 0,0, ?, 0.0, -1, -1, 0, 1, 0, -1, 10.0, 0.0, 0, 30.0)".format(refinement_id),
                          (k, 100.0 / number_of_classes))
             conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_RESULT_{}_{}(POSITION_IN_STACK INTEGER PRIMARY KEY, PSI REAL, THETA REAL, PHI REAL, XSHIFT REAL, YSHIFT REAL, "
                          "DEFOCUS1 REAL, DEFOCUS2 REAL, DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, OCCUPANCY REAL, LOGP REAL, SIGMA REAL, SCORE REAL, IMAGE_IS_ACTIVE INTEGER, "
                          "PIXEL_SIZE REAL, MICROSCOPE_VOLTAGE REAL, MICROSCOPE_CS REAL, AMPLITUDE_CONTRAST REAL, BEAM_TILT_X REAL, BEAM_TILT_Y REAL, IMAGE_SHIFT_X REAL, "
                          "IMAGE_SHIFT_Y REAL, ASSIGNED_SUBSET INTEGER)".format(refinement_id, k))
-            rows = []
-            for c in contained:
-                # Random Euler angles, uniform over the sphere for theta (the wizard's formula).
-                phi = rng.uniform(-1.0, 1.0) * 180.0
-                theta = math.degrees(math.acos(max(-1.0, min(1.0, 2.0 * abs(rng.uniform(-1.0, 1.0)) - 1.0))))
-                psi = rng.uniform(-1.0, 1.0) * 180.0
-                occupancy = 100.0 if number_of_classes == 1 else abs(rng.uniform(-1.0, 1.0) * (200.0 / number_of_classes))
-                rows.append((c["position_in_stack"], psi, theta, phi, 0.0, 0.0, c["defocus1"], c["defocus2"], c["defocus_angle"], c["phase_shift"],
-                             occupancy, 0.0, 1.0, 0.0, 1, c["pixel_size"], c["voltage"], c["cs"], c["amplitude_contrast"], 0.0, 0.0, 0.0, 0.0, c["subset"]))
             conn.executemany("INSERT INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(refinement_id, k, ",".join("?" * 24)), rows)
             conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_RESOLUTION_STATISTICS_{}_{}(SHELL INTEGER PRIMARY KEY, RESOLUTION REAL, FSC REAL, PART_FSC REAL, "
                          "PART_SSNR REAL, REC_SSNR REAL)".format(refinement_id, k))
             conn.executemany("INSERT INTO REFINEMENT_RESOLUTION_STATISTICS_{}_{} VALUES (?,?,?,?,?,?)".format(refinement_id, k), stats)
-    return dict(source, refinement_package_asset_id=package_id, name=name, particles=len(contained), stack_filename=stack_path,
-                box_size=box_size, output_pixel_size=output_pixel_size, refinement_id=refinement_id)
+    if angular:
+        import refinements
+        refinements.rebuild_angular_distributions(conn, refinement_id)
 
 
 def list_packages(conn):

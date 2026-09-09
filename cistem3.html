@@ -617,12 +617,26 @@ table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:
 .modal.browse-modal{z-index:23;}
 
 /* The preview is a picture, so it gets more room than the form modals. */
-.modal.preview-modal{width:min(900px,94vw);}
-.preview-stage{
-  display:flex;align-items:center;justify-content:center;min-height:220px;
-  background:var(--surface-sunken);border:1px solid var(--border);
-}
-.preview-stage img{display:block;max-width:100%;height:auto;}
+.modal.display-modal{width:min(1400px,96vw);height:94%;max-height:94%;}
+.modal.display-modal .modal-body{display:flex;flex-direction:column;min-height:0;}
+#displayPanelHost{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
+/* The Display panel (cisTEM's DisplayPanel): toolbar, a dark scrolling stage
+   holding the canvas, and a monospace status line with the cursor readout. */
+.display-panel{display:flex;flex-direction:column;gap:8px;min-height:0;flex:1 1 auto;}
+.display-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.display-toolbar .dp-sep{width:1px;height:20px;background:var(--border);margin:0 4px;}
+.display-toolbar input[type=number]{width:64px;padding:3px 6px;font-size:11px;}
+.display-toolbar select{padding:3px 6px;font-size:11px;}
+.display-toolbar .dp-toggle[aria-pressed="true"]{background:var(--surface-sunken);box-shadow:inset 0 1px 2px rgba(0,0,0,.15);}
+.display-toolbar .dp-count{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);}
+.display-stage{position:relative;overflow:auto;background:#2B2F33;border:1px solid var(--border);flex:1 1 auto;min-height:240px;}
+.display-stage canvas{display:block;image-rendering:pixelated;}
+.display-stage canvas.smooth{image-rendering:auto;}
+.display-stage .dp-message{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#D5D9DD;font-size:12px;}
+.display-status{display:flex;justify-content:space-between;gap:12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);min-height:16px;}
+.display-manual{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11px;}
+.display-manual canvas{border:1px solid var(--border);background:var(--surface);}
+.display-manual input[type=number]{width:110px;padding:3px 6px;font-size:11px;}
 
 .browse-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .browse-path{
@@ -1583,18 +1597,18 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
 </div>
 
-<div class="scrim" id="previewScrim"></div>
-<div class="modal preview-modal" id="previewModal">
+<div class="scrim" id="displayScrim"></div>
+<!-- cisTEM's DisplayPanel as a modal: the asset panels' Display buttons open
+     a file here, and its own Open button browses the server's files. The
+     server hands over the section's numbers (GET /display/section) and the
+     panel does the greys, zoom, inversion, FFT and stepping itself. -->
+<div class="modal display-modal" id="displayModal">
   <div class="modal-head">
-    <div class="modal-title" id="previewTitle">Movie</div>
-    <button class="log-close" id="previewModalClose" aria-label="Close">&times;</button>
+    <div class="modal-title" id="displayTitle">Display</div>
+    <button class="log-close" id="displayModalClose" aria-label="Close">&times;</button>
   </div>
   <div class="modal-body">
-    <div class="preview-stage" id="previewStage">
-      <p class="form-note" id="previewStatus">Rendering…</p>
-      <img id="previewImg" alt="" hidden>
-    </div>
-    <p class="form-note" id="previewNote"></p>
+    <div id="displayPanelHost"></div>
   </div>
 </div>
 
@@ -2605,8 +2619,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
    "browseTitle","browseNote",
-   "movieDisplayBtn","previewScrim","previewModal","previewModalClose","previewTitle",
-   "previewStage","previewStatus","previewImg","previewNote",
+   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgImportBtn","rpkgExportBtn",
@@ -5637,8 +5650,6 @@ From branch : <span id="versionBranch">—</span></p>
   // Display stays disabled for it, with a tooltip saying which formats work.
   // Kept in step with PREVIEWABLE_EXTENSIONS in preview.py, which enforces it.
   var PREVIEWABLE_RE = /\.(mrcs?|tiff?)$/i;
-  var previewObjectUrl = null;
-
   function updateDisplayButton(movie){
     if (!movie){
       els.movieDisplayBtn.disabled = true;
@@ -5648,83 +5659,304 @@ From branch : <span id="versionBranch">—</span></p>
     var previewable = PREVIEWABLE_RE.test(movie.FILENAME || "");
     els.movieDisplayBtn.disabled = !previewable;
     els.movieDisplayBtn.title = previewable
-      ? "Show " + (movie.NAME || "this movie") + " (frames summed)."
-      : "Preview is available for MRC and TIFF movies only.";
+      ? "Open " + (movie.NAME || "this movie") + " in the Display panel (the sum of its frames first; step through the frames from there)."
+      : "Display is available for MRC and TIFF movies only.";
   }
 
-  function releasePreviewUrl(){
-    if (previewObjectUrl){
-      URL.revokeObjectURL(previewObjectUrl);
-      previewObjectUrl = null;
-    }
-  }
-
-  // Shared by the Movies and Images panels. `descriptor` is {title, path,
-  // status}: the heading, the preview endpoint under the project, and the
-  // "rendering..." line, which differs because a movie preview has frames to
-  // sum and an image doesn't.
-  function openPreviewModal(descriptor){
-    els.previewModal.classList.add("open");
-    els.previewScrim.classList.add("open");
-    els.previewTitle.textContent = descriptor.title;
-    els.previewStatus.textContent = descriptor.status;
-    els.previewStatus.hidden = false;
-    els.previewImg.hidden = true;
-    els.previewNote.textContent = "";
-    releasePreviewUrl();
-
-    // An <img src> can't carry the Authorization header this API needs, so
-    // the PNG is fetched through apiFetch and shown from a blob URL.
-    apiFetch(projectApiUrl(descriptor.path), {cache: "no-cache"}).then(function(r){
-      if (!r.ok){
-        return r.json().catch(function(){ return {}; }).then(function(d){
-          throw new Error((d && d.error) || ("HTTP " + r.status));
-        });
-      }
-      var summed = r.headers.get("X-Preview-Frames-Summed");
-      var total = r.headers.get("X-Preview-Frames-Total");
-      return r.blob().then(function(blob){ return {blob: blob, summed: summed, total: total}; });
-    }).then(function(result){
-      previewObjectUrl = URL.createObjectURL(result.blob);
-      els.previewImg.src = previewObjectUrl;
-      els.previewImg.hidden = false;
-      els.previewStatus.hidden = true;
-      // Only the movie preview sends these -- an image is one exposure, so
-      // there is nothing to say about how many frames went into it.
-      var note = "";
-      if (result.summed){
-        var capped = result.total && Number(result.total) > Number(result.summed);
-        note = capped
-          ? "Sum of the first " + result.summed + " of " + result.total + " frames."
-          : "Sum of " + result.summed + " frames.";
-        note += " A single frame of counting-mode data is mostly shot noise, so the sum is what's shown.";
-      }
-      els.previewNote.textContent = note;
-    }).catch(function(err){
-      els.previewStatus.textContent = "Could not render preview: " + err.message;
-      els.previewStatus.hidden = false;
+  // ---------- the Display panel (cisTEM's DisplayPanel) ----------
+  // One section of a file at a time, as numbers from GET /display/section,
+  // drawn on a canvas: the grey range from Auto (mean +/- 2.5 sigma of the
+  // non-zero pixels, DisplayNotebookPanel's rule), Local (this section's
+  // min and max), Global (the whole stack's, from GET /display/range) or
+  // Manual (typed, with a histogram); a scale from cisTEM's combo plus Fit;
+  // Invert, FFT (the power spectrum of the shown section, computed here),
+  // High Quality (smoothed resampling), Previous / Next through a stack
+  // (also the arrow keys), Open (the server-side Browse picker), Save (the
+  // canvas as a PNG) and the cursor's x, y : value in the file's pixels,
+  // y up as cisTEM counts it. Rows come in file order and are flipped when
+  // drawn, so the first row is the bottom of the picture. `setOverlay(fn)`
+  // lets a view draw over the picture in image coordinates (pick circles).
+  var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
+  function makeDisplayPanel(host){
+    var dp = { path: null, title: "", pixelSize: null, info: null, data: null, fftData: null, w: 0, h: 0, seq: 0, mode: "auto", manual: null,
+               global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, low: 0, high: 0 };
+    var root = document.createElement("div"); root.className = "display-panel"; host.appendChild(root);
+    var bar = document.createElement("div"); bar.className = "display-toolbar"; root.appendChild(bar);
+    function button(label, title, cls){ var b = document.createElement("button"); b.type = "button"; b.className = "small" + (cls ? " " + cls : ""); b.textContent = label; b.title = title || ""; bar.appendChild(b); return b; }
+    function sep(){ var d = document.createElement("span"); d.className = "dp-sep"; bar.appendChild(d); }
+    var openBtn = button("Open…", "Open an image file on the machine running the API server");
+    var saveBtn = button("Save", "Save the picture as shown, as a PNG");
+    sep();
+    var prevBtn = button("◀", "Previous image (left arrow)"), sectionInput = document.createElement("input");
+    sectionInput.type = "number"; sectionInput.min = "1"; sectionInput.step = "1"; sectionInput.title = "Image number in the stack; 0 shows the sum of the frames"; bar.appendChild(sectionInput);
+    var countLabel = document.createElement("span"); countLabel.className = "dp-count"; bar.appendChild(countLabel);
+    var nextBtn = button("▶", "Next image (right arrow)");
+    sep();
+    var scaleSelect = document.createElement("select"); scaleSelect.title = "Scale";
+    DISPLAY_SCALES.forEach(function(o){ var op = document.createElement("option"); op.value = String(o[0]); op.textContent = o[1]; scaleSelect.appendChild(op); });
+    bar.appendChild(scaleSelect);
+    sep();
+    var modeBtns = {};
+    [["auto", "Auto", "Set the grey values via automatic contrast: the mean ± 2.5 σ of the non-zero pixels"], ["local", "Local", "Grey values from this image’s own minimum and maximum"],
+     ["global", "Global", "Grey values from the minimum and maximum of the whole stack"], ["manual", "Manual", "Set the grey values by hand, with a histogram"]].forEach(function(m){
+      var b = button(m[1], m[2], "dp-toggle"); b.setAttribute("aria-pressed", String(dp.mode === m[0])); modeBtns[m[0]] = b;
+      b.addEventListener("click", function(){ setMode(m[0]); });
     });
+    sep();
+    var invertBtn = button("Invert", "Invert the contrast", "dp-toggle"), fftBtn = button("FFT", "Show the power spectrum of the image as displayed", "dp-toggle"),
+        hqBtn = button("High Quality", "Smooth the picture when it is scaled", "dp-toggle"), histBtn = button("Histogram", "Show the histogram of the grey values", "dp-toggle");
+    [invertBtn, fftBtn, hqBtn, histBtn].forEach(function(b){ b.setAttribute("aria-pressed", "false"); });
+    var stage = document.createElement("div"); stage.className = "display-stage"; root.appendChild(stage);
+    var canvas = document.createElement("canvas"); stage.appendChild(canvas);
+    var message = document.createElement("div"); message.className = "dp-message"; message.textContent = "No image open."; stage.appendChild(message);
+    var manual = document.createElement("div"); manual.className = "display-manual"; manual.hidden = true; root.appendChild(manual);
+    var histCanvas = document.createElement("canvas"); histCanvas.width = 256; histCanvas.height = 64; manual.appendChild(histCanvas);
+    var lowInput = document.createElement("input"), highInput = document.createElement("input");
+    [["Minimum", lowInput], ["Maximum", highInput]].forEach(function(pair){
+      var l = document.createElement("label"); l.textContent = pair[0] + " "; pair[1].type = "number"; pair[1].step = "any"; l.appendChild(pair[1]); manual.appendChild(l);
+    });
+    var status = document.createElement("div"); status.className = "display-status"; root.appendChild(status);
+    var fileText = document.createElement("span"), locText = document.createElement("span"); status.appendChild(fileText); status.appendChild(locText);
+    var offscreen = document.createElement("canvas");
+    var pathInput = document.createElement("input"); pathInput.type = "hidden";   // the Browse picker's target
+
+    // ---- data ----
+    function source(){ return dp.fft ? fftFor() : dp.data; }
+    function fftFor(){
+      if (dp.fftData) return dp.fftData;
+      dp.fftData = powerSpectrum(dp.data, dp.w, dp.h);
+      return dp.fftData;
+    }
+    // The power spectrum of the central 2^n square, log scaled, origin at the centre.
+    function powerSpectrum(data, w, h){
+      var n = 1; while (n * 2 <= Math.min(w, h)) n *= 2;
+      var x0 = (w - n) >> 1, y0 = (h - n) >> 1;
+      var re = new Float32Array(n * n), im = new Float32Array(n * n);
+      var mean = 0; for (var j = 0; j < n; j++) for (var i = 0; i < n; i++) mean += data[(y0 + j) * w + x0 + i]; mean /= n * n;
+      for (var j2 = 0; j2 < n; j2++) for (var i2 = 0; i2 < n; i2++) re[j2 * n + i2] = data[(y0 + j2) * w + x0 + i2] - mean;
+      var rowRe = new Float32Array(n), rowIm = new Float32Array(n);
+      for (var r = 0; r < n; r++){ rowRe.set(re.subarray(r * n, r * n + n)); rowIm.set(im.subarray(r * n, r * n + n)); fft1d(rowRe, rowIm); re.set(rowRe, r * n); im.set(rowIm, r * n); }
+      for (var c = 0; c < n; c++){
+        for (var k = 0; k < n; k++){ rowRe[k] = re[k * n + c]; rowIm[k] = im[k * n + c]; }
+        fft1d(rowRe, rowIm);
+        for (var k2 = 0; k2 < n; k2++){ re[k2 * n + c] = rowRe[k2]; im[k2 * n + c] = rowIm[k2]; }
+      }
+      var out = new Float32Array(w * h), half = n >> 1;
+      for (var y = 0; y < n; y++) for (var x = 0; x < n; x++){
+        var sx = (x + half) % n, sy = (y + half) % n, idx = sy * n + sx;
+        out[(y0 + y) * w + x0 + x] = Math.log(1 + Math.sqrt(re[idx] * re[idx] + im[idx] * im[idx]));
+      }
+      return out;
+    }
+    function fft1d(re, im){
+      var n = re.length;
+      for (var i = 1, j = 0; i < n; i++){
+        var bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+        if (i < j){ var t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+      }
+      for (var len = 2; len <= n; len <<= 1){
+        var ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+        for (var s0 = 0; s0 < n; s0 += len){
+          var cr = 1, ci = 0;
+          for (var k = 0; k < len / 2; k++){
+            var a = s0 + k, b = a + len / 2;
+            var tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+            re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+            var ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+          }
+        }
+      }
+    }
+    function stats(arr){
+      var n = 0, sum = 0, sq = 0, lo = Infinity, hi = -Infinity;
+      for (var i = 0; i < arr.length; i++){
+        var v = arr[i]; if (v !== v) continue;
+        if (v < lo) lo = v; if (v > hi) hi = v;
+        if (v !== 0){ n++; sum += v; sq += v * v; }
+      }
+      var mean = n ? sum / n : 0, sd = n ? Math.sqrt(Math.max(sq / n - mean * mean, 0)) : 0;
+      return {min: lo === Infinity ? 0 : lo, max: hi === -Infinity ? 0 : hi, mean: mean, std: sd};
+    }
+    function greyRange(){
+      var arr = source(); if (!arr) return [0, 1];
+      var st = stats(arr);
+      if (dp.mode === "manual" && dp.manual) return dp.manual;
+      if (dp.mode === "global" && dp.global && !dp.fft) return [dp.global.min, dp.global.max];
+      if (dp.mode === "local" || dp.mode === "global" || dp.fft && dp.mode !== "auto") return [st.min, st.max];
+      return [st.mean - 2.5 * st.std, st.mean + 2.5 * st.std];
+    }
+
+    // ---- drawing ----
+    function currentScale(){
+      if (dp.scale !== "fit") return Number(dp.scale);
+      var pad = 4, sw = stage.clientWidth - pad, sh = stage.clientHeight - pad;
+      return Math.max(0.01, Math.min(sw / dp.w, sh / dp.h));
+    }
+    function draw(){
+      var arr = source();
+      if (!arr){ canvas.width = canvas.height = 0; return; }
+      var range = greyRange(); dp.low = range[0]; dp.high = range[1];
+      var span = dp.high - dp.low || 1;
+      offscreen.width = dp.w; offscreen.height = dp.h;
+      var octx = offscreen.getContext("2d"), img = octx.createImageData(dp.w, dp.h), px = img.data;
+      for (var j = 0; j < dp.h; j++){
+        var srcRow = (dp.h - 1 - j) * dp.w, dstRow = j * dp.w * 4;   // file's first row is the bottom
+        for (var i = 0; i < dp.w; i++){
+          var g = (arr[srcRow + i] - dp.low) / span * 255;
+          g = g < 0 ? 0 : g > 255 ? 255 : g;
+          if (dp.invert) g = 255 - g;
+          var o = dstRow + i * 4; px[o] = px[o + 1] = px[o + 2] = g; px[o + 3] = 255;
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      var sc = currentScale();
+      canvas.width = Math.max(1, Math.round(dp.w * sc)); canvas.height = Math.max(1, Math.round(dp.h * sc));
+      canvas.classList.toggle("smooth", dp.hq);
+      var ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = dp.hq;
+      ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
+      if (dp.overlay) dp.overlay(ctx, {scale: sc, bin: dp.info.bin, width: dp.w, height: dp.h, toCanvas: function(x, y){ return [x / dp.info.bin * sc, canvas.height - y / dp.info.bin * sc]; }});
+      if (dp.showHist || dp.mode === "manual") drawHistogram(arr, range);
+      fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + (dp.info.nz > 1 ? " [" + (dp.info.section === 0 ? "sum of " + dp.info.summed : dp.info.section + " / " + dp.info.nz) + "]" : "") +
+        "  " + dp.info.nx + " × " + dp.info.ny + (dp.info.bin > 1 ? "  (binned ×" + dp.info.bin + ")" : "") + (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") +
+        "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high);
+    }
+    // The asset's pixel size when the caller knows it; else the header's, if it is a plausible one.
+    function pixelSize(){ if (dp.pixelSize) return dp.pixelSize; var p = dp.info && dp.info.pixel_size; return p && p > 0.05 && p < 200 ? p : null; }
+    function fmtG(v){ return Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v !== 0) ? v.toExponential(3) : v.toFixed(3); }
+    function drawHistogram(arr, range){
+      var ctx = histCanvas.getContext("2d"), W = histCanvas.width, H = histCanvas.height;
+      ctx.clearRect(0, 0, W, H);
+      var st = stats(arr), lo = st.min, hi = st.max, bins = new Float64Array(W), span = hi - lo || 1;
+      for (var i = 0; i < arr.length; i++){ var v = arr[i]; if (v !== v) continue; var b = Math.min(W - 1, Math.max(0, Math.floor((v - lo) / span * (W - 1)))); bins[b]++; }
+      var peak = 0; for (var k = 0; k < W; k++) if (bins[k] > peak) peak = bins[k];
+      ctx.fillStyle = "#8A97A3";
+      for (var x = 0; x < W; x++){ var hgt = peak ? Math.log(1 + bins[x]) / Math.log(1 + peak) * (H - 2) : 0; ctx.fillRect(x, H - hgt, 1, hgt); }
+      ctx.fillStyle = "rgba(47,95,166,0.9)";
+      [range[0], range[1]].forEach(function(g){ var x0 = Math.round((g - lo) / span * (W - 1)); ctx.fillRect(Math.max(0, Math.min(W - 1, x0)), 0, 1, H); });
+      histCanvas.title = "Histogram (log counts) from " + fmtG(lo) + " to " + fmtG(hi) + "; the marks are the grey range shown";
+    }
+
+    // ---- state changes ----
+    function setPressed(){
+      Object.keys(modeBtns).forEach(function(k){ modeBtns[k].setAttribute("aria-pressed", String(dp.mode === k)); });
+      invertBtn.setAttribute("aria-pressed", String(dp.invert)); fftBtn.setAttribute("aria-pressed", String(dp.fft));
+      hqBtn.setAttribute("aria-pressed", String(dp.hq)); histBtn.setAttribute("aria-pressed", String(dp.showHist));
+      manual.hidden = !(dp.showHist || dp.mode === "manual");
+      lowInput.disabled = highInput.disabled = dp.mode !== "manual";
+    }
+    function setMode(m){
+      dp.mode = m;
+      if (m === "manual" && !dp.manual){ var r = greyRange(); dp.manual = [r[0], r[1]]; }
+      if (m === "manual"){ lowInput.value = Number(dp.manual[0].toPrecision(6)); highInput.value = Number(dp.manual[1].toPrecision(6)); }
+      if (m === "global" && dp.path && !dp.global) fetchGlobal();
+      setPressed(); draw();
+    }
+    function fetchGlobal(){
+      var path = dp.path;
+      apiFetch(apiUrl("/display/range") + "?path=" + encodeURIComponent(path) + "&max_edge=" + maxEdge()).then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){ if (d && dp.path === path){ dp.global = d; draw(); } }).catch(function(){});
+    }
+    function maxEdge(){ return Math.max(512, Math.min(2048, Math.round(Math.max(stage.clientWidth, stage.clientHeight) * (window.devicePixelRatio || 1)))); }
+    lowInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); });
+    highInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); });
+    invertBtn.addEventListener("click", function(){ dp.invert = !dp.invert; setPressed(); draw(); });
+    fftBtn.addEventListener("click", function(){ dp.fft = !dp.fft; setPressed(); draw(); });
+    hqBtn.addEventListener("click", function(){ dp.hq = !dp.hq; setPressed(); draw(); });
+    histBtn.addEventListener("click", function(){ dp.showHist = !dp.showHist; setPressed(); draw(); });
+    scaleSelect.addEventListener("change", function(){ dp.scale = scaleSelect.value; draw(); });
+    prevBtn.addEventListener("click", function(){ step(-1); });
+    nextBtn.addEventListener("click", function(){ step(1); });
+    sectionInput.addEventListener("change", function(){ if (dp.path) load(dp.path, Number(sectionInput.value)); });
+    function step(delta){
+      if (!dp.info || dp.info.nz <= 1) return;
+      var next = dp.info.section + delta;
+      if (next < 1) next = 1; if (next > dp.info.nz) next = dp.info.nz;
+      if (next !== dp.info.section) load(dp.path, next);
+    }
+    openBtn.addEventListener("click", function(){
+      pathInput.value = dp.path || "";
+      openBrowseModal({input: pathInput, noun: "image file", article: "an", types: "display", single: true});
+    });
+    pathInput.addEventListener("input", function(){ if (pathInput.value) open({path: pathInput.value, title: ""}); });
+    saveBtn.addEventListener("click", function(){
+      if (!dp.data) return;
+      canvas.toBlob(function(blob){
+        if (!blob) return;
+        var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+        a.download = (dp.path.split("/").pop().replace(/\.[^.]+$/, "") || "image") + (dp.info.nz > 1 ? "_" + dp.info.section : "") + (dp.fft ? "_fft" : "") + ".png";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+      }, "image/png");
+    });
+    canvas.addEventListener("mousemove", function(e){
+      if (!dp.data) return;
+      var sc = currentScale(), ix = Math.floor(e.offsetX / sc), iy = Math.floor(e.offsetY / sc);
+      if (ix < 0 || iy < 0 || ix >= dp.w || iy >= dp.h){ locText.textContent = ""; return; }
+      var j = dp.h - 1 - iy, v = source()[j * dp.w + ix], bin = dp.info.bin;
+      locText.textContent = (ix * bin) + ", " + (j * bin) + (bin > 1 ? " (±" + (bin - 1) + ")" : "") + " : " + fmtG(v);
+    });
+    canvas.addEventListener("mouseleave", function(){ locText.textContent = ""; });
+    window.addEventListener("resize", function(){ if (dp.data && dp.scale === "fit") draw(); });
+
+    function load(path, section){
+      var seq = ++dp.seq;
+      message.hidden = false; message.textContent = "Loading…";
+      apiFetch(apiUrl("/display/section") + "?path=" + encodeURIComponent(path) + "&section=" + section + "&max_edge=" + maxEdge(), {cache: "no-cache"}).then(function(r){
+        if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+        var info = JSON.parse(r.headers.get("X-Display-Info") || "{}");
+        return r.arrayBuffer().then(function(buf){ return {info: info, buf: buf}; });
+      }).then(function(res){
+        if (seq !== dp.seq) return;
+        var fileChanged = dp.path !== path;
+        dp.path = path; dp.info = res.info; dp.w = res.info.width; dp.h = res.info.height;
+        dp.data = new Float32Array(res.buf); dp.fftData = null;
+        if (fileChanged){ dp.global = null; dp.manual = null; if (dp.mode === "global") fetchGlobal(); }
+        sectionInput.value = res.info.section; sectionInput.max = String(res.info.nz); sectionInput.min = res.info.nz > 1 ? "0" : "1"; sectionInput.disabled = res.info.nz <= 1;
+        countLabel.textContent = "/ " + res.info.nz; prevBtn.disabled = nextBtn.disabled = res.info.nz <= 1;
+        if (dp.mode === "manual" && !dp.manual){ var r0 = greyRange(); dp.manual = [r0[0], r0[1]]; lowInput.value = Number(r0[0].toPrecision(6)); highInput.value = Number(r0[1].toPrecision(6)); }
+        message.hidden = true;
+        draw();
+      }).catch(function(err){
+        if (seq !== dp.seq) return;
+        message.hidden = false; message.textContent = "Could not open: " + err.message;
+        canvas.width = canvas.height = 0; dp.data = null; fileText.textContent = path; locText.textContent = "";
+      });
+    }
+    function open(src){
+      dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
+      var section = src.section != null ? src.section : 1;
+      if (src.path !== dp.path){ dp.global = null; dp.manual = null; }
+      load(src.path, section);
+    }
+    setPressed();
+    return { open: open, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: draw, state: dp, root: root };
   }
 
-  function closePreviewModal(){
-    els.previewModal.classList.remove("open");
-    els.previewScrim.classList.remove("open");
-    els.previewImg.removeAttribute("src");
-    els.previewImg.hidden = true;
-    releasePreviewUrl();
+  // The modal instance the asset panels' Display buttons use (a movie opens
+  // on the sum of its frames, an image on itself, a volume on its middle
+  // slice), with the arrow keys stepping while it is open.
+  var displayPanel = makeDisplayPanel(els.displayPanelHost);
+  function openDisplayModal(src){
+    els.displayTitle.textContent = src.title || "Display";
+    els.displayModal.classList.add("open"); els.displayScrim.classList.add("open");
+    displayPanel.open(src);
   }
-
+  function closeDisplayModal(){ els.displayModal.classList.remove("open"); els.displayScrim.classList.remove("open"); }
+  els.displayModalClose.addEventListener("click", closeDisplayModal);
+  els.displayScrim.addEventListener("click", closeDisplayModal);
+  document.addEventListener("keydown", function(e){
+    if (!els.displayModal.classList.contains("open") || els.browseModal.classList.contains("open")) return;
+    if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp"){ displayPanel.next(); e.preventDefault(); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown"){ displayPanel.prev(); e.preventDefault(); }
+    else if (e.key === "Escape") closeDisplayModal();
+  });
   els.movieDisplayBtn.addEventListener("click", function(){
     var movie = (state.movies || []).filter(function(m){ return m.MOVIE_ASSET_ID === state.selectedMovieId; })[0];
     if (!movie) return;
-    openPreviewModal({
-      title: movie.NAME || "Movie",
-      path: "/movies/" + movie.MOVIE_ASSET_ID + "/preview.png",
-      status: "Rendering… summing frames, which takes a few seconds for a large movie."
-    });
+    openDisplayModal({title: movie.NAME || "Movie", path: movie.FILENAME, section: 0, pixelSize: movie.PIXEL_SIZE});
   });
-  els.previewModalClose.addEventListener("click", closePreviewModal);
-  els.previewScrim.addEventListener("click", closePreviewModal);
 
   // ---------- movie multi-select (for Remove / Add To Group) ----------
   function toggleMovieChecked(movieId, checked){
@@ -6416,11 +6648,7 @@ From branch : <span id="versionBranch">—</span></p>
   els.imageDisplayBtn.addEventListener("click", function(){
     var image = (state.images || []).filter(function(m){ return m.IMAGE_ASSET_ID === state.selectedImageId; })[0];
     if (!image) return;
-    openPreviewModal({
-      title: image.NAME || "Image",
-      path: "/images/" + image.IMAGE_ASSET_ID + "/preview.png",
-      status: "Rendering…"
-    });
+    openDisplayModal({title: image.NAME || "Image", path: image.FILENAME, section: 1, pixelSize: image.PIXEL_SIZE});
   });
 
   // ---------- image multi-select (for Remove / Add To Group) ----------
@@ -6989,7 +7217,7 @@ From branch : <span id="versionBranch">—</span></p>
   });
   els.volDisplayBtn.addEventListener("click", function(){
     var v = state.volumes.filter(function(x){ return x.VOLUME_ASSET_ID === state.selectedVolumeId; })[0]; if (!v) return;
-    openPreviewModal({title: (v.NAME || "Volume") + " — orthogonal projections (top) and central slices (bottom)", status: "Rendering\u2026", path: "/volumes/" + v.VOLUME_ASSET_ID + "/preview.png"});
+    openDisplayModal({title: (v.NAME || "Volume") + " \u2014 slices", path: v.FILENAME, section: Math.max(1, Math.round((v.Z_SIZE || 1) / 2)), pixelSize: v.PIXEL_SIZE});
   });
   els.volRemoveBtn.addEventListener("click", function(){
     var ids = Array.from(state.selectedVolumeIds); if (!ids.length) return;

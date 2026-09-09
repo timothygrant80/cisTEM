@@ -62,6 +62,7 @@ import package_io
 import stages
 import imageheaders
 import preview
+import display
 import volumes
 
 # Stages that are cycles of program runs rather than one: a user-visible
@@ -804,7 +805,63 @@ MOVIE_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff", ".eer"}
 BROWSABLE_EXTENSIONS = {"movie": MOVIE_EXTENSIONS, "image": {".mrc", ".mrcs", ".tif", ".tiff"}, "volume": {".mrc", ".mrcs"},
                         "text": {".txt", ".plt", ".dat", ".coords", ".box", ".csv"},
                         # a particle stack and the parameter files that go with one (package export / import)
-                        "stack": {".mrc", ".mrcs"}, "parameters": {".star", ".par"}}
+                        "stack": {".mrc", ".mrcs"}, "parameters": {".star", ".par"},
+                        # anything the Display panel can open
+                        "display": display.DISPLAY_EXTENSIONS}
+
+
+# ---------------------------------------------------------------------------
+# The Display panel's data (server/display.py, cisTEM's DisplayPanel): a
+# section of any image file the server can see, as float32 for the browser
+# to contrast-stretch and zoom itself. Not project-scoped, like /browse --
+# the panel's Open button looks at arbitrary files -- and guarded the same
+# way, by login.
+# ---------------------------------------------------------------------------
+
+@app.route("/api/display/info")
+@auth.login_required
+def display_info():
+    try:
+        return jsonify(display.file_info(request.args.get("path", "")))
+    except display.DisplayError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/display/section")
+@auth.login_required
+def display_section():
+    """?path=&section=1&max_edge=1024 -> the section as little-endian float32
+    rows (file order), with the header in X-Display-Info (JSON: sizes, bin
+    factor, section, pixel size, min/max/mean/std). section=0 is the sum of
+    the first MAX_SUM_SECTIONS sections."""
+    try:
+        section = int(request.args.get("section", 1))
+        max_edge = max(64, min(int(request.args.get("max_edge", 1024)), 4096))
+    except ValueError:
+        return jsonify({"error": "section and max_edge must be integers"}), 400
+    try:
+        data, info = display.read_section(request.args.get("path", ""), section, max_edge)
+    except display.DisplayError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except OSError as exc:
+        return jsonify({"error": "could not read: {}".format(exc)}), 400
+    response = app.response_class(data.tobytes(), mimetype="application/octet-stream")
+    response.headers["X-Display-Info"] = json.dumps(info)
+    response.headers["Access-Control-Expose-Headers"] = "X-Display-Info"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.route("/api/display/range")
+@auth.login_required
+def display_range():
+    """?path=&max_edge= -> {min, max, sections, nz} over the stack, for Global greys."""
+    try:
+        return jsonify(display.global_range(request.args.get("path", ""), max(64, min(int(request.args.get("max_edge", 1024)), 4096))))
+    except display.DisplayError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except (OSError, ValueError) as exc:
+        return jsonify({"error": "could not read: {}".format(exc)}), 400
 
 
 @app.route("/api/browse")

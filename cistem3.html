@@ -1103,8 +1103,8 @@ From branch : <span id="versionBranch">—</span></p>
               </div>
               <div class="asset-toolbar">
                 <button class="small" disabled title="Combining packages isn’t implemented yet.">Combine</button>
-                <button class="small" disabled title="Importing a package isn’t implemented yet.">Import</button>
-                <button class="small" disabled title="Exporting a package isn’t implemented yet.">Export</button>
+                <button class="small" id="rpkgImportBtn" title="cisTEM’s Import Refinement Package wizard: a particle stack plus a cisTEM star, Frealign par or Relion star file on the server’s machine.">Import</button>
+                <button class="small" id="rpkgExportBtn" disabled title="cisTEM’s Export Refinement Package wizard: one refinement’s parameters as a Frealign, Relion or cisTEM file, beside a copy of the stack.">Export</button>
               </div>
             </div>
 
@@ -1403,6 +1403,71 @@ From branch : <span id="versionBranch">—</span></p>
       <button class="primary" id="npCreateBtn">Create</button>
     </div>
     <p class="form-note" id="npNote"></p>
+  </div>
+</div>
+<div class="scrim" id="exportPackageScrim"></div>
+<!-- ExportRefinementPackageWizard: which refinement's parameters, which
+     class, which format, and where on the server's machine the stack copy
+     and the parameter file go. -->
+<div class="modal" id="exportPackageModal">
+  <div class="modal-head">
+    <div class="modal-title">Export Refinement Package</div>
+    <button class="log-close" id="exportPackageModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;" id="epIntro">Writes one refinement&rsquo;s parameters for one class beside a copy of the package&rsquo;s particle stack, on the machine running the API server &mdash; cisTEM&rsquo;s Export Refinement Package wizard.</p>
+    <div class="field"><label for="epRefinement">Parameters</label><select id="epRefinement"></select></div>
+    <div class="field"><label for="epClass">Class</label><select id="epClass"></select></div>
+    <div class="field"><label for="epFormat">Format</label><select id="epFormat">
+      <option value="frealign">Frealign (.par + .mrc stack)</option>
+      <option value="relion">Relion (.star + .mrcs stack)</option>
+      <option value="relion3">Relion 3.1 (.star with optics group + .mrcs stack, plus motion-correction star files)</option>
+      <option value="cistem">cisTEM (.star + .mrc stack)</option>
+    </select></div>
+    <div class="field"><label for="epStackPath">Particle Stack File</label><div class="field-row"><input type="text" id="epStackPath" placeholder="/data/export/particles.mrcs" /><button type="button" class="small" id="epStackBrowseBtn">Browse&hellip;</button></div></div>
+    <div class="field"><label for="epMetaPath">Parameter File</label><div class="field-row"><input type="text" id="epMetaPath" placeholder="/data/export/particles.star" /><button type="button" class="small" id="epMetaBrowseBtn">Browse&hellip;</button></div></div>
+    <p class="form-note" style="margin-top:0;">Relion stacks are written white-on-black and normalised outside the particle radius, as the wizard does; Frealign and cisTEM exports copy the stack as it is. An existing file at either path is overwritten.</p>
+    <div class="submit-row">
+      <button class="primary" id="epExportBtn">Export</button>
+    </div>
+    <p class="form-note" id="epNote"></p>
+  </div>
+</div>
+<div class="scrim" id="importPackageScrim"></div>
+<!-- ImportRefinementPackageWizard: a stack and its parameter file on the
+     server's machine become a package with an "Imported Parameters"
+     refinement. A cisTEM star carries the pixel size, voltage and amplitude
+     contrast per particle; Frealign and Relion files do not, so those are
+     asked for -- the wizard hides the same three fields for cisTEM. -->
+<div class="modal" id="importPackageModal">
+  <div class="modal-head">
+    <div class="modal-title">Import Refinement Package</div>
+    <button class="log-close" id="importPackageModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">A particle stack and its parameter file, on the machine running the API server, become a refinement package with an &ldquo;Imported Parameters&rdquo; refinement &mdash; cisTEM&rsquo;s Import Refinement Package wizard. The stack is used where it is, not copied; its particles have no parent image in this project.</p>
+    <div class="field"><label for="ipFormat">Format</label><select id="ipFormat">
+      <option value="cistem">cisTEM star file</option>
+      <option value="frealign">Frealign par file</option>
+      <option value="relion">Relion star file</option>
+    </select></div>
+    <div class="field"><label for="ipStackPath">Particle Stack File</label><div class="field-row"><input type="text" id="ipStackPath" placeholder="/data/particles.mrcs" /><button type="button" class="small" id="ipStackBrowseBtn">Browse&hellip;</button></div></div>
+    <div class="field"><label for="ipMetaPath">Parameter File</label><div class="field-row"><input type="text" id="ipMetaPath" placeholder="/data/particles.star" /><button type="button" class="small" id="ipMetaBrowseBtn">Browse&hellip;</button></div></div>
+    <div class="field"><label for="ipName">Name <span class="unit">(optional)</span></label><input type="text" id="ipName" placeholder="Refinement Package #N (cisTEM Import)" /></div>
+    <div class="field-group-label">Imaging</div>
+    <div class="field" id="ipPixelField"><label for="ipPixel">Pixel Size <span class="unit">(&Aring;)</span></label><input type="number" id="ipPixel" step="0.0001" min="0.01" /></div>
+    <div class="field" id="ipVoltageField"><label for="ipVoltage">Microscope Voltage <span class="unit">(kV)</span></label><input type="number" id="ipVoltage" step="1" min="1" value="300" /></div>
+    <div class="field"><label for="ipCs">Spherical Aberration <span class="unit">(mm)</span></label><input type="number" id="ipCs" step="0.1" min="0" value="2.7" /></div>
+    <div class="field" id="ipAcField"><label for="ipAc">Amplitude Contrast</label><input type="number" id="ipAc" step="0.01" min="0" max="1" value="0.07" /></div>
+    <div class="field field-checkbox" title="Whether the particles in the stack are white on a dark background (cisTEM’s own stacks are black)."><input type="checkbox" id="ipWhite" /><label for="ipWhite">Stack has white protein</label></div>
+    <div class="field-group-label">Particle</div>
+    <div class="field"><label for="ipMw">Estimated Molecular Weight <span class="unit">(kDa)</span></label><input type="number" id="ipMw" step="1" min="1" value="300" /></div>
+    <div class="field"><label for="ipSize">Estimated Largest Dimension <span class="unit">(&Aring;)</span></label><input type="number" id="ipSize" step="1" min="1" value="150" /></div>
+    <div class="field"><label for="ipSymmetry">Pointgroup Symmetry</label><select id="ipSymmetry"></select></div>
+    <div class="submit-row">
+      <button class="primary" id="ipImportBtn">Import</button>
+    </div>
+    <p class="form-note" id="ipNote"></p>
   </div>
 </div>
 <div class="scrim" id="importPositionsScrim"></div>
@@ -2544,7 +2609,10 @@ From branch : <span id="versionBranch">—</span></p>
    "previewStage","previewStatus","previewImg","previewNote",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
-   "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
+   "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgImportBtn","rpkgExportBtn",
+   "exportPackageScrim","exportPackageModal","exportPackageModalClose","epRefinement","epClass","epFormat","epStackPath","epStackBrowseBtn","epMetaPath","epMetaBrowseBtn","epExportBtn","epNote",
+   "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
+   "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
    "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel",
    "npRecentreField","npRecentre","npDedupField","npDedup","npDedupThresholdField","npDedupThreshold","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
@@ -2688,9 +2756,10 @@ From branch : <span id="versionBranch">—</span></p>
 
   function openBrowseModal(target){
     browseTarget = target;
-    els.browseTitle.textContent = "Choose " + target.noun.charAt(0).toUpperCase() + target.noun.slice(1) + " Files";
-    els.browseNote.textContent = "Click a folder to open it, or " + target.article + " " + target.noun
-      + " file to match every file of that type in its folder.";
+    els.browseTitle.textContent = "Choose " + target.noun.charAt(0).toUpperCase() + target.noun.slice(1) + (target.single ? "" : " Files");
+    els.browseNote.textContent = target.single
+      ? "Click a folder to open it, or " + target.article + " " + target.noun + " to choose it."
+      : "Click a folder to open it, or " + target.article + " " + target.noun + " file to match every file of that type in its folder.";
     els.browseModal.classList.add("open");
     els.browseScrim.classList.add("open");
     var glob = target.input.value.trim();
@@ -2747,7 +2816,8 @@ From branch : <span id="versionBranch">—</span></p>
       li.addEventListener("click", function(){
         var ext = name.slice(name.lastIndexOf("."));
         var glob = browseTarget.input;
-        glob.value = d.path + "/*" + ext;
+        // A single-file target takes the file itself; a glob target every file of its type in the folder.
+        glob.value = browseTarget.single ? d.path + "/" + name : d.path + "/*" + ext;
         glob.dispatchEvent(new Event("input", {bubbles: true}));
         closeBrowseModal();
       });
@@ -6718,7 +6788,7 @@ From branch : <span id="versionBranch">—</span></p>
   els.importPositionsModalClose.addEventListener("click", closeImportPositionsModal);
   els.importPositionsScrim.addEventListener("click", closeImportPositionsModal);
   els.importPositionsBrowseBtn.addEventListener("click", function(){
-    openBrowseModal({input: els.importPositionsPath, noun: "coordinate file", article: "a", types: "text"});
+    openBrowseModal({input: els.importPositionsPath, noun: "coordinate file", article: "a", types: "text", single: true});
   });
   function submitPositionsImport(body){
     els.importPositionsBtn.disabled = true;
@@ -6982,7 +7052,7 @@ From branch : <span id="versionBranch">—</span></p>
       li.addEventListener("click", function(){ state.selectedPackageId = p.refinement_package_asset_id; renderPackageList(state.packages); });
       els.rpkgList.appendChild(li);
     });
-    els.rpkgRenameBtn.disabled = els.rpkgDeleteBtn.disabled = state.selectedPackageId == null;
+    els.rpkgRenameBtn.disabled = els.rpkgDeleteBtn.disabled = els.rpkgExportBtn.disabled = state.selectedPackageId == null;
     showPackage(state.selectedPackageId);
   }
   function showPackage(id){
@@ -7105,6 +7175,125 @@ From branch : <span id="versionBranch">—</span></p>
       }).catch(function(){});
   }
   els.rpkgNewBtn.addEventListener("click", function(){ if (state.projectId) openNewPackageModal(null); });
+
+  // ---- Export (ExportRefinementPackageWizard) ----
+  var ep = { pkg: null };
+  function openExportPackageModal(){
+    var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0];
+    if (!p) return;
+    ep.pkg = p;
+    els.epNote.textContent = ""; els.epNote.classList.remove("blocked");
+    els.epExportBtn.disabled = false; els.epExportBtn.textContent = "Export";
+    els.epRefinement.innerHTML = ""; els.epClass.innerHTML = "";
+    var stem = p.name.replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") || ("package_" + p.refinement_package_asset_id);
+    var dir = (p.stack_filename || "").replace(/[^/]*$/, "");
+    els.epStackPath.value = dir + stem + "_export";
+    els.epMetaPath.value = dir + stem + "_export";
+    epFormatChanged();
+    els.exportPackageModal.classList.add("open"); els.exportPackageScrim.classList.add("open");
+    apiFetch(projectApiUrl("/refinement-packages/" + p.refinement_package_asset_id)).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if (!d || ep.pkg !== p) return;
+      (d.refinements || []).forEach(function(r){
+        var o = document.createElement("option"); o.value = r.REFINEMENT_ID; o.textContent = r.NAME + " (#" + r.REFINEMENT_ID + ")"; o.dataset.classes = r.NUMBER_OF_CLASSES; els.epRefinement.appendChild(o);
+      });
+      if (els.epRefinement.options.length) els.epRefinement.selectedIndex = els.epRefinement.options.length - 1;   // the newest, as the wizard's picker opens on
+      epRefinementChanged();
+    }).catch(function(){});
+  }
+  function closeExportPackageModal(){ els.exportPackageModal.classList.remove("open"); els.exportPackageScrim.classList.remove("open"); }
+  function epRefinementChanged(){
+    var opt = els.epRefinement.options[els.epRefinement.selectedIndex];
+    var n = opt ? Number(opt.dataset.classes) || 1 : 1;
+    els.epClass.innerHTML = "";
+    for (var k = 1; k <= n; k++){ var o = document.createElement("option"); o.value = k; o.textContent = "Class #" + k; els.epClass.appendChild(o); }
+    els.epClass.disabled = n === 1;
+  }
+  // The extensions the wizard forces: Frealign and cisTEM copy the stack as
+  // .mrc beside a .par / .star; Relion gets an .mrcs and a .star.
+  function epFormatChanged(){
+    var f = els.epFormat.value;
+    var stackExt = f === "relion" || f === "relion3" ? ".mrcs" : ".mrc";
+    var metaExt = f === "frealign" ? ".par" : ".star";
+    els.epStackPath.value = els.epStackPath.value.replace(/\.(mrcs?|par|star)$/, "") + stackExt;
+    els.epMetaPath.value = els.epMetaPath.value.replace(/\.(mrcs?|par|star)$/, "") + metaExt;
+  }
+  els.rpkgExportBtn.addEventListener("click", openExportPackageModal);
+  els.exportPackageModalClose.addEventListener("click", closeExportPackageModal);
+  els.exportPackageScrim.addEventListener("click", closeExportPackageModal);
+  els.epRefinement.addEventListener("change", epRefinementChanged);
+  els.epFormat.addEventListener("change", epFormatChanged);
+  els.epStackBrowseBtn.addEventListener("click", function(){ openBrowseModal({input: els.epStackPath, noun: "stack file", article: "a", types: "stack", single: true}); });
+  els.epMetaBrowseBtn.addEventListener("click", function(){ openBrowseModal({input: els.epMetaPath, noun: "parameter file", article: "a", types: "parameters", single: true}); });
+  els.epExportBtn.addEventListener("click", function(){
+    if (!ep.pkg || !state.projectId) return;
+    if (!els.epRefinement.value){ els.epNote.classList.add("blocked"); els.epNote.textContent = "This package has no refinement to export."; return; }
+    if (!els.epStackPath.value.trim() || !els.epMetaPath.value.trim()){ els.epNote.classList.add("blocked"); els.epNote.textContent = "Both file names are required."; return; }
+    var body = {refinement_id: Number(els.epRefinement.value), class_number: Number(els.epClass.value) || 1, format: els.epFormat.value,
+                stack_path: els.epStackPath.value.trim(), metadata_path: els.epMetaPath.value.trim()};
+    els.epExportBtn.disabled = true; els.epExportBtn.textContent = "Exporting\u2026";
+    els.epNote.classList.remove("blocked"); els.epNote.textContent = "Writing the parameter file and the stack \u2014 this can take a while for a large package.";
+    apiFetch(projectApiUrl("/refinement-packages/" + ep.pkg.refinement_package_asset_id + "/export"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+      .then(function(res){
+        if (!res.ok) throw new Error((res.data && res.data.error) || "could not export the package");
+        els.epNote.textContent = "Exported " + res.data.particles + " particles. Wrote: " + res.data.files.join(", ");
+        els.epExportBtn.textContent = "Export";
+        els.epExportBtn.disabled = false;
+      }).catch(function(err){
+        els.epNote.classList.add("blocked"); els.epNote.textContent = "Could not export: " + err.message;
+        els.epExportBtn.disabled = false; els.epExportBtn.textContent = "Export";
+      });
+  });
+
+  // ---- Import (ImportRefinementPackageWizard) ----
+  function openImportPackageModal(){
+    if (!els.ipSymmetry.options.length){
+      ["C1","C2","C3","C4","D2","D3","D4","I","I2","O","T","T2"].forEach(function(sym){ var o = document.createElement("option"); o.value = o.textContent = sym; els.ipSymmetry.appendChild(o); });
+    }
+    els.ipNote.textContent = ""; els.ipNote.classList.remove("blocked");
+    els.ipImportBtn.disabled = false; els.ipImportBtn.textContent = "Import";
+    ipFormatChanged();
+    els.importPackageModal.classList.add("open"); els.importPackageScrim.classList.add("open");
+  }
+  function closeImportPackageModal(){ els.importPackageModal.classList.remove("open"); els.importPackageScrim.classList.remove("open"); }
+  // The wizard hides voltage, pixel size and amplitude contrast for a cisTEM star, which carries them per particle.
+  function ipFormatChanged(){
+    var cistem = els.ipFormat.value === "cistem";
+    els.ipPixelField.hidden = els.ipVoltageField.hidden = els.ipAcField.hidden = cistem;
+    els.ipName.placeholder = "Refinement Package #N (" + (cistem ? "cisTEM" : els.ipFormat.value === "frealign" ? "Frealign" : "Relion") + " Import)";
+  }
+  els.rpkgImportBtn.addEventListener("click", function(){ if (state.projectId) openImportPackageModal(); });
+  els.importPackageModalClose.addEventListener("click", closeImportPackageModal);
+  els.importPackageScrim.addEventListener("click", closeImportPackageModal);
+  els.ipFormat.addEventListener("change", ipFormatChanged);
+  els.ipStackBrowseBtn.addEventListener("click", function(){ openBrowseModal({input: els.ipStackPath, noun: "stack file", article: "a", types: "stack", single: true}); });
+  els.ipMetaBrowseBtn.addEventListener("click", function(){ openBrowseModal({input: els.ipMetaPath, noun: "parameter file", article: "a", types: "parameters", single: true}); });
+  els.ipImportBtn.addEventListener("click", function(){
+    if (!state.projectId) return;
+    var fmt = els.ipFormat.value;
+    var problems = [];
+    if (!els.ipStackPath.value.trim()) problems.push("the particle stack file");
+    if (!els.ipMetaPath.value.trim()) problems.push("the parameter file");
+    if (fmt !== "cistem" && !Number(els.ipPixel.value)) problems.push("the pixel size");
+    if (problems.length){ els.ipNote.classList.add("blocked"); els.ipNote.textContent = "Missing: " + problems.join(", ") + "."; return; }
+    var body = {format: fmt, stack_path: els.ipStackPath.value.trim(), metadata_path: els.ipMetaPath.value.trim(), name: els.ipName.value.trim(),
+                symmetry: els.ipSymmetry.value, molecular_weight_kda: Number(els.ipMw.value) || 300, largest_dimension_a: Number(els.ipSize.value) || 150,
+                protein_is_white: els.ipWhite.checked, cs_mm: Number(els.ipCs.value) || 2.7};
+    if (fmt !== "cistem"){ body.pixel_size_a = Number(els.ipPixel.value); body.voltage_kv = Number(els.ipVoltage.value) || 300; body.amplitude_contrast = Number(els.ipAc.value) || 0.07; }
+    els.ipImportBtn.disabled = true; els.ipImportBtn.textContent = "Importing\u2026";
+    els.ipNote.classList.remove("blocked"); els.ipNote.textContent = "Reading the parameter file\u2026";
+    apiFetch(projectApiUrl("/refinement-packages/import"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+      .then(function(res){
+        if (!res.ok) throw new Error((res.data && res.data.error) || "could not import the package");
+        state.selectedPackageId = res.data.refinement_package_asset_id;
+        closeImportPackageModal();
+        loadPackages();
+      }).catch(function(err){
+        els.ipNote.classList.add("blocked"); els.ipNote.textContent = "Could not import: " + err.message;
+        els.ipImportBtn.disabled = false; els.ipImportBtn.textContent = "Import";
+      });
+  });
   els.newPackageModalClose.addEventListener("click", closeNewPackageModal);
   els.newPackageScrim.addEventListener("click", closeNewPackageModal);
   els.npGroup.addEventListener("change", refreshPackageDefaults);

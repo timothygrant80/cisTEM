@@ -58,6 +58,7 @@ import sharpen
 import refinements
 import job_runner
 import refinement_packages
+import package_io
 import stages
 import imageheaders
 import preview
@@ -801,7 +802,9 @@ MOVIE_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff", ".eer"}
 # include .eer -- see IMAGE_IMPORT_EXTENSIONS, which the import route
 # enforces on the resolved files regardless of what the picker offered.
 BROWSABLE_EXTENSIONS = {"movie": MOVIE_EXTENSIONS, "image": {".mrc", ".mrcs", ".tif", ".tiff"}, "volume": {".mrc", ".mrcs"},
-                        "text": {".txt", ".plt", ".dat", ".coords", ".box", ".csv"}}
+                        "text": {".txt", ".plt", ".dat", ".coords", ".box", ".csv"},
+                        # a particle stack and the parameter files that go with one (package export / import)
+                        "stack": {".mrc", ".mrcs"}, "parameters": {".star", ".par"}}
 
 
 @app.route("/api/browse")
@@ -2308,6 +2311,53 @@ def delete_refinement_package(project_id, package_id):
     if not ok:
         return jsonify({"error": "no such refinement package"}), 404
     return jsonify({"deleted": package_id})
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/export", methods=["POST"])
+@auth.project_access_required
+def export_refinement_package(project_id, package_id):
+    """ExportRefinementPackageWizard: one refinement's parameters for one
+    class, as a Frealign par file, a Relion 2 / 3.1 star or a cisTEM star,
+    beside a copy of the particle stack. Body {refinement_id, class_number,
+    format, stack_path, metadata_path}; the paths are on the server's
+    machine. Synchronous, as the wizard is."""
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            result = package_io.export_package(conn, package_id, body.get("refinement_id"), body.get("class_number", 1), body.get("format"),
+                                               body.get("stack_path"), body.get("metadata_path"))
+        except KeyError as exc:
+            return jsonify({"error": str(exc).strip("'")}), 404
+        except (ValueError, TypeError) as exc:
+            return jsonify({"error": str(exc)}), 400
+        except OSError as exc:
+            return jsonify({"error": "could not write: {}".format(exc)}), 400
+        return jsonify(result)
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/import", methods=["POST"])
+@auth.project_access_required
+def import_refinement_package(project_id):
+    """ImportRefinementPackageWizard: a package plus its "Imported Parameters"
+    refinement from a stack and a cisTEM star / Frealign par / Relion star on
+    the server's machine. Body {format, stack_path, metadata_path, name,
+    symmetry, molecular_weight_kda, largest_dimension_a, protein_is_white,
+    pixel_size_a, voltage_kv, cs_mm, amplitude_contrast}."""
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            result = package_io.import_package(conn, project_id, body, log=lambda m: print("[import] " + m, flush=True))
+        except (ValueError, TypeError) as exc:
+            return jsonify({"error": str(exc)}), 400
+        except OSError as exc:
+            return jsonify({"error": "could not read: {}".format(exc)}), 400
+        return jsonify(result), 201
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------

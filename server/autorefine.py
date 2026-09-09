@@ -386,6 +386,14 @@ def _mask_then_refine(conn, project_id, job_id, state):
         state["reference_files"] = masked
     elif s["auto_mask"]:
         _log(project_id, job_id, "Automasking reference reconstruction")
+        # Not mirrored, deliberately: cisTEM's AutoRefinementManager hands its
+        # AutoMaskerThread a filter resolution -- the input refinement's part-FSC
+        # estimate, capped at the class's current high-resolution limit -- so the
+        # mask is made from a map low-passed to what has been resolved. The mask
+        # here is made from the unfiltered map (volumes.auto_mask's fixed 7 A
+        # binning). Worth bringing across if masks look to be following noise
+        # and overfitting becomes a problem; the numbers to pass are
+        # resolution_at(stats, 0.143, ps, True) and state["class_high_res_limits"][k].
         masked = []
         for ref in state["reference_files"]:
             vol, _ps = volumes.read_mrc_volume(ref)

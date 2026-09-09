@@ -181,6 +181,16 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual([r["X_POSITION"] for r in rows], [100.0, 130.0, 500.0])
         conn.close()
 
+    def test_selection_defaults_inherit_the_parent_package(self):
+        conn = self.db.get_conn(self.project)
+        sid = c.create_selection(conn, 1, "sel", [1, 2])
+        d = self.rp.selection_defaults(conn, [sid])
+        pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=1").fetchone()
+        self.assertEqual((d["symmetry"], d["molecular_weight_kda"], d["largest_dimension_a"], d["number_of_classes"], d["box_size"], d["pixel_size"]),
+                         (pkg["SYMMETRY"], pkg["MOLECULAR_WEIGHT"], pkg["PARTICLE_SIZE"], pkg["NUMBER_OF_CLASSES"], pkg["STACK_BOX_SIZE"], pkg["OUTPUT_PIXEL_SIZE"]))
+        self.assertEqual(d["parent_package_ids"], [1])
+        conn.close()
+
 
 class StatisticsTests(unittest.TestCase):
     def test_round_statistics(self):

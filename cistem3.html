@@ -7045,7 +7045,7 @@ From branch : <span id="versionBranch">—</span></p>
       : "Cuts every particle in a particle position group out of its image into a stack, with the image\u2019s CTF estimate carried along, and starts the package with a \u201cRandom Parameters\u201d refinement \u2014 cisTEM\u2019s New Refinement Package wizard.";
     if (fromClasses){
       els.npSelectionLabel.textContent = np.selection.name + " \u2014 " + np.selection.classes.length + " class" + (np.selection.classes.length === 1 ? "" : "es") + ", " + np.selection.particle_count + " particle" + (np.selection.particle_count === 1 ? "" : "s") + " (" + np.selection.classification_name + ")";
-      els.npDedupThreshold.value = els.npSize.value || 150;
+      els.npDedupThreshold.value = 0.25 * (Number(els.npSize.value) || 150);
       npSyncDedup();
     }
     els.npGroup.innerHTML = "";
@@ -7055,7 +7055,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (!els.npSymmetry.options.length){
       ["C1","C2","C3","C4","D2","D3","D4","I","I2","O","T","T2"].forEach(function(sym){ var o = document.createElement("option"); o.value = o.textContent = sym; els.npSymmetry.appendChild(o); });
     }
-    np.boxTouched = np.pixelTouched = false;
+    np.boxTouched = np.pixelTouched = false; np.parentApplied = false;
     els.npNote.textContent = ""; els.npNote.classList.remove("blocked");
     els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create";
     els.newPackageModal.classList.add("open"); els.newPackageScrim.classList.add("open");
@@ -7088,6 +7088,17 @@ From branch : <span id="versionBranch">—</span></p>
         if (!els.npName.value.trim() || /^Refinement Package #\d+$/.test(els.npName.value.trim())) els.npName.value = d.next_name;
         if (!np.pixelTouched && d.pixel_size) els.npPixel.value = d.pixel_size;
         if (!np.boxTouched && d.box_size) els.npBox.value = d.box_size;
+        // A class-selection package inherits the parent package's symmetry,
+        // molecular weight, largest dimension and class count (the wizard
+        // fills each page from the parent); applied once, when the dialog
+        // opens, so typing over them is not undone by the next refresh.
+        if (np.selection && !np.parentApplied){
+          np.parentApplied = true;
+          if (d.symmetry) els.npSymmetry.value = d.symmetry;
+          if (d.molecular_weight_kda != null) els.npMw.value = d.molecular_weight_kda;
+          if (d.largest_dimension_a != null){ els.npSize.value = d.largest_dimension_a; els.npDedupThreshold.value = 0.25 * Number(d.largest_dimension_a); }
+          if (d.number_of_classes != null) els.npClasses.value = d.number_of_classes;
+        }
         els.npBoxHint.textContent = d.box_size ? (np.selection ? "\u2014 the parent package\u2019s " + d.box_size : "\u2014 cisTEM suggests " + d.box_size) : "";
       }).catch(function(){});
   }
@@ -7109,7 +7120,7 @@ From branch : <span id="versionBranch">—</span></p>
       body.selection_ids = [np.selection.selection_id];
       body.recentre = els.npRecentre.checked;
       body.remove_duplicates = els.npRecentre.checked && els.npDedup.checked;
-      body.duplicate_threshold_a = Number(els.npDedupThreshold.value) || Number(els.npSize.value) || 150;
+      body.duplicate_threshold_a = Number(els.npDedupThreshold.value) || 0.25 * (Number(els.npSize.value) || 150);
     } else {
       if (els.npGroup.value === ""){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Pick a particle position group."; return; }
       body.particle_group_id = Number(els.npGroup.value);

@@ -251,7 +251,8 @@ def _particles_of_selections(conn, params):
         raise ValueError("the selected classes hold no particles")
     recentre = bool(params.get("recentre", True))
     remove_duplicates = recentre and bool(params.get("remove_duplicates", True))
-    threshold = float(params.get("duplicate_threshold_a") or params.get("largest_dimension_a") or 150.0)
+    # the wizard's default threshold: a quarter of the largest dimension
+    threshold = float(params.get("duplicate_threshold_a") or 0.25 * float(params.get("largest_dimension_a") or 150.0))
 
     contained_cache = {}
     picks = []
@@ -326,9 +327,11 @@ def _particles_of_selections(conn, params):
 
 
 def selection_defaults(conn, selection_ids):
-    """What the wizard prefills for a class-selection package: the parent
-    package's box size and pixel size (BoxSizeWizardPage takes the parent's
-    box), and how many particles the selections hold."""
+    """What the wizard prefills for a class-selection package -- the parent
+    package's values, page by page (MyNewRefinementPackageWizard::OnPageChanged
+    with a class-average parent): box size, pixel size, symmetry, molecular
+    weight, largest dimension and class count -- and how many particles the
+    selections hold."""
     import classification  # noqa: E402
 
     members = classification.selection_members(conn, selection_ids)
@@ -337,6 +340,10 @@ def selection_defaults(conn, selection_ids):
     return {"particle_count": len(members),
             "box_size": pkg["STACK_BOX_SIZE"] if pkg else None,
             "pixel_size": pkg["OUTPUT_PIXEL_SIZE"] if pkg else None,
+            "symmetry": pkg["SYMMETRY"] if pkg else None,
+            "molecular_weight_kda": pkg["MOLECULAR_WEIGHT"] if pkg else None,
+            "largest_dimension_a": pkg["PARTICLE_SIZE"] if pkg else None,
+            "number_of_classes": pkg["NUMBER_OF_CLASSES"] if pkg else None,
             "parent_package_ids": pkg_ids}
 
 

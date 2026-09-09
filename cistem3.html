@@ -3071,7 +3071,7 @@ From branch : <span id="versionBranch">—</span></p>
     btn.addEventListener("click", function(){ showResultsStage(key); });
     els.resultsTabs.appendChild(btn);
   });
-  function showResultsStage(key){
+  function showResultsStage(key, alreadyLoaded){
     key = RESULT_PAGE_ALIAS[key] || key;
     state.resultsStage = key;
     els.resultsTabs.querySelectorAll(".subtab-btn").forEach(function(btn){ btn.classList.toggle("active", btn.dataset.stage === key); });
@@ -3082,7 +3082,7 @@ From branch : <span id="versionBranch">—</span></p>
       els.resultsPlaceholderLabel.textContent = STAGES[key].label;
       els.resultsPlaceholderNote.innerHTML = STAGES[key].label + " results aren’t wired up yet" +
         '<span class="hint">This stage doesn’t write to its project tables yet — see CLAUDE.md’s "Scope note". Its cisTEM results panel is the model for what goes here.</span>';
-    } else {
+    } else if (!alreadyLoaded){
       RESULT_PAGES[key].load();
     }
   }
@@ -3322,8 +3322,8 @@ From branch : <span id="versionBranch">—</span></p>
     }
 
     page.load = function(){
-      if (!state.projectId || !state.connected) return;
-      apiFetch(projectApiUrl(cfg.listPath)).then(function(r){
+      if (!state.projectId || !state.connected) return Promise.resolve();
+      return apiFetch(projectApiUrl(cfg.listPath)).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       }).then(function(data){
@@ -3350,6 +3350,14 @@ From branch : <span id="versionBranch">—</span></p>
       renderGrid();
       showSelected();
     }
+    // Show one job's results: its first asset, with that job's run shown
+    // (the eye) -- what the Jobs tab opens for a finished job.
+    page.showJob = function(job){
+      var its = page.items.filter(function(it){ return it[cfg.jobKey] === job.id; });
+      if (!its.length) return false;
+      select(its[0][cfg.rowIdKey], its[0][cfg.idKey]);
+      return true;
+    };
     function activate(id){
       apiFetch(projectApiUrl(cfg.activatePath(id)), {method: "POST"}).then(function(r){
         return r.json().then(function(d){ return {ok: r.ok, data: d}; });
@@ -3899,8 +3907,8 @@ From branch : <span id="versionBranch">—</span></p>
     });
 
     page.load = function(){
-      if (!state.projectId || !state.connected) return;
-      Promise.all([
+      if (!state.projectId || !state.connected) return Promise.resolve();
+      return Promise.all([
         apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
         apiFetch(projectApiUrl("/classifications")).then(function(r){ return r.ok ? r.json() : {classifications: []}; })
       ]).then(function(res){
@@ -3950,6 +3958,14 @@ From branch : <span id="versionBranch">—</span></p>
       btn("delete").disabled = page.selectedId == null;
       showSelected();
     }
+    page.showJob = function(job){
+      var c = page.items.filter(function(x){ return x.job_id === job.id; }).pop();
+      if (!c) return false;
+      page.packageId = c.refinement_package_asset_id; pkgSelect.value = page.packageId;
+      page.selectedId = c.classification_id; page.selectedClass = null;
+      renderList();
+      return true;
+    };
     function showSelected(){
       releaseUrls();
       var item = page.items.filter(function(c){ return c.classification_id === page.selectedId; })[0];
@@ -4063,8 +4079,8 @@ From branch : <span id="versionBranch">—</span></p>
     var tbody = left.querySelector("tbody");
     function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
     page.load = function(){
-      if (!state.projectId || !state.connected) return;
-      apiFetch(projectApiUrl("/startups")).then(function(r){ return r.ok ? r.json() : {startups: []}; }).then(function(d){
+      if (!state.projectId || !state.connected) return Promise.resolve();
+      return apiFetch(projectApiUrl("/startups")).then(function(r){ return r.ok ? r.json() : {startups: []}; }).then(function(d){
         page.items = (d && d.startups) || [];
         if (!page.items.some(function(r){ return r.startup_id === page.selectedId; })) page.selectedId = page.items.length ? page.items[page.items.length - 1].startup_id : null;
         render();
@@ -4082,6 +4098,12 @@ From branch : <span id="versionBranch">—</span></p>
       });
       show();
     }
+    page.showJob = function(job){
+      var r = page.items.filter(function(x){ return x.job_id === job.id; }).pop();
+      if (!r) return false;
+      page.selectedId = r.startup_id; render();
+      return true;
+    };
     function show(){
       releaseUrls();
       var r = page.items.filter(function(x){ return x.startup_id === page.selectedId; })[0];
@@ -4183,8 +4205,8 @@ From branch : <span id="versionBranch">—</span></p>
     var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
     function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
     page.load = function(){
-      if (!state.projectId || !state.connected) return;
-      Promise.all([
+      if (!state.projectId || !state.connected) return Promise.resolve();
+      return Promise.all([
         apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
         apiFetch(projectApiUrl("/refinements")).then(function(r){ return r.ok ? r.json() : {refinements: []}; })
       ]).then(function(res){
@@ -4219,6 +4241,15 @@ From branch : <span id="versionBranch">—</span></p>
       });
       show();
     }
+    page.showJob = function(job){
+      var r = page.items.filter(function(x){ return x.job_id === job.id; }).pop();
+      if (!r && job.metrics && job.metrics.refinement_id != null) r = page.items.filter(function(x){ return x.refinement_id === job.metrics.refinement_id; })[0];
+      if (!r) return false;
+      page.packageId = r.refinement_package_asset_id; pkgSelect.value = page.packageId;
+      page.selectedId = r.refinement_id; page.classIndex = 0;
+      renderList();
+      return true;
+    };
     function drawAngular(hist){
       while (ang.firstChild) ang.removeChild(ang.firstChild);
       var NS = "http://www.w3.org/2000/svg";
@@ -7934,7 +7965,7 @@ From branch : <span id="versionBranch">—</span></p>
     sorted.forEach(function(job){
       var tr = document.createElement("tr");
       tr.className = "clickable" + (job.id === state.selectedJobId ? " selected" : "");
-      tr.addEventListener("click", function(){ selectJob(job.id); });
+      tr.addEventListener("click", function(){ openJob(job); });
 
       var tdName = document.createElement("td");
       var nameDiv = document.createElement("div");
@@ -8074,6 +8105,20 @@ From branch : <span id="versionBranch">—</span></p>
   var LIVE_MIN_INTERVAL_MS = 10000;
   var live = { jobId: null, shownTask: null, shownAt: 0, pending: null, timer: null, urls: [], inflight: false, viewStage: null, render: null };
 
+  // A finished job's row opens its results where cisTEM shows them -- the
+  // Results tab's page for its stage, with that job's own result selected --
+  // since the live panel is for following a job that is still running. A
+  // job with nothing on that page (failed, or a simulated run) falls back to
+  // the live panel, which shows its last result and its log.
+  function openJob(job){
+    var key = RESULT_PAGE_ALIAS[job.stage] || job.stage;
+    var page = RESULT_PAGES[key];
+    if (!TERMINAL_STATUSES[job.status] || job.status === "failed" || !page || !page.showJob){ selectJob(job.id); return; }
+    page.load().then(function(){
+      if (page.showJob(job)){ showTab("results"); showResultsStage(key, true); }
+      else selectJob(job.id);
+    });
+  }
   function selectJob(jobId){
     if (state.selectedJobId === jobId) return;
     state.selectedJobId = jobId;

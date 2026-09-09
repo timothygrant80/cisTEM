@@ -2994,11 +2994,12 @@ From branch : <span id="versionBranch">—</span></p>
     }
   }
 
-  function populateDynamicFields(fields){
+  function populateDynamicFields(fields, refreshing){
     fields.forEach(function(f){
       if (!f.dynamicOptions) return;
       var input = els.paramFields.querySelector('[data-key="' + f.key + '"]');
       if (!input) return;
+      var keep = refreshing && !input.disabled ? input.value : null;
       if (!state.projectId){
         input.disabled = true;
         input.innerHTML = "";
@@ -3031,11 +3032,12 @@ From branch : <span id="versionBranch">—</span></p>
           opt.textContent = row[f.dynamicOptions.label] + " (" + row[f.dynamicOptions.countKey] + " " + (f.dynamicOptions.countLabel || "movies") + ")";
           input.appendChild(opt);
         });
+        if (keep !== null && Array.from(input.options).some(function(o){ return o.value === keep; })) input.value = keep;
         updateStartButton();
         // The preview image list follows the group, which is only known now.
         if (typeof loadPreviewImages === "function") loadPreviewImages();
         var stage = STAGES[state.currentStage];
-        if (stage && stage.afterDynamicLoad) stage.afterDynamicLoad(f.key);
+        if (stage && stage.afterDynamicLoad) stage.afterDynamicLoad(f.key, !!refreshing);
       }).catch(function(){
         input.innerHTML = "";
         var errOpt = document.createElement("option");
@@ -7171,11 +7173,12 @@ From branch : <span id="versionBranch">—</span></p>
   // (SetDefaults takes it from that classification) and seeds the starting
   // high-resolution limit with the one it reached; "New Classification" puts
   // the package's particle count through the 300-per-class rule instead.
-  function class2dPackageChanged(){
+  function class2dPackageChanged(refreshing){
     var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
     var start = els.paramFields.querySelector('[data-key="starting_classification_id"]');
     if (!pkg || !start) return;
     var pkgId = pkg.value;
+    var keep = refreshing ? start.value : null;
     start.innerHTML = "";
     var fresh = document.createElement("option"); fresh.value = ""; fresh.textContent = "New Classification"; start.appendChild(fresh);
     if (!pkgId || !state.projectId){ class2dStartChanged(); return; }
@@ -7186,7 +7189,7 @@ From branch : <span id="versionBranch">—</span></p>
       if (pkg.value !== pkgId) return;
       start.dataset.newClasses = d.number_of_classes;
       // SetDefaults(): mask radius 0.6 x and search range 0.33 x the package's largest dimension.
-      if (d.defaults) ["mask_radius_a", "max_search_range_a"].forEach(function(k){
+      if (d.defaults && !refreshing) ["mask_radius_a", "max_search_range_a"].forEach(function(k){
         var input = els.expertFields.querySelector('[data-key="' + k + '"]');
         if (input && d.defaults[k] != null) input.value = Number(d.defaults[k]).toFixed(2);
       });
@@ -7199,8 +7202,10 @@ From branch : <span id="versionBranch">—</span></p>
         opt.disabled = !c.class_average_file_exists;
         start.appendChild(opt);
       });
-      class2dStartChanged();
-    }).catch(function(){ class2dStartChanged(); });
+      // A refresh keeps the starting-references choice and the fields it set.
+      if (keep !== null && Array.from(start.options).some(function(o){ return o.value === keep; })) start.value = keep;
+      else class2dStartChanged();
+    }).catch(function(){ if (keep === null) class2dStartChanged(); });
   }
   function class2dStartChanged(){
     var start = els.paramFields.querySelector('[data-key="starting_classification_id"]');
@@ -7225,13 +7230,13 @@ From branch : <span id="versionBranch">—</span></p>
     if (pkg) pkg.addEventListener("change", class2dPackageChanged);
     if (start) start.addEventListener("change", class2dStartChanged);
   };
-  STAGES.class2d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") class2dPackageChanged(); };
+  STAGES.class2d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") class2dPackageChanged(refreshing); };
 
   // ---------- ab-initio panel wiring (AbInitio3DPanel::NewRefinementPackageSelected / SetDefaults) ----------
   // The package sets the symmetry, and the mask radius and search ranges
   // (0.75 x and 0.4 x its largest dimension); the reconstruction profile
   // picker is filled from the same run profiles as the run bar.
-  function abinitioPackageChanged(){
+  function abinitioPackageChanged(refreshing){
     var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
     if (!pkg || !pkg.value || !state.projectId) return;
     var pkgId = pkg.value;
@@ -7240,16 +7245,19 @@ From branch : <span id="versionBranch">—</span></p>
       return r.json();
     }).then(function(d){
       if (pkg.value !== pkgId) return;
-      var sym = els.paramFields.querySelector('[data-key="symmetry"]');
-      if (sym && d.symmetry) sym.value = d.symmetry;
-      var classes = els.paramFields.querySelector('[data-key="number_of_classes"]');
-      if (classes && d.number_of_classes) classes.value = d.number_of_classes;
-      [["mask_radius_a", d.mask_radius_a], ["search_range_x_a", d.search_range_x_a], ["search_range_y_a", d.search_range_y_a]].forEach(function(pair){
-        var input = els.expertFields.querySelector('[data-key="' + pair[0] + '"]');
-        if (input && pair[1] != null) input.value = pair[1];
-      });
+      if (!refreshing){
+        var sym = els.paramFields.querySelector('[data-key="symmetry"]');
+        if (sym && d.symmetry) sym.value = d.symmetry;
+        var classes = els.paramFields.querySelector('[data-key="number_of_classes"]');
+        if (classes && d.number_of_classes) classes.value = d.number_of_classes;
+        [["mask_radius_a", d.mask_radius_a], ["search_range_x_a", d.search_range_x_a], ["search_range_y_a", d.search_range_y_a]].forEach(function(pair){
+          var input = els.expertFields.querySelector('[data-key="' + pair[0] + '"]');
+          if (input && pair[1] != null) input.value = pair[1];
+        });
+      }
       var selSelect = els.paramFields.querySelector('[data-key="classification_selection_id"]');
       if (selSelect){
+        var keepSel = refreshing ? selSelect.value : null;
         selSelect.innerHTML = "";
         var sels = d.selections || [];
         if (!sels.length){
@@ -7261,6 +7269,7 @@ From branch : <span id="versionBranch">—</span></p>
           selSelect.appendChild(o);
         });
         selSelect.dataset.count = String(sels.length);
+        if (keepSel !== null && Array.from(selSelect.options).some(function(o){ return o.value === keepSel; })) selSelect.value = keepSel;
       }
       updateStartButton();
     }).catch(function(){});
@@ -7280,10 +7289,10 @@ From branch : <span id="versionBranch">—</span></p>
     if (pkg) pkg.addEventListener("change", abinitioPackageChanged);
     abinitioFillProfiles();
   };
-  STAGES.ab_initio_3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") abinitioPackageChanged(); };
+  STAGES.ab_initio_3d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") abinitioPackageChanged(refreshing); };
 
   // ---------- Refine 3D panel wiring (MyRefine3DPanel::NewRefinementPackageSelected / SetDefaults / OnHighResLimitChange) ----------
-  function refine3dPackageChanged(){
+  function refine3dPackageChanged(refreshing){
     var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
     if (!pkg || !pkg.value || !state.projectId) return;
     var pkgId = pkg.value;
@@ -7303,16 +7312,20 @@ From branch : <span id="versionBranch">—</span></p>
       if (note) refine3dFillReferences(note, pkgId, d.references || [], d.volumes || []);
       var mask = els.paramFields.querySelector('[data-key="mask_volume_id"]');
       if (mask){
+        var keepMask = refreshing ? mask.value : null;
         mask.innerHTML = "";
         (d.volumes || []).forEach(function(v){ var o = document.createElement("option"); o.value = v.volume_asset_id; o.textContent = v.name + " (" + v.x_size + " px)"; mask.appendChild(o); });
         if (!(d.volumes || []).length){ var none = document.createElement("option"); none.value = ""; none.textContent = "No volumes yet"; mask.appendChild(none); }
+        else if (keepMask !== null && Array.from(mask.options).some(function(o){ return o.value === keepMask; })) mask.value = keepMask;
       }
-      var hi = els.paramFields.querySelector('[data-key="high_resolution_limit_a"]');
-      if (hi) hi.value = d.high_resolution_limit_a;
-      ["low_resolution_limit_a", "mask_radius_a", "global_mask_radius_a", "angular_step_deg", "search_range_x_a", "search_range_y_a", "classification_high_resolution_limit_a"].forEach(function(k){
-        var input = els.expertFields.querySelector('[data-key="' + k + '"]');
-        if (input && d[k] != null) input.value = d[k];
-      });
+      if (!refreshing){
+        var hi = els.paramFields.querySelector('[data-key="high_resolution_limit_a"]');
+        if (hi) hi.value = d.high_resolution_limit_a;
+        ["low_resolution_limit_a", "mask_radius_a", "global_mask_radius_a", "angular_step_deg", "search_range_x_a", "search_range_y_a", "classification_high_resolution_limit_a"].forEach(function(k){
+          var input = els.expertFields.querySelector('[data-key="' + k + '"]');
+          if (input && d[k] != null) input.value = d[k];
+        });
+      }
       updateStartButton();
     }).catch(function(){});
   }
@@ -7350,7 +7363,7 @@ From branch : <span id="versionBranch">—</span></p>
           if (!resp.ok) return resp.json().catch(function(){ return {}; }).then(function(e){ throw new Error(e.error || ("HTTP " + resp.status)); });
         }).catch(function(err){
           alert("Could not change the reference: " + err.message);
-        }).then(function(){ refine3dPackageChanged(); });
+        }).then(function(){ refine3dPackageChanged(true); });
       });
       td2.appendChild(sel); tr.appendChild(td2);
       tbody.appendChild(tr);
@@ -7376,10 +7389,10 @@ From branch : <span id="versionBranch">—</span></p>
     if (hi) hi.addEventListener("change", refine3dHighResChanged);
     abinitioFillProfiles();
   };
-  STAGES.refine3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") refine3dPackageChanged(); };
+  STAGES.refine3d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") refine3dPackageChanged(refreshing); };
 
   // ---------- Auto Refine panel wiring (AutoRefine3DPanel::NewRefinementPackageSelected / SetDefaults) ----------
-  function autorefinePackageChanged(){
+  function autorefinePackageChanged(refreshing){
     var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
     if (!pkg || !pkg.value || !state.projectId) return;
     var pkgId = pkg.value;
@@ -7403,7 +7416,7 @@ From branch : <span id="versionBranch">—</span></p>
       }
       fillVolumes(els.paramFields.querySelector('[data-key="reference_volume_id"]'), d.suggested_reference_id, true);
       fillVolumes(els.paramFields.querySelector('[data-key="mask_volume_id"]'), null, false);
-      ["low_resolution_limit_a", "mask_radius_a", "global_mask_radius_a", "search_range_x_a", "search_range_y_a"].forEach(function(k){
+      if (!refreshing) ["low_resolution_limit_a", "mask_radius_a", "global_mask_radius_a", "search_range_x_a", "search_range_y_a"].forEach(function(k){
         var input = els.expertFields.querySelector('[data-key="' + k + '"]');
         if (input && d[k] != null) input.value = d[k];
       });
@@ -7415,14 +7428,14 @@ From branch : <span id="versionBranch">—</span></p>
     if (pkg) pkg.addEventListener("change", autorefinePackageChanged);
     abinitioFillProfiles();
   };
-  STAGES.auto_refine3d.afterDynamicLoad = function(key){ if (key === "refinement_package_id") autorefinePackageChanged(); };
+  STAGES.auto_refine3d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") autorefinePackageChanged(refreshing); };
 
   // ---------- Refine CTF and Generate 3D panel wiring (their SetDefaults() / NewRefinementPackageSelected()) ----------
   // Both share GET /refine3d/defaults: the package's refinements for the
   // Input Parameters picker, its current references, the volumes a mask can
   // be, and the size-derived defaults.
   var cf = { missingReference: null };
-  function refinementInputsPackageChanged(stageKey){
+  function refinementInputsPackageChanged(stageKey, refreshing){
     var pkg = els.paramFields.querySelector('[data-key="refinement_package_id"]');
     if (!pkg || !pkg.value || !state.projectId) return;
     var pkgId = pkg.value;
@@ -7440,12 +7453,14 @@ From branch : <span id="versionBranch">—</span></p>
       }
       var mask = els.paramFields.querySelector('[data-key="mask_volume_id"]');
       if (mask){
+        var keepMask = refreshing ? mask.value : null;
         mask.innerHTML = "";
         (d.volumes || []).forEach(function(v){ var o = document.createElement("option"); o.value = v.volume_asset_id; o.textContent = v.name + " (" + v.x_size + " px)"; mask.appendChild(o); });
         if (!(d.volumes || []).length){ var none = document.createElement("option"); none.value = ""; none.textContent = "No volumes yet"; mask.appendChild(none); }
+        else if (keepMask !== null && Array.from(mask.options).some(function(o){ return o.value === keepMask; })) mask.value = keepMask;
       }
       var defaults = stageKey === "generate3d" ? (d.generate3d || {}) : (d.refine_ctf || {});
-      Object.keys(defaults).forEach(function(k){
+      if (!refreshing) Object.keys(defaults).forEach(function(k){
         var input = els.expertFields.querySelector('[data-key="' + k + '"]');
         if (input && defaults[k] != null) input.value = defaults[k];
       });
@@ -7465,7 +7480,7 @@ From branch : <span id="versionBranch">—</span></p>
       cf.missingReference = null;
       if (stageKey === "refine_ctf") abinitioFillProfiles();
     };
-    STAGES[stageKey].afterDynamicLoad = function(key){ if (key === "refinement_package_id") refinementInputsPackageChanged(stageKey); };
+    STAGES[stageKey].afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") refinementInputsPackageChanged(stageKey, refreshing); };
   });
 
   // ---------- Sharpen 3D (Sharpen3DPanel) ----------
@@ -7473,7 +7488,7 @@ From branch : <span id="versionBranch">—</span></p>
   // radii of the reconstruction that made it, the cut-off at its estimated
   // resolution with FOM weighting on when its refinement's statistics are
   // there, else 3.5 A with weighting off and greyed.
-  function sharpenVolumeChanged(){
+  function sharpenVolumeChanged(refreshing){
     var vol = els.paramFields.querySelector('[data-key="volume_asset_id"]');
     if (!vol || !vol.value || vol.disabled || !state.projectId) return;
     var vid = vol.value;
@@ -7495,7 +7510,7 @@ From branch : <span id="versionBranch">—</span></p>
         else if (keep && Array.from(mask.options).some(function(o){ return o.value === keep; })) mask.value = keep;
       }
       var defs = d.defaults || {};
-      Object.keys(defs).forEach(function(k){
+      if (!refreshing) Object.keys(defs).forEach(function(k){
         var input = els.paramFields.querySelector('[data-key="' + k + '"]');
         if (!input) return;
         if (input.type === "checkbox") input.checked = !!defs[k]; else input.value = defs[k];
@@ -7509,7 +7524,7 @@ From branch : <span id="versionBranch">—</span></p>
       }
       var useMask = els.paramFields.querySelector('[data-key="use_mask"]');
       if (useMask) useMask.dispatchEvent(new Event("change", {bubbles: true}));
-      resetSharpenView();
+      if (!refreshing) resetSharpenView();
       updateStartButton();
     }).catch(function(){});
   }
@@ -7525,7 +7540,7 @@ From branch : <span id="versionBranch">—</span></p>
       else if (sv.autoMaskValue !== undefined) auto.checked = sv.autoMaskValue;
     });
   };
-  STAGES.sharpen3d.afterDynamicLoad = function(key){ if (key === "volume_asset_id") sharpenVolumeChanged(); };
+  STAGES.sharpen3d.afterDynamicLoad = function(key, refreshing){ if (key === "volume_asset_id") sharpenVolumeChanged(refreshing); };
 
   function sharpenShowInfo(showInfo){
     sv.shownInfo = showInfo;
@@ -7883,6 +7898,18 @@ From branch : <span id="versionBranch">—</span></p>
     Object.keys(stages).forEach(function(stage){
       if (STAGE_RESULT_REFRESH[stage]) STAGE_RESULT_REFRESH[stage]();
     });
+    if (Object.keys(stages).length) refreshActionPanelLists();
+  }
+  // A finished (or terminated) job changes what the open Actions panel can
+  // pick from -- a new classification for the starting-references list, a
+  // new refinement or volume for Input Parameters and the reference and
+  // mask pickers, CTF estimates that make an image group pickable -- so its
+  // lists are refilled with their selections kept and, unlike a package
+  // change, the size-derived prefills and anything typed left alone.
+  function refreshActionPanelLists(){
+    var stage = STAGES[state.currentStage];
+    if (!stage || !state.projectId) return;
+    populateDynamicFields(stage.fields, true);
   }
 
   function fetchJobs(){

@@ -440,11 +440,14 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .preview-status.error{color:var(--critical);}
 .preview-view .pick-result{grid-template-columns:1fr;}
 .preview-view .pick-numbers{grid-template-columns:repeat(2,1fr);}
-.pick-result{display:grid;grid-template-columns:minmax(0,2fr) minmax(210px,1fr);gap:14px;align-items:start;}
-.pick-numbers .details-item{white-space:nowrap;}
-.pick-frame{position:relative;min-height:120px;}
+.pick-result{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start;}
+.pick-frame{position:relative;border:1px solid var(--border);background:var(--surface-sunken);min-height:120px;}
+.pick-frame img{display:block;width:100%;height:auto;}
+.pick-frame .ra-figure-status{position:absolute;left:0;right:0;top:40%;text-align:center;}
+.pick-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.pick-overlay circle{fill:none;stroke:#3CC24A;stroke-width:6;vector-effect:non-scaling-stroke;stroke-width:1.5px;}
 .pick-side .ra-radio{margin-bottom:6px;}
-.ctf-numbers.pick-numbers{grid-template-columns:1fr;margin-top:4px;}
+.pick-numbers{grid-template-columns:1fr;margin-top:4px;}
 @media (max-width:1100px){ .pick-result{grid-template-columns:1fr;} }
 /* 2D classification: a montage of class averages with a selection square
    (ClassumDisplayPanel), and the members of the selected class below it. */
@@ -634,14 +637,12 @@ table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:
 .display-manual{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11px;}
 .display-manual canvas{border:1px solid var(--border);background:var(--surface);}
 .display-manual input[type=number]{width:110px;padding:3px 6px;font-size:11px;}
-/* Embedded in a Results or live view: a square stage sized by its column,
-   only the file name in the status line, and an Expand button to the modal. */
-.display-panel.compact{flex:none;gap:6px;}
-.display-panel.compact .display-stage{flex:none;height:auto;aspect-ratio:1 / 1;min-height:0;}
-.display-panel.compact .display-status{font-size:10px;}
-.dp-figure{margin:0;}
-.dp-figure figcaption{font-size:11px;color:var(--text-secondary);margin-top:4px;font-weight:600;}
-.dp-figure.wide .display-stage{aspect-ratio:auto;height:clamp(300px,55vh,720px);}
+/* The expand icon in a picture's top-left corner: opens the file behind
+   the picture in the Display window. Hidden until the view knows the file. */
+.fig-expand{position:absolute;left:6px;top:6px;z-index:2;width:24px;height:24px;padding:0;border:1px solid var(--border-strong);background:rgba(255,255,255,.88);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:2px;}
+.fig-expand:hover{background:#fff;border-color:var(--accent);}
+.fig-expand svg{width:14px;height:14px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.fig-expand[hidden]{display:none;}
 
 .browse-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .browse-path{
@@ -3210,35 +3211,28 @@ From branch : <span id="versionBranch">—</span></p>
       status.hidden = false; status.textContent = "Could not render the " + what + ": " + err.message; img.hidden = true;
     });
   }
-  // A Results-view figure whose picture is a compact Display panel rather
-  // than a server-rendered PNG: makeFigure()'s caption row under the panel.
-  function makePanelFigure(caption, wide){
-    var fig = document.createElement("figure"); fig.className = "dp-figure" + (wide ? " wide" : "");
-    var host = document.createElement("div"); fig.appendChild(host);
-    var panel = makeDisplayPanel(host, {compact: true});
-    var cap = document.createElement("figcaption"); cap.textContent = caption + " ";
-    var extra = document.createElement("span"); extra.className = "ra-nyquist"; cap.appendChild(extra);
-    fig.appendChild(cap);
-    return {root: fig, panel: panel, extra: extra};
-  }
-  // A "Display…" button opening a file in the full Display window; the
-  // file follows the view through setDisplayButton().
-  function makeDisplayButton(){
-    var b = document.createElement("button"); b.type = "button"; b.className = "small"; b.textContent = "Display…"; b.title = "Open this file in the Display window"; b.hidden = true;
-    b.addEventListener("click", function(){ if (b.displaySrc) openDisplayModal(b.displaySrc); });
+  // An expand icon in a picture's top-left corner that opens the file behind
+  // it in the Display window (cisTEM's DisplayPanel); the view tells it the
+  // file through setExpand() as what it shows changes.
+  function makeExpandButton(frame){
+    var b = document.createElement("button"); b.type = "button"; b.className = "fig-expand"; b.title = "Open in the Display window"; b.hidden = true;
+    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>';
+    b.addEventListener("click", function(e){ e.stopPropagation(); if (b.displaySrc) openDisplayModal(b.displaySrc); });
+    frame.appendChild(b);
     return b;
   }
-  function setDisplayButton(b, src){ b.displaySrc = src && src.path ? src : null; b.hidden = !b.displaySrc; }
+  function setExpand(b, src){ b.displaySrc = src && src.path ? src : null; b.hidden = !b.displaySrc; }
   function makeFigure(caption, alt){
     var fig = document.createElement("figure"); fig.className = "ra-figure";
     var frame = document.createElement("div"); frame.className = "ra-figure-frame";
     var img = document.createElement("img"); img.alt = alt || caption; img.hidden = true;
     var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading…";
     frame.appendChild(img); frame.appendChild(status);
+    var expand = makeExpandButton(frame);
     var cap = document.createElement("figcaption"); cap.textContent = caption + " ";
     var extra = document.createElement("span"); extra.className = "ra-nyquist"; cap.appendChild(extra);
     fig.appendChild(frame); fig.appendChild(cap);
-    return {root: fig, img: img, status: status, extra: extra};
+    return {root: fig, img: img, status: status, extra: extra, expand: expand};
   }
   function makePlotBlock(title, legend){
     var wrap = document.createElement("div");
@@ -3640,15 +3634,17 @@ From branch : <span id="versionBranch">—</span></p>
       plot.svg.setAttribute("aria-label", "Frame shift against accumulated exposure");
       box.appendChild(plot.root);
       var images = document.createElement("div"); images.className = "ra-images"; box.appendChild(images);
-      var sum = makePanelFigure("Aligned sum"), spectrum = makePanelFigure("Amplitude spectrum");
+      var sum = makeFigure("Aligned sum"), spectrum = makeFigure("Amplitude spectrum");
       images.appendChild(sum.root); images.appendChild(spectrum.root);
       return {
-        loading: function(){ sum.panel.clear("Loading…"); spectrum.panel.clear("Loading…"); },
-        error: function(msg){ sum.panel.clear("Could not load this alignment: " + msg); },
+        loading: function(){ sum.img.hidden = true; sum.status.hidden = false; sum.status.textContent = "Loading…"; spectrum.img.hidden = true; spectrum.status.hidden = false; spectrum.status.textContent = "Loading…"; },
+        error: function(msg){ sum.status.textContent = "Could not load this alignment: " + msg; },
         update: function(a, urls){
           drawDriftPlot(plot.svg, a.shifts, a.exposure_per_frame);
-          sum.panel.open({path: a.output_file, exists: a.output_file_exists, what: "aligned sum", title: "Aligned sum", pixelSize: a.final_pixel_size || a.pixel_size});
-          spectrum.panel.open({path: a.spectrum_file, exists: a.spectrum_file_exists, what: "spectrum", title: "Amplitude spectrum"});
+          loadFigure(sum.img, sum.status, "/alignments/" + a.alignment_id + "/sum.png", a.output_file_exists, "aligned sum", urls);
+          loadFigure(spectrum.img, spectrum.status, "/alignments/" + a.alignment_id + "/spectrum.png", a.spectrum_file_exists, "spectrum", urls);
+          setExpand(sum.expand, a.output_file_exists ? {path: a.output_file, title: "Aligned sum — " + (a.movie_name || ""), pixelSize: a.final_pixel_size || a.pixel_size} : null);
+          setExpand(spectrum.expand, a.spectrum_file_exists ? {path: a.spectrum_file, title: "Amplitude spectrum — " + (a.movie_name || "")} : null);
           // ProcessResult(): Nyquist is 2x the corrected pixel size, floored at 2.8 A -- that's what the spectrum's edge means.
           var px = a.final_pixel_size || a.pixel_size;
           spectrum.extra.textContent = px ? "(Nyquist " + (px < 1.4 ? 2.8 : 2 * px).toFixed(2) + " Å)" : "";
@@ -3672,7 +3668,7 @@ From branch : <span id="versionBranch">—</span></p>
   ];
   function buildCtfResultView(box){
     var wrap = document.createElement("div"); wrap.className = "ctf-result"; box.appendChild(wrap);
-    var diag = makePanelFigure("Diagnostic image"); wrap.appendChild(diag.root);
+    var diag = makeFigure("Diagnostic image", "Filtered amplitude spectrum with the CTF fit in the lower-left quadrant"); wrap.appendChild(diag.root);
     var col = document.createElement("div"); col.className = "live-plot-col"; wrap.appendChild(col);
     var plot = makePlotBlock("1D Fit", [["ra-swatch-amp", "Spectrum"], ["ra-swatch-fit", "CTF fit"], ["ra-swatch-q", "Quality of fit"]]);
     plot.svg.setAttribute("aria-label", "Rotational average of the spectrum, the CTF fit and the quality of fit against spatial frequency");
@@ -3685,14 +3681,15 @@ From branch : <span id="versionBranch">—</span></p>
       item.appendChild(k); item.appendChild(v); numbers.appendChild(item); return v;
     });
     return {
-      loading: function(){ diag.panel.clear("Loading…"); },
-      error: function(msg){ diag.panel.clear("Could not load this estimate: " + msg); },
-      update: function(c, urls, filePath){
+      loading: function(){ diag.img.hidden = true; diag.status.hidden = false; diag.status.textContent = "Loading…"; },
+      error: function(msg){ diag.status.textContent = "Could not load this estimate: " + msg; },
+      update: function(c, urls, picturePath, filePath){
         drawCtfPlot(plot.svg, c.plot);
         CTF_NUMBERS.forEach(function(pair, i){ cells[i].textContent = pair[1](c); });
-        var path = filePath || c.output_diagnostic_file;
-        diag.panel.open({path: path, exists: filePath ? undefined : c.diagnostic_file_exists, what: "diagnostic image", title: "Diagnostic image"});
-        diag.extra.textContent = path ? "(" + path.split("/").pop() + ")" : "";
+        loadFigure(diag.img, diag.status, picturePath || ("/ctf-estimates/" + c.ctf_estimation_id + "/diagnostic.png"), c.diagnostic_file_exists, "diagnostic image", urls);
+        var file = filePath || c.output_diagnostic_file;
+        diag.extra.textContent = file ? "(" + file.split("/").pop() + ")" : "";
+        setExpand(diag.expand, file && (filePath || c.diagnostic_file_exists) ? {path: file, title: "Diagnostic image — " + (c.image_name || "")} : null);
       }
     };
   }
@@ -3736,7 +3733,10 @@ From branch : <span id="versionBranch">—</span></p>
   function buildPicksResultView(box){
     var wrap = document.createElement("div"); wrap.className = "pick-result"; box.appendChild(wrap);
     var frame = document.createElement("div"); frame.className = "pick-frame"; wrap.appendChild(frame);
-    var pic = makeDisplayPanel(frame, {compact: true});
+    var img = document.createElement("img"); img.alt = "Micrograph with picked particles"; img.hidden = true; frame.appendChild(img);
+    var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading\u2026"; frame.appendChild(status);
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "pick-overlay"); frame.appendChild(svg);
+    var expand = makeExpandButton(frame);
     var side = document.createElement("div"); side.className = "pick-side"; wrap.appendChild(side);
     var toggle = document.createElement("label"); toggle.className = "ra-radio";
     var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; toggle.appendChild(cb); toggle.appendChild(document.createTextNode(" Circles around particles"));
@@ -3756,29 +3756,36 @@ From branch : <span id="versionBranch">—</span></p>
       item.appendChild(k); item.appendChild(v); numbers.appendChild(item); return v;
     });
     var current = null;
-    // The circles are the Display panel's overlay, drawn in canvas space from
-    // the picks' file coordinates. particle_finder.cpp reports
-    // pixel_size * (box centre - peak offset): Angstroms from the image
-    // origin, y up -- which is how the panel counts y, so no flip is needed.
-    function drawCircles(ctx, view){
-      if (!current || !cb.checked) return;
-      var px = current.pixel_size || 1, r = (current.maximum_radius || 0) / px / view.bin * view.scale;
-      ctx.save(); ctx.strokeStyle = "#3CC24A"; ctx.lineWidth = 1.5;
+    function drawCircles(){
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (!current || !current.x_size || !current.y_size) return;
+      var X = current.x_size, Y = current.y_size, px = current.pixel_size || 1;
+      svg.setAttribute("viewBox", "0 0 " + X + " " + Y);
+      svg.style.display = cb.checked ? "" : "none";
+      var r = (current.maximum_radius || 0) / px;
       (current.positions || []).forEach(function(p){
-        var xy = view.toCanvas(p.x / px, p.y / px);
-        ctx.beginPath(); ctx.arc(xy[0], xy[1], r, 0, 2 * Math.PI); ctx.stroke();
+        var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        // particle_finder.cpp reports pixel_size * (box centre - peak offset):
+        // Angstroms from the image origin, y up. The previews are rendered
+        // bottom-up like cisTEM's display (preview.py), so a pick's y counts
+        // from the bottom of the picture.
+        c.setAttribute("cx", (p.x / px).toFixed(1));
+        c.setAttribute("cy", (Y - p.y / px).toFixed(1));
+        c.setAttribute("r", r.toFixed(1));
+        svg.appendChild(c);
       });
-      ctx.restore();
     }
-    pic.setOverlay(drawCircles);
-    cb.addEventListener("change", function(){ pic.redraw(); });
+    cb.addEventListener("change", drawCircles);
     return {
-      loading: function(){ current = null; pic.clear("Loading\u2026"); },
-      error: function(msg){ pic.clear("Could not load these picks: " + msg); },
-      update: function(c, urls, filePath){
+      loading: function(){ img.hidden = true; status.hidden = false; status.textContent = "Loading\u2026"; while (svg.firstChild) svg.removeChild(svg.firstChild); },
+      error: function(msg){ status.textContent = "Could not load these picks: " + msg; },
+      update: function(c, urls, picturePath, filePath){
         current = c;
         rows.forEach(function(pair, i){ cells[i].textContent = pair[1](c); });
-        pic.open({path: filePath || c.image_filename, exists: filePath ? undefined : c.image_file_exists !== false, what: "micrograph", title: c.image_name || "Micrograph", pixelSize: c.pixel_size});
+        loadFigure(img, status, picturePath || ("/images/" + c.image_asset_id + "/preview.png"), c.image_file_exists !== false, "micrograph", urls);
+        var file = filePath || c.image_filename;
+        setExpand(expand, file && c.image_file_exists !== false ? {path: file, title: c.image_name || "Micrograph", pixelSize: c.pixel_size} : null);
+        drawCircles();
       }
     };
   }
@@ -3821,9 +3828,9 @@ From branch : <span id="versionBranch">—</span></p>
     var img = document.createElement("img"); img.alt = alt; img.hidden = true; frame.appendChild(img);
     var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading…"; frame.appendChild(status);
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "c2d-overlay"); frame.appendChild(svg);
+    var expand = makeExpandButton(frame);
     var caption = document.createElement("div"); caption.className = "c2d-caption";
     var left = document.createElement("span"), right = document.createElement("span"); caption.appendChild(left); caption.appendChild(right);
-    var display = makeDisplayButton(); caption.appendChild(display);   // the file behind the picture, in the Display window
     var root = document.createElement("div"); root.appendChild(frame); root.appendChild(caption);
     function tileAt(geom, x, y){
       // x, y in montage pixels -> 0-based tile index, or -1 in a gap.
@@ -3859,7 +3866,7 @@ From branch : <span id="versionBranch">—</span></p>
       });
       if (index != null && index >= 0) svg.appendChild(tileRect(geom, index, null));
     }
-    return {root: root, frame: frame, img: img, status: status, svg: svg, left: left, right: right, display: display, tileAt: tileAt, select: select};
+    return {root: root, frame: frame, img: img, status: status, svg: svg, left: left, right: right, expand: expand, tileAt: tileAt, select: select};
   }
 
   function makeClassificationResultsPage(){
@@ -4095,7 +4102,7 @@ From branch : <span id="versionBranch">—</span></p>
         averages.img.style.maxWidth = full.montage ? (full.montage.width * 2) + "px" : "";
         averages.svg.style.maxWidth = averages.img.style.maxWidth;
         loadFigure(averages.img, averages.status, "/classifications/" + full.classification_id + "/averages.png", full.class_average_file_exists, "class averages", page.urls);
-        setDisplayButton(averages.display, full.class_average_file_exists ? {path: full.class_average_file, title: full.name + " — class averages", section: 1} : null);
+        setExpand(averages.expand, full.class_average_file_exists ? {path: full.class_average_file, title: full.name + " — class averages", section: 1} : null);
         if (page.selectedClass != null) showClass(page.selectedClass); else redrawOverlay();
       }).catch(function(err){ averages.status.textContent = "Could not load this classification: " + err.message; });
     }
@@ -4222,7 +4229,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.img.style.maxWidth = "720px";
         figures.appendChild(fig.root);
         loadFigure(fig.img, fig.status, "/volumes/" + v.volume_asset_id + "/preview.png", v.file_exists, "volume", page.urls);
-        setDisplayButton(fig.display, v.file_exists ? {path: v.filename, title: v.name || "Volume", section: "middle"} : null);
+        setExpand(fig.expand, v.file_exists ? {path: v.filename, title: v.name || "Volume", section: "middle"} : null);
       });
     }
     return page;
@@ -4402,7 +4409,7 @@ From branch : <span id="versionBranch">—</span></p>
       fig.img.style.maxWidth = "720px"; fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
       if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "volume", page.urls);
       else fig.status.textContent = "No reconstruction for this class.";
-      setDisplayButton(fig.display, c.volume_file_exists ? {path: c.volume_filename, title: c.volume_name || "Reconstruction", section: "middle"} : null);
+      setExpand(fig.expand, c.volume_file_exists ? {path: c.volume_filename, title: c.volume_name || "Reconstruction", section: "middle"} : null);
     }
     classSelect.addEventListener("change", function(){ page.classIndex = Number(classSelect.value) || 0; releaseUrls(); showClass(); });
     pkgSelect.addEventListener("change", function(){ page.packageId = Number(pkgSelect.value); page.selectedId = null; renderList(); });
@@ -5698,19 +5705,17 @@ From branch : <span id="versionBranch">—</span></p>
   // y up as cisTEM counts it. Rows come in file order and are flipped when
   // drawn, so the first row is the bottom of the picture. `setOverlay(fn)`
   // lets a view draw over the picture in image coordinates (pick circles).
-  function makeDisplayPanel(host, opts){
-    opts = opts || {};
-    var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
+  var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
+  function makeDisplayPanel(host){
     var dp = { path: null, title: "", pixelSize: null, info: null, data: null, fftData: null, w: 0, h: 0, seq: 0, mode: "auto", manual: null,
                global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, low: 0, high: 0 };
-    var root = document.createElement("div"); root.className = "display-panel" + (opts.compact ? " compact" : ""); host.appendChild(root);
+    var root = document.createElement("div"); root.className = "display-panel"; host.appendChild(root);
     var bar = document.createElement("div"); bar.className = "display-toolbar"; root.appendChild(bar);
     function button(label, title, cls){ var b = document.createElement("button"); b.type = "button"; b.className = "small" + (cls ? " " + cls : ""); b.textContent = label; b.title = title || ""; bar.appendChild(b); return b; }
     function sep(){ var d = document.createElement("span"); d.className = "dp-sep"; bar.appendChild(d); }
-    var openBtn = opts.compact ? null : button("Open…", "Open an image file on the machine running the API server");
-    var saveBtn = opts.compact ? null : button("Save", "Save the picture as shown, as a PNG");
-    if (!opts.compact) sep();
-    var stepSep = document.createElement("span"); stepSep.className = "dp-sep"; if (opts.compact) bar.appendChild(stepSep);
+    var openBtn = button("Open…", "Open an image file on the machine running the API server");
+    var saveBtn = button("Save", "Save the picture as shown, as a PNG");
+    sep();
     var prevBtn = button("◀", "Previous image (left arrow)"), sectionInput = document.createElement("input");
     sectionInput.type = "number"; sectionInput.min = "1"; sectionInput.step = "1"; sectionInput.title = "Image number in the stack; 0 shows the sum of the frames"; bar.appendChild(sectionInput);
     var countLabel = document.createElement("span"); countLabel.className = "dp-count"; bar.appendChild(countLabel);
@@ -5730,10 +5735,6 @@ From branch : <span id="versionBranch">—</span></p>
     var invertBtn = button("Invert", "Invert the contrast", "dp-toggle"), fftBtn = button("FFT", "Show the power spectrum of the image as displayed", "dp-toggle"),
         hqBtn = button("High Quality", "Smooth the picture when it is scaled", "dp-toggle"), histBtn = button("Histogram", "Show the histogram of the grey values", "dp-toggle");
     [invertBtn, fftBtn, hqBtn, histBtn].forEach(function(b){ b.setAttribute("aria-pressed", "false"); });
-    // Compact: a shorter toolbar -- Expand reaches Save, Global, High Quality and the histogram.
-    if (opts.compact){ modeBtns.global.hidden = true; hqBtn.hidden = true; histBtn.hidden = true; }
-    var expandBtn = null;
-    if (opts.compact){ sep(); expandBtn = button("Expand", "Open this file in the full Display window"); }
     var stage = document.createElement("div"); stage.className = "display-stage"; root.appendChild(stage);
     var canvas = document.createElement("canvas"); stage.appendChild(canvas);
     var message = document.createElement("div"); message.className = "dp-message"; message.textContent = "No image open."; stage.appendChild(message);
@@ -5845,7 +5846,7 @@ From branch : <span id="versionBranch">—</span></p>
       ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
       if (dp.overlay) dp.overlay(ctx, {scale: sc, bin: dp.info.bin, width: dp.w, height: dp.h, toCanvas: function(x, y){ return [x / dp.info.bin * sc, canvas.height - y / dp.info.bin * sc]; }});
       if (dp.showHist || dp.mode === "manual") drawHistogram(arr, range);
-      fileText.textContent = (dp.title ? dp.title + " — " : "") + (opts.compact ? dp.path.split("/").pop() : dp.path) + (dp.info.nz > 1 ? " [" + (dp.info.section === 0 ? "sum of " + dp.info.summed : dp.info.section + " / " + dp.info.nz) + "]" : "") +
+      fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + (dp.info.nz > 1 ? " [" + (dp.info.section === 0 ? "sum of " + dp.info.summed : dp.info.section + " / " + dp.info.nz) + "]" : "") +
         "  " + dp.info.nx + " × " + dp.info.ny + (dp.info.bin > 1 ? "  (binned ×" + dp.info.bin + ")" : "") + (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") +
         "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high);
     }
@@ -5902,15 +5903,12 @@ From branch : <span id="versionBranch">—</span></p>
       if (next < 1) next = 1; if (next > dp.info.nz) next = dp.info.nz;
       if (next !== dp.info.section) load(dp.path, next);
     }
-    if (openBtn) openBtn.addEventListener("click", function(){
+    openBtn.addEventListener("click", function(){
       pathInput.value = dp.path || "";
       openBrowseModal({input: pathInput, noun: "image file", article: "an", types: "display", single: true});
     });
-    if (expandBtn) expandBtn.addEventListener("click", function(){
-      if (dp.path) openDisplayModal({path: dp.path, title: dp.title, section: dp.info ? dp.info.section : 1, pixelSize: dp.pixelSize});
-    });
     pathInput.addEventListener("input", function(){ if (pathInput.value) open({path: pathInput.value, title: ""}); });
-    if (saveBtn) saveBtn.addEventListener("click", function(){
+    saveBtn.addEventListener("click", function(){
       if (!dp.data) return;
       canvas.toBlob(function(blob){
         if (!blob) return;
@@ -5945,7 +5943,6 @@ From branch : <span id="versionBranch">—</span></p>
         if (fileChanged){ dp.global = null; dp.manual = null; if (dp.mode === "global") fetchGlobal(); }
         sectionInput.value = res.info.section; sectionInput.max = String(res.info.nz); sectionInput.min = res.info.nz > 1 ? "0" : "1"; sectionInput.disabled = res.info.nz <= 1;
         countLabel.textContent = "/ " + res.info.nz; prevBtn.disabled = nextBtn.disabled = res.info.nz <= 1;
-        if (opts.compact){ var single = res.info.nz <= 1; prevBtn.hidden = nextBtn.hidden = sectionInput.hidden = countLabel.hidden = stepSep.hidden = single; }
         if (dp.mode === "manual" && !dp.manual){ var r0 = greyRange(); dp.manual = [r0[0], r0[1]]; lowInput.value = Number(r0[0].toPrecision(6)); highInput.value = Number(r0[1].toPrecision(6)); }
         message.hidden = true;
         draw();
@@ -5957,7 +5954,6 @@ From branch : <span id="versionBranch">—</span></p>
     }
     function open(src){
       dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
-      if (!src.path || src.exists === false){ clear("The " + (src.what || "file") + " isn’t on disk" + (src.what === "spectrum" ? " (simulated jobs don’t write one)." : ".")); return; }
       var section = src.section != null ? src.section : 1;
       if (src.path !== dp.path){ dp.global = null; dp.manual = null; }
       if (section === "middle"){
@@ -5971,15 +5967,8 @@ From branch : <span id="versionBranch">—</span></p>
       }
       load(src.path, section);
     }
-    // Nothing to show yet: an explanation in the stage instead of a picture.
-    function clear(text){
-      dp.seq++; dp.path = null; dp.info = null; dp.data = null; dp.fftData = null;
-      canvas.width = canvas.height = 0; fileText.textContent = ""; locText.textContent = "";
-      message.hidden = false; message.textContent = text || "No image open.";
-      countLabel.textContent = ""; sectionInput.value = ""; sectionInput.disabled = prevBtn.disabled = nextBtn.disabled = true;
-    }
     setPressed();
-    return { open: open, clear: clear, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: draw, state: dp, root: root };
+    return { open: open, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: draw, state: dp, root: root };
   }
 
   // The modal instance the asset panels' Display buttons use (a movie opens
@@ -8058,12 +8047,6 @@ From branch : <span id="versionBranch">—</span></p>
       }).catch(function(err){ alert("Could not download the result: " + err.message); }).then(function(){ saveBtn.disabled = false; });
     });
     bar.appendChild(saveBtn);
-    [["Display Original…", d.original_path, d.volume_name], ["Display Sharpened…", d.volume_path, (d.volume_name || "volume") + " (sharpened)"]].forEach(function(t){
-      if (!t[1]) return;
-      var b = document.createElement("button"); b.className = "small"; b.textContent = t[0]; b.title = "Open the map's slices in the Display window";
-      b.addEventListener("click", function(){ openDisplayModal({path: t[1], title: t[2], section: "middle", pixelSize: d.pixel_size}); });
-      bar.appendChild(b);
-    });
     var importBtn = document.createElement("button"); importBtn.className = "small"; importBtn.textContent = "Import as Volume Asset";
     importBtn.title = "Add the sharpened map to the project's 3D Volumes.";
     importBtn.addEventListener("click", function(){
@@ -8093,9 +8076,11 @@ From branch : <span id="versionBranch">—</span></p>
     var tabs = document.createElement("div"); tabs.className = "sharpen-tabs"; view.appendChild(tabs);
     var frame = document.createElement("div"); frame.className = "c2d-frame c2d-orth"; view.appendChild(frame);
     var img = document.createElement("img"); img.alt = "Central slices"; img.style.maxWidth = "720px"; frame.appendChild(img);
+    var expand = makeExpandButton(frame);
     function showTabN(n){
       sv.tab = n;
       img.src = n === 0 ? d.original_png : d.sharpened_png;
+      setExpand(expand, {path: n === 0 ? d.original_path : d.volume_path, title: (d.volume_name || "Volume") + (n === 0 ? "" : " (sharpened)"), section: "middle", pixelSize: d.pixel_size});
       tabs.querySelectorAll("button").forEach(function(b, i){ b.setAttribute("aria-pressed", i === n ? "true" : "false"); });
     }
     ["Original 3D", "Sharpened 3D"].forEach(function(label, i){
@@ -8735,7 +8720,7 @@ From branch : <span id="versionBranch">—</span></p>
     motion_correction: function(body){
       var col = document.createElement("div"); col.className = "live-plot-col"; body.appendChild(col);
       var plot = makePlotBlock("Drift", [["ra-swatch-x", "X shift"], ["ra-swatch-y", "Y shift"]]); col.appendChild(plot.root);
-      var sum = makePanelFigure("Aligned sum"), spectrum = makePanelFigure("Amplitude spectrum");
+      var sum = makeFigure("Aligned sum"), spectrum = makeFigure("Amplitude spectrum");
       body.appendChild(sum.root); body.appendChild(spectrum.root);
       return function(result, base, urls){
         plot.title.textContent = "Drift";
@@ -8743,8 +8728,10 @@ From branch : <span id="versionBranch">—</span></p>
         name.textContent = result.movie_name + (result.frame_count ? " (" + result.frame_count + " frames)" : "");
         plot.title.appendChild(name);
         drawDriftPlot(plot.svg, result.shifts, result.exposure_per_frame);
-        sum.panel.open({path: result.output_file, exists: result.output_file_exists, what: "aligned sum", title: "Aligned sum", pixelSize: result.final_pixel_size || result.pixel_size});
-        spectrum.panel.open({path: result.spectrum_file, exists: result.spectrum_file_exists, what: "spectrum", title: "Amplitude spectrum"});
+        loadFigure(sum.img, sum.status, base + "sum.png", result.output_file_exists, "aligned sum", urls);
+        loadFigure(spectrum.img, spectrum.status, base + "spectrum.png", result.spectrum_file_exists, "spectrum", urls);
+        setExpand(sum.expand, result.output_file_exists ? {path: result.output_file, title: "Aligned sum — " + result.movie_name, pixelSize: result.final_pixel_size || result.pixel_size} : null);
+        setExpand(spectrum.expand, result.spectrum_file_exists ? {path: result.spectrum_file, title: "Amplitude spectrum — " + result.movie_name} : null);
         spectrum.extra.textContent = result.nyquist ? "(Nyquist " + result.nyquist.toFixed(2) + " \u00c5)" : "";
       };
     },
@@ -8753,7 +8740,7 @@ From branch : <span id="versionBranch">—</span></p>
       var view = buildCtfResultView(box);
       return function(result, base, urls){
         view.loading();
-        view.update(result, urls, result.files && result.files.diagnostic);
+        view.update(result, urls, base + "diagnostic.png", result.files && result.files.diagnostic);
       };
     },
     particle_picking: function(body){
@@ -8761,7 +8748,7 @@ From branch : <span id="versionBranch">—</span></p>
       var view = buildPicksResultView(box);
       return function(result, base, urls){
         view.loading();
-        view.update(result, urls, result.files && result.files.image);
+        view.update(result, urls, base + "image.png", result.files && result.files.image);
       };
     },
     // AbInitio3DPanel while it runs: the sigma plot (PlotPanel) and the
@@ -8783,7 +8770,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
         fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setDisplayButton(fig.display, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
       };
     },
     // MyRefine3DPanel while it runs: the FSC of the newest refinement and the
@@ -8800,7 +8787,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setDisplayButton(fig.display, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
       };
     },
     // AutoRefine3DPanel while it runs: the FSC of the newest refinement, the
@@ -8828,7 +8815,7 @@ From branch : <span id="versionBranch">—</span></p>
           : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setDisplayButton(fig.display, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
       };
     },
     // RefineCTFPanel while it runs: the defocus-change histogram filling
@@ -8868,7 +8855,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.root.hidden = !result.has_picture && !running;
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = result.has_picture ? "Loading…" : "The reconstruction has not been merged yet."; fig.img.style.maxWidth = "720px";
         if (result.has_picture) loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", true, "reconstruction", urls);
-        setDisplayButton(fig.display, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
       };
     },
     // MyRefine2DPanel while it runs: the newest class averages
@@ -8895,7 +8882,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
         fig.img.style.maxWidth = result.montage ? (result.montage.width * 2) + "px" : "";
         loadFigure(fig.img, fig.status, "/classifications/" + result.classification_id + "/averages.png", result.class_average_file_exists, "class averages", urls);
-        setDisplayButton(fig.display, result.class_average_file_exists ? {path: result.class_average_file, title: result.name + " — class averages", section: 1} : null);
+        setExpand(fig.expand, result.class_average_file_exists ? {path: result.class_average_file, title: result.name + " — class averages", section: 1} : null);
       };
     }
   };

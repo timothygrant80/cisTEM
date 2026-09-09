@@ -1235,7 +1235,7 @@ def live_result(conn, row):
         "label": history[-1]["label"] if history else "Random Start",
         "phase": state["phase"], "start": state["start"], "starts": state["starts"], "round": state["round"], "rounds": state["rounds"],
         "high_res": state.get("current_high_res"), "percent_used": state.get("current_percent_used"),
-        "number_of_classes": state["number_of_classes"], "has_picture": bool(display),
+        "number_of_classes": state["number_of_classes"], "has_picture": bool(display), "current_volume": display[0] if display else None,
         "history": [h for h in history if h.get("average_sigma") is not None],
         "volume_ids": state.get("volume_ids", []), "startup_id": state.get("startup_id"),
         "package_name": state.get("package_name"),

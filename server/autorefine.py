@@ -947,7 +947,7 @@ def live_result(conn, row):
     return {
         "kind": "auto_refine3d", "task_index": len(state["history"]) * 10 + (1 if state.get("phase") == "finished" else 0),
         "label": last["label"], "refinement_id": rid, "phase": state["phase"], "round": state["round"], "rounds": None,
-        "final_round": state.get("final_round"), "number_of_classes": state["number_of_classes"], "has_picture": bool(files),
+        "final_round": state.get("final_round"), "number_of_classes": state["number_of_classes"], "has_picture": bool(files), "current_volume": files[0] if files else None,
         "estimated_resolution": last.get("estimated_resolution"), "history": state["history"],
         "resolution_per_round": state.get("resolution_per_round", []), "percent_used_per_round": state.get("percent_used_per_round", []),
         "high_res_limits": state.get("class_high_res_limits"), "current_percent_used": state.get("current_percent_used"),

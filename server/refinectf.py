@@ -827,7 +827,7 @@ def live_result(conn, row):
     return {
         "kind": "refine_ctf", "task_index": (len(state.get("history", [])) * 1000) + (1 if state.get("phase") == "finished" else 0) + (10 if state.get("beam_tilt") else 0) + n_done,
         "label": last["label"] if last else "CTF refinement", "refinement_id": rid, "phase": state["phase"], "round": 0, "rounds": 1,
-        "number_of_classes": state["number_of_classes"], "has_picture": bool(files) and bool(last),
+        "number_of_classes": state["number_of_classes"], "has_picture": bool(files) and bool(last), "current_volume": files[0] if files and last else None,
         "estimated_resolution": last.get("estimated_resolution") if last else None, "history": state.get("history", []),
         "defocus_histogram": hist, "beam_tilt": state.get("beam_tilt"),
         "refine_defocus": state["settings"]["refine_defocus"], "refine_beam_tilt": state["settings"]["refine_beam_tilt"],

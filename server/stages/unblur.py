@@ -192,6 +192,7 @@ def live_result(conn, task, task_row):
         "shifts": [{"frame": i + 1, "x": float(x), "y": float(y)} for i, (x, y) in enumerate(zip(data[:n], data[n:]))],
         "output_file": v[1],
         "output_file_exists": os.path.isfile(v[1]),
+        "spectrum_file": v[26] if v[25] else None,
         "spectrum_file_exists": bool(v[25]) and os.path.isfile(v[26]),
     }
 

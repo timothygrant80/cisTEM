@@ -305,6 +305,7 @@ def run(conn, project_id, volume_id, params, executable):
         display_radius = s["outer_mask_radius_a"] if s["outer_mask_radius_a"] > 0 else 0.0
         result = {
             "result_id": rid, "volume_asset_id": vol["VOLUME_ASSET_ID"], "volume_name": vol["NAME"], "pixel_size": ps, "x_size": n,
+            "original_path": vol["FILENAME"], "volume_path": out_path,
             "settings": s, "used_statistics": use_stats, "used_mask": "supplied" if s["use_mask"] else ("auto" if s["auto_mask"] else "none"),
             "guinier": {"spatial_frequency": xs, "original": ys_orig, "sharpened": ys_sharp, "nyquist": 0.5 / ps},
             "original_png": _slices_png(original, ps, display_radius), "sharpened_png": _slices_png(sharpened, ps, display_radius),

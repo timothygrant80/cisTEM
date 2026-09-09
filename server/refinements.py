@@ -292,6 +292,7 @@ def _refinement_json(conn, row, with_classes=False):
         vol = conn.execute("SELECT NAME, FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (vid,)).fetchone() if vid is not None and vid >= 0 else None
         c["class_number"] = k
         c["volume_name"] = vol["NAME"] if vol else None
+        c["volume_filename"] = vol["FILENAME"] if vol else None
         c["volume_file_exists"] = bool(vol and vol["FILENAME"] and os.path.isfile(vol["FILENAME"]))
         if with_classes:
             c["statistics"] = load_statistics(conn, row["REFINEMENT_ID"], k)

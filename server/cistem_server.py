@@ -3034,6 +3034,7 @@ def _alignment_json(row, conn=None):
     d["job_number"] = row["JOB_NUMBER"]
     out = d["output_file"] or ""
     d["output_file_exists"] = bool(out) and Path(out).is_file()
+    d["spectrum_file"] = str(_spectrum_path(out)) if out else None
     d["spectrum_file_exists"] = bool(out) and _spectrum_path(out).is_file()
     if conn is not None:
         try:
@@ -3803,6 +3804,9 @@ def get_latest_result(project_id, job_id):
             return jsonify(out)
         result["task_index"] = task_row["TASK_INDEX"]
         result["finished_at"] = task_row["FINISHED_AT"]
+        # The output files by name (sum, spectrum, diagnostic, image), for the Display panel.
+        if hasattr(adapter, "live_result_files"):
+            result["files"] = adapter.live_result_files(task)
         out["result"] = result
         return jsonify(out)
     finally:

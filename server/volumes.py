@@ -391,6 +391,6 @@ def list_startups(conn):
             for k, vid in conn.execute("SELECT CLASS_NUMBER, VOLUME_ASSET_ID FROM {} ORDER BY CLASS_NUMBER".format(table)).fetchall():
                 v = conn.execute("SELECT * FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (vid,)).fetchone()
                 d["volumes"].append({"class_number": k, "volume_asset_id": vid, "name": v["NAME"] if v else None,
-                                     "file_exists": bool(v and v["FILENAME"] and os.path.isfile(v["FILENAME"]))})
+                                     "file_exists": bool(v and v["FILENAME"] and os.path.isfile(v["FILENAME"])), "filename": v["FILENAME"] if v else None})
         out.append(d)
     return out

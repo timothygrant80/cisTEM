@@ -711,7 +711,7 @@ def live_result(conn, row):
     return {
         "kind": "refine3d", "task_index": len(state["history"]) * 10 + (1 if state.get("phase") == "finished" else 0),
         "label": last["label"], "refinement_id": rid, "phase": state["phase"], "round": state["round"], "rounds": state["rounds"],
-        "number_of_classes": state["number_of_classes"], "has_picture": bool(files),
+        "number_of_classes": state["number_of_classes"], "has_picture": bool(files), "current_volume": files[0] if files else None,
         "estimated_resolution": last.get("estimated_resolution"), "history": state["history"],
         "fsc": [{"resolution": s["resolution"], "fsc": s["fsc"], "part_fsc": s["part_fsc"]} for s in stats if s["resolution"]],
         "pixel_size": state["pixel_size"], "volume_ids": state.get("volume_ids", []), "package_name": state.get("package_name"),

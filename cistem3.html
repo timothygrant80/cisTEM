@@ -5710,7 +5710,7 @@ From branch : <span id="versionBranch">—</span></p>
   function makeDisplayPanel(host){
     var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
     // location: the first image of the page shown (1-based; 0 = the frame sum); tiles: the page's sections as float32 rows.
-    var dp = { path: null, title: "", pixelSize: null, info: null, bin: 1, w: 0, h: 0, location: 1, sum: false, tiles: [], fftTiles: [], pageCount: 0, seq: 0,
+    var dp = { path: null, title: "", pixelSize: null, info: null, bin: 1, w: 0, h: 0, location: 1, sum: false, singleView: false, pageScale: null, tiles: [], fftTiles: [], pageCount: 0, seq: 0,
                mode: "auto", manual: null, global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, selected: null, lay: null, low: 0, high: 0 };
     var root = document.createElement("div"); root.className = "display-panel"; host.appendChild(root);
     var bar = document.createElement("div"); bar.className = "display-toolbar"; root.appendChild(bar);
@@ -5756,7 +5756,7 @@ From branch : <span id="versionBranch">—</span></p>
     // At the chosen scale, as many images as fit across and down are shown;
     // if none fits, the scale drops so one does. Fit means one image fills the stage.
     function maxEdge(){ return Math.max(512, Math.min(2048, Math.round(Math.max(stage.clientWidth, stage.clientHeight) * (window.devicePixelRatio || 1)))); }
-    function single(){ return dp.sum || !dp.info || dp.info.nz <= 1; }
+    function single(){ return dp.sum || dp.singleView || !dp.info || dp.info.nz <= 1; }
     // Scales are in the file's pixels: an image is drawn nx*scale wide. The
     // server bins each section to about that size (edgeFor), so a page of
     // small tiles costs little and a zoomed-in image comes at full resolution.
@@ -5888,7 +5888,7 @@ From branch : <span id="versionBranch">—</span></p>
       if (dp.showHist || dp.mode === "manual") drawHistogram(pageArray(), dp.mode === "manual" && dp.manual ? dp.manual : first);
       var where = dp.sum ? "[sum of " + dp.info.summed + "]" : dp.info.nz > 1 ? (dp.tiles.length > 1 ? "[images " + dp.location + "–" + (dp.location + dp.tiles.length - 1) + " of " + dp.info.nz + "]" : "[" + dp.location + " / " + dp.info.nz + "]") : "";
       fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + " " + where + "  " + dp.info.nx + " × " + dp.info.ny + (dp.bin > 1 ? "  (binned ×" + dp.bin + ")" : "") +
-        (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") + (dp.tiles.length === 1 ? "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high) : dp.selected != null ? "  selected image " + dp.selected : "");
+        (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") + (dp.tiles.length === 1 ? "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high) + (dp.singleView ? "  (double-click for the page)" : "") : dp.selected != null ? "  selected image " + dp.selected + "  (double-click to open it)" : "");
     }
     // The asset's pixel size when the caller knows it; else the header's, if it is a plausible one.
     function pixelSize(){ if (dp.pixelSize) return dp.pixelSize; var p = dp.info && dp.info.pixel_size; return p && p > 0.05 && p < 200 ? p : null; }
@@ -5933,7 +5933,7 @@ From branch : <span id="versionBranch">—</span></p>
     fftBtn.addEventListener("click", function(){ dp.fft = !dp.fft; setPressed(); draw(); });
     hqBtn.addEventListener("click", function(){ dp.hq = !dp.hq; setPressed(); draw(); });
     histBtn.addEventListener("click", function(){ dp.showHist = !dp.showHist; setPressed(); draw(); });
-    scaleSelect.addEventListener("change", function(){ dp.scale = scaleSelect.value; draw(); });
+    scaleSelect.addEventListener("change", function(){ dp.scale = scaleSelect.value; dp.singleView = false; draw(); });
     prevBtn.addEventListener("click", function(){ step(-1); });
     nextBtn.addEventListener("click", function(){ step(1); });
     sectionInput.addEventListener("change", function(){ if (dp.path) goTo(Number(sectionInput.value)); });
@@ -5989,6 +5989,21 @@ From branch : <span id="versionBranch">—</span></p>
       var h = hit(e); if (!h || dp.tiles.length <= 1) return;
       dp.selected = dp.selected === h.image ? null : h.image; draw();
     });
+    // A double-click on an image of the page opens it on its own, at Fit;
+    // from a single view a double-click goes back to the page it sits in.
+    canvas.addEventListener("dblclick", function(e){
+      var h = hit(e); if (!h || !dp.info || dp.info.nz <= 1 || dp.sum) return;
+      if (dp.tiles.length > 1){
+        dp.selected = h.image; dp.pageScale = dp.scale; dp.scale = "fit"; dp.singleView = true; scaleSelect.value = "fit";
+        goTo(h.image);
+      } else if (dp.singleView){
+        // back to the page holding the image just viewed, which stays selected
+        dp.singleView = false; dp.scale = dp.pageScale || "1"; scaleSelect.value = dp.scale;
+        var per = layout().perPage, image = dp.location;
+        dp.selected = image;
+        goTo(1 + Math.floor((image - 1) / per) * per);
+      }
+    });
     var resizeTimer = null;
     window.addEventListener("resize", function(){ if (!dp.tiles.length) return; clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 150); });
 
@@ -6024,7 +6039,7 @@ From branch : <span id="versionBranch">—</span></p>
       dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
       var seq = ++dp.seq, path = src.path;
       var fileChanged = path !== dp.path;
-      if (fileChanged){ dp.global = null; dp.manual = null; dp.selected = null; }
+      if (fileChanged){ dp.global = null; dp.manual = null; dp.selected = null; dp.singleView = false; }
       dp.path = path; dp.tiles = []; dp.fftTiles = []; canvas.width = canvas.height = 0;
       message.hidden = false; message.textContent = "Loading…";
       apiFetch(apiUrl("/display/info") + "?path=" + encodeURIComponent(path)).then(function(r){

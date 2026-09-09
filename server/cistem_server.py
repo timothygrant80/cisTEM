@@ -830,17 +830,20 @@ def display_info():
 @app.route("/api/display/section")
 @auth.login_required
 def display_section():
-    """?path=&section=1&max_edge=1024 -> the section as little-endian float32
-    rows (file order), with the header in X-Display-Info (JSON: sizes, bin
-    factor, section, pixel size, min/max/mean/std). section=0 is the sum of
-    the first MAX_SUM_SECTIONS sections."""
+    """?path=&section=1&count=1&max_edge=1024 -> `count` consecutive
+    sections as little-endian float32 rows (file order), concatenated, with
+    the header in X-Display-Info (JSON: sizes, count returned, bin factor,
+    first section, pixel size, min/max/mean/std) -- a page of a stack for
+    the panel's montage. section=0 is the sum of the first MAX_SUM_SECTIONS
+    sections."""
     try:
         section = int(request.args.get("section", 1))
+        count = int(request.args.get("count", 1))
         max_edge = max(64, min(int(request.args.get("max_edge", 1024)), 4096))
     except ValueError:
-        return jsonify({"error": "section and max_edge must be integers"}), 400
+        return jsonify({"error": "section, count and max_edge must be integers"}), 400
     try:
-        data, info = display.read_section(request.args.get("path", ""), section, max_edge)
+        data, info = display.read_section(request.args.get("path", ""), section, max_edge, count)
     except display.DisplayError as exc:
         return jsonify({"error": str(exc)}), 400
     except OSError as exc:

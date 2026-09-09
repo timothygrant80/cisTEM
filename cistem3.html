@@ -617,7 +617,7 @@ table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:
 .modal.browse-modal{z-index:23;}
 
 /* The preview is a picture, so it gets more room than the form modals. */
-.modal.display-modal{width:min(1400px,96vw);height:94%;max-height:94%;}
+.modal.display-modal{width:min(1400px,76vw);height:94%;max-height:94%;}   /* 76vw: the body is zoomed 1.25, so this is 95% of the window */
 .modal.display-modal .modal-body{display:flex;flex-direction:column;min-height:0;}
 #displayPanelHost{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
 /* The Display panel (cisTEM's DisplayPanel): toolbar, a dark scrolling stage
@@ -5700,15 +5700,18 @@ From branch : <span id="versionBranch">—</span></p>
   // Manual (typed, with a histogram); a scale from cisTEM's combo plus Fit;
   // Invert, FFT (the power spectrum of the shown section, computed here),
   // High Quality (smoothed resampling), Previous / Next through a stack
-  // (also the arrow keys), Open (the server-side Browse picker), Save (the
+  // (also the arrow keys) -- for a stack, as many images as fit at the
+  // chosen scale are shown at once and a page is that many, ReDrawPanel()'s
+  // rule -- Open (the server-side Browse picker), Save (the
   // canvas as a PNG) and the cursor's x, y : value in the file's pixels,
   // y up as cisTEM counts it. Rows come in file order and are flipped when
   // drawn, so the first row is the bottom of the picture. `setOverlay(fn)`
   // lets a view draw over the picture in image coordinates (pick circles).
-  var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
   function makeDisplayPanel(host){
-    var dp = { path: null, title: "", pixelSize: null, info: null, data: null, fftData: null, w: 0, h: 0, seq: 0, mode: "auto", manual: null,
-               global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, low: 0, high: 0 };
+    var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
+    // location: the first image of the page shown (1-based; 0 = the frame sum); tiles: the page's sections as float32 rows.
+    var dp = { path: null, title: "", pixelSize: null, info: null, bin: 1, w: 0, h: 0, location: 1, sum: false, tiles: [], fftTiles: [], pageCount: 0, seq: 0,
+               mode: "auto", manual: null, global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, selected: null, lay: null, low: 0, high: 0 };
     var root = document.createElement("div"); root.className = "display-panel"; host.appendChild(root);
     var bar = document.createElement("div"); bar.className = "display-toolbar"; root.appendChild(bar);
     function button(label, title, cls){ var b = document.createElement("button"); b.type = "button"; b.className = "small" + (cls ? " " + cls : ""); b.textContent = label; b.title = title || ""; bar.appendChild(b); return b; }
@@ -5716,23 +5719,23 @@ From branch : <span id="versionBranch">—</span></p>
     var openBtn = button("Open…", "Open an image file on the machine running the API server");
     var saveBtn = button("Save", "Save the picture as shown, as a PNG");
     sep();
-    var prevBtn = button("◀", "Previous image (left arrow)"), sectionInput = document.createElement("input");
-    sectionInput.type = "number"; sectionInput.min = "1"; sectionInput.step = "1"; sectionInput.title = "Image number in the stack; 0 shows the sum of the frames"; bar.appendChild(sectionInput);
+    var prevBtn = button("◀", "Previous page of images (left arrow)"), sectionInput = document.createElement("input");
+    sectionInput.type = "number"; sectionInput.min = "1"; sectionInput.step = "1"; sectionInput.title = "The first image shown; 0 shows the sum of the frames"; bar.appendChild(sectionInput);
     var countLabel = document.createElement("span"); countLabel.className = "dp-count"; bar.appendChild(countLabel);
-    var nextBtn = button("▶", "Next image (right arrow)");
+    var nextBtn = button("▶", "Next page of images (right arrow)");
     sep();
-    var scaleSelect = document.createElement("select"); scaleSelect.title = "Scale";
+    var scaleSelect = document.createElement("select"); scaleSelect.title = "Scale of each image; as many as fit at that scale are shown";
     DISPLAY_SCALES.forEach(function(o){ var op = document.createElement("option"); op.value = String(o[0]); op.textContent = o[1]; scaleSelect.appendChild(op); });
     bar.appendChild(scaleSelect);
     sep();
     var modeBtns = {};
-    [["auto", "Auto", "Set the grey values via automatic contrast: the mean ± 2.5 σ of the non-zero pixels"], ["local", "Local", "Grey values from this image’s own minimum and maximum"],
+    [["auto", "Auto", "Set the grey values via automatic contrast: each image's mean ± 2.5 σ of its non-zero pixels"], ["local", "Local", "Grey values from each image's own minimum and maximum"],
      ["global", "Global", "Grey values from the minimum and maximum of the whole stack"], ["manual", "Manual", "Set the grey values by hand, with a histogram"]].forEach(function(m){
       var b = button(m[1], m[2], "dp-toggle"); b.setAttribute("aria-pressed", String(dp.mode === m[0])); modeBtns[m[0]] = b;
       b.addEventListener("click", function(){ setMode(m[0]); });
     });
     sep();
-    var invertBtn = button("Invert", "Invert the contrast", "dp-toggle"), fftBtn = button("FFT", "Show the power spectrum of the image as displayed", "dp-toggle"),
+    var invertBtn = button("Invert", "Invert the contrast", "dp-toggle"), fftBtn = button("FFT", "Show the power spectrum of each image as displayed", "dp-toggle"),
         hqBtn = button("High Quality", "Smooth the picture when it is scaled", "dp-toggle"), histBtn = button("Histogram", "Show the histogram of the grey values", "dp-toggle");
     [invertBtn, fftBtn, hqBtn, histBtn].forEach(function(b){ b.setAttribute("aria-pressed", "false"); });
     var stage = document.createElement("div"); stage.className = "display-stage"; root.appendChild(stage);
@@ -5749,12 +5752,30 @@ From branch : <span id="versionBranch">—</span></p>
     var offscreen = document.createElement("canvas");
     var pathInput = document.createElement("input"); pathInput.type = "hidden";   // the Browse picker's target
 
+    // ---- geometry: DisplayNotebookPanel::ReDrawPanel()'s rule ----
+    // At the chosen scale, as many images as fit across and down are shown;
+    // if none fits, the scale drops so one does. Fit means one image fills the stage.
+    function maxEdge(){ return Math.max(512, Math.min(2048, Math.round(Math.max(stage.clientWidth, stage.clientHeight) * (window.devicePixelRatio || 1)))); }
+    function single(){ return dp.sum || !dp.info || dp.info.nz <= 1; }
+    // Scales are in the file's pixels: an image is drawn nx*scale wide. The
+    // server bins each section to about that size (edgeFor), so a page of
+    // small tiles costs little and a zoomed-in image comes at full resolution.
+    function edgeFor(scale){ return Math.max(64, Math.min(4096, Math.ceil(Math.max(dp.info.nx, dp.info.ny) * scale * (window.devicePixelRatio || 1)))); }
+    function layout(){
+      var sw = Math.max(1, stage.clientWidth - 4), sh = Math.max(1, stage.clientHeight - 4), nx = dp.info.nx, ny = dp.info.ny;
+      var fitOne = Math.max(0.005, Math.min(sw / nx, sh / ny));
+      var s = dp.scale === "fit" ? fitOne : Number(dp.scale);
+      if (single()) return {scale: s, tw: nx * s, th: ny * s, across: 1, down: 1, perPage: 1};
+      var across = Math.floor(sw / (nx * s)), down = Math.floor(sh / (ny * s));
+      if (across < 1 || down < 1){ s = fitOne; across = down = 1; }
+      return {scale: s, tw: nx * s, th: ny * s, across: across, down: down, perPage: across * down};
+    }
+
     // ---- data ----
-    function source(){ return dp.fft ? fftFor() : dp.data; }
-    function fftFor(){
-      if (dp.fftData) return dp.fftData;
-      dp.fftData = powerSpectrum(dp.data, dp.w, dp.h);
-      return dp.fftData;
+    function tileSource(i){
+      if (!dp.fft) return dp.tiles[i];
+      if (!dp.fftTiles[i]) dp.fftTiles[i] = powerSpectrum(dp.tiles[i], dp.w, dp.h);
+      return dp.fftTiles[i];
     }
     // The power spectrum of the central 2^n square, log scaled, origin at the centre.
     function powerSpectrum(data, w, h){
@@ -5806,49 +5827,68 @@ From branch : <span id="versionBranch">—</span></p>
       var mean = n ? sum / n : 0, sd = n ? Math.sqrt(Math.max(sq / n - mean * mean, 0)) : 0;
       return {min: lo === Infinity ? 0 : lo, max: hi === -Infinity ? 0 : hi, mean: mean, std: sd};
     }
-    function greyRange(){
-      var arr = source(); if (!arr) return [0, 1];
-      var st = stats(arr);
+    // The grey range of one tile: Auto and Local are per image, as cisTEM's are; Global and Manual apply to all.
+    function greyRange(arr){
       if (dp.mode === "manual" && dp.manual) return dp.manual;
       if (dp.mode === "global" && dp.global && !dp.fft) return [dp.global.min, dp.global.max];
-      if (dp.mode === "local" || dp.mode === "global" || dp.fft && dp.mode !== "auto") return [st.min, st.max];
+      var st = stats(arr);
+      if (dp.mode === "local" || dp.mode === "global" || (dp.fft && dp.mode !== "auto")) return [st.min, st.max];
       return [st.mean - 2.5 * st.std, st.mean + 2.5 * st.std];
+    }
+    function pageArray(){   // every shown pixel, for the histogram and Manual's starting range
+      var n = dp.tiles.length * dp.w * dp.h, out = new Float32Array(n), o = 0;
+      for (var i = 0; i < dp.tiles.length; i++){ out.set(tileSource(i), o); o += dp.w * dp.h; }
+      return out;
     }
 
     // ---- drawing ----
-    function currentScale(){
-      if (dp.scale !== "fit") return Number(dp.scale);
-      var pad = 4, sw = stage.clientWidth - pad, sh = stage.clientHeight - pad;
-      return Math.max(0.01, Math.min(sw / dp.w, sh / dp.h));
-    }
     function draw(){
-      var arr = source();
-      if (!arr){ canvas.width = canvas.height = 0; return; }
-      var range = greyRange(); dp.low = range[0]; dp.high = range[1];
-      var span = dp.high - dp.low || 1;
-      offscreen.width = dp.w; offscreen.height = dp.h;
-      var octx = offscreen.getContext("2d"), img = octx.createImageData(dp.w, dp.h), px = img.data;
-      for (var j = 0; j < dp.h; j++){
-        var srcRow = (dp.h - 1 - j) * dp.w, dstRow = j * dp.w * 4;   // file's first row is the bottom
-        for (var i = 0; i < dp.w; i++){
-          var g = (arr[srcRow + i] - dp.low) / span * 255;
-          g = g < 0 ? 0 : g > 255 ? 255 : g;
-          if (dp.invert) g = 255 - g;
-          var o = dstRow + i * 4; px[o] = px[o + 1] = px[o + 2] = g; px[o + 3] = 255;
+      if (!dp.tiles.length){ canvas.width = canvas.height = 0; return; }
+      var lay = layout(); dp.lay = lay;
+      // A page size or a binning that changed with the scale or the window wants different data.
+      var needBin = Math.max(1, Math.ceil(Math.max(dp.info.nx, dp.info.ny) / edgeFor(lay.scale)));
+      if ((!dp.sum && lay.perPage !== dp.pageCount) || needBin !== dp.bin){ fetchPage(); return; }
+      var across = lay.across, down = Math.max(1, Math.ceil(dp.tiles.length / across));
+      offscreen.width = across * dp.w; offscreen.height = down * dp.h;
+      var octx = offscreen.getContext("2d"); octx.fillStyle = "#2B2F33"; octx.fillRect(0, 0, offscreen.width, offscreen.height);
+      var img = octx.createImageData(dp.w, dp.h), px = img.data, first = null;
+      for (var t = 0; t < dp.tiles.length; t++){
+        var arr = tileSource(t), range = greyRange(arr); if (!first) first = range;
+        var low = range[0], span = (range[1] - range[0]) || 1;
+        for (var j = 0; j < dp.h; j++){
+          var srcRow = (dp.h - 1 - j) * dp.w, dstRow = j * dp.w * 4;   // file's first row is the bottom
+          for (var i = 0; i < dp.w; i++){
+            var g = (arr[srcRow + i] - low) / span * 255;
+            g = g < 0 ? 0 : g > 255 ? 255 : g;
+            if (dp.invert) g = 255 - g;
+            var o = dstRow + i * 4; px[o] = px[o + 1] = px[o + 2] = g; px[o + 3] = 255;
+          }
         }
+        octx.putImageData(img, (t % across) * dp.w, Math.floor(t / across) * dp.h);
       }
-      octx.putImageData(img, 0, 0);
-      var sc = currentScale();
-      canvas.width = Math.max(1, Math.round(dp.w * sc)); canvas.height = Math.max(1, Math.round(dp.h * sc));
+      dp.low = first[0]; dp.high = first[1];
+      var tw = lay.tw, th = lay.th;
+      canvas.width = Math.max(1, Math.round(across * tw)); canvas.height = Math.max(1, Math.round(down * th));
       canvas.classList.toggle("smooth", dp.hq);
       var ctx = canvas.getContext("2d");
       ctx.imageSmoothingEnabled = dp.hq;
       ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
-      if (dp.overlay) dp.overlay(ctx, {scale: sc, bin: dp.info.bin, width: dp.w, height: dp.h, toCanvas: function(x, y){ return [x / dp.info.bin * sc, canvas.height - y / dp.info.bin * sc]; }});
-      if (dp.showHist || dp.mode === "manual") drawHistogram(arr, range);
-      fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + (dp.info.nz > 1 ? " [" + (dp.info.section === 0 ? "sum of " + dp.info.summed : dp.info.section + " / " + dp.info.nz) + "]" : "") +
-        "  " + dp.info.nx + " × " + dp.info.ny + (dp.info.bin > 1 ? "  (binned ×" + dp.info.bin + ")" : "") + (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") +
-        "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high);
+      if (!single() && dp.tiles.length > 1){
+        // tile borders, and the selected image's frame
+        ctx.save(); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+        for (var k = 1; k < across; k++){ var x = Math.round(k * tw) + 0.5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+        for (var r2 = 1; r2 < down; r2++){ var y = Math.round(r2 * th) + 0.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+        ctx.restore();
+      }
+      if (dp.selected != null && dp.selected >= dp.location && dp.selected < dp.location + dp.tiles.length){
+        var si = dp.selected - dp.location, tx = (si % across) * tw, ty = Math.floor(si / across) * th;
+        ctx.save(); ctx.strokeStyle = "#2F5FA6"; ctx.lineWidth = 3; ctx.strokeRect(tx + 1.5, ty + 1.5, tw - 3, th - 3); ctx.restore();
+      }
+      if (dp.overlay && single()) dp.overlay(ctx, {scale: lay.scale, bin: dp.bin, width: dp.info.nx, height: dp.info.ny, toCanvas: function(x, y){ return [x * lay.scale, canvas.height - y * lay.scale]; }});
+      if (dp.showHist || dp.mode === "manual") drawHistogram(pageArray(), dp.mode === "manual" && dp.manual ? dp.manual : first);
+      var where = dp.sum ? "[sum of " + dp.info.summed + "]" : dp.info.nz > 1 ? (dp.tiles.length > 1 ? "[images " + dp.location + "–" + (dp.location + dp.tiles.length - 1) + " of " + dp.info.nz + "]" : "[" + dp.location + " / " + dp.info.nz + "]") : "";
+      fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + " " + where + "  " + dp.info.nx + " × " + dp.info.ny + (dp.bin > 1 ? "  (binned ×" + dp.bin + ")" : "") +
+        (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") + (dp.tiles.length === 1 ? "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high) : dp.selected != null ? "  selected image " + dp.selected : "");
     }
     // The asset's pixel size when the caller knows it; else the header's, if it is a plausible one.
     function pixelSize(){ if (dp.pixelSize) return dp.pixelSize; var p = dp.info && dp.info.pixel_size; return p && p > 0.05 && p < 200 ? p : null; }
@@ -5863,7 +5903,7 @@ From branch : <span id="versionBranch">—</span></p>
       for (var x = 0; x < W; x++){ var hgt = peak ? Math.log(1 + bins[x]) / Math.log(1 + peak) * (H - 2) : 0; ctx.fillRect(x, H - hgt, 1, hgt); }
       ctx.fillStyle = "rgba(47,95,166,0.9)";
       [range[0], range[1]].forEach(function(g){ var x0 = Math.round((g - lo) / span * (W - 1)); ctx.fillRect(Math.max(0, Math.min(W - 1, x0)), 0, 1, H); });
-      histCanvas.title = "Histogram (log counts) from " + fmtG(lo) + " to " + fmtG(hi) + "; the marks are the grey range shown";
+      histCanvas.title = "Histogram (log counts) of the images shown, from " + fmtG(lo) + " to " + fmtG(hi) + "; the marks are the grey range shown";
     }
 
     // ---- state changes ----
@@ -5874,10 +5914,11 @@ From branch : <span id="versionBranch">—</span></p>
       manual.hidden = !(dp.showHist || dp.mode === "manual");
       lowInput.disabled = highInput.disabled = dp.mode !== "manual";
     }
+    function setManualInputs(){ lowInput.value = Number(dp.manual[0].toPrecision(6)); highInput.value = Number(dp.manual[1].toPrecision(6)); }
     function setMode(m){
       dp.mode = m;
-      if (m === "manual" && !dp.manual){ var r = greyRange(); dp.manual = [r[0], r[1]]; }
-      if (m === "manual"){ lowInput.value = Number(dp.manual[0].toPrecision(6)); highInput.value = Number(dp.manual[1].toPrecision(6)); }
+      if (m === "manual" && !dp.manual && dp.tiles.length){ var r = greyRange(dp.tiles.length === 1 ? tileSource(0) : pageArray()); dp.manual = [r[0], r[1]]; }
+      if (m === "manual" && dp.manual) setManualInputs();
       if (m === "global" && dp.path && !dp.global) fetchGlobal();
       setPressed(); draw();
     }
@@ -5886,7 +5927,6 @@ From branch : <span id="versionBranch">—</span></p>
       apiFetch(apiUrl("/display/range") + "?path=" + encodeURIComponent(path) + "&max_edge=" + maxEdge()).then(function(r){ return r.ok ? r.json() : null; })
         .then(function(d){ if (d && dp.path === path){ dp.global = d; draw(); } }).catch(function(){});
     }
-    function maxEdge(){ return Math.max(512, Math.min(2048, Math.round(Math.max(stage.clientWidth, stage.clientHeight) * (window.devicePixelRatio || 1)))); }
     lowInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); });
     highInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); });
     invertBtn.addEventListener("click", function(){ dp.invert = !dp.invert; setPressed(); draw(); });
@@ -5896,12 +5936,22 @@ From branch : <span id="versionBranch">—</span></p>
     scaleSelect.addEventListener("change", function(){ dp.scale = scaleSelect.value; draw(); });
     prevBtn.addEventListener("click", function(){ step(-1); });
     nextBtn.addEventListener("click", function(){ step(1); });
-    sectionInput.addEventListener("change", function(){ if (dp.path) load(dp.path, Number(sectionInput.value)); });
+    sectionInput.addEventListener("change", function(){ if (dp.path) goTo(Number(sectionInput.value)); });
+    // A page back or forward: by as many images as are shown (OnPrevious / OnNext).
     function step(delta){
       if (!dp.info || dp.info.nz <= 1) return;
-      var next = dp.info.section + delta;
+      var per = dp.lay ? dp.lay.perPage : 1;
+      if (dp.sum){ if (delta > 0) goTo(1); return; }
+      if (delta > 0 && dp.location + dp.tiles.length - 1 >= dp.info.nz) return;   // the last image is already shown
+      var next = dp.location + delta * per;
       if (next < 1) next = 1; if (next > dp.info.nz) next = dp.info.nz;
-      if (next !== dp.info.section) load(dp.path, next);
+      if (next !== dp.location) goTo(next);
+    }
+    function goTo(n){
+      n = Math.max(0, Math.min(Math.round(n), dp.info ? dp.info.nz : n));
+      dp.sum = n === 0 && !!dp.info && dp.info.nz > 1;
+      dp.location = n;
+      fetchPage();
     }
     openBtn.addEventListener("click", function(){
       pathInput.value = dp.path || "";
@@ -5909,63 +5959,90 @@ From branch : <span id="versionBranch">—</span></p>
     });
     pathInput.addEventListener("input", function(){ if (pathInput.value) open({path: pathInput.value, title: ""}); });
     saveBtn.addEventListener("click", function(){
-      if (!dp.data) return;
+      if (!dp.tiles.length) return;
       canvas.toBlob(function(blob){
         if (!blob) return;
         var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-        a.download = (dp.path.split("/").pop().replace(/\.[^.]+$/, "") || "image") + (dp.info.nz > 1 ? "_" + dp.info.section : "") + (dp.fft ? "_fft" : "") + ".png";
+        a.download = (dp.path.split("/").pop().replace(/\.[^.]+$/, "") || "image") + (dp.info.nz > 1 ? "_" + dp.location : "") + (dp.fft ? "_fft" : "") + ".png";
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
       }, "image/png");
     });
+    // Which tile and which pixel of it the cursor is on.
+    function hit(e){
+      if (!dp.tiles.length || !dp.lay) return null;
+      var tw = dp.lay.tw, th = dp.lay.th;
+      var col = Math.floor(e.offsetX / tw), row = Math.floor(e.offsetY / th), idx = row * dp.lay.across + col;
+      if (col < 0 || col >= dp.lay.across || row < 0 || idx >= dp.tiles.length) return null;
+      var ix = Math.floor((e.offsetX - col * tw) / tw * dp.w), iy = Math.floor((e.offsetY - row * th) / th * dp.h);   // binned pixel
+      if (ix < 0 || iy < 0 || ix >= dp.w || iy >= dp.h) return null;
+      return {idx: idx, image: dp.location + idx, ix: ix, j: dp.h - 1 - iy};
+    }
     canvas.addEventListener("mousemove", function(e){
-      if (!dp.data) return;
-      var sc = currentScale(), ix = Math.floor(e.offsetX / sc), iy = Math.floor(e.offsetY / sc);
-      if (ix < 0 || iy < 0 || ix >= dp.w || iy >= dp.h){ locText.textContent = ""; return; }
-      var j = dp.h - 1 - iy, v = source()[j * dp.w + ix], bin = dp.info.bin;
-      locText.textContent = (ix * bin) + ", " + (j * bin) + (bin > 1 ? " (±" + (bin - 1) + ")" : "") + " : " + fmtG(v);
+      var h = hit(e);
+      if (!h){ locText.textContent = ""; return; }
+      var v = tileSource(h.idx)[h.j * dp.w + h.ix];
+      locText.textContent = (dp.tiles.length > 1 ? "image " + h.image + "  " : "") + (h.ix * dp.bin) + ", " + (h.j * dp.bin) + (dp.bin > 1 ? " (±" + (dp.bin - 1) + ")" : "") + " : " + fmtG(v);
     });
     canvas.addEventListener("mouseleave", function(){ locText.textContent = ""; });
-    window.addEventListener("resize", function(){ if (dp.data && dp.scale === "fit") draw(); });
+    canvas.addEventListener("click", function(e){
+      var h = hit(e); if (!h || dp.tiles.length <= 1) return;
+      dp.selected = dp.selected === h.image ? null : h.image; draw();
+    });
+    var resizeTimer = null;
+    window.addEventListener("resize", function(){ if (!dp.tiles.length) return; clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 150); });
 
-    function load(path, section){
-      var seq = ++dp.seq;
+    // ---- loading ----
+    function fetchPage(){
+      if (!dp.info) return;
+      var seq = ++dp.seq, path = dp.path;
+      var lay = layout(), count = dp.sum ? 1 : lay.perPage;
+      dp.pageCount = count;
       message.hidden = false; message.textContent = "Loading…";
-      apiFetch(apiUrl("/display/section") + "?path=" + encodeURIComponent(path) + "&section=" + section + "&max_edge=" + maxEdge(), {cache: "no-cache"}).then(function(r){
+      apiFetch(apiUrl("/display/section") + "?path=" + encodeURIComponent(path) + "&section=" + (dp.sum ? 0 : dp.location) + "&count=" + count + "&max_edge=" + edgeFor(lay.scale), {cache: "no-cache"}).then(function(r){
         if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
         var info = JSON.parse(r.headers.get("X-Display-Info") || "{}");
         return r.arrayBuffer().then(function(buf){ return {info: info, buf: buf}; });
       }).then(function(res){
-        if (seq !== dp.seq) return;
-        var fileChanged = dp.path !== path;
-        dp.path = path; dp.info = res.info; dp.w = res.info.width; dp.h = res.info.height;
-        dp.data = new Float32Array(res.buf); dp.fftData = null;
-        if (fileChanged){ dp.global = null; dp.manual = null; if (dp.mode === "global") fetchGlobal(); }
-        sectionInput.value = res.info.section; sectionInput.max = String(res.info.nz); sectionInput.min = res.info.nz > 1 ? "0" : "1"; sectionInput.disabled = res.info.nz <= 1;
-        countLabel.textContent = "/ " + res.info.nz; prevBtn.disabled = nextBtn.disabled = res.info.nz <= 1;
-        if (dp.mode === "manual" && !dp.manual){ var r0 = greyRange(); dp.manual = [r0[0], r0[1]]; lowInput.value = Number(r0[0].toPrecision(6)); highInput.value = Number(r0[1].toPrecision(6)); }
+        if (seq !== dp.seq || dp.path !== path) return;
+        var info = res.info, n = dp.w * dp.h, all = new Float32Array(res.buf);
+        dp.info.summed = info.summed; dp.bin = info.bin; dp.w = info.width; dp.h = info.height; n = dp.w * dp.h;
+        dp.tiles = []; dp.fftTiles = [];
+        for (var i = 0; i < (info.count || 1); i++) dp.tiles.push(all.subarray(i * n, (i + 1) * n));
+        sectionInput.value = dp.sum ? 0 : dp.location; sectionInput.max = String(dp.info.nz); sectionInput.min = dp.info.nz > 1 ? "0" : "1"; sectionInput.disabled = dp.info.nz <= 1;
+        countLabel.textContent = "/ " + dp.info.nz; prevBtn.disabled = nextBtn.disabled = dp.info.nz <= 1;
+        if (dp.mode === "manual" && !dp.manual){ var r0 = greyRange(dp.tiles.length === 1 ? tileSource(0) : pageArray()); dp.manual = [r0[0], r0[1]]; setManualInputs(); }
         message.hidden = true;
         draw();
       }).catch(function(err){
         if (seq !== dp.seq) return;
         message.hidden = false; message.textContent = "Could not open: " + err.message;
-        canvas.width = canvas.height = 0; dp.data = null; fileText.textContent = path; locText.textContent = "";
+        canvas.width = canvas.height = 0; dp.tiles = []; fileText.textContent = path; locText.textContent = "";
       });
     }
     function open(src){
       dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
-      var section = src.section != null ? src.section : 1;
-      if (src.path !== dp.path){ dp.global = null; dp.manual = null; }
-      if (section === "middle"){
-        // A volume opens on its middle slice, which takes the header first.
-        var seq = ++dp.seq; message.hidden = false; message.textContent = "Loading…";
-        apiFetch(apiUrl("/display/info") + "?path=" + encodeURIComponent(src.path)).then(function(r){ return r.ok ? r.json() : null; }).then(function(info){
-          if (seq !== dp.seq) return;
-          load(src.path, info && info.nz > 1 ? Math.max(1, Math.round(info.nz / 2)) : 1);
-        }).catch(function(){ if (seq === dp.seq) load(src.path, 1); });
-        return;
-      }
-      load(src.path, section);
+      var seq = ++dp.seq, path = src.path;
+      var fileChanged = path !== dp.path;
+      if (fileChanged){ dp.global = null; dp.manual = null; dp.selected = null; }
+      dp.path = path; dp.tiles = []; dp.fftTiles = []; canvas.width = canvas.height = 0;
+      message.hidden = false; message.textContent = "Loading…";
+      apiFetch(apiUrl("/display/info") + "?path=" + encodeURIComponent(path)).then(function(r){
+        if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+        return r.json();
+      }).then(function(info){
+        if (seq !== dp.seq) return;
+        dp.info = info; dp.bin = 0;   // the binning comes with the first page
+        var section = src.section === "middle" ? Math.max(1, Math.round(info.nz / 2)) : (src.section != null ? src.section : 1);
+        // A stack opens at 100% so that as many images as fit are shown; a single image fills the stage.
+        if (fileChanged){ dp.scale = info.nz > 1 && section !== 0 ? "1" : "fit"; scaleSelect.value = dp.scale; }
+        if (dp.mode === "global") fetchGlobal();
+        goTo(section);
+      }).catch(function(err){
+        if (seq !== dp.seq) return;
+        message.hidden = false; message.textContent = "Could not open: " + err.message;
+        dp.info = null; fileText.textContent = path; locText.textContent = "";
+      });
     }
     setPressed();
     return { open: open, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: draw, state: dp, root: root };

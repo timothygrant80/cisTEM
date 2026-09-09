@@ -29,13 +29,17 @@ class DisplayTests(unittest.TestCase):
         info = display.file_info(self.stack)
         self.assertEqual((info["nx"], info["ny"], info["nz"], info["pixel_size"], info["format"]), (40, 40, 3, 2.0, "mrc"))
         data, info = display.read_section(self.stack, 2)
-        self.assertEqual((data.shape, data.dtype.str, info["bin"], info["section"]), ((40, 40), "<f4", 1, 2))
+        self.assertEqual((data.shape, data.dtype.str, info["bin"], info["section"]), ((1, 40, 40), "<f4", 1, 2))
         self.assertEqual((info["min"], info["max"], info["mean"]), (2.0, 2.0, 2.0))
         # section 0 is the sum
         data, info = display.read_section(self.stack, 0)
-        self.assertEqual((float(data[0, 0]), info["summed"]), (6.0, 3))
+        self.assertEqual((float(data[0, 0, 0]), info["summed"]), (6.0, 3))
         with self.assertRaises(display.DisplayError):
             display.read_section(self.stack, 4)
+        # a page of the stack: fewer come back at the end
+        data, info = display.read_section(self.stack, 2, count=5)
+        self.assertEqual((data.shape, info["count"], info["section"]), ((2, 40, 40), 2, 2))
+        self.assertEqual((float(data[0, 0, 0]), float(data[1, 0, 0])), (2.0, 3.0))
 
     def test_binning(self):
         img = np.arange(100 * 60, dtype=np.float32).reshape(60, 100)
@@ -57,7 +61,7 @@ class DisplayTests(unittest.TestCase):
         info = display.file_info(path)
         self.assertEqual((info["nx"], info["ny"], info["nz"], info["format"]), (12, 8, 2, "tiff"))
         data, info = display.read_section(path, 2)
-        self.assertEqual((data.shape, float(data[0, 0])), ((8, 12), 9.0))
+        self.assertEqual((data.shape, float(data[0, 0, 0])), ((1, 8, 12), 9.0))
 
     def test_rejects_other_files(self):
         with self.assertRaises(display.DisplayError):

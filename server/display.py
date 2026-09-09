@@ -118,11 +118,17 @@ def bin_image(image, max_edge):
     return binned.astype(np.float32), factor
 
 
-def read_section(path, section=1, max_edge=1024):
-    """One section (or the sum, section 0) binned for display, with the info
-    the client needs. Returns (float32 array, info dict)."""
+MAX_PAGE_SECTIONS = 400
+
+
+def read_section(path, section=1, max_edge=1024, count=1):
+    """`count` consecutive sections from `section` (or the sum, section 0)
+    binned for display, concatenated, with the info the client needs --
+    `count` is how many came back (fewer at the end of the stack), `width`
+    and `height` the binned size of each. Returns (float32 array, info)."""
     info = file_info(path)
     section = int(section or 0)
+    count = max(1, min(int(count or 1), MAX_PAGE_SECTIONS))
     if section < 0 or section > info["nz"]:
         raise DisplayError("section {} is not in the file's {} sections".format(section, info["nz"]))
     if section == 0:
@@ -131,16 +137,18 @@ def read_section(path, section=1, max_edge=1024):
         for s in range(1, summed + 1):
             page = _read(path, info, s)
             acc = page if acc is None else acc + page
-        image = acc
+        images = [acc]
         info["summed"] = summed
     else:
-        image = _read(path, info, section)
-    binned, factor = bin_image(image, max_edge)
-    finite = binned[np.isfinite(binned)]
-    info.update({"section": section, "bin": factor, "width": int(binned.shape[1]), "height": int(binned.shape[0]),
+        images = [_read(path, info, s) for s in range(section, min(info["nz"], section + count - 1) + 1)]
+    binned = [bin_image(im, max_edge) for im in images]
+    factor = binned[0][1]
+    stack = np.stack([b[0] for b in binned])
+    finite = stack[np.isfinite(stack)]
+    info.update({"section": section, "count": len(images), "bin": factor, "width": int(stack.shape[2]), "height": int(stack.shape[1]),
                  "min": float(finite.min()) if finite.size else 0.0, "max": float(finite.max()) if finite.size else 0.0,
                  "mean": float(finite.mean()) if finite.size else 0.0, "std": float(finite.std()) if finite.size else 0.0})
-    return np.ascontiguousarray(binned, dtype="<f4"), info
+    return np.ascontiguousarray(stack, dtype="<f4"), info
 
 
 def global_range(path, max_edge=1024, max_sections=MAX_GLOBAL_SECTIONS):

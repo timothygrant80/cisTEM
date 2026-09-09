@@ -1120,6 +1120,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small" id="rpkgNewBtn" title="cisTEM’s New Refinement Package wizard: cut a particle stack from a particle position group.">New</button>
                 <button class="small" id="rpkgRenameBtn" disabled>Rename</button>
                 <button class="small danger" id="rpkgDeleteBtn" disabled>Delete</button>
+                <button class="small" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
               </div>
               <div class="asset-toolbar">
                 <button class="small" disabled title="Combining packages isn’t implemented yet.">Combine</button>
@@ -2628,7 +2629,7 @@ From branch : <span id="versionBranch">—</span></p>
    "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
-   "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgImportBtn","rpkgExportBtn",
+   "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
    "exportPackageScrim","exportPackageModal","exportPackageModalClose","epRefinement","epClass","epFormat","epStackPath","epStackBrowseBtn","epMetaPath","epMetaBrowseBtn","epExportBtn","epNote",
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
    "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
@@ -7411,6 +7412,9 @@ From branch : <span id="versionBranch">—</span></p>
       els.rpkgList.appendChild(li);
     });
     els.rpkgRenameBtn.disabled = els.rpkgDeleteBtn.disabled = els.rpkgExportBtn.disabled = state.selectedPackageId == null;
+    var sel = pkgs.filter(function(p){ return p.refinement_package_asset_id === state.selectedPackageId; })[0];
+    els.rpkgDisplayBtn.disabled = !(sel && sel.stack_file_exists);
+    els.rpkgDisplayBtn.title = sel && !sel.stack_file_exists ? "The package’s particle stack is missing from disk." : "Open the package’s particle stack in the Display window.";
     showPackage(state.selectedPackageId);
   }
   function showPackage(id){
@@ -7445,6 +7449,11 @@ From branch : <span id="versionBranch">—</span></p>
         if (!els.rpkgParticlesNote.hidden) els.rpkgParticlesNote.textContent = "Showing the first " + p.particles.length + " of " + p.particle_total + " particles.";
       }).catch(function(){});
   }
+  // MyRefinementPackageAssetPanel's Display: the particle stack, a page of particles at a time.
+  els.rpkgDisplayBtn.addEventListener("click", function(){
+    var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0]; if (!p || !p.stack_file_exists) return;
+    openDisplayModal({path: p.stack_filename, title: p.name + " \u2014 particle stack", section: 1, pixelSize: p.output_pixel_size});
+  });
   els.rpkgRenameBtn.addEventListener("click", function(){
     var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0]; if (!p) return;
     var name = prompt('Rename "' + p.name + '" to:', p.name); if (name === null || !name.trim()) return;

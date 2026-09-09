@@ -5904,8 +5904,27 @@ From branch : <span id="versionBranch">—</span></p>
       for (var x = 0; x < W; x++){ var hgt = peak ? Math.log(1 + bins[x]) / Math.log(1 + peak) * (H - 2) : 0; ctx.fillRect(x, H - hgt, 1, hgt); }
       ctx.fillStyle = "rgba(47,95,166,0.9)";
       [range[0], range[1]].forEach(function(g){ var x0 = Math.round((g - lo) / span * (W - 1)); ctx.fillRect(Math.max(0, Math.min(W - 1, x0)), 0, 1, H); });
-      histCanvas.title = "Histogram (log counts) of the images shown, from " + fmtG(lo) + " to " + fmtG(hi) + "; the marks are the grey range shown";
+      dp.histRange = [lo, hi];
+      histCanvas.title = "Histogram (log counts) of the images shown, from " + fmtG(lo) + " to " + fmtG(hi) + ". The marks are the grey range shown: left-click to set the minimum there, right-click the maximum.";
     }
+    // Clicking the histogram sets the Manual greys: left button the minimum, right button the maximum
+    // (switching to Manual if need be). The two never cross; the marks and the picture follow.
+    function histGreyAt(e){
+      if (!dp.histRange) return null;
+      var W = histCanvas.width, x = Math.max(0, Math.min(W - 1, e.offsetX * (W / histCanvas.clientWidth)));
+      return dp.histRange[0] + x / (W - 1) * (dp.histRange[1] - dp.histRange[0]);
+    }
+    function histPick(e, which){
+      var g = histGreyAt(e); if (g == null) return;
+      if (dp.mode !== "manual"){ var r = greyRange(dp.tiles.length === 1 ? tileSource(0) : pageArray()); dp.manual = [r[0], r[1]]; dp.mode = "manual"; }
+      var m = dp.manual.slice();
+      m[which] = g;
+      if (m[0] > m[1]) m[which === 0 ? 1 : 0] = g;
+      dp.manual = m; setManualInputs(); setPressed(); draw();
+    }
+    histCanvas.addEventListener("click", function(e){ histPick(e, 0); });
+    histCanvas.addEventListener("contextmenu", function(e){ e.preventDefault(); histPick(e, 1); });
+    histCanvas.style.cursor = "crosshair";
 
     // ---- state changes ----
     function setPressed(){

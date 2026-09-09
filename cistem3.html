@@ -7765,9 +7765,11 @@ From branch : <span id="versionBranch">—</span></p>
     }).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(){
-      fetchJobs();
+    }).then(function(job){
+      // cisTEM shows the new job's progress in the panel it was started from;
+      // here that view is the Jobs tab's Latest Result panel, so open it there.
       showTab("jobs");
+      return fetchJobs().then(function(){ if (job && job.id) selectJob(job.id); });
     }).catch(function(err){
       alert("Job submission failed: " + err.message);
     }).finally(function(){
@@ -7837,8 +7839,8 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   function fetchJobs(){
-    if (!state.connected || !state.projectId) return;
-    apiFetch(projectApiUrl("/jobs")).then(function(r){
+    if (!state.connected || !state.projectId) return Promise.resolve();
+    return apiFetch(projectApiUrl("/jobs")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){

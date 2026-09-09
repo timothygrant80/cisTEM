@@ -87,12 +87,19 @@ DEFAULTS = {
     "angular_step_deg": 15.0,
     "max_search_range_a": 100.0,
     "smoothing_factor": 1.0,
-    "exclude_blank_edges": True,
+    "exclude_blank_edges": False,
     "auto_percent_used": True,
     "percent_used": 100.0,
     "auto_mask": False,
-    "auto_centre": False,
+    "auto_centre": True,  # cisTEM's SetDefaults() says No; Yes here at the author's request
 }
+
+
+def package_defaults(largest_dimension_a):
+    """MyRefine2DPanel::SetDefaults()' size-derived prefills: the mask radius
+    is 0.6 x the package's largest dimension, the X/Y search range 0.33 x."""
+    size = float(largest_dimension_a or 0.0)
+    return {"mask_radius_a": round(size * 0.6, 2), "max_search_range_a": round(size * 0.33, 2)}
 
 PLEASE_CREATE_PACKAGE_MESSAGE = ("Please create a refinement package (in the assets panel) in order to perform a "
                                  "2D classification.")

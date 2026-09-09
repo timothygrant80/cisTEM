@@ -12,6 +12,12 @@ import classification as c  # noqa: E402
 
 
 class ScheduleTests(unittest.TestCase):
+    def test_package_defaults_follow_set_defaults(self):
+        d = c.package_defaults(150.0)
+        self.assertEqual(d, {"mask_radius_a": 90.0, "max_search_range_a": 49.5})
+        self.assertFalse(c.DEFAULTS["exclude_blank_edges"])   # ExcludeBlankEdgesNoRadio
+        self.assertTrue(c.DEFAULTS["auto_centre"])            # on by request, unlike cisTEM
+
     def test_default_number_of_classes_follows_set_defaults(self):
         # MyRefine2DPanel::SetDefaults(): particles / 300, stepped down.
         self.assertEqual(c.default_number_of_classes(100), 5)

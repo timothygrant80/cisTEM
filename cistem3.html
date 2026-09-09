@@ -1864,14 +1864,14 @@ From branch : <span id="versionBranch">—</span></p>
         {key:"high_resolution_limit_finish_a", label:"High-Resolution Limit (finish)", unit:"Å", type:"number", step:"1", min:0, default:"8", group:"Refinement",
          tooltip:"The high-resolution limit used for the final cycles. It should be set sufficiently high, for example 8 Å, to include signal originating from protein secondary structure."},
         {key:"mask_radius_a", label:"Mask Radius", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Refinement",
-         tooltip:"The radius of the circular mask applied to the input class averages before classification starts. This mask should be sufficiently large to include the largest dimension of the particle."},
+         tooltip:"The radius of the circular mask applied to the input class averages before classification starts. This mask should be sufficiently large to include the largest dimension of the particle. Prefilled with 0.6 × the package’s largest dimension."},
         {key:"angular_step_deg", label:"Angular Search Step", unit:"°", type:"number", step:"0.5", min:0, default:"15", group:"Refinement",
          tooltip:"The angular step used to generate the search grid when marginalizing over the in-plane rotational alignment parameter. It is often sufficient to set the step to 15°."},
         {key:"max_search_range_a", label:"Search Range in X/Y", unit:"Å", type:"number", step:"1", min:0, default:"100", group:"Refinement",
-         tooltip:"The search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are used for classification. If the range of particle displacements is unknown, start with a larger value, e.g. 100 Å."},
+         tooltip:"The search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are used for classification. If the range of particle displacements is unknown, start with a larger value, e.g. 100 Å. Prefilled with 0.33 × the package’s largest dimension."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.1", min:0.01, default:"1", group:"Refinement",
          tooltip:"A factor that reduces the range of likelihoods used during classification. A reduced range can help prevent the appearance of “empty” classes early in the classification. Try values between 0.1 and 1 if classification suffers from the disappearance of small classes or noisy class averages."},
-        {key:"exclude_blank_edges", label:"Exclude Blank Edges?", type:"checkbox", default:true, group:"Refinement",
+        {key:"exclude_blank_edges", label:"Exclude Blank Edges?", type:"checkbox", default:false, group:"Refinement",
          tooltip:"Should particle boxes with blank edges be excluded from classification? Blank edges can be the result of particles selected close to the edges of micrographs, and can lead to errors in the calculation of the likelihood function."},
         {key:"auto_percent_used", label:"Auto Percent Used?", type:"checkbox", default:true, group:"Particles Used",
          tooltip:"Should the percent of included particles be adjusted automatically? A classification scheme using initially 300 particles/class, then 30% and then 100% is often sufficient to obtain good classes."},
@@ -1879,7 +1879,7 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The fraction of the dataset used for classification. Only available when Auto Percent Used is not selected."},
         {key:"auto_mask", label:"Automask Averages?", type:"checkbox", default:false, group:"Class Averages",
          tooltip:"Apply automatic masking to the reference class averages before each cycle."},
-        {key:"auto_centre", label:"Auto Centre Averages?", type:"checkbox", default:false, group:"Class Averages",
+        {key:"auto_centre", label:"Auto Centre Averages?", type:"checkbox", default:true, group:"Class Averages",
          tooltip:"Centre the class averages on their centre of mass before each cycle."}
       ],
       info: {
@@ -7174,6 +7174,11 @@ From branch : <span id="versionBranch">—</span></p>
     }).then(function(d){
       if (pkg.value !== pkgId) return;
       start.dataset.newClasses = d.number_of_classes;
+      // SetDefaults(): mask radius 0.6 x and search range 0.33 x the package's largest dimension.
+      if (d.defaults) ["mask_radius_a", "max_search_range_a"].forEach(function(k){
+        var input = els.expertFields.querySelector('[data-key="' + k + '"]');
+        if (input && d.defaults[k] != null) input.value = Number(d.defaults[k]).toFixed(2);
+      });
       (d.classifications || []).forEach(function(c){
         var opt = document.createElement("option");
         opt.value = c.classification_id;

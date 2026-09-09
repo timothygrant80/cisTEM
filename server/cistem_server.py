@@ -2709,8 +2709,9 @@ def list_classifications(project_id):
 @auth.project_access_required
 def class2d_defaults(project_id):
     """MyRefine2DPanel::SetDefaults() for the chosen package: the class
-    count it would pick for a new classification, and, per earlier
-    classification, the class count and high-resolution limit a run
+    count it would pick for a new classification, the mask radius and
+    search range derived from the package's largest dimension, and, per
+    earlier classification, the class count and high-resolution limit a run
     continuing from it inherits."""
     package_id = request.args.get("refinement_package_id", type=int)
     conn = db.get_conn(project_id)
@@ -2723,7 +2724,8 @@ def class2d_defaults(project_id):
             "refinement_package_id": package_id,
             "particle_count": particles,
             "number_of_classes": classification.default_number_of_classes(particles),
-            "defaults": classification.DEFAULTS,
+            "largest_dimension_a": pkg["PARTICLE_SIZE"],
+            "defaults": dict(classification.DEFAULTS, **classification.package_defaults(pkg["PARTICLE_SIZE"])),
             "classifications": [{"classification_id": c["classification_id"], "name": c["name"],
                                  "number_of_classes": c["number_of_classes"], "high_resolution_limit": c["high_resolution_limit"],
                                  "class_average_file_exists": c["class_average_file_exists"]}

@@ -234,6 +234,7 @@ button.link:hover{background:none;text-decoration:underline;}
    with each group of related actions on its own row. */
 .assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups){display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
 .assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups) button{width:100%;}
+.assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups) button.span-row{grid-column:1 / -1;}
 .asset-toolbar.btn-groups{display:flex;flex-direction:column;gap:8px;}
 .btn-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
 .btn-group button{width:100%;padding-left:6px;padding-right:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1129,7 +1130,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small" id="ppGroupInvertBtn" disabled title="Select a group other than All Particle Positions first.">Invert</button>
               </div>
               <div class="asset-toolbar">
-                <button class="small" id="ppGroupFromImagesBtn" title="cisTEM’s “New from parent”: a group holding the positions of every image in an image group.">From Image Group</button>
+                <button class="small span-row" id="ppGroupFromImagesBtn" title="cisTEM’s “New from parent”: a group holding the positions of every image in an image group.">From Image Group</button>
               </div>
             </div>
 

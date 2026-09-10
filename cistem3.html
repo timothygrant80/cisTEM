@@ -57,7 +57,7 @@ body{
 button,input,select{font-family:var(--font-ui);}
 
 /* ---------- app shell ---------- */
-.app{display:flex;height:100vh;}
+.app{display:flex;height:100%;}   /* of the body, whose zoom vh units would ignore: 100vh here overran the window by the zoom factor and scrolled the document */
 
 .railnav{
   width:84px;flex-shrink:0;background:var(--chrome);border-right:1px solid var(--border-strong);
@@ -372,7 +372,17 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 /* ---------- Results: Align Movies (MyMovieAlignResultsPanel) ----------
    The bounded list-plus-detail idiom again: movies on the left, the chosen
    alignment's job details, drift plot and pictures on the right. */
-.results-layout{display:grid;grid-template-columns:minmax(340px,36%) minmax(0,1fr);gap:16px;align-items:stretch;height:clamp(480px, calc(100vh - 240px), 900px);}
+/* The Results tab fills the page area, so its two panels take whatever height
+   the window leaves under the heading and the tab bar and scroll inside
+   themselves -- the page itself never scrolls. A flex chain rather than a vh
+   height: the body is zoomed, which vh units do not follow. */
+.tabpage.fill{display:flex;flex-direction:column;height:100%;min-height:0;}
+.tabpage.fill[hidden]{display:none;}
+.tabpage.fill > .subtabs,.tabpage.fill > .page-heading,.tabpage.fill > .page-sub{flex-shrink:0;}
+#resultsPages{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
+#resultsPages > .results-subpage,#resultspagePlaceholder{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
+#resultsPages > .results-subpage[hidden],#resultspagePlaceholder[hidden]{display:none;}
+.results-layout{display:grid;grid-template-columns:minmax(340px,36%) minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:320px;}
 .results-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
 .ra-nav{justify-content:space-between;flex-wrap:nowrap;}
 .ra-nav .small{white-space:nowrap;}
@@ -1286,7 +1296,7 @@ From branch : <span id="versionBranch">—</span></p>
            Assets and Actions pages use. Only Align Movies has real results
            behind it so far; the other stages share one placeholder shell, as
            the unwired asset types do. -->
-      <section class="tabpage" id="page-results" hidden>
+      <section class="tabpage fill" id="page-results" hidden>
         <h2 class="page-heading">Results</h2>
         <p class="page-sub page-sub-wide">What each processing step produced, per movie or image.</p>
 

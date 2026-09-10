@@ -106,7 +106,7 @@ button,input,select{font-family:var(--font-ui);}
 
 /* Three levels: page title, section / tab labels, body. */
 .page-heading{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;}
-.page-sub{font-size:12.5px;color:var(--text-secondary);margin:0 0 6px;max-width:70ch;}
+.page-sub{font-size:12.5px;color:var(--text-secondary);margin:0 0 2px;max-width:70ch;}
 .page-sub.page-sub-wide{max-width:none;}
 
 /* ---------- group box (native fieldset look) ---------- */
@@ -135,6 +135,9 @@ button.small{padding:5px 11px;font-size:11.5px;}
 button.danger{color:var(--critical);}
 button.danger:hover{background:var(--critical-soft);border-color:var(--critical);}
 button.danger-hover:not(:disabled):hover{color:var(--critical);border-color:var(--critical);background:var(--critical-soft);}
+/* A secondary action that should still stand out from the plain ones: blue text on a blue-tinted edge. */
+button.secondary:not(:disabled){color:var(--accent-strong);border-color:#A9BFDD;background:#F6F9FD;}
+button.secondary:not(:disabled):hover{background:var(--accent-soft);border-color:var(--accent);}
 button.link{background:none;border:none;color:var(--accent);font-weight:600;padding:2px 0;}
 button.link:hover{background:none;text-decoration:underline;}
 
@@ -163,7 +166,7 @@ button.link:hover{background:none;text-decoration:underline;}
 
 .stage-inventory{width:100%;border-collapse:collapse;}
 .stage-inventory th{
-  text-align:left;font-size:11px;font-weight:700;color:var(--text);
+  text-align:left;font-size:11px;font-weight:700;color:#0F1418;
   padding:7px 12px;background:#F7F8FA;border:none;border-bottom:1px solid var(--border);
 }
 .stage-inventory td{padding:8px 12px;border:none;border-bottom:1px solid var(--border);font-size:12.5px;}
@@ -181,7 +184,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:10px;overflow-x:auto;scrollbar-width:thin;}
 .subtab-btn{
   display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0;
-  padding:12px 14px 11px;border:none;border-radius:4px 4px 0 0;
+  padding:10px 14px 9px;border:none;border-radius:4px 4px 0 0;
   background:none;color:var(--text-secondary);
   box-shadow:inset 0 -3px 0 transparent;
 }
@@ -224,7 +227,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .group-list li{padding:9px 12px;font-size:12.5px;font-weight:500;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);}
 .group-list li:last-child{border-bottom:none;}
 .group-list li:hover{background:#EEF3FA;}
-.group-list li.selected{background:#E5EFFC;color:var(--accent-strong);font-weight:600;}
+.group-list li.selected{background:#EBF3FD;color:var(--accent-strong);font-weight:600;}
 .asset-toolbar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;flex-shrink:0;}
 .asset-toolbar.btn-groups{gap:10px 16px;}
 .btn-group{display:flex;gap:6px;flex-wrap:wrap;}
@@ -232,19 +235,19 @@ button.link:hover{background:none;text-decoration:underline;}
 /* Label / value pairs in three explicit column pairs: every label sits in a
    label column and every value in the value column beside it, so a block of
    metadata reads down as well as across. */
-.details-grid{display:grid;grid-template-columns:repeat(3,max-content minmax(0,1fr));gap:3px 22px;margin-top:0;align-items:baseline;}
+.details-grid{display:grid;grid-template-columns:repeat(3,110px minmax(0,1fr));gap:2px 22px;margin-top:0;align-items:baseline;}
 .details-item{display:contents;font-size:12.5px;}
-.details-item .details-key,.details-item .details-val{padding:1px 0;font-size:12.5px;}
+.details-item .details-key,.details-item .details-val{padding:0;font-size:12.5px;line-height:1.5;}
 .details-item.details-item-wide .details-key{grid-column:1;}
 .details-item.details-item-wide .details-val{grid-column:2 / -1;}
-.details-key{font-weight:500;color:var(--text-secondary);white-space:nowrap;}
+.details-key{font-weight:500;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .details-val{font-family:var(--font-mono);color:var(--text);word-break:break-all;text-align:left;}
 /* The Selected Movie / Image / Position box: a compact inspector -- a white
    panel with a softer radius than the ones above, no edge, three rows of
    label / value pairs and the filename across the bottom. */
-.asset-subpage > .groupbox{background:var(--surface);border-radius:8px;padding:12px 20px 12px;}
+.asset-subpage > .groupbox{background:var(--surface);border-radius:8px;padding:10px 20px 8px;}
 .asset-subpage > .groupbox > .groupbox-label,.inspector-head .groupbox-label{font-size:13px;margin:0 0 8px;color:var(--text);}
-.inspector-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+.inspector-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
 .inspector-head .groupbox-label{margin:0;}
 .inspector-id{font-size:12px;color:var(--text-secondary);}
 .inspector-id span{font-family:var(--font-mono);color:var(--text);margin-left:4px;}
@@ -363,7 +366,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .table-scroll{overflow-x:auto;margin:-4px -2px 0;}
 table.queue{width:100%;border-collapse:collapse;min-width:720px;}
 table.queue thead th{
-  text-align:left;font-size:11px;font-weight:700;color:var(--text);
+  text-align:left;font-size:11px;font-weight:700;color:#0F1418;
   padding:8px 12px;background:#F7F8FA;border:none;border-bottom:1px solid var(--border);white-space:nowrap;
 }
 table.queue tbody td{padding:8px 12px;border:none;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text);white-space:nowrap;}
@@ -1013,7 +1016,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small danger" id="movieRemoveAllBtn" disabled title="No movies in this group yet.">Remove All</button>
                 <button class="small" id="movieRenameBtn" disabled title="Select exactly one movie first.">Rename</button>
                 <button class="small" id="movieAddToGroupBtn" disabled title="Select one or more movies first.">Add To Group</button>
-                <button class="small" id="movieDisplayBtn" disabled title="Select a movie first.">Display</button>
+                <button class="small secondary" id="movieDisplayBtn" disabled title="Select a movie first.">Display</button>
               </div>
             </div>
           </div>
@@ -1079,7 +1082,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small danger" id="imageRemoveAllBtn" disabled title="No images in this group yet.">Remove All</button>
                 <button class="small" id="imageRenameBtn" disabled title="Select exactly one image first.">Rename</button>
                 <button class="small" id="imageAddToGroupBtn" disabled title="Select one or more images first.">Add To Group</button>
-                <button class="small" id="imageDisplayBtn" disabled title="Select an image first.">Display</button>
+                <button class="small secondary" id="imageDisplayBtn" disabled title="Select an image first.">Display</button>
               </div>
             </div>
           </div>
@@ -1143,7 +1146,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small danger-hover" id="ppRemoveBtn" disabled title="Select one or more positions first.">Remove</button>
                 <button class="small danger" id="ppRemoveAllBtn" disabled title="No positions in this group yet.">Remove All</button>
                 <button class="small" id="ppAddToGroupBtn" disabled title="Select one or more positions first.">Add To Group</button>
-                <button class="small" id="ppDisplayBtn" disabled title="Select a position first.">Display</button>
+                <button class="small secondary" id="ppDisplayBtn" disabled title="Select a position first.">Display</button>
               </div>
             </div>
           </div>
@@ -1182,7 +1185,7 @@ From branch : <span id="versionBranch">—</span></p>
                   <button class="small" id="rpkgExportBtn" disabled title="cisTEM’s Export Refinement Package wizard: one refinement’s parameters as a Frealign, Relion or cisTEM file, beside a copy of the stack.">Export</button>
                 </div>
                 <div class="btn-group">
-                  <button class="small" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
+                  <button class="small secondary" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
                 </div>
                 <div class="btn-group">
                   <button class="small danger" id="rpkgDeleteBtn" disabled>Delete</button>
@@ -1254,7 +1257,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small danger-hover" id="volRemoveBtn" disabled title="Select one or more volumes first.">Remove</button>
                 <button class="small" id="volRenameBtn" disabled title="Select exactly one volume first.">Rename</button>
                 <button class="small" id="volAddToGroupBtn" disabled title="Select one or more volumes first.">Add To Group</button>
-                <button class="small" id="volDisplayBtn" disabled title="Select a volume first.">Display</button>
+                <button class="small secondary" id="volDisplayBtn" disabled title="Select a volume first.">Display</button>
               </div>
             </div>
           </div>

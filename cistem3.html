@@ -330,7 +330,8 @@ button.link:hover{background:none;text-decoration:underline;}
 /* A figure in the info flow. Bordered rather than floating on the panel
    background, since these are micrographs on white and would otherwise
    bleed into the surface; flat and square-cornered like everything else. */
-.info-figure{display:block;max-width:100%;height:auto;margin:2px 0 12px;border:1px solid var(--border);background:#fff;}
+/* Information figures are centred in the column; an item's `scale` (0-1) draws it at that fraction of the width. */
+.info-figure{display:block;max-width:100%;height:auto;margin:2px auto 12px;border:1px solid var(--border);background:#fff;}
 /* cisTEM's option lists read "Label : description"; as a <dl> the label can
    carry the emphasis without a literal colon doing the work. */
 .info-options{margin:0;}
@@ -1878,7 +1879,7 @@ From branch : <span id="versionBranch">—</span></p>
         body: [
           "The contrast transfer function (CTF) of the microscope affects the relative signal-to-noise ratio (SNR) of Fourier components of each micrograph. Those Fourier components where the CTF is near 0.0 have very low SNR compared to others. It is therefore essential to obtain accurate estimates of the CTF for each micrograph so that data from multiple micrographs may be combined in an optimal manner during later processing.",
           "In this panel, you can use CTFfind (Mindell & Grigorieff, 2003; Rohou & Grigorieff, 2015) to estimate CTF parameter values for each micrograph. The main parameter to be determined for each micrograph is the objective lens defocus (in Angstroms). Because in general lenses are astigmatic, one actually needs to determine two defocus values (describing defocus along the lens\u2019 major and minor axes) and the angle of astigmatism.",
-          {image: "ctffind-definitions.png",
+          {image: "ctffind-definitions.png", scale: 0.5,
            alt: "Definitions of the two defocus values and the astigmatism angle: an ellipse with its major and minor axes, and the angle from the x axis to the major axis."},
           "To estimate the values of these three defocus parameters for a micrograph, CTFfind computes a filtered version of the amplitude spectrum of the micrograph and then fits a model of the CTF (Equation 1 of Rohou & Grigorieff) to this filtered amplitude spectrum. It then returns the values of the defocus parameters which maximize the quality of the fit, as well as an image of the filtered amplitude spectrum, with the CTF model overlayed onto the lower-left quadrant.",
           {image: "ctffind-diagnostic-image.png",
@@ -3133,6 +3134,7 @@ From branch : <span id="versionBranch">—</span></p>
         img.className = "info-figure";
         img.src = item.image;
         img.alt = item.alt || "";
+        if (item.scale) img.style.width = Math.round(item.scale * 100) + "%";
         els.stageInfoBody.appendChild(img);
         return;
       }

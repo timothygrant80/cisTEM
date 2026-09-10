@@ -216,7 +216,9 @@ button.link:hover{background:none;text-decoration:underline;}
 .assets-layout .table-scroll{flex:1;min-height:0;overflow-y:auto;background:var(--surface);margin:0;border:1px solid var(--border);border-radius:4px;}
 .assets-layout .table-scroll thead th{position:sticky;top:0;z-index:1;}
 .assets-layout .table-scroll tbody td{background:var(--surface);}
-.assets-layout .table-scroll tbody tr:nth-child(even) td{background:#FAFBFC;}
+.assets-layout .table-scroll tbody:not(.virtual) tr:nth-child(even) td,.assets-layout .table-scroll tbody.virtual tr.alt td{background:#FAFBFC;}
+/* A virtual body's spacer rows stand in for the rows not in the DOM (see makeVirtualBody). */
+.assets-layout .table-scroll tbody tr.vspacer td,.assets-layout .table-scroll tbody tr.vspacer:hover td{padding:0;border:0;background:var(--surface);}
 /* Let the table's own (reliably-rendering) row backgrounds fill the box down
    to its full height instead of leaving bare space below a short table --
    the sunken background above is just a fallback for any rounding gap. */
@@ -7320,6 +7322,50 @@ From branch : <span id="versionBranch">—</span></p>
   // Display jumps to the image's picks on the Results tab, where the
   // position can be seen on the micrograph.
   function fmtCoord(v){ return v == null ? "—" : Number(v).toFixed(1); }
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]; });
+  }
+  // ---------- virtual table bodies ----------
+  // cisTEM's asset lists are wxDataViewListCtrls in virtual mode: the control
+  // asks for a row's text only when that row is on screen. Here a 3000-row
+  // <tbody> laid out in full cost Chrome ~0.4 s every time its panel was shown
+  // (measured: 450 ms for Particle Positions, 330 ms for a package's
+  // particles), which was the pause on those two tabs. So the two big tables
+  // keep only the rows in view plus a margin in the DOM, with a spacer row
+  // above and below standing in for the rest; rows are built as one HTML
+  // string from `rowHtml(item, index)` and their events are delegated to the
+  // <tbody>, so a re-render on scroll is cheap. Rows must be one line tall.
+  var VIRTUAL_MARGIN = 20;
+  function makeVirtualBody(tbody, colSpan, rowHtml){
+    var scroller = tbody.closest(".table-scroll");
+    var v = {items: [], rowHeight: 0, first: -1, count: -1};
+    function spacer(rows){ return "<tr class='vspacer'><td colspan='" + colSpan + "' style='height:" + Math.max(0, rows) * (v.rowHeight || 30) + "px'></td></tr>"; }
+    function render(force){
+      var n = v.items.length;
+      if (!n){ v.first = v.count = -1; return; }
+      var rh = v.rowHeight || 30;
+      var first = Math.min(Math.max(0, Math.floor(scroller.scrollTop / rh) - VIRTUAL_MARGIN), n - 1);
+      var count = Math.min(n - first, Math.ceil(scroller.clientHeight / rh) + 2 * VIRTUAL_MARGIN);
+      if (!force && first === v.first && count === v.count) return;
+      v.first = first; v.count = count;
+      var html = spacer(first);
+      for (var i = first; i < first + count; i++) html += rowHtml(v.items[i], i);
+      tbody.innerHTML = html + spacer(n - first - count);
+      if (!v.rowHeight){
+        // Measure a real row the first time one is laid out (0 while the panel is hidden) and redraw to the true height.
+        var tr = tbody.children[1];
+        if (tr && tr.offsetHeight){ v.rowHeight = tr.offsetHeight; render(true); }
+      }
+    }
+    v.setItems = function(items, keepScroll){ v.items = items; tbody.classList.add("virtual"); if (!keepScroll) scroller.scrollTop = 0; render(true); };
+    v.clear = function(html){ v.items = []; v.first = v.count = -1; tbody.classList.remove("virtual"); tbody.innerHTML = html || ""; };
+    v.redraw = function(){ render(true); };
+    v.rows = function(){ return Array.from(tbody.querySelectorAll("tr:not(.vspacer)")); };
+    scroller.addEventListener("scroll", function(){ render(false); });
+    // The panel being shown, or the window resized, changes how many rows fit.
+    if (window.ResizeObserver) new ResizeObserver(function(){ render(!v.rowHeight); }).observe(scroller);
+    return v;
+  }
   function loadPositions(){
     if (!state.projectId) return;
     apiFetch(projectApiUrl("/particle-positions?group_id=" + state.selectedPositionGroupId)).then(function(r){
@@ -7332,41 +7378,42 @@ From branch : <span id="versionBranch">—</span></p>
     var present = new Set(rows.map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }));
     state.selectedPositionIds = new Set(Array.from(state.selectedPositionIds).filter(function(id){ return present.has(id); }));
     if (!present.has(state.selectedPositionId)) state.selectedPositionId = null;
-    els.ppListBody.innerHTML = "";
     els.ppListNote.hidden = !(data && data.truncated);
     if (data && data.truncated) els.ppListNote.textContent = "Showing the first " + rows.length + " of " + data.total + " positions.";
     if (!rows.length){
       updatePositionDetails(null); updatePositionBulkButtons();
-      var tr = document.createElement("tr"); var td = document.createElement("td"); td.colSpan = 8;
-      var box = document.createElement("div"); box.className = "empty-note"; box.textContent = "No particle positions in this group";
-      var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Find Particles from the Actions tab — each image's picks land here.";
-      box.appendChild(hint); td.appendChild(box); tr.appendChild(td); els.ppListBody.appendChild(tr);
+      ppVirtual.clear("<tr><td colspan='8'><div class='empty-note'>No particle positions in this group" +
+        "<span class='hint'>Run Find Particles from the Actions tab \u2014 each image's picks land here.</span></div></td></tr>");
       return;
     }
-    rows.forEach(function(p){
-      var tr = document.createElement("tr");
-      tr.className = "clickable" + (p.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId ? " selected" : "");
-      tr.dataset.positionId = p.PARTICLE_POSITION_ASSET_ID;
-      var cells = ["<td class='check-col'><input type='checkbox' class='pp-check'></td>",
-        "<td>" + p.PARTICLE_POSITION_ASSET_ID + "</td>", "<td></td>", "<td class='num'>" + p.PARENT_IMAGE_ASSET_ID + "</td>",
-        "<td class='num'>" + (p.JOB_NUMBER != null ? "Job " + p.JOB_NUMBER : "—") + "</td>",
-        "<td class='num'>" + fmtCoord(p.X_POSITION) + "</td>", "<td class='num'>" + fmtCoord(p.Y_POSITION) + "</td>",
-        "<td class='num'>" + (p.PEAK_HEIGHT != null ? Number(p.PEAK_HEIGHT).toFixed(2) : "—") + "</td>"];
-      tr.innerHTML = cells.join("");
-      tr.children[2].textContent = p.IMAGE_NAME || "—";
-      tr.addEventListener("click", function(){ selectPosition(p.PARTICLE_POSITION_ASSET_ID); });
-      var cb = tr.querySelector(".pp-check");
-      cb.checked = state.selectedPositionIds.has(p.PARTICLE_POSITION_ASSET_ID);
-      cb.addEventListener("click", function(e){ e.stopPropagation(); });
-      cb.addEventListener("change", function(){ if (cb.checked) state.selectedPositionIds.add(p.PARTICLE_POSITION_ASSET_ID); else state.selectedPositionIds.delete(p.PARTICLE_POSITION_ASSET_ID); updatePositionBulkButtons(); });
-      els.ppListBody.appendChild(tr);
-    });
+    ppVirtual.setItems(rows, true);
     updatePositionDetails(rows.filter(function(p){ return p.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId; })[0] || null);
     updatePositionBulkButtons();
   }
+  var ppVirtual = makeVirtualBody(els.ppListBody, 8, function(p, i){
+    var id = p.PARTICLE_POSITION_ASSET_ID;
+    return "<tr class='clickable" + (id === state.selectedPositionId ? " selected" : "") + (i % 2 ? " alt" : "") + "' data-position-id='" + id + "'>" +
+      "<td class='check-col'><input type='checkbox' class='pp-check'" + (state.selectedPositionIds.has(id) ? " checked" : "") + "></td>" +
+      "<td>" + id + "</td><td>" + escapeHtml(p.IMAGE_NAME || "\u2014") + "</td><td class='num'>" + p.PARENT_IMAGE_ASSET_ID + "</td>" +
+      "<td class='num'>" + (p.JOB_NUMBER != null ? "Job " + p.JOB_NUMBER : "\u2014") + "</td>" +
+      "<td class='num'>" + fmtCoord(p.X_POSITION) + "</td><td class='num'>" + fmtCoord(p.Y_POSITION) + "</td>" +
+      "<td class='num'>" + (p.PEAK_HEIGHT != null ? Number(p.PEAK_HEIGHT).toFixed(2) : "\u2014") + "</td></tr>";
+  });
+  // Row events are delegated: the rows come and go with scrolling.
+  els.ppListBody.addEventListener("click", function(e){
+    var tr = e.target.closest("tr");
+    if (!tr || !tr.dataset.positionId || e.target.classList.contains("pp-check")) return;
+    selectPosition(Number(tr.dataset.positionId));
+  });
+  els.ppListBody.addEventListener("change", function(e){
+    if (!e.target.classList.contains("pp-check")) return;
+    var id = Number(e.target.closest("tr").dataset.positionId);
+    if (e.target.checked) state.selectedPositionIds.add(id); else state.selectedPositionIds.delete(id);
+    updatePositionBulkButtons();
+  });
   function selectPosition(id){
     state.selectedPositionId = id;
-    els.ppListBody.querySelectorAll("tr").forEach(function(tr){ tr.classList.toggle("selected", Number(tr.dataset.positionId) === id); });
+    ppVirtual.rows().forEach(function(tr){ tr.classList.toggle("selected", Number(tr.dataset.positionId) === id); });
     updatePositionDetails((state.positions || []).filter(function(p){ return p.PARTICLE_POSITION_ASSET_ID === id; })[0] || null);
   }
   function updatePositionDetails(p){
@@ -7397,7 +7444,7 @@ From branch : <span id="versionBranch">—</span></p>
   els.ppSelectAllCheckbox.addEventListener("change", function(){
     var checked = els.ppSelectAllCheckbox.checked;
     state.selectedPositionIds = new Set(checked ? (state.positions || []).map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }) : []);
-    els.ppListBody.querySelectorAll(".pp-check").forEach(function(cb){ cb.checked = checked; });
+    ppVirtual.redraw();
     updatePositionBulkButtons();
   });
   function removePositions(ids){
@@ -7740,21 +7787,20 @@ From branch : <span id="versionBranch">—</span></p>
         els.dRpkgRefinements.textContent = p.number_of_refinements;
         els.dRpkgLastRef.textContent = p.last_refinement_id;
         els.rpkgParticlesHead.textContent = "Contained Particles (" + p.particle_total + ")";
-        els.rpkgParticlesBody.innerHTML = "";
-        (p.particles || []).forEach(function(c){
-          var tr = document.createElement("tr");
-          tr.innerHTML = ["original_particle_position_asset_id", "parent_image_asset_id"].map(function(k){ return "<td class='num'>" + c[k] + "</td>"; }).join("") +
-            ["x_position", "y_position"].map(function(k){ return "<td class='num'>" + Number(c[k]).toFixed(1) + "</td>"; }).join("") +
-            "<td class='num'>" + Number(c.pixel_size).toFixed(4) + "</td><td class='num'>" + Number(c.spherical_aberration).toFixed(2) + "</td>" +
-            "<td class='num'>" + Number(c.microscope_voltage).toFixed(0) + "</td><td class='num'>" + Number(c.amplitude_contrast).toFixed(2) + "</td>" +
-            "<td class='num'>" + Math.round(c.defocus_1) + "</td><td class='num'>" + Math.round(c.defocus_2) + "</td>" +
-            "<td class='num'>" + Number(c.defocus_angle).toFixed(2) + "</td><td class='num'>" + Number(c.phase_shift).toFixed(2) + "</td><td class='num'>" + c.assigned_subset + "</td>";
-          els.rpkgParticlesBody.appendChild(tr);
-        });
+        rpkgVirtual.setItems(p.particles || []);
         els.rpkgParticlesNote.hidden = !(p.particle_total > (p.particles || []).length);
         if (!els.rpkgParticlesNote.hidden) els.rpkgParticlesNote.textContent = "Showing the first " + p.particles.length + " of " + p.particle_total + " particles.";
       }).catch(function(){});
   }
+  var rpkgVirtual = makeVirtualBody(els.rpkgParticlesBody, 13, function(c, i){
+    return "<tr" + (i % 2 ? " class='alt'" : "") + ">" +
+      ["original_particle_position_asset_id", "parent_image_asset_id"].map(function(k){ return "<td class='num'>" + c[k] + "</td>"; }).join("") +
+      ["x_position", "y_position"].map(function(k){ return "<td class='num'>" + Number(c[k]).toFixed(1) + "</td>"; }).join("") +
+      "<td class='num'>" + Number(c.pixel_size).toFixed(4) + "</td><td class='num'>" + Number(c.spherical_aberration).toFixed(2) + "</td>" +
+      "<td class='num'>" + Number(c.microscope_voltage).toFixed(0) + "</td><td class='num'>" + Number(c.amplitude_contrast).toFixed(2) + "</td>" +
+      "<td class='num'>" + Math.round(c.defocus_1) + "</td><td class='num'>" + Math.round(c.defocus_2) + "</td>" +
+      "<td class='num'>" + Number(c.defocus_angle).toFixed(2) + "</td><td class='num'>" + Number(c.phase_shift).toFixed(2) + "</td><td class='num'>" + c.assigned_subset + "</td></tr>";
+  });
   // MyRefinementPackageAssetPanel's Display: the particle stack, a page of particles at a time.
   els.rpkgDisplayBtn.addEventListener("click", function(){
     var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0]; if (!p || !p.stack_file_exists) return;

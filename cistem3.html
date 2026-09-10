@@ -400,6 +400,11 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .filter-rows label{font-size:12px;}
 .filter-rows input[type=number],.filter-rows input[type=date]{width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px;font-family:var(--font-mono);}
 .filter-rows .filter-unit{color:var(--text-tertiary);font-weight:400;}
+.filter-sort{margin-top:14px;border-top:1px solid var(--border);padding-top:10px;}
+.filter-sort .filter-head{font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
+.filter-sort-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 14px;font-size:12px;}
+.filter-sort-options label,.filter-sort-dir label{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.filter-sort-dir{display:flex;gap:16px;margin-top:8px;font-size:12px;}
 .ra-nav .small{white-space:nowrap;}
 .ra-filter-row{display:flex;align-items:center;gap:12px;font-size:12px;margin-bottom:8px;flex-shrink:0;flex-wrap:wrap;}
 .ra-radio{display:flex;align-items:center;gap:5px;font-weight:600;color:var(--text-secondary);cursor:pointer;}
@@ -1463,10 +1468,18 @@ From branch : <span id="versionBranch">—</span></p>
     <button class="log-close" id="filterModalClose" aria-label="Close">&times;</button>
   </div>
   <div class="modal-body">
-    <p class="page-sub" style="margin:0 0 12px;">Tick the fields to filter on and give each a range (leave a bound empty for no limit). A row is listed when its <em>active</em> result satisfies every ticked range.</p>
+    <p class="page-sub" style="margin:0 0 12px;">Tick the fields to filter on and give each a range (leave a bound empty for no limit). A row is listed when its <em>active</em> result satisfies every ticked range, in the order chosen below.</p>
     <div class="filter-rows" id="filterRows"></div>
+    <div class="filter-sort">
+      <div class="filter-head">Sort by</div>
+      <div class="filter-sort-options" id="filterSortOptions"></div>
+      <div class="filter-sort-dir" id="filterSortDir">
+        <label><input type="radio" name="filter-sort-dir" value="asc" checked /> Ascending</label>
+        <label><input type="radio" name="filter-sort-dir" value="desc" /> Descending</label>
+      </div>
+    </div>
     <div class="submit-row">
-      <button class="small" id="filterClearBtn" title="Untick every field">Clear</button>
+      <button class="small" id="filterClearBtn" title="Untick every field and sort by the default">Clear</button>
       <button class="primary" id="filterApplyBtn">Filter</button>
     </div>
   </div>
@@ -2675,7 +2688,7 @@ From branch : <span id="versionBranch">—</span></p>
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
-   "filterScrim","filterModal","filterModalClose","filterTitle","filterRows","filterClearBtn","filterApplyBtn",
+   "filterScrim","filterModal","filterModalClose","filterTitle","filterRows","filterSortOptions","filterSortDir","filterClearBtn","filterApplyBtn",
    "exportPackageScrim","exportPackageModal","exportPackageModalClose","epRefinement","epClass","epFormat","epStackPath","epStackBrowseBtn","epMetaPath","epMetaBrowseBtn","epExportBtn","epNote",
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
    "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
@@ -3398,7 +3411,7 @@ From branch : <span id="versionBranch">—</span></p>
   // run's parameters, toggled) and the stage's own result view.
   function makeResultsPage(cfg){
     var page = { cfg: cfg, items: [], entries: [], selectedRowId: null, selectedItemId: null, current: null, showDetails: false, urls: [], inflight: null,
-                 filter: {on: false, values: {}} };
+                 filter: {on: false, values: {}, sort: {key: "asset_id", desc: false}} };
 
     // ---- DOM ----
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
@@ -3470,7 +3483,27 @@ From branch : <span id="versionBranch">—</span></p>
         return (v.low == null || x >= v.low) && (v.high == null || x <= v.high);
       });
     }
-    function visibleEntries(){ return page.filter.on && cfg.filters ? page.entries.filter(passes) : page.entries; }
+    // The Sort by choices (MyFilterDialog's radio buttons): the ids, the job, then every filter field, read off the active result.
+    function sortOptions(){
+      var opts = [{key: "asset_id", label: cfg.rowLabel + " ID", get: function(e, it){ return e.rowId; }},
+                  {key: "result_id", label: cfg.titleWord + " ID", get: function(e, it){ return it[cfg.idKey]; }},
+                  {key: "job", label: "Job", get: function(e, it){ return it.job_number; }}];
+      (cfg.filters || []).forEach(function(f){ opts.push({key: f.key, label: f.label, get: function(e, it){ return f.value(it); }}); });
+      return opts;
+    }
+    function visibleEntries(){
+      if (!(page.filter.on && cfg.filters)) return page.entries;
+      var out = page.entries.filter(passes);
+      var opt = sortOptions().filter(function(o){ return o.key === page.filter.sort.key; })[0];
+      if (opt && opt.key !== "asset_id" || (opt && page.filter.sort.desc)){
+        var sign = page.filter.sort.desc ? -1 : 1;
+        out = out.map(function(e, i){ var v = opt.get(e, e.active); return {e: e, i: i, v: v == null || v !== v ? null : v}; })
+          .sort(function(a, b){ if (a.v == null && b.v == null) return a.i - b.i; if (a.v == null) return 1; if (b.v == null) return -1; return a.v === b.v ? a.i - b.i : (a.v < b.v ? -1 : 1) * sign; })
+          .map(function(x){ return x.e; });
+      }
+      return out;
+    }
+    page.sortOptions = sortOptions;
     function itemById(id){ return page.items.filter(function(it){ return it[cfg.idKey] === id; })[0]; }
     function defaultItem(e){ return e.active || e.latest; }
     function jobs(){
@@ -3671,7 +3704,8 @@ From branch : <span id="versionBranch">—</span></p>
     if (cfg.filters){
       left.querySelector('[data-role="all"]').addEventListener("change", function(){ applyFilterState(false); });
       left.querySelector('[data-role="byfilter"]').addEventListener("change", function(){
-        if (Object.keys(page.filter.values).some(function(k){ return page.filter.values[k].on; })) applyFilterState(true);
+        var defined = Object.keys(page.filter.values).some(function(k){ return page.filter.values[k].on; }) || page.filter.sort.key !== "asset_id" || page.filter.sort.desc;
+        if (defined) applyFilterState(true);
         else openFilterDialog(page, cfg, applyFilterState);
       });
       btn("define").addEventListener("click", function(){ openFilterDialog(page, cfg, applyFilterState); });
@@ -3703,6 +3737,12 @@ From branch : <span id="versionBranch">—</span></p>
       });
       els.filterRows.appendChild(cb); els.filterRows.appendChild(label); els.filterRows.appendChild(lo); els.filterRows.appendChild(hi);
     });
+    els.filterSortOptions.innerHTML = "";
+    page.sortOptions().forEach(function(o){
+      var l = document.createElement("label"), r = document.createElement("input"); r.type = "radio"; r.name = "filter-sort-key"; r.value = o.key; r.checked = o.key === page.filter.sort.key;
+      l.appendChild(r); l.appendChild(document.createTextNode(o.label)); els.filterSortOptions.appendChild(l);
+    });
+    els.filterSortDir.querySelector('[value="' + (page.filter.sort.desc ? "desc" : "asc") + '"]').checked = true;
     els.filterModal.classList.add("open"); els.filterScrim.classList.add("open");
   }
   // epoch seconds <-> the date input's yyyy-mm-dd, local time; the high bound
@@ -3721,7 +3761,11 @@ From branch : <span id="versionBranch">—</span></p>
   function closeFilterDialog(){ els.filterModal.classList.remove("open"); els.filterScrim.classList.remove("open"); }
   els.filterModalClose.addEventListener("click", closeFilterDialog);
   els.filterScrim.addEventListener("click", closeFilterDialog);
-  els.filterClearBtn.addEventListener("click", function(){ els.filterRows.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; }); });
+  els.filterClearBtn.addEventListener("click", function(){
+    els.filterRows.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+    var first = els.filterSortOptions.querySelector('input[type="radio"]'); if (first) first.checked = true;
+    els.filterSortDir.querySelector('[value="asc"]').checked = true;
+  });
   els.filterApplyBtn.addEventListener("click", function(){
     var page = filterDialog.page; if (!page) return;
     var values = {};
@@ -3733,8 +3777,10 @@ From branch : <span id="versionBranch">—</span></p>
       values[f.key] = {on: cb.checked && (low != null || high != null), low: low, high: high};
     });
     page.filter.values = values;
+    var sortKey = els.filterSortOptions.querySelector('input[type="radio"]:checked'), dir = els.filterSortDir.querySelector('input[type="radio"]:checked');
+    page.filter.sort = {key: sortKey ? sortKey.value : "asset_id", desc: !!(dir && dir.value === "desc")};
     closeFilterDialog();
-    filterDialog.apply(Object.keys(values).some(function(k){ return values[k].on; }));
+    filterDialog.apply(Object.keys(values).some(function(k){ return values[k].on; }) || page.filter.sort.key !== "asset_id" || page.filter.sort.desc);
   });
 
   // ---- Align Movies: MyMovieAlignResultsPanel + UnblurResultsPanel ----

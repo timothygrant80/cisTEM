@@ -3842,7 +3842,7 @@ From branch : <span id="versionBranch">—</span></p>
   RESULT_PAGES.ctf_estimation = makeResultsPage({
     stage: "ctf_estimation",
     listPath: "/ctf-estimates", listKey: "ctf_estimates", idKey: "ctf_estimation_id", jobKey: "ctf_estimation_job_id",
-    // MyCTFFilterDialog's fields, in its order (the estimate's results first, then its settings).
+    // MyCTFFilterDialog's fields, cut to the ones worth filtering estimates on.
     filters: [
       {key: "date", label: "Date of Run", type: "date", value: function(c){ return c.datetime_of_run; }},
       {key: "defocus", label: "Defocus", unit: "Å, mean of 1 and 2", type: "number", value: function(c){ return c.defocus1 != null && c.defocus2 != null ? (c.defocus1 + c.defocus2) / 2 : null; }},
@@ -3851,21 +3851,9 @@ From branch : <span id="versionBranch">—</span></p>
       {key: "score", label: "Score", type: "number", value: function(c){ return c.score; }},
       {key: "iciness", label: "Iciness", type: "number", value: function(c){ return c.iciness; }},
       {key: "ring_res", label: "Fit Resolution", unit: "Å", type: "number", value: function(c){ return c.detected_ring_resolution; }},
-      {key: "alias_res", label: "Alias Resolution", unit: "Å", type: "number", value: function(c){ return c.detected_alias_resolution; }},
       {key: "phase_shift", label: "Additional Phase Shift", unit: "°", type: "number", value: function(c){ return c.additional_phase_shift != null ? c.additional_phase_shift * 180 / Math.PI : null; }},
       {key: "tilt_angle", label: "Tilt Angle", unit: "°", type: "number", value: function(c){ return c.tilt_angle; }},
-      {key: "tilt_axis", label: "Tilt Axis", unit: "°", type: "number", value: function(c){ return c.tilt_axis; }},
-      {key: "voltage", label: "Voltage", unit: "kV", type: "number", value: function(c){ return c.voltage; }},
-      {key: "cs", label: "Spherical Aberration", unit: "mm", type: "number", value: function(c){ return c.spherical_aberration; }},
-      {key: "pixel_size", label: "Pixel Size", unit: "Å", type: "number", value: function(c){ return c.pixel_size; }},
-      {key: "amplitude_contrast", label: "Amplitude Contrast", type: "number", value: function(c){ return c.amplitude_contrast; }},
-      {key: "box_size", label: "Box Size", unit: "px", type: "number", value: function(c){ return c.box_size; }},
-      {key: "min_res", label: "Min. Resolution", unit: "Å", type: "number", value: function(c){ return c.min_resolution; }},
-      {key: "max_res", label: "Max. Resolution", unit: "Å", type: "number", value: function(c){ return c.max_resolution; }},
-      {key: "min_defocus", label: "Min. Defocus", unit: "Å", type: "number", value: function(c){ return c.min_defocus; }},
-      {key: "max_defocus", label: "Max. Defocus", unit: "Å", type: "number", value: function(c){ return c.max_defocus; }},
-      {key: "defocus_step", label: "Defocus Step", unit: "Å", type: "number", value: function(c){ return c.defocus_step; }},
-      {key: "tolerated_astig", label: "Tolerated Astigmatism", unit: "Å", type: "number", value: function(c){ return c.tolerated_astigmatism; }}
+      {key: "tilt_axis", label: "Tilt Axis", unit: "°", type: "number", value: function(c){ return c.tilt_axis; }}
     ],
     rowIdKey: "image_asset_id", rowNameKey: "image_name", rowLabel: "Image", rowLabelPlural: "Images",
     groupAssetKey: "image_asset_id", addAllTitle: "Add every image listed to an image group.",

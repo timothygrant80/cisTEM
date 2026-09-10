@@ -72,8 +72,7 @@ button,input,select{font-family:var(--font-ui);}
 .rail-item span{font-size:11px;font-weight:600;}
 .rail-item:hover{background:var(--surface-sunken);color:var(--text);}
 /* The selected item: a soft blue fill with a narrow accent bar on its left, rather than a solid block. */
-.rail-item.active{background:var(--accent-soft);color:var(--accent-strong);}
-.rail-item.active::before{content:"";position:absolute;left:-6px;top:8px;bottom:8px;width:3px;background:var(--accent);border-radius:0 2px 2px 0;}
+.rail-item.active{background:var(--accent);color:#fff;}
 .rail-item:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
 
 .mainarea{flex:1;display:flex;flex-direction:column;min-width:0;}
@@ -191,7 +190,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .subtab-btn span{font-size:13px;font-weight:600;white-space:nowrap;}
 .subtab-btn:hover{color:var(--text);background:var(--surface-sunken);}
 /* The selected asset type or stage: the rail's treatment, a rounded soft-blue fill with blue icon and label. */
-.subtab-btn.active{color:var(--accent-strong);background:var(--accent-soft);}
+.subtab-btn.active{color:#fff;background:var(--accent);}
 
 /* minmax(0,1fr), not plain 1fr: a 1fr track's automatic minimum is the item's
    min-content width, and the movies table's nowrap columns (long file paths in

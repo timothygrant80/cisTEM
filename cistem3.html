@@ -3419,11 +3419,12 @@ From branch : <span id="versionBranch">—</span></p>
     var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
     left.innerHTML =
       '<span class="groupbox-label">' + cfg.rowLabelPlural + '</span>' +
-      '<div class="ra-filter-row">' +
+      // The All / By Filter / Define Filter row only where the page has filter fields (Find Particles has none: a filter there is not worth much).
+      (cfg.filters ? '<div class="ra-filter-row">' +
         '<label class="ra-radio"><input type="radio" name="rafilter-' + cfg.stage + '" data-role="all" checked /> All ' + cfg.rowLabelPlural + '</label>' +
-        '<label class="ra-radio"' + (cfg.filters ? '' : ' title="This page has no filter fields yet."') + '><input type="radio" name="rafilter-' + cfg.stage + '" data-role="byfilter"' + (cfg.filters ? '' : ' disabled') + ' /> By Filter</label>' +
-        '<button class="small" data-role="define"' + (cfg.filters ? ' title="Choose the fields and ranges the listed ' + cfg.rowLabelPlural.toLowerCase() + ' must satisfy (cisTEM’s Define Filter)."' : ' disabled title="This page has no filter fields yet."') + '>Define Filter</button>' +
-      '</div>' +
+        '<label class="ra-radio"><input type="radio" name="rafilter-' + cfg.stage + '" data-role="byfilter" /> By Filter</label>' +
+        '<button class="small" data-role="define" title="Choose the fields and ranges the listed ' + cfg.rowLabelPlural.toLowerCase() + ' must satisfy (cisTEM’s Define Filter)."' + '>Define Filter</button>' +
+      '</div>' : '') +
       '<div class="ra-grid-scroll"><table class="ra-grid"><thead></thead><tbody></tbody></table></div>' +
       '<div class="ra-legend-row"><span class="ra-cell-glyph active">&#10003;</span> active &nbsp; <span class="ra-cell-glyph"></span> other run &nbsp; <span class="ra-eye-swatch"></span> shown</div>' +
       '<div class="asset-toolbar">' +

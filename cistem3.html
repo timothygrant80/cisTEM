@@ -191,7 +191,14 @@ button.link:hover{background:none;text-decoration:underline;}
    reason the boxes need min-width/min-height:0: as flex/grid children their
    automatic minimum would otherwise size them to content rather than letting
    the inner scroll containers do their job. */
-.assets-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:stretch;height:340px;}
+.assets-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:220px;}
+/* An Assets sub-page fills the page area like the Results tab: the groups
+   and asset lists take the height the window leaves, the details box under
+   them keeps its natural height, and only the lists scroll. */
+.tabpage.fill > .asset-subpage{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
+.tabpage.fill > .asset-subpage[hidden]{display:none;}
+.asset-subpage > .groupbox{flex:none;margin-bottom:0;}
+.assets-layout > .groupbox{margin-bottom:0;}
 .assets-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
 /* A plain 1px border on this element doesn't reliably paint in Chromium once
    its content is shorter than the fixed-height box (a rendering quirk of
@@ -263,7 +270,8 @@ button.link:hover{background:none;text-decoration:underline;}
    reason as .assets-layout: as grid/flex children the panels' automatic
    minimum would otherwise size them to their content and defeat the inner
    scrollers. */
-.actions-layout{height:clamp(400px, calc(100vh - 280px), 600px);grid-template-rows:minmax(0,1fr);}
+.actions-layout{flex:1 1 auto;min-height:320px;grid-template-rows:minmax(0,1fr);}
+.actions-layout > .groupbox{margin-bottom:0;}
 .actions-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
 .action-form-body{flex:1;min-height:0;overflow-y:auto;padding-right:8px;}
 
@@ -514,11 +522,12 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .ra-swatch-amp{border-top-color:var(--success);} .ra-swatch-fit{border-top-color:var(--plot-y);} .ra-swatch-q{border-top-color:var(--accent);}
 @media (max-width:1100px){ .ctf-result{grid-template-columns:1fr;} }
 
-.rpkg-layout{height:auto;min-height:340px;}
-.rpkg-layout > .groupbox:first-child{height:340px;}
+.rpkg-layout{min-height:340px;}
+#rpkgDetails{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
+#rpkgDetails[hidden]{display:none;}
 .rpkg-grid{margin-bottom:12px;}
 .rpkg-particles-head{font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;margin:4px 0 6px;}
-.rpkg-table{max-height:300px;overflow:auto;}
+.rpkg-table{flex:1 1 auto;min-height:120px;overflow:auto;}
 
 /* ---------- Jobs: latest result of the selected job ---------- */
 .queue-scroll{max-height:340px;overflow-y:auto;}
@@ -906,7 +915,7 @@ From branch : <span id="versionBranch">—</span></p>
     <div class="pagearea">
 
       <!-- ASSETS -->
-      <section class="tabpage" id="page-assets">
+      <section class="tabpage fill" id="page-assets">
         <h2 class="page-heading">Assets</h2>
         <p class="page-sub">Everything this project knows about, grouped by asset type.</p>
 
@@ -1236,7 +1245,7 @@ From branch : <span id="versionBranch">—</span></p>
       </section>
 
       <!-- ACTIONS -->
-      <section class="tabpage" id="page-actions" hidden>
+      <section class="tabpage fill" id="page-actions" hidden>
         <h2 class="page-heading">Actions</h2>
         <p class="page-sub">Pick a processing step and submit it to the connected pipeline.</p>
 

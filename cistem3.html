@@ -229,8 +229,15 @@ button.link:hover{background:none;text-decoration:underline;}
 .group-list li:hover{background:#EEF3FA;}
 .group-list li.selected{background:#EBF3FD;color:var(--accent-strong);font-weight:600;}
 .asset-toolbar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;flex-shrink:0;}
-.asset-toolbar.btn-groups{gap:10px 16px;}
-.btn-group{display:flex;gap:6px;flex-wrap:wrap;}
+/* The Groups / Packages list toolbars: buttons on a fixed grid so the rows
+   line up -- two equal columns under a Groups list, three under Packages,
+   with each group of related actions on its own row. */
+.assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups){display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups) button{width:100%;}
+.asset-toolbar.btn-groups{display:flex;flex-direction:column;gap:8px;}
+.btn-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.btn-group button{width:100%;padding-left:6px;padding-right:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-group .push-right{grid-column:3;}
 
 /* Label / value pairs in three explicit column pairs: every label sits in a
    label column and every value in the value column beside it, so a block of
@@ -561,7 +568,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-swatch-amp{border-top-color:var(--success);} .ra-swatch-fit{border-top-color:var(--plot-y);} .ra-swatch-q{border-top-color:var(--accent);}
 @media (max-width:1100px){ .ctf-result{grid-template-columns:1fr;} }
 
-.rpkg-layout{min-height:340px;}
+.rpkg-layout{min-height:340px;grid-template-columns:250px minmax(0,1fr);}
 #rpkgDetails{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
 #rpkgDetails[hidden]{display:none;}
 .rpkg-grid{margin-bottom:12px;}
@@ -1186,9 +1193,7 @@ From branch : <span id="versionBranch">—</span></p>
                 </div>
                 <div class="btn-group">
                   <button class="small secondary" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
-                </div>
-                <div class="btn-group">
-                  <button class="small danger" id="rpkgDeleteBtn" disabled>Delete</button>
+                  <button class="small danger push-right" id="rpkgDeleteBtn" disabled>Delete</button>
                 </div>
               </div>
             </div>

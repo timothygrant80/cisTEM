@@ -13,6 +13,14 @@ import display  # noqa: E402
 import refinement_packages as rp  # noqa: E402
 
 
+class TotalShiftTests(unittest.TestCase):
+    def test_total_shift_is_the_path_length(self):
+        import cistem_server
+        self.assertEqual(cistem_server.total_shift([]), 0.0)
+        self.assertEqual(cistem_server.total_shift([(0, 0)]), 0.0)
+        self.assertAlmostEqual(cistem_server.total_shift([(0, 0), (3, 4), (3, 4), (6, 8)]), 10.0)
+
+
 class DisplayTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()

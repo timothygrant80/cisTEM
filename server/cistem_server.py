@@ -32,6 +32,7 @@ HTTPS enforcement (see README.md's Security section for what that implies).
 
 import glob as glob_module
 import json
+import math
 import os
 import shlex
 import shutil
@@ -3018,6 +3019,16 @@ _ALIGNMENT_COLUMNS = (
 )
 
 
+def total_shift(shifts):
+    """The total drift of a movie: the length of the path the frames took,
+    the sum of the frame-to-frame shift distances (Angstroms) -- what the
+    Align Movies results filter calls Total Shift."""
+    total = 0.0
+    for (x0, y0), (x1, y1) in zip(shifts, shifts[1:]):
+        total += math.hypot(float(x1) - float(x0), float(y1) - float(y0))
+    return total
+
+
 def _spectrum_path(output_file):
     """unblur writes the amplitude spectrum to Spectra/ beside the sum, under
     the same name (stages/unblur.py builds both paths the same way)."""
@@ -3040,6 +3051,11 @@ def _alignment_json(row, conn=None):
     d["spectrum_file"] = str(_spectrum_path(out)) if out else None
     d["spectrum_file_exists"] = bool(out) and _spectrum_path(out).is_file()
     if conn is not None:
+        table = "MOVIE_ALIGNMENT_PARAMETERS_{}".format(row["ALIGNMENT_ID"])
+        if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+            d["total_shift"] = total_shift([(r[0], r[1]) for r in conn.execute("SELECT X_SHIFT, Y_SHIFT FROM {} ORDER BY FRAME_NUMBER".format(table)).fetchall()])
+        else:
+            d["total_shift"] = None
         try:
             d["frame_count"] = conn.execute(
                 "SELECT COUNT(*) FROM MOVIE_ALIGNMENT_PARAMETERS_{}".format(row["ALIGNMENT_ID"])).fetchone()[0]

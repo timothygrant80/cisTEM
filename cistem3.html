@@ -393,6 +393,13 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .results-layout{display:grid;grid-template-columns:minmax(340px,36%) minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:320px;}
 .results-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;margin-bottom:0;}
 .ra-nav{justify-content:space-between;flex-wrap:nowrap;}
+/* The Define Filter dialog (cisTEM's MyFilterDialog): one row per field with
+   its checkbox, label and low / high bounds. */
+.filter-rows{display:grid;grid-template-columns:auto minmax(0,1fr) 130px 130px;gap:8px 10px;align-items:center;max-height:60vh;overflow-y:auto;padding-right:6px;}
+.filter-rows .filter-head{font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;}
+.filter-rows label{font-size:12px;}
+.filter-rows input[type=number],.filter-rows input[type=date]{width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px;font-family:var(--font-mono);}
+.filter-rows .filter-unit{color:var(--text-tertiary);font-weight:400;}
 .ra-nav .small{white-space:nowrap;}
 .ra-filter-row{display:flex;align-items:center;gap:12px;font-size:12px;margin-bottom:8px;flex-shrink:0;flex-wrap:wrap;}
 .ra-radio{display:flex;align-items:center;gap:5px;font-weight:600;color:var(--text-secondary);cursor:pointer;}
@@ -1443,6 +1450,25 @@ From branch : <span id="versionBranch">—</span></p>
       <button class="primary" id="npCreateBtn">Create</button>
     </div>
     <p class="form-note" id="npNote"></p>
+  </div>
+</div>
+<div class="scrim" id="filterScrim"></div>
+<!-- cisTEM's Define Filter dialog (MyMovieFilterDialog / MyCTFFilterDialog):
+     tick a field and give a range; a row of the results grid stays listed
+     when its active result satisfies every ticked range. One dialog, filled
+     for whichever results page opened it. -->
+<div class="modal" id="filterModal">
+  <div class="modal-head">
+    <div class="modal-title" id="filterTitle">Define Filter</div>
+    <button class="log-close" id="filterModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">Tick the fields to filter on and give each a range (leave a bound empty for no limit). A row is listed when its <em>active</em> result satisfies every ticked range.</p>
+    <div class="filter-rows" id="filterRows"></div>
+    <div class="submit-row">
+      <button class="small" id="filterClearBtn" title="Untick every field">Clear</button>
+      <button class="primary" id="filterApplyBtn">Filter</button>
+    </div>
   </div>
 </div>
 <div class="scrim" id="exportPackageScrim"></div>
@@ -2649,6 +2675,7 @@ From branch : <span id="versionBranch">—</span></p>
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
+   "filterScrim","filterModal","filterModalClose","filterTitle","filterRows","filterClearBtn","filterApplyBtn",
    "exportPackageScrim","exportPackageModal","exportPackageModalClose","epRefinement","epClass","epFormat","epStackPath","epStackBrowseBtn","epMetaPath","epMetaBrowseBtn","epExportBtn","epNote",
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
    "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
@@ -3370,7 +3397,8 @@ From branch : <span id="versionBranch">—</span></p>
   // active for every asset it processed. On the right, Job Details (the
   // run's parameters, toggled) and the stage's own result view.
   function makeResultsPage(cfg){
-    var page = { cfg: cfg, items: [], entries: [], selectedRowId: null, selectedItemId: null, current: null, showDetails: false, urls: [], inflight: null };
+    var page = { cfg: cfg, items: [], entries: [], selectedRowId: null, selectedItemId: null, current: null, showDetails: false, urls: [], inflight: null,
+                 filter: {on: false, values: {}} };
 
     // ---- DOM ----
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
@@ -3379,9 +3407,9 @@ From branch : <span id="versionBranch">—</span></p>
     left.innerHTML =
       '<span class="groupbox-label">' + cfg.rowLabelPlural + '</span>' +
       '<div class="ra-filter-row">' +
-        '<label class="ra-radio"><input type="radio" checked /> All ' + cfg.rowLabelPlural + '</label>' +
-        '<label class="ra-radio" title="Filtering by result parameters isn’t implemented yet — cisTEM’s Define Filter dialog is the model."><input type="radio" disabled /> By Filter</label>' +
-        '<button class="small" disabled title="Not implemented yet.">Define Filter</button>' +
+        '<label class="ra-radio"><input type="radio" name="rafilter-' + cfg.stage + '" data-role="all" checked /> All ' + cfg.rowLabelPlural + '</label>' +
+        '<label class="ra-radio"' + (cfg.filters ? '' : ' title="This page has no filter fields yet."') + '><input type="radio" name="rafilter-' + cfg.stage + '" data-role="byfilter"' + (cfg.filters ? '' : ' disabled') + ' /> By Filter</label>' +
+        '<button class="small" data-role="define"' + (cfg.filters ? ' title="Choose the fields and ranges the listed ' + cfg.rowLabelPlural.toLowerCase() + ' must satisfy (cisTEM’s Define Filter)."' : ' disabled title="This page has no filter fields yet."') + '>Define Filter</button>' +
       '</div>' +
       '<div class="ra-grid-scroll"><table class="ra-grid"><thead></thead><tbody></tbody></table></div>' +
       '<div class="ra-legend-row"><span class="ra-cell-glyph active">&#10003;</span> active &nbsp; <span class="ra-cell-glyph"></span> other run &nbsp; <span class="ra-eye-swatch"></span> shown</div>' +
@@ -3432,6 +3460,17 @@ From branch : <span id="versionBranch">—</span></p>
       }).sort(function(p, q){ return p.rowId - q.rowId; });
     }
     function entry(rowId){ return page.entries.filter(function(e){ return e.rowId === rowId; })[0]; }
+    // ---- filtering (MyFilterDialog::BuildSearchCommand): the active result
+    // must satisfy every ticked range; a row with no active result is out.
+    function passes(e){
+      var it = e.active; if (!it) return false;
+      return (cfg.filters || []).every(function(f){
+        var v = page.filter.values[f.key]; if (!v || !v.on) return true;
+        var x = f.value(it); if (x == null || x !== x) return false;
+        return (v.low == null || x >= v.low) && (v.high == null || x <= v.high);
+      });
+    }
+    function visibleEntries(){ return page.filter.on && cfg.filters ? page.entries.filter(passes) : page.entries; }
     function itemById(id){ return page.items.filter(function(it){ return it[cfg.idKey] === id; })[0]; }
     function defaultItem(e){ return e.active || e.latest; }
     function jobs(){
@@ -3517,7 +3556,9 @@ From branch : <span id="versionBranch">—</span></p>
         th.appendChild(b); hr.appendChild(th);
       });
       gridHead.appendChild(hr);
-      page.entries.forEach(function(e){
+      var visible = visibleEntries();
+      left.querySelector(".groupbox-label").textContent = cfg.rowLabelPlural + (page.filter.on && cfg.filters ? " (" + visible.length + " of " + page.entries.length + " match the filter)" : "");
+      visible.forEach(function(e){
         var tr = document.createElement("tr");
         var isRow = e.rowId === page.selectedRowId;
         tr.classList.toggle("shown-row", isRow);
@@ -3547,10 +3588,10 @@ From branch : <span id="versionBranch">—</span></p>
         });
         gridBody.appendChild(tr);
       });
-      var idx = page.entries.findIndex(function(e){ return e.rowId === page.selectedRowId; });
+      var idx = visible.findIndex(function(e){ return e.rowId === page.selectedRowId; });
       btn("prev").disabled = idx <= 0;
-      btn("next").disabled = idx < 0 || idx >= page.entries.length - 1;
-      btn("addall").disabled = !page.entries.length;
+      btn("next").disabled = idx < 0 || idx >= visible.length - 1;
+      btn("addall").disabled = !visible.length;
       var shownItem = itemById(page.selectedItemId);
       btn("activate").disabled = !shownItem || shownItem.is_active;
       var shownCell = gridBody.querySelector("td.ra-cell.shown");
@@ -3585,8 +3626,9 @@ From branch : <span id="versionBranch">—</span></p>
     }
 
     function step(delta){
-      var idx = page.entries.findIndex(function(e){ return e.rowId === page.selectedRowId; });
-      var next = page.entries[idx + delta];
+      var visible = visibleEntries();
+      var idx = visible.findIndex(function(e){ return e.rowId === page.selectedRowId; });
+      var next = visible[idx + delta];
       if (!next) return;
       var shown = itemById(page.selectedItemId);
       var same = shown ? next.items.filter(function(it){ return it[cfg.jobKey] === shown[cfg.jobKey]; })[0] : null;
@@ -3602,7 +3644,7 @@ From branch : <span id="versionBranch">—</span></p>
     btn("prev").addEventListener("click", function(){ step(-1); });
     btn("next").addEventListener("click", function(){ step(1); });
     btn("addall").addEventListener("click", function(){
-      var ids = page.entries.map(function(e){ return e.groupAssetId; }).filter(function(id){ return id != null; });
+      var ids = visibleEntries().map(function(e){ return e.groupAssetId; }).filter(function(id){ return id != null; });
       if (!ids.length){ alert("None of these " + cfg.rowLabelPlural.toLowerCase() + " has an image asset to add."); return; }
       var name = prompt("Add the " + ids.length + " image" + (ids.length === 1 ? "" : "s") + " to which image group? (a new name creates the group)");
       name = name ? name.trim() : "";
@@ -3612,14 +3654,98 @@ From branch : <span id="versionBranch">—</span></p>
         .then(function(){ loadImageGroups(); })
         .catch(function(err){ alert("Could not add to group: " + err.message); });
     });
+    // ---- the All / By Filter radios and the Define Filter dialog ----
+    function applyFilterState(on){
+      page.filter.on = on && !!cfg.filters;
+      left.querySelector('[data-role="all"]').checked = !page.filter.on;
+      left.querySelector('[data-role="byfilter"]').checked = page.filter.on;
+      var visible = visibleEntries();
+      if (page.filter.on && !visible.some(function(e){ return e.rowId === page.selectedRowId; })){
+        // the shown row fell out of the filter: show the first that passes
+        var first = visible[0];
+        page.selectedRowId = first ? first.rowId : null;
+        page.selectedItemId = first ? defaultItem(first)[cfg.idKey] : null;
+        renderGrid(); showSelected();
+      } else renderGrid();
+    }
+    if (cfg.filters){
+      left.querySelector('[data-role="all"]').addEventListener("change", function(){ applyFilterState(false); });
+      left.querySelector('[data-role="byfilter"]').addEventListener("change", function(){
+        if (Object.keys(page.filter.values).some(function(k){ return page.filter.values[k].on; })) applyFilterState(true);
+        else openFilterDialog(page, cfg, applyFilterState);
+      });
+      btn("define").addEventListener("click", function(){ openFilterDialog(page, cfg, applyFilterState); });
+    }
     page.select = select;
     return page;
   }
+
+  // cisTEM's MyFilterDialog, shared by the results pages: rows of checkbox,
+  // label, low and high from the page's `filters`; Filter applies and turns
+  // By Filter on, Clear unticks everything. Dates are whole days, local time.
+  var filterDialog = { page: null, apply: null };
+  function openFilterDialog(page, cfg, apply){
+    filterDialog.page = page; filterDialog.apply = apply;
+    els.filterTitle.textContent = "Define Filter — " + cfg.rowLabelPlural;
+    els.filterRows.innerHTML = "";
+    [["", ""], ["Field", ""], ["Minimum", ""], ["Maximum", ""]].forEach(function(h){ var d = document.createElement("div"); d.className = "filter-head"; d.textContent = h[0]; els.filterRows.appendChild(d); });
+    cfg.filters.forEach(function(f){
+      var v = page.filter.values[f.key] || {on: false, low: null, high: null};
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = v.on; cb.dataset.key = f.key; cb.id = "filter-" + cfg.stage + "-" + f.key;
+      var label = document.createElement("label"); label.htmlFor = cb.id; label.textContent = f.label + " "; if (f.unit){ var u = document.createElement("span"); u.className = "filter-unit"; u.textContent = "(" + f.unit + ")"; label.appendChild(u); }
+      var lo = document.createElement("input"), hi = document.createElement("input");
+      [lo, hi].forEach(function(inp, i){
+        inp.type = f.type === "date" ? "date" : "number"; if (f.type !== "date") inp.step = "any";
+        var val = i === 0 ? v.low : v.high;
+        inp.value = val == null ? "" : (f.type === "date" ? dateInputValue(val, i === 1) : String(val));
+        inp.dataset.key = f.key; inp.dataset.bound = i === 0 ? "low" : "high";
+        inp.addEventListener("input", function(){ cb.checked = true; });
+      });
+      els.filterRows.appendChild(cb); els.filterRows.appendChild(label); els.filterRows.appendChild(lo); els.filterRows.appendChild(hi);
+    });
+    els.filterModal.classList.add("open"); els.filterScrim.classList.add("open");
+  }
+  // epoch seconds <-> the date input's yyyy-mm-dd, local time; the high bound
+  // stored is the end of its day, so the input shows that day.
+  function dateInputValue(epoch, isHigh){
+    var d = new Date((epoch - (isHigh ? 1 : 0)) * 1000);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function dateBound(value, isHigh){
+    if (!value) return null;
+    var parts = value.split("-").map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+    if (isHigh) d.setDate(d.getDate() + 1);
+    return Math.floor(d.getTime() / 1000) - (isHigh ? 1 : 0);
+  }
+  function closeFilterDialog(){ els.filterModal.classList.remove("open"); els.filterScrim.classList.remove("open"); }
+  els.filterModalClose.addEventListener("click", closeFilterDialog);
+  els.filterScrim.addEventListener("click", closeFilterDialog);
+  els.filterClearBtn.addEventListener("click", function(){ els.filterRows.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; }); });
+  els.filterApplyBtn.addEventListener("click", function(){
+    var page = filterDialog.page; if (!page) return;
+    var values = {};
+    page.cfg.filters.forEach(function(f){
+      var cb = els.filterRows.querySelector('input[type="checkbox"][data-key="' + f.key + '"]');
+      var lo = els.filterRows.querySelector('input[data-key="' + f.key + '"][data-bound="low"]'), hi = els.filterRows.querySelector('input[data-key="' + f.key + '"][data-bound="high"]');
+      var low = f.type === "date" ? dateBound(lo.value, false) : (lo.value === "" ? null : Number(lo.value));
+      var high = f.type === "date" ? dateBound(hi.value, true) : (hi.value === "" ? null : Number(hi.value));
+      values[f.key] = {on: cb.checked && (low != null || high != null), low: low, high: high};
+    });
+    page.filter.values = values;
+    closeFilterDialog();
+    filterDialog.apply(Object.keys(values).some(function(k){ return values[k].on; }));
+  });
 
   // ---- Align Movies: MyMovieAlignResultsPanel + UnblurResultsPanel ----
   RESULT_PAGES.motion_correction = makeResultsPage({
     stage: "motion_correction",
     listPath: "/alignments", listKey: "alignments", idKey: "alignment_id", jobKey: "alignment_job_id",
+    // MyMovieFilterDialog, cut to the two fields worth filtering movies on.
+    filters: [
+      {key: "date", label: "Date of Run", type: "date", value: function(a){ return a.datetime_of_run; }},
+      {key: "total_shift", label: "Total Shift", unit: "Å, path of the frames", type: "number", value: function(a){ return a.total_shift; }}
+    ],
     rowIdKey: "movie_asset_id", rowNameKey: "movie_name", rowLabel: "Movie", rowLabelPlural: "Movies",
     groupAssetKey: "movie_image_asset_id", addAllTitle: "Add the aligned images of every movie listed to an image group.",
     itemPath: function(id){ return "/alignments/" + id; },
@@ -3716,6 +3842,31 @@ From branch : <span id="versionBranch">—</span></p>
   RESULT_PAGES.ctf_estimation = makeResultsPage({
     stage: "ctf_estimation",
     listPath: "/ctf-estimates", listKey: "ctf_estimates", idKey: "ctf_estimation_id", jobKey: "ctf_estimation_job_id",
+    // MyCTFFilterDialog's fields, in its order (the estimate's results first, then its settings).
+    filters: [
+      {key: "date", label: "Date of Run", type: "date", value: function(c){ return c.datetime_of_run; }},
+      {key: "defocus", label: "Defocus", unit: "Å, mean of 1 and 2", type: "number", value: function(c){ return c.defocus1 != null && c.defocus2 != null ? (c.defocus1 + c.defocus2) / 2 : null; }},
+      {key: "astigmatism", label: "Astigmatism", unit: "Å, |defocus 1 − 2|", type: "number", value: function(c){ return c.defocus1 != null && c.defocus2 != null ? Math.abs(c.defocus1 - c.defocus2) : null; }},
+      {key: "astig_angle", label: "Astigmatism Angle", unit: "°", type: "number", value: function(c){ return c.defocus_angle; }},
+      {key: "score", label: "Score", type: "number", value: function(c){ return c.score; }},
+      {key: "iciness", label: "Iciness", type: "number", value: function(c){ return c.iciness; }},
+      {key: "ring_res", label: "Fit Resolution", unit: "Å", type: "number", value: function(c){ return c.detected_ring_resolution; }},
+      {key: "alias_res", label: "Alias Resolution", unit: "Å", type: "number", value: function(c){ return c.detected_alias_resolution; }},
+      {key: "phase_shift", label: "Additional Phase Shift", unit: "°", type: "number", value: function(c){ return c.additional_phase_shift != null ? c.additional_phase_shift * 180 / Math.PI : null; }},
+      {key: "tilt_angle", label: "Tilt Angle", unit: "°", type: "number", value: function(c){ return c.tilt_angle; }},
+      {key: "tilt_axis", label: "Tilt Axis", unit: "°", type: "number", value: function(c){ return c.tilt_axis; }},
+      {key: "voltage", label: "Voltage", unit: "kV", type: "number", value: function(c){ return c.voltage; }},
+      {key: "cs", label: "Spherical Aberration", unit: "mm", type: "number", value: function(c){ return c.spherical_aberration; }},
+      {key: "pixel_size", label: "Pixel Size", unit: "Å", type: "number", value: function(c){ return c.pixel_size; }},
+      {key: "amplitude_contrast", label: "Amplitude Contrast", type: "number", value: function(c){ return c.amplitude_contrast; }},
+      {key: "box_size", label: "Box Size", unit: "px", type: "number", value: function(c){ return c.box_size; }},
+      {key: "min_res", label: "Min. Resolution", unit: "Å", type: "number", value: function(c){ return c.min_resolution; }},
+      {key: "max_res", label: "Max. Resolution", unit: "Å", type: "number", value: function(c){ return c.max_resolution; }},
+      {key: "min_defocus", label: "Min. Defocus", unit: "Å", type: "number", value: function(c){ return c.min_defocus; }},
+      {key: "max_defocus", label: "Max. Defocus", unit: "Å", type: "number", value: function(c){ return c.max_defocus; }},
+      {key: "defocus_step", label: "Defocus Step", unit: "Å", type: "number", value: function(c){ return c.defocus_step; }},
+      {key: "tolerated_astig", label: "Tolerated Astigmatism", unit: "Å", type: "number", value: function(c){ return c.tolerated_astigmatism; }}
+    ],
     rowIdKey: "image_asset_id", rowNameKey: "image_name", rowLabel: "Image", rowLabelPlural: "Images",
     groupAssetKey: "image_asset_id", addAllTitle: "Add every image listed to an image group.",
     itemPath: function(id){ return "/ctf-estimates/" + id; },

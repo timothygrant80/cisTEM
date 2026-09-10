@@ -98,7 +98,7 @@ button,input,select{font-family:var(--font-ui);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 @media (prefers-reduced-motion: reduce){.badge .dot.pulse{animation:none;}}
 
-.pagearea{flex:1;overflow-y:auto;padding:10px 22px 18px;}   /* 10 + the tab's own 10px puts as much above the icons as sits below the bar */
+.pagearea{flex:1;overflow-y:auto;padding:4px 22px 18px;}   /* 4 + the tab's own 6px puts as much above the icons as sits below the bar */
 /* Pages fill the window the way cisTEM's panels fill its frame; the one
    ceiling keeps a maximised window on a very wide monitor from stretching a
    form or a table of six columns across all of it. */
@@ -184,7 +184,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:10px;overflow-x:auto;scrollbar-width:thin;}
 .subtab-btn{
   display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0;
-  padding:10px 14px 9px;border:none;border-radius:4px 4px 0 0;
+  padding:6px 14px 6px;border:none;border-radius:4px 4px 0 0;
   background:none;color:var(--text-secondary);
   box-shadow:inset 0 -3px 0 transparent;
 }

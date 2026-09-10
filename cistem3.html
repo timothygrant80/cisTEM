@@ -14,15 +14,15 @@
    No web fonts either: this runs on lab machines that may be offline. */
 
 :root{
-  --chrome:#E4E6E8;
-  --page-bg:#F2F3F4;
-  --surface:#FFFFFF;
-  --surface-sunken:#EBEDEE;
-  --border:#C4CBD1;
-  --border-strong:#9AA4AC;
+  --chrome:#FFFFFF;          /* rail and top bar share the panel surface */
+  --page-bg:#F3F4F6;         /* grey 1: the page */
+  --surface:#FFFFFF;         /* the panels */
+  --surface-sunken:#F3F4F6;  /* grey 1 again: table heads, the inspector, hover on chrome */
+  --border:#E2E5E9;          /* grey 2: every divider */
+  --border-strong:#CBD1D8;   /* grey 3: control edges (inputs, buttons) */
   --text:#1A1E22;
-  --text-secondary:#4B545C;
-  --text-tertiary:#7C868E;
+  --text-secondary:#5B6570;  /* grey 4: secondary text, labels, captions */
+  --text-tertiary:#5B6570;   /* folded into secondary: one shade of quiet text, not two */
   --accent:#2F5FA6;
   --accent-strong:#1F4680;
   --plot-y:#B2562B;   /* the second series in the drift plot, distinct from the accent */
@@ -60,28 +60,30 @@ button,input,select{font-family:var(--font-ui);}
 .app{display:flex;height:100%;}   /* of the body, whose zoom vh units would ignore: 100vh here overran the window by the zoom factor and scrolled the document */
 
 .railnav{
-  width:84px;flex-shrink:0;background:var(--chrome);border-right:1px solid var(--border-strong);
-  display:flex;flex-direction:column;align-items:stretch;padding:10px 0;
+  width:72px;flex-shrink:0;background:var(--chrome);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:stretch;padding:8px 0;
 }
 .rail-item{
-  display:flex;flex-direction:column;align-items:center;gap:5px;
-  padding:11px 4px;margin:1px 6px;border-radius:3px;border:1px solid transparent;
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:12px 4px;margin:2px 6px;border-radius:4px;border:none;
   background:none;color:var(--text-secondary);cursor:pointer;
 }
 .rail-item svg{width:22px;height:22px;}
-.rail-item span{font-size:10.5px;font-weight:600;}
-.rail-item:hover{background:rgba(0,0,0,0.05);}
-.rail-item.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
+.rail-item span{font-size:11px;font-weight:600;}
+.rail-item:hover{background:var(--surface-sunken);color:var(--text);}
+/* The selected item: a soft blue fill with a narrow accent bar on its left, rather than a solid block. */
+.rail-item.active{background:var(--accent-soft);color:var(--accent-strong);}
+.rail-item.active::before{content:"";position:absolute;left:-6px;top:8px;bottom:8px;width:3px;background:var(--accent);border-radius:0 2px 2px 0;}
 .rail-item:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
 
 .mainarea{flex:1;display:flex;flex-direction:column;min-width:0;}
 
 .topbar{
-  height:46px;flex-shrink:0;background:var(--chrome);border-bottom:1px solid var(--border-strong);
+  height:48px;flex-shrink:0;background:#ECF2F8;border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:16px;
 }
 .topbar-title{display:flex;align-items:baseline;gap:9px;min-width:0;}
-.app-name{font-size:13px;font-weight:700;white-space:nowrap;}
+.app-name{font-size:13px;font-weight:700;white-space:nowrap;color:#001D88;}
 .app-sub{font-size:11.5px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .badge{
@@ -102,34 +104,40 @@ button,input,select{font-family:var(--font-ui);}
    form or a table of six columns across all of it. */
 .tabpage{max-width:1800px;}
 
-.page-heading{font-size:14.5px;font-weight:700;margin:0 0 3px;}
-.page-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 16px;max-width:70ch;}
+/* Three levels: page title, section / tab labels, body. */
+.page-heading{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;}
+.page-sub{font-size:12.5px;color:var(--text-secondary);margin:0 0 2px;max-width:70ch;}
 .page-sub.page-sub-wide{max-width:none;}
 
 /* ---------- group box (native fieldset look) ---------- */
 .groupbox{
-  position:relative;border:1px solid var(--border-strong);background:var(--surface);
-  padding:20px 18px 18px;margin-bottom:16px;border-radius:2px;
+  position:relative;border:none;background:var(--surface);
+  padding:16px 20px 18px;margin-bottom:16px;border-radius:6px;
 }
 .groupbox-label{
-  position:absolute;top:-9px;left:11px;background:var(--page-bg);padding:0 6px;
-  font-size:11px;font-weight:700;color:var(--text-secondary);
+  display:block;margin:0 0 12px;padding:0;
+  font-size:13.5px;font-weight:600;color:var(--text);
 }
 
 /* ---------- buttons / inputs ---------- */
 button{
-  font-size:12px;font-weight:600;color:var(--text);cursor:pointer;border-radius:2px;
+  font-size:12px;font-weight:600;color:var(--text);cursor:pointer;border-radius:4px;
   border:1px solid var(--border-strong);padding:6px 13px;
-  background:linear-gradient(#FDFDFD,#E7E9EB);
+  background:var(--surface);
 }
-button:hover{background:linear-gradient(#FFFFFF,#DEE1E4);}
-button:active{background:linear-gradient(#DEE1E4,#E7E9EB);}
-button:disabled{opacity:.5;cursor:not-allowed;}
+button:hover{background:var(--surface-sunken);border-color:#B8C0C8;}
+button:active{background:var(--border);}
+button:disabled{opacity:.45;cursor:not-allowed;}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-button.primary{background:linear-gradient(#3A6BB5,var(--accent-strong));border-color:var(--accent-strong);color:#fff;}
-button.primary:hover{background:linear-gradient(#4575C4,#204A8C);}
-button.small{padding:4px 10px;font-size:11px;}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+button.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+button.small{padding:5px 11px;font-size:11.5px;}
 button.danger{color:var(--critical);}
+button.danger:hover{background:var(--critical-soft);border-color:var(--critical);}
+button.danger-hover:not(:disabled):hover{color:var(--critical);border-color:var(--critical);background:var(--critical-soft);}
+/* A secondary action that should still stand out from the plain ones: blue text on a blue-tinted edge. */
+button.secondary:not(:disabled){color:var(--accent-strong);border-color:#A9BFDD;background:#F6F9FD;}
+button.secondary:not(:disabled):hover{background:var(--accent-soft);border-color:var(--accent);}
 button.link{background:none;border:none;color:var(--accent);font-weight:600;padding:2px 0;}
 button.link:hover{background:none;text-decoration:underline;}
 
@@ -158,10 +166,10 @@ button.link:hover{background:none;text-decoration:underline;}
 
 .stage-inventory{width:100%;border-collapse:collapse;}
 .stage-inventory th{
-  text-align:left;font-size:10.5px;font-weight:700;color:var(--text-tertiary);
-  padding:6px 10px;background:var(--surface-sunken);border:1px solid var(--border);
+  text-align:left;font-size:11px;font-weight:700;color:#0F1418;
+  padding:7px 12px;background:#F7F8FA;border:none;border-bottom:1px solid var(--border);
 }
-.stage-inventory td{padding:8px 10px;border:1px solid var(--border);font-size:12px;}
+.stage-inventory td{padding:8px 12px;border:none;border-bottom:1px solid var(--border);font-size:12.5px;}
 .stage-inventory td.num{font-family:var(--font-mono);text-align:right;}
 .stage-inventory td .role-select{font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--border-strong);background:var(--surface);}
 .stage-inventory td.mono{font-family:var(--font-mono);color:var(--text-secondary);white-space:nowrap;}
@@ -173,16 +181,18 @@ button.link:hover{background:none;text-decoration:underline;}
    the Actions tab picks a stage. Scope any querySelectorAll on .subtab-btn to
    its own bar (#assetSubtabs / #stageTabs) -- the two are on the same page
    object, just never visible at once. */
-.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border-strong);margin-bottom:16px;}
+.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:10px;overflow-x:auto;scrollbar-width:thin;}
 .subtab-btn{
-  display:flex;flex-direction:column;align-items:center;gap:4px;
-  padding:8px 16px;border:1px solid transparent;border-bottom:none;border-radius:2px 2px 0 0;
+  display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0;
+  padding:10px 14px 9px;border:none;border-radius:4px 4px 0 0;
   background:none;color:var(--text-secondary);
+  box-shadow:inset 0 -3px 0 transparent;
 }
 .subtab-btn svg{width:22px;height:22px;}
-.subtab-btn span{font-size:11px;font-weight:600;white-space:nowrap;}
-.subtab-btn:hover{background:var(--surface-sunken);}
-.subtab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
+.subtab-btn span{font-size:13px;font-weight:600;white-space:nowrap;}
+.subtab-btn:hover{color:var(--text);}
+/* The selected asset type or stage: blue icon and label with a 3px underline. */
+.subtab-btn.active{color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent);}
 
 /* minmax(0,1fr), not plain 1fr: a 1fr track's automatic minimum is the item's
    min-content width, and the movies table's nowrap columns (long file paths in
@@ -191,7 +201,7 @@ button.link:hover{background:none;text-decoration:underline;}
    reason the boxes need min-width/min-height:0: as flex/grid children their
    automatic minimum would otherwise size them to content rather than letting
    the inner scroll containers do their job. */
-.assets-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:220px;}
+.assets-layout{display:grid;grid-template-columns:205px minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:220px;}
 /* An Assets sub-page fills the page area like the Results tab: the groups
    and asset lists take the height the window leaves, the details box under
    them keeps its natural height, and only the lists scroll. */
@@ -205,26 +215,50 @@ button.link:hover{background:none;text-decoration:underline;}
    hairline borders on a scroll container here) -- use a background fill
    instead, which isn't affected, so the box still visibly extends to the
    bottom of its 340px height even when there's little/no content. */
-.assets-layout .table-scroll{flex:1;min-height:0;overflow-y:auto;background:var(--surface-sunken);margin:0;}
+.assets-layout .table-scroll{flex:1;min-height:0;overflow-y:auto;background:var(--surface);margin:0;border:1px solid var(--border);border-radius:4px;}
 .assets-layout .table-scroll thead th{position:sticky;top:0;z-index:1;}
 .assets-layout .table-scroll tbody td{background:var(--surface);}
-.assets-layout .table-scroll tbody tr:nth-child(even) td{background:var(--surface-sunken);}
+.assets-layout .table-scroll tbody tr:nth-child(even) td{background:#FAFBFC;}
 /* Let the table's own (reliably-rendering) row backgrounds fill the box down
    to its full height instead of leaving bare space below a short table --
    the sunken background above is just a fallback for any rounding gap. */
 .assets-layout .table-scroll table.queue{height:100%;}
-.group-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;overflow-y:auto;border:1px solid var(--border);}
-.group-list li{padding:7px 10px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-bottom:1px solid var(--border);}
+.group-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;overflow-y:auto;border:1px solid var(--border);border-radius:4px;}
+.group-list li{padding:9px 12px;font-size:12.5px;font-weight:500;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);}
 .group-list li:last-child{border-bottom:none;}
-.group-list li:hover{background:var(--surface-sunken);}
-.group-list li.selected{background:var(--accent);color:#fff;}
-.asset-toolbar{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;flex-shrink:0;}
+.group-list li:hover{background:#EEF3FA;}
+.group-list li.selected{background:#EBF3FD;color:var(--accent-strong);font-weight:600;}
+.asset-toolbar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;flex-shrink:0;}
+/* The Groups / Packages list toolbars: buttons on a fixed grid so the rows
+   line up -- two equal columns under a Groups list, three under Packages,
+   with each group of related actions on its own row. */
+.assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups){display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups) button{width:100%;}
+.assets-layout > .groupbox:first-child .asset-toolbar:not(.btn-groups) button.span-row{grid-column:1 / -1;}
+.asset-toolbar.btn-groups{display:flex;flex-direction:column;gap:8px;}
+.btn-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.btn-group button{width:100%;padding-left:6px;padding-right:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-group .push-right{grid-column:3;}
 
-.details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 24px;margin-top:2px;}
-.details-item{display:flex;justify-content:space-between;gap:8px;font-size:12px;border-bottom:1px solid var(--border);padding-bottom:4px;}
-.details-item.details-item-wide{grid-column:1 / -1;}
-.details-key{font-weight:600;color:var(--text-tertiary);flex-shrink:0;}
-.details-val{font-family:var(--font-mono);color:var(--text);word-break:break-all;text-align:right;}
+/* Label / value pairs in three explicit column pairs: every label sits in a
+   label column and every value in the value column beside it, so a block of
+   metadata reads down as well as across. */
+.details-grid{display:grid;grid-template-columns:repeat(3,110px minmax(0,1fr));gap:2px 22px;margin-top:0;align-items:baseline;}
+.details-item{display:contents;font-size:12.5px;}
+.details-item .details-key,.details-item .details-val{padding:0;font-size:12.5px;line-height:1.5;}
+.details-item.details-item-wide .details-key{grid-column:1;}
+.details-item.details-item-wide .details-val{grid-column:2 / -1;}
+.details-key{font-weight:500;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.details-val{font-family:var(--font-mono);color:var(--text);word-break:break-all;text-align:left;}
+/* The Selected Movie / Image / Position box: a compact inspector -- a white
+   panel with a softer radius than the ones above, no edge, three rows of
+   label / value pairs and the filename across the bottom. */
+.asset-subpage > .groupbox{background:var(--surface);border-radius:8px;padding:10px 20px 8px;}
+.asset-subpage > .groupbox > .groupbox-label,.inspector-head .groupbox-label{font-size:13px;margin:0 0 8px;color:var(--text);}
+.inspector-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+.inspector-head .groupbox-label{margin:0;}
+.inspector-id{font-size:12px;color:var(--text-secondary);}
+.inspector-id span{font-family:var(--font-mono);color:var(--text);margin-left:4px;}
 
 @media (max-width:900px){
   .assets-layout{grid-template-columns:1fr;height:auto;}
@@ -340,13 +374,15 @@ button.link:hover{background:none;text-decoration:underline;}
 .table-scroll{overflow-x:auto;margin:-4px -2px 0;}
 table.queue{width:100%;border-collapse:collapse;min-width:720px;}
 table.queue thead th{
-  text-align:left;font-size:10.5px;font-weight:700;color:var(--text-tertiary);
-  padding:7px 10px;background:var(--surface-sunken);border:1px solid var(--border);white-space:nowrap;
+  text-align:left;font-size:11px;font-weight:700;color:#0F1418;
+  padding:8px 12px;background:#F7F8FA;border:none;border-bottom:1px solid var(--border);white-space:nowrap;
 }
-table.queue tbody td{padding:8px 10px;border:1px solid var(--border);font-size:12px;color:var(--text-secondary);white-space:nowrap;}
-table.queue tbody tr:nth-child(even) td{background:var(--surface-sunken);}
+table.queue tbody td{padding:8px 12px;border:none;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text);white-space:nowrap;}
+table.queue tbody tr:nth-child(even) td{background:#FAFBFC;}
 table.queue tbody tr.clickable{cursor:pointer;}
-table.queue tbody tr.clickable:hover td{background:var(--accent-soft);}
+table.queue tbody tr.clickable:hover td,.assets-layout .table-scroll tbody tr:hover td{background:#EEF3FA;}
+/* A row whose checkbox is ticked reads pale blue across its width; the clicked (shown) row is the stronger blue below. */
+.assets-layout .table-scroll tbody tr:not(.selected):has(input[type="checkbox"]:checked) td{background:#E6F0FC;}
 /* The selected row is solid navy with white text -- the Groups list's own
    `li.selected` look, and what a native wxListCtrl does -- so "what I
    picked" and "where the mouse is" (the soft hover above) can't be
@@ -358,8 +394,8 @@ table.queue tbody tr.selected:hover td,
 .assets-layout .table-scroll tbody tr.selected td,
 .assets-layout .table-scroll tbody tr.selected:hover td,
 .profiles-layout .rp-table tbody tr.selected td,
-.profiles-layout .rp-table tbody tr.selected:hover td{background:var(--accent);color:#fff;}
-table.queue tbody tr.selected .job-name,table.queue tbody tr.selected .job-id{color:#fff;}
+.profiles-layout .rp-table tbody tr.selected:hover td{background:#CFDFF6;color:var(--text);}
+table.queue tbody tr.selected .job-name{color:var(--accent-strong);}
 th.check-col,td.check-col{width:1%;padding-left:10px;padding-right:6px;}
 td.check-col{cursor:default;}
 td.mono{font-family:var(--font-mono);}
@@ -371,9 +407,9 @@ td.mono{font-family:var(--font-mono);}
 .progress-fill.completed{background:var(--success);}
 .progress-fill.failed{background:var(--critical);}
 .progress-eta{font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);margin-top:3px;white-space:nowrap;}
-table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
+table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 
-.empty-note{font-family:var(--font-ui);color:var(--text-tertiary);text-align:center;padding:30px 16px;font-size:12.5px;border:1px solid var(--border);background:var(--surface);}
+.empty-note{font-family:var(--font-ui);color:var(--text-secondary);text-align:center;padding:30px 16px;font-size:12.5px;border:none;border-radius:4px;background:var(--surface-sunken);}
 .empty-note .hint{display:block;font-size:11px;margin-top:4px;}
 
 /* ---------- Settings ---------- */
@@ -533,7 +569,7 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .ra-swatch-amp{border-top-color:var(--success);} .ra-swatch-fit{border-top-color:var(--plot-y);} .ra-swatch-q{border-top-color:var(--accent);}
 @media (max-width:1100px){ .ctf-result{grid-template-columns:1fr;} }
 
-.rpkg-layout{min-height:340px;}
+.rpkg-layout{min-height:340px;grid-template-columns:250px minmax(0,1fr);}
 #rpkgDetails{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
 #rpkgDetails[hidden]{display:none;}
 .rpkg-grid{margin-bottom:12px;}
@@ -983,29 +1019,28 @@ From branch : <span id="versionBranch">—</span></p>
                 </table>
               </div>
               <div class="asset-toolbar">
-                <button class="small" id="movieImportOpenBtn">Import</button>
-                <button class="small" id="movieRemoveBtn" disabled title="Select one or more movies first.">Remove</button>
-                <button class="small" id="movieRemoveAllBtn" disabled title="No movies in this group yet.">Remove All</button>
+                <button class="small primary" id="movieImportOpenBtn">Import</button>
+                <button class="small danger-hover" id="movieRemoveBtn" disabled title="Select one or more movies first.">Remove</button>
+                <button class="small danger" id="movieRemoveAllBtn" disabled title="No movies in this group yet.">Remove All</button>
                 <button class="small" id="movieRenameBtn" disabled title="Select exactly one movie first.">Rename</button>
                 <button class="small" id="movieAddToGroupBtn" disabled title="Select one or more movies first.">Add To Group</button>
-                <button class="small" id="movieDisplayBtn" disabled title="Select a movie first.">Display</button>
+                <button class="small secondary" id="movieDisplayBtn" disabled title="Select a movie first.">Display</button>
               </div>
             </div>
           </div>
 
           <div class="groupbox" style="margin-top:16px;">
-            <span class="groupbox-label" id="movieDetailsLabel">Selected Movie</span>
+            <div class="inspector-head"><span class="groupbox-label" id="movieDetailsLabel">Selected Movie</span><span class="inspector-id">Movie ID <span id="dMovieId">—</span></span></div>
             <div class="details-grid">
               <div class="details-item"><span class="details-key">Name</span><span class="details-val" id="dMovieName">—</span></div>
-              <div class="details-item"><span class="details-key">No. Frames</span><span class="details-val" id="dMovieFrames">—</span></div>
+              <div class="details-item"><span class="details-key">Frames</span><span class="details-val" id="dMovieFrames">—</span></div>
               <div class="details-item"><span class="details-key">Pixel Size</span><span class="details-val" id="dMoviePixelSize">—</span></div>
-              <div class="details-item"><span class="details-key">I.D.</span><span class="details-val" id="dMovieId">—</span></div>
-              <div class="details-item"><span class="details-key">Y Size</span><span class="details-val" id="dMovieYSize">—</span></div>
-              <div class="details-item"><span class="details-key">Total Exp.</span><span class="details-val" id="dMovieTotalExp">—</span></div>
               <div class="details-item"><span class="details-key">X Size</span><span class="details-val" id="dMovieXSize">—</span></div>
+              <div class="details-item"><span class="details-key">Y Size</span><span class="details-val" id="dMovieYSize">—</span></div>
               <div class="details-item"><span class="details-key">Voltage</span><span class="details-val" id="dMovieVoltage">—</span></div>
+              <div class="details-item"><span class="details-key">Exp./Frame</span><span class="details-val" id="dMovieExpFrame">—</span></div>
+              <div class="details-item"><span class="details-key">Total Exp.</span><span class="details-val" id="dMovieTotalExp">—</span></div>
               <div class="details-item"><span class="details-key">Cs</span><span class="details-val" id="dMovieCs">—</span></div>
-              <div class="details-item"><span class="details-key">Exp. Per Frame</span><span class="details-val" id="dMovieExpFrame">—</span></div>
               <div class="details-item details-item-wide"><span class="details-key">Filename</span><span class="details-val" id="dMovieFilename">—</span></div>
             </div>
           </div>
@@ -1050,12 +1085,12 @@ From branch : <span id="versionBranch">—</span></p>
                 </table>
               </div>
               <div class="asset-toolbar">
-                <button class="small" id="imageImportOpenBtn">Import</button>
-                <button class="small" id="imageRemoveBtn" disabled title="Select one or more images first.">Remove</button>
-                <button class="small" id="imageRemoveAllBtn" disabled title="No images in this group yet.">Remove All</button>
+                <button class="small primary" id="imageImportOpenBtn">Import</button>
+                <button class="small danger-hover" id="imageRemoveBtn" disabled title="Select one or more images first.">Remove</button>
+                <button class="small danger" id="imageRemoveAllBtn" disabled title="No images in this group yet.">Remove All</button>
                 <button class="small" id="imageRenameBtn" disabled title="Select exactly one image first.">Rename</button>
                 <button class="small" id="imageAddToGroupBtn" disabled title="Select one or more images first.">Add To Group</button>
-                <button class="small" id="imageDisplayBtn" disabled title="Select an image first.">Display</button>
+                <button class="small secondary" id="imageDisplayBtn" disabled title="Select an image first.">Display</button>
               </div>
             </div>
           </div>
@@ -1095,7 +1130,7 @@ From branch : <span id="versionBranch">—</span></p>
                 <button class="small" id="ppGroupInvertBtn" disabled title="Select a group other than All Particle Positions first.">Invert</button>
               </div>
               <div class="asset-toolbar">
-                <button class="small" id="ppGroupFromImagesBtn" title="cisTEM’s “New from parent”: a group holding the positions of every image in an image group.">From Image Group</button>
+                <button class="small span-row" id="ppGroupFromImagesBtn" title="cisTEM’s “New from parent”: a group holding the positions of every image in an image group.">From Image Group</button>
               </div>
             </div>
 
@@ -1115,11 +1150,11 @@ From branch : <span id="versionBranch">—</span></p>
               </div>
               <p class="form-note" id="ppListNote" hidden></p>
               <div class="asset-toolbar">
-                <button class="small" id="ppImportBtn" title="Import positions from a text file of image, X, Y lines.">Import</button>
-                <button class="small" id="ppRemoveBtn" disabled title="Select one or more positions first.">Remove</button>
-                <button class="small" id="ppRemoveAllBtn" disabled title="No positions in this group yet.">Remove All</button>
+                <button class="small primary" id="ppImportBtn" title="Import positions from a text file of image, X, Y lines.">Import</button>
+                <button class="small danger-hover" id="ppRemoveBtn" disabled title="Select one or more positions first.">Remove</button>
+                <button class="small danger" id="ppRemoveAllBtn" disabled title="No positions in this group yet.">Remove All</button>
                 <button class="small" id="ppAddToGroupBtn" disabled title="Select one or more positions first.">Add To Group</button>
-                <button class="small" id="ppDisplayBtn" disabled title="Select a position first.">Display</button>
+                <button class="small secondary" id="ppDisplayBtn" disabled title="Select a position first.">Display</button>
               </div>
             </div>
           </div>
@@ -1146,16 +1181,21 @@ From branch : <span id="versionBranch">—</span></p>
             <div class="groupbox">
               <span class="groupbox-label">Packages</span>
               <ul class="group-list" id="rpkgList"></ul>
-              <div class="asset-toolbar">
-                <button class="small" id="rpkgNewBtn" title="cisTEM’s New Refinement Package wizard: cut a particle stack from a particle position group.">New</button>
-                <button class="small" id="rpkgRenameBtn" disabled>Rename</button>
-                <button class="small danger" id="rpkgDeleteBtn" disabled>Delete</button>
-                <button class="small" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
-              </div>
-              <div class="asset-toolbar">
-                <button class="small" disabled title="Combining packages isn’t implemented yet.">Combine</button>
-                <button class="small" id="rpkgImportBtn" title="cisTEM’s Import Refinement Package wizard: a particle stack plus a cisTEM star, Frealign par or Relion star file on the server’s machine.">Import</button>
-                <button class="small" id="rpkgExportBtn" disabled title="cisTEM’s Export Refinement Package wizard: one refinement’s parameters as a Frealign, Relion or cisTEM file, beside a copy of the stack.">Export</button>
+              <!-- Grouped by kind: make / manage, import / export, view, and the destructive one on its own. -->
+              <div class="asset-toolbar btn-groups">
+                <div class="btn-group">
+                  <button class="small primary" id="rpkgNewBtn" title="cisTEM’s New Refinement Package wizard: cut a particle stack from a particle position group.">New</button>
+                  <button class="small" id="rpkgRenameBtn" disabled>Rename</button>
+                  <button class="small" disabled title="Combining packages isn’t implemented yet.">Combine</button>
+                </div>
+                <div class="btn-group">
+                  <button class="small" id="rpkgImportBtn" title="cisTEM’s Import Refinement Package wizard: a particle stack plus a cisTEM star, Frealign par or Relion star file on the server’s machine.">Import</button>
+                  <button class="small" id="rpkgExportBtn" disabled title="cisTEM’s Export Refinement Package wizard: one refinement’s parameters as a Frealign, Relion or cisTEM file, beside a copy of the stack.">Export</button>
+                </div>
+                <div class="btn-group">
+                  <button class="small secondary" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
+                  <button class="small danger push-right" id="rpkgDeleteBtn" disabled>Delete</button>
+                </div>
               </div>
             </div>
 
@@ -1219,11 +1259,11 @@ From branch : <span id="versionBranch">—</span></p>
                 </table>
               </div>
               <div class="asset-toolbar">
-                <button class="small" id="volImportOpenBtn" title="Import MRC volumes from files on the server (a starting reference, a mask).">Import</button>
-                <button class="small" id="volRemoveBtn" disabled title="Select one or more volumes first.">Remove</button>
+                <button class="small primary" id="volImportOpenBtn" title="Import MRC volumes from files on the server (a starting reference, a mask).">Import</button>
+                <button class="small danger-hover" id="volRemoveBtn" disabled title="Select one or more volumes first.">Remove</button>
                 <button class="small" id="volRenameBtn" disabled title="Select exactly one volume first.">Rename</button>
                 <button class="small" id="volAddToGroupBtn" disabled title="Select one or more volumes first.">Add To Group</button>
-                <button class="small" id="volDisplayBtn" disabled title="Select a volume first.">Display</button>
+                <button class="small secondary" id="volDisplayBtn" disabled title="Select a volume first.">Display</button>
               </div>
             </div>
           </div>
@@ -6561,7 +6601,7 @@ From branch : <span id="versionBranch">—</span></p>
   function updateMovieDetails(m){
     // The panel names what it shows, so the choice survives the row
     // scrolling out of view.
-    els.movieDetailsLabel.textContent = m ? "Selected Movie \u2014 " + (m.NAME || m.MOVIE_ASSET_ID) : "Selected Movie";
+    els.movieDetailsLabel.textContent = "Selected Movie";   // the name is the first field, the id sits in the header
     els.dMovieName.textContent = m ? (m.NAME || "—") : "—";
     els.dMovieFilename.textContent = m ? (m.FILENAME || "—") : "—";
     els.dMovieId.textContent = m ? m.MOVIE_ASSET_ID : "—";

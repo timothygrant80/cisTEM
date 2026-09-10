@@ -106,7 +106,7 @@ button,input,select{font-family:var(--font-ui);}
 
 /* Three levels: page title, section / tab labels, body. */
 .page-heading{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;}
-.page-sub{font-size:12.5px;color:var(--text-secondary);margin:0 0 8px;max-width:70ch;}
+.page-sub{font-size:12.5px;color:var(--text-secondary);margin:0 0 6px;max-width:70ch;}
 .page-sub.page-sub-wide{max-width:none;}
 
 /* ---------- group box (native fieldset look) ---------- */
@@ -163,7 +163,7 @@ button.link:hover{background:none;text-decoration:underline;}
 
 .stage-inventory{width:100%;border-collapse:collapse;}
 .stage-inventory th{
-  text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);
+  text-align:left;font-size:11px;font-weight:700;color:var(--text);
   padding:7px 12px;background:#F7F8FA;border:none;border-bottom:1px solid var(--border);
 }
 .stage-inventory td{padding:8px 12px;border:none;border-bottom:1px solid var(--border);font-size:12.5px;}
@@ -178,7 +178,7 @@ button.link:hover{background:none;text-decoration:underline;}
    the Actions tab picks a stage. Scope any querySelectorAll on .subtab-btn to
    its own bar (#assetSubtabs / #stageTabs) -- the two are on the same page
    object, just never visible at once. */
-.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:14px;overflow-x:auto;scrollbar-width:thin;}
+.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:10px;overflow-x:auto;scrollbar-width:thin;}
 .subtab-btn{
   display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0;
   padding:12px 14px 11px;border:none;border-radius:4px 4px 0 0;
@@ -226,12 +226,19 @@ button.link:hover{background:none;text-decoration:underline;}
 .group-list li:hover{background:#EEF3FA;}
 .group-list li.selected{background:#E5EFFC;color:var(--accent-strong);font-weight:600;}
 .asset-toolbar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;flex-shrink:0;}
+.asset-toolbar.btn-groups{gap:10px 16px;}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap;}
 
-.details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px 28px;margin-top:0;}
-.details-item{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:1px 0;}
-.details-item.details-item-wide{grid-column:1 / -1;}
-.details-key{font-weight:500;color:var(--text-secondary);flex-shrink:0;}
-.details-val{font-family:var(--font-mono);color:var(--text);word-break:break-all;text-align:right;}
+/* Label / value pairs in three explicit column pairs: every label sits in a
+   label column and every value in the value column beside it, so a block of
+   metadata reads down as well as across. */
+.details-grid{display:grid;grid-template-columns:repeat(3,max-content minmax(0,1fr));gap:3px 22px;margin-top:0;align-items:baseline;}
+.details-item{display:contents;font-size:12.5px;}
+.details-item .details-key,.details-item .details-val{padding:1px 0;font-size:12.5px;}
+.details-item.details-item-wide .details-key{grid-column:1;}
+.details-item.details-item-wide .details-val{grid-column:2 / -1;}
+.details-key{font-weight:500;color:var(--text-secondary);white-space:nowrap;}
+.details-val{font-family:var(--font-mono);color:var(--text);word-break:break-all;text-align:left;}
 /* The Selected Movie / Image / Position box: a compact inspector -- a white
    panel with a softer radius than the ones above, no edge, three rows of
    label / value pairs and the filename across the bottom. */
@@ -356,7 +363,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .table-scroll{overflow-x:auto;margin:-4px -2px 0;}
 table.queue{width:100%;border-collapse:collapse;min-width:720px;}
 table.queue thead th{
-  text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);
+  text-align:left;font-size:11px;font-weight:700;color:var(--text);
   padding:8px 12px;background:#F7F8FA;border:none;border-bottom:1px solid var(--border);white-space:nowrap;
 }
 table.queue tbody td{padding:8px 12px;border:none;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text);white-space:nowrap;}
@@ -364,7 +371,7 @@ table.queue tbody tr:nth-child(even) td{background:#FAFBFC;}
 table.queue tbody tr.clickable{cursor:pointer;}
 table.queue tbody tr.clickable:hover td,.assets-layout .table-scroll tbody tr:hover td{background:#EEF3FA;}
 /* A row whose checkbox is ticked reads pale blue across its width; the clicked (shown) row is the stronger blue below. */
-.assets-layout .table-scroll tbody tr:not(.selected):has(input[type="checkbox"]:checked) td{background:#EDF5FF;}
+.assets-layout .table-scroll tbody tr:not(.selected):has(input[type="checkbox"]:checked) td{background:#E6F0FC;}
 /* The selected row is solid navy with white text -- the Groups list's own
    `li.selected` look, and what a native wxListCtrl does -- so "what I
    picked" and "where the mouse is" (the soft hover above) can't be
@@ -376,7 +383,7 @@ table.queue tbody tr.selected:hover td,
 .assets-layout .table-scroll tbody tr.selected td,
 .assets-layout .table-scroll tbody tr.selected:hover td,
 .profiles-layout .rp-table tbody tr.selected td,
-.profiles-layout .rp-table tbody tr.selected:hover td{background:#D6E3F6;color:var(--text);}
+.profiles-layout .rp-table tbody tr.selected:hover td{background:#CFDFF6;color:var(--text);}
 table.queue tbody tr.selected .job-name{color:var(--accent-strong);}
 th.check-col,td.check-col{width:1%;padding-left:10px;padding-right:6px;}
 td.check-col{cursor:default;}
@@ -1163,16 +1170,23 @@ From branch : <span id="versionBranch">—</span></p>
             <div class="groupbox">
               <span class="groupbox-label">Packages</span>
               <ul class="group-list" id="rpkgList"></ul>
-              <div class="asset-toolbar">
-                <button class="small primary" id="rpkgNewBtn" title="cisTEM’s New Refinement Package wizard: cut a particle stack from a particle position group.">New</button>
-                <button class="small" id="rpkgRenameBtn" disabled>Rename</button>
-                <button class="small danger" id="rpkgDeleteBtn" disabled>Delete</button>
-                <button class="small" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
-              </div>
-              <div class="asset-toolbar">
-                <button class="small" disabled title="Combining packages isn’t implemented yet.">Combine</button>
-                <button class="small" id="rpkgImportBtn" title="cisTEM’s Import Refinement Package wizard: a particle stack plus a cisTEM star, Frealign par or Relion star file on the server’s machine.">Import</button>
-                <button class="small" id="rpkgExportBtn" disabled title="cisTEM’s Export Refinement Package wizard: one refinement’s parameters as a Frealign, Relion or cisTEM file, beside a copy of the stack.">Export</button>
+              <!-- Grouped by kind: make / manage, import / export, view, and the destructive one on its own. -->
+              <div class="asset-toolbar btn-groups">
+                <div class="btn-group">
+                  <button class="small primary" id="rpkgNewBtn" title="cisTEM’s New Refinement Package wizard: cut a particle stack from a particle position group.">New</button>
+                  <button class="small" id="rpkgRenameBtn" disabled>Rename</button>
+                  <button class="small" disabled title="Combining packages isn’t implemented yet.">Combine</button>
+                </div>
+                <div class="btn-group">
+                  <button class="small" id="rpkgImportBtn" title="cisTEM’s Import Refinement Package wizard: a particle stack plus a cisTEM star, Frealign par or Relion star file on the server’s machine.">Import</button>
+                  <button class="small" id="rpkgExportBtn" disabled title="cisTEM’s Export Refinement Package wizard: one refinement’s parameters as a Frealign, Relion or cisTEM file, beside a copy of the stack.">Export</button>
+                </div>
+                <div class="btn-group">
+                  <button class="small" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
+                </div>
+                <div class="btn-group">
+                  <button class="small danger" id="rpkgDeleteBtn" disabled>Delete</button>
+                </div>
               </div>
             </div>
 

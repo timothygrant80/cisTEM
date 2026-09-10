@@ -490,8 +490,7 @@ table.queue tbody tr.selected .progress-eta{color:rgba(255,255,255,.85);}
 .c2d-frame img{max-width:100%;}
 .c2d-frame.c2d-orth{background:#000;display:inline-block;max-width:100%;}
 .ra-plot .fsc-threshold{stroke:var(--text-tertiary);stroke-dasharray:4 3;stroke-width:1;}
-.ang-plot{aspect-ratio:1/1;max-width:260px;}
-.ang-plot .ang-rim{stroke:var(--border-strong);stroke-width:1.5;}
+.ang-plot{background:#fff;height:auto;aspect-ratio:340 / 240;}
 .field-static{margin:0;font-size:12px;}
 .ref-list{font-size:12px;}
 .job-actions{white-space:nowrap;} .job-actions .small + .small{margin-left:6px;}
@@ -4512,11 +4511,11 @@ From branch : <span id="versionBranch">—</span></p>
     var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
     var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
-    var pair = document.createElement("div"); pair.className = "c2d-plots"; pair.style.gridTemplateColumns = "minmax(0,2fr) minmax(0,1fr)"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
+    var pair = document.createElement("div"); pair.className = "c2d-plots"; pair.style.gridTemplateColumns = "minmax(0,1.4fr) minmax(0,1fr)"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
     var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); pair.appendChild(fig.root);
     var angBlock = document.createElement("div");
-    var angHead = document.createElement("div"); angHead.className = "ra-plot-head"; angHead.innerHTML = '<span class="ra-plot-title">Angular Distribution</span><span class="ra-legend">theta out, phi around</span>'; angBlock.appendChild(angHead);
-    var ang = document.createElementNS("http://www.w3.org/2000/svg", "svg"); ang.setAttribute("class", "ra-plot ang-plot"); ang.setAttribute("viewBox", "0 0 240 240"); angBlock.appendChild(ang);
+    var angHead = document.createElement("div"); angHead.className = "ra-plot-head"; angHead.innerHTML = '<span class="ra-plot-title">Angular Distribution</span><span class="ra-legend">views per bin, all symmetry mates</span>'; angBlock.appendChild(angHead);
+    var ang = document.createElementNS("http://www.w3.org/2000/svg", "svg"); ang.setAttribute("class", "ra-plot ang-plot"); ang.setAttribute("viewBox", "0 0 340 240"); angBlock.appendChild(ang);
     pair.appendChild(angBlock);
     els.resultsPages.appendChild(root);
     page.root = root;
@@ -4569,24 +4568,78 @@ From branch : <span id="versionBranch">—</span></p>
       renderList();
       return true;
     };
+    // AngularDistributionPlotPanelHistogram: the 18 x 72 histogram painted on a
+    // disc with theta linear in radius (90 degrees at the rim) and phi around
+    // it, coloured on cisTEM's colour bar from 0 to 4.5 x the mean bin
+    // ("N+" saturates at red), with the bar beside it, white dashed circles at
+    // theta = 30 and 60 with white labels, and black phi labels round the rim.
+    // cisTEM paints from bitmap coordinates (y down), so phi runs clockwise on
+    // screen while the labels read anticlockwise; kept as it is so the picture
+    // matches the desktop panel's.
+    var ANG_RAMP = [[0, [0, 0, 128]], [127 / 1019, [0, 0, 255]], [382 / 1019, [0, 255, 255]], [509 / 1019, [127, 255, 255]], [637 / 1019, [255, 255, 127]], [764 / 1019, [255, 255, 0]], [1, [255, 0, 0]]];
+    function angColour(t){
+      t = Math.max(0, Math.min(1, t));
+      for (var i = 1; i < ANG_RAMP.length; i++){
+        if (t <= ANG_RAMP[i][0]){
+          var a = ANG_RAMP[i - 1], b = ANG_RAMP[i], f = (t - a[0]) / (b[0] - a[0]);
+          return "rgb(" + [0, 1, 2].map(function(k){ return Math.round(a[1][k] + (b[1][k] - a[1][k]) * f); }).join(",") + ")";
+        }
+      }
+      return "rgb(255,0,0)";
+    }
     function drawAngular(hist){
       while (ang.firstChild) ang.removeChild(ang.firstChild);
       var NS = "http://www.w3.org/2000/svg";
-      if (!hist || !hist.length){ var t = document.createElementNS(NS, "text"); t.setAttribute("x", 120); t.setAttribute("y", 120); t.setAttribute("text-anchor", "middle"); t.setAttribute("class", "axis-label"); t.textContent = "No angular distribution."; ang.appendChild(t); return; }
-      var T = 18, P = 72, cx = 120, cy = 120, R = 110, mx = Math.max.apply(null, hist) || 1;
+      function el(tag, attrs, text){ var e = document.createElementNS(NS, tag); Object.keys(attrs).forEach(function(k){ e.setAttribute(k, attrs[k]); }); if (text != null) e.textContent = text; ang.appendChild(e); return e; }
+      var W = 340, H = 240;
+      if (!hist || !hist.length){ el("text", {x: W / 2, y: H / 2, "text-anchor": "middle", "class": "axis-label"}, "No angular distribution."); return; }
+      var T = 18, P = 72;
+      // UpdateScalingAndDimensions(): the disc and the bar beside it
+      var R = Math.min(W * 0.4, H / 2) * 0.7, barW = R * 0.2, barH = 2 * R, cx = W / 2 - barW / 2, cy = H / 2, barX = cx + R + R * 0.5, barY = cy - R;
+      var tick = R * 0.05, margin = Math.max(tick * 0.5, 5), font = R / 9.5, thetaMargin = 2;
+      var total = 0; for (var i = 0; i < hist.length; i++) total += hist[i];
+      var maxValue = Math.round(total / hist.length * 4.5), minValue = 0;
+      // the bins: theta bounds are equal-area in cos(theta) (Init()), drawn at radius theta / 90
+      var bounds = [0]; for (var b = 1; b < T; b++) bounds.push(Math.acos(1 - b / T) * 180 / Math.PI); bounds.push(90);
       for (var pb = 0; pb < P; pb++){
+        var a0 = 2 * Math.PI * pb / P, a1 = 2 * Math.PI * (pb + 1) / P;
         for (var tb = 0; tb < T; tb++){
-          var v = hist[T * pb + tb]; if (!v) continue;
-          // theta bins are equal-area in cos(theta): radius ~ sqrt(bin fraction) keeps the picture equal-area too.
-          var r0 = R * Math.sqrt(tb / T), r1 = R * Math.sqrt((tb + 1) / T), a0 = 2 * Math.PI * pb / P, a1 = 2 * Math.PI * (pb + 1) / P;
-          var d = "M" + (cx + r0 * Math.cos(a0)) + "," + (cy + r0 * Math.sin(a0)) + " L" + (cx + r1 * Math.cos(a0)) + "," + (cy + r1 * Math.sin(a0)) +
-            " A" + r1 + "," + r1 + " 0 0 1 " + (cx + r1 * Math.cos(a1)) + "," + (cy + r1 * Math.sin(a1)) + " L" + (cx + r0 * Math.cos(a1)) + "," + (cy + r0 * Math.sin(a1)) +
-            " A" + r0 + "," + r0 + " 0 0 0 " + (cx + r0 * Math.cos(a0)) + "," + (cy + r0 * Math.sin(a0)) + " Z";
-          var path = document.createElementNS(NS, "path"); path.setAttribute("d", d); path.setAttribute("fill", "rgba(47,95,166," + (0.15 + 0.85 * v / mx).toFixed(3) + ")"); path.setAttribute("stroke", "none");
-          path.setAttribute("title", v + " particle" + (v === 1 ? "" : "s")); ang.appendChild(path);
+          var v = hist[T * pb + tb] || 0, r0 = R * bounds[tb] / 90, r1 = R * bounds[tb + 1] / 90;
+          var colour = angColour(maxValue > minValue ? (v - minValue) / (maxValue - minValue) : 0);
+          var d = tb === 0
+            ? "M" + cx + "," + cy + " L" + (cx + r1 * Math.cos(a0)) + "," + (cy + r1 * Math.sin(a0)) + " A" + r1 + "," + r1 + " 0 0 1 " + (cx + r1 * Math.cos(a1)) + "," + (cy + r1 * Math.sin(a1)) + " Z"
+            : "M" + (cx + r0 * Math.cos(a0)) + "," + (cy + r0 * Math.sin(a0)) + " L" + (cx + r1 * Math.cos(a0)) + "," + (cy + r1 * Math.sin(a0)) +
+              " A" + r1 + "," + r1 + " 0 0 1 " + (cx + r1 * Math.cos(a1)) + "," + (cy + r1 * Math.sin(a1)) + " L" + (cx + r0 * Math.cos(a1)) + "," + (cy + r0 * Math.sin(a1)) +
+              " A" + r0 + "," + r0 + " 0 0 0 " + (cx + r0 * Math.cos(a0)) + "," + (cy + r0 * Math.sin(a0)) + " Z";
+          var path = el("path", {d: d, fill: colour, stroke: colour, "stroke-width": 0.6});
+          var title = document.createElementNS(NS, "title"); title.textContent = v + " view" + (v === 1 ? "" : "s"); path.appendChild(title);
         }
       }
-      var circle = document.createElementNS(NS, "circle"); circle.setAttribute("cx", cx); circle.setAttribute("cy", cy); circle.setAttribute("r", R); circle.setAttribute("fill", "none"); circle.setAttribute("class", "ang-rim"); ang.appendChild(circle);
+      // DrawAxisOverlay(): the rim, the dashed theta circles, the labels
+      var lw = Math.max(R / 90, 1);
+      el("circle", {cx: cx, cy: cy, r: R, fill: "none", stroke: "#000", "stroke-width": lw});
+      [1 / 3, 2 / 3].forEach(function(f){ el("circle", {cx: cx, cy: cy, r: R * f, fill: "none", stroke: "#fff", "stroke-width": lw, "stroke-dasharray": (4 * lw) + " " + (3 * lw)}); });
+      var diag = Math.SQRT1_2 * (R + thetaMargin), textAttrs = {"font-size": font, "font-family": "var(--font-ui)", fill: "#000"};
+      function label(text, x, y, anchor, baseline){ el("text", Object.assign({x: x, y: y, "text-anchor": anchor, "dominant-baseline": baseline || "middle"}, textAttrs), text); }
+      label("φ=0°", cx + R + tick + margin, cy, "start");
+      label("φ=45°", cx + diag, cy - diag - font * 0.2, "start", "auto");
+      label("φ=90°", cx, cy - R - tick - margin, "middle", "auto");
+      label("φ=135°", cx - diag, cy - diag - font * 0.2, "end", "auto");
+      label("φ=180°", cx - R - tick - margin, cy, "end");
+      label("φ=225°", cx - diag, cy + diag + font * 0.2, "end", "hanging");
+      label("φ=270°", cx, cy + R + tick + margin, "middle", "hanging");
+      label("φ=315°", cx + diag, cy + diag + font * 0.2, "start", "hanging");
+      [[1 / 3, "θ=30°"], [2 / 3, "θ=60°"]].forEach(function(t){
+        el("text", {x: cx, y: cy - R * t[0] - thetaMargin - font * 0.15, "text-anchor": "middle", "dominant-baseline": "auto", "font-size": font, "font-family": "var(--font-ui)", fill: "#fff"}, t[1]);
+      });
+      // the colour bar (SetupDefaultColorBar()'s ramp, top = max) with its values
+      var defs = el("defs", {}), gradId = "angbar-" + Math.random().toString(36).slice(2, 8);
+      var grad = document.createElementNS(NS, "linearGradient"); grad.setAttribute("id", gradId); grad.setAttribute("x1", "0"); grad.setAttribute("y1", "1"); grad.setAttribute("x2", "0"); grad.setAttribute("y2", "0");
+      ANG_RAMP.forEach(function(stop){ var st = document.createElementNS(NS, "stop"); st.setAttribute("offset", (stop[0] * 100).toFixed(2) + "%"); st.setAttribute("stop-color", "rgb(" + stop[1].join(",") + ")"); grad.appendChild(st); });
+      defs.appendChild(grad);
+      el("rect", {x: barX, y: barY, width: barW, height: barH, fill: "url(#" + gradId + ")", stroke: "#000", "stroke-width": lw});
+      label(String(minValue), barX + barW / 2, barY + barH + margin, "middle", "hanging");
+      label(maxValue + "+", barX + barW / 2, barY - margin, "middle", "auto");
     }
     function show(){
       releaseUrls();

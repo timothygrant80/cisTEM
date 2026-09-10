@@ -963,8 +963,6 @@ From branch : <span id="versionBranch">—</span></p>
 
       <!-- ASSETS -->
       <section class="tabpage fill" id="page-assets">
-        <h2 class="page-heading">Assets</h2>
-        <p class="page-sub">Everything this project knows about, grouped by asset type.</p>
 
         <div class="subtabs" id="assetSubtabs">
           <button class="subtab-btn" data-asset-tab="movies">
@@ -1297,8 +1295,6 @@ From branch : <span id="versionBranch">—</span></p>
 
       <!-- ACTIONS -->
       <section class="tabpage fill" id="page-actions" hidden>
-        <h2 class="page-heading">Actions</h2>
-        <p class="page-sub">Pick a processing step and submit it to the connected pipeline.</p>
 
         <div class="subtabs" id="stageTabs"></div>
 
@@ -1357,8 +1353,6 @@ From branch : <span id="versionBranch">—</span></p>
            behind it so far; the other stages share one placeholder shell, as
            the unwired asset types do. -->
       <section class="tabpage fill" id="page-results" hidden>
-        <h2 class="page-heading">Results</h2>
-        <p class="page-sub page-sub-wide">What each processing step produced, per movie or image.</p>
 
         <div class="subtabs" id="resultsTabs"></div>
 
@@ -1379,12 +1373,9 @@ From branch : <span id="versionBranch">—</span></p>
       <!-- JOBS: the queue, with the summary tiles and per-stage totals that
            used to be a separate Details tab -- they are all job bookkeeping. -->
       <section class="tabpage" id="page-jobs" hidden>
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-          <div style="flex:1;min-width:0;">
-            <h2 class="page-heading">Jobs</h2>
-            <p class="page-sub page-sub-wide">Every job this project has run &mdash; queued, running and finished. Click a row to follow its latest result as it runs; Log opens its output.</p>
-          </div>
-          <button class="small" id="refreshBtn">Refresh</button>
+        <!-- The rail already names the tab, so no heading; only the Refresh button keeps its place at the top right. -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+          <button class="small" id="refreshBtn" title="Reload the job list now (it also refreshes every few seconds while this tab is visible).">Refresh</button>
         </div>
 
         <div class="groupbox" style="padding:10px;">

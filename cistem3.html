@@ -493,6 +493,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-figure-frame img{max-width:100%;max-height:100%;display:block;}
 .ra-figure-status{font-size:14.5px;color:var(--text-tertiary);padding:8px;text-align:center;}
 .ra-figure figcaption{font-size:14.5px;color:var(--text-secondary);margin-top:4px;font-weight:600;}
+.ra-figure.caption-top figcaption{margin:0 0 4px;}
 .ra-nyquist{font-weight:400;color:var(--text-tertiary);font-family:var(--font-mono);}
 @media (max-width:900px){
   .results-layout{grid-template-columns:1fr;height:auto;}
@@ -3314,8 +3315,9 @@ From branch : <span id="versionBranch">—</span></p>
     return b;
   }
   function setExpand(b, src){ b.displaySrc = src && src.path ? src : null; b.hidden = !b.displaySrc; }
-  function makeFigure(caption, alt){
-    var fig = document.createElement("figure"); fig.className = "ra-figure";
+  // opts.captionTop puts the caption above the picture (the Align Movies pair reads as a titled pair that way).
+  function makeFigure(caption, alt, opts){
+    var fig = document.createElement("figure"); fig.className = "ra-figure" + (opts && opts.captionTop ? " caption-top" : "");
     var frame = document.createElement("div"); frame.className = "ra-figure-frame";
     var img = document.createElement("img"); img.alt = alt || caption; img.hidden = true;
     var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading…";
@@ -3323,7 +3325,7 @@ From branch : <span id="versionBranch">—</span></p>
     var expand = makeExpandButton(frame);
     var cap = document.createElement("figcaption"); cap.textContent = caption + " ";
     var extra = document.createElement("span"); extra.className = "ra-nyquist"; cap.appendChild(extra);
-    fig.appendChild(frame); fig.appendChild(cap);
+    if (opts && opts.captionTop){ fig.appendChild(cap); fig.appendChild(frame); } else { fig.appendChild(frame); fig.appendChild(cap); }
     return {root: fig, img: img, status: status, extra: extra, expand: expand};
   }
   function makePlotBlock(title, legend){
@@ -3859,7 +3861,7 @@ From branch : <span id="versionBranch">—</span></p>
       plot.svg.setAttribute("aria-label", "Frame shift against accumulated exposure");
       box.appendChild(plot.root);
       var images = document.createElement("div"); images.className = "ra-images"; box.appendChild(images);
-      var sum = makeFigure("Aligned sum"), spectrum = makeFigure("Amplitude spectrum");
+      var sum = makeFigure("Aligned sum", null, {captionTop: true}), spectrum = makeFigure("Amplitude spectrum", null, {captionTop: true});
       images.appendChild(sum.root); images.appendChild(spectrum.root);
       return {
         loading: function(){ sum.img.hidden = true; sum.status.hidden = false; sum.status.textContent = "Loading…"; spectrum.img.hidden = true; spectrum.status.hidden = false; spectrum.status.textContent = "Loading…"; },
@@ -9216,7 +9218,7 @@ From branch : <span id="versionBranch">—</span></p>
     motion_correction: function(body){
       var col = document.createElement("div"); col.className = "live-plot-col"; body.appendChild(col);
       var plot = makePlotBlock("Drift", [["ra-swatch-x", "X shift"], ["ra-swatch-y", "Y shift"]]); col.appendChild(plot.root);
-      var sum = makeFigure("Aligned sum"), spectrum = makeFigure("Amplitude spectrum");
+      var sum = makeFigure("Aligned sum", null, {captionTop: true}), spectrum = makeFigure("Amplitude spectrum", null, {captionTop: true});
       body.appendChild(sum.root); body.appendChild(spectrum.root);
       return function(result, base, urls){
         plot.title.textContent = "Drift";

@@ -6319,9 +6319,18 @@ From branch : <span id="versionBranch">—</span></p>
         octx.putImageData(img, (t % across) * dp.w, Math.floor(t / across) * dp.h);
       }
       dp.low = first[0]; dp.high = first[1];
-      var tw = lay.tw, th = lay.th;
-      canvas.width = Math.max(1, Math.round(across * tw)); canvas.height = Math.max(1, Math.round(down * th));
+      canvas.width = Math.max(1, Math.round(across * lay.tw)); canvas.height = Math.max(1, Math.round(down * lay.th));
       canvas.classList.toggle("smooth", dp.hq);
+      paintCanvas();
+      if (dp.showHist || dp.mode === "manual") drawHistogram(pageArray(), dp.mode === "manual" && dp.manual ? dp.manual : first);
+      var where = dp.sum ? "[sum of " + dp.info.summed + "]" : dp.info.nz > 1 ? (dp.tiles.length > 1 ? "[images " + dp.location + "–" + (dp.location + dp.tiles.length - 1) + " of " + dp.info.nz + "]" : "[" + dp.location + " / " + dp.info.nz + "]") : "";
+      fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + " " + where + "  " + dp.info.nx + " × " + dp.info.ny + (dp.bin > 1 ? "  (binned ×" + dp.bin + ")" : "") +
+        (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") + (dp.tiles.length === 1 ? "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high) + (dp.singleView ? "  (double-click for the page)" : "") : dp.selected != null ? "  selected image " + dp.selected + "  (double-click to open it)" : "");
+    }
+    // The canvas from the offscreen page: cheap, so the loupe can repaint on every mouse move.
+    function paintCanvas(){
+      var lay = dp.lay; if (!lay || !dp.tiles.length) return;
+      var across = lay.across, down = Math.max(1, Math.ceil(dp.tiles.length / across)), tw = lay.tw, th = lay.th;
       var ctx = canvas.getContext("2d");
       ctx.imageSmoothingEnabled = dp.hq;
       ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
@@ -6337,11 +6346,42 @@ From branch : <span id="versionBranch">—</span></p>
         ctx.save(); ctx.strokeStyle = "#2F5FA6"; ctx.lineWidth = 3; ctx.strokeRect(tx + 1.5, ty + 1.5, tw - 3, th - 3); ctx.restore();
       }
       if (dp.overlay && single()) dp.overlay(ctx, {scale: lay.scale, bin: dp.bin, width: dp.info.nx, height: dp.info.ny, toCanvas: function(x, y){ return [x * lay.scale, canvas.height - y * lay.scale]; }});
-      if (dp.showHist || dp.mode === "manual") drawHistogram(pageArray(), dp.mode === "manual" && dp.manual ? dp.manual : first);
-      var where = dp.sum ? "[sum of " + dp.info.summed + "]" : dp.info.nz > 1 ? (dp.tiles.length > 1 ? "[images " + dp.location + "–" + (dp.location + dp.tiles.length - 1) + " of " + dp.info.nz + "]" : "[" + dp.location + " / " + dp.info.nz + "]") : "";
-      fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + " " + where + "  " + dp.info.nx + " × " + dp.info.ny + (dp.bin > 1 ? "  (binned ×" + dp.bin + ")" : "") +
-        (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") + (dp.tiles.length === 1 ? "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high) + (dp.singleView ? "  (double-click for the page)" : "") : dp.selected != null ? "  selected image " + dp.selected + "  (double-click to open it)" : "");
+      if (loupe.on) paintLoupe(ctx);
     }
+    // The loupe: while the right button is held, a square of the page under
+    // the cursor at LOUPE_MAG times the drawn size, in the drawn pixels (so
+    // at Fit it enlarges the binned picture; at 100% or more, real pixels).
+    var LOUPE_SIZE = 240, LOUPE_MAG = 4, loupe = {on: false, x: 0, y: 0};
+    function paintLoupe(ctx){
+      var lay = dp.lay, perCanvas = dp.w / lay.tw;                  // offscreen pixels per canvas pixel
+      var side = LOUPE_SIZE / LOUPE_MAG;                             // canvas pixels the loupe covers
+      var sx = (loupe.x - side / 2) * perCanvas, sy = (loupe.y - side / 2) * perCanvas, sw = side * perCanvas;
+      var dx = Math.round(Math.min(Math.max(loupe.x - LOUPE_SIZE / 2, 0), canvas.width - LOUPE_SIZE));
+      var dy = Math.round(Math.min(Math.max(loupe.y - LOUPE_SIZE / 2, 0), canvas.height - LOUPE_SIZE));
+      ctx.save();
+      ctx.fillStyle = "#2B2F33"; ctx.fillRect(dx, dy, LOUPE_SIZE, LOUPE_SIZE);
+      // Clip the source to the page so the edges show as background rather than smearing.
+      var cx0 = Math.max(0, sx), cy0 = Math.max(0, sy), cx1 = Math.min(offscreen.width, sx + sw), cy1 = Math.min(offscreen.height, sy + sw);
+      if (cx1 > cx0 && cy1 > cy0){
+        ctx.imageSmoothingEnabled = false;
+        var f = LOUPE_SIZE / sw;
+        ctx.drawImage(offscreen, cx0, cy0, cx1 - cx0, cy1 - cy0, dx + (cx0 - sx) * f, dy + (cy0 - sy) * f, (cx1 - cx0) * f, (cy1 - cy0) * f);
+      }
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(dx + 1, dy + 1, LOUPE_SIZE - 2, LOUPE_SIZE - 2);
+      ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1; ctx.strokeRect(dx + 2.5, dy + 2.5, LOUPE_SIZE - 5, LOUPE_SIZE - 5);
+      // A hair at the point under the cursor.
+      var mx = dx + (loupe.x - sx / perCanvas) * LOUPE_MAG, my = dy + (loupe.y - sy / perCanvas) * LOUPE_MAG;
+      ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(mx - 6, my + 0.5); ctx.lineTo(mx + 6, my + 0.5); ctx.moveTo(mx + 0.5, my - 6); ctx.lineTo(mx + 0.5, my + 6); ctx.stroke();
+      ctx.restore();
+    }
+    canvas.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+    canvas.addEventListener("mousedown", function(e){
+      if (e.button !== 2 || !dp.tiles.length) return;
+      e.preventDefault(); loupe.on = true; loupe.x = e.offsetX; loupe.y = e.offsetY; paintCanvas();
+    });
+    function loupeOff(){ if (!loupe.on) return; loupe.on = false; paintCanvas(); }
+    window.addEventListener("mouseup", function(e){ if (e.button === 2) loupeOff(); });
     // The asset's pixel size when the caller knows it; else the header's, if it is a plausible one.
     function pixelSize(){ if (dp.pixelSize) return dp.pixelSize; var p = dp.info && dp.info.pixel_size; return p && p > 0.05 && p < 200 ? p : null; }
     function fmtG(v){ return Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v !== 0) ? v.toExponential(3) : v.toFixed(3); }
@@ -6450,12 +6490,13 @@ From branch : <span id="versionBranch">—</span></p>
       return {idx: idx, image: dp.location + idx, ix: ix, j: dp.h - 1 - iy};
     }
     canvas.addEventListener("mousemove", function(e){
+      if (loupe.on){ loupe.x = e.offsetX; loupe.y = e.offsetY; paintCanvas(); }
       var h = hit(e);
       if (!h){ locText.textContent = ""; return; }
       var v = tileSource(h.idx)[h.j * dp.w + h.ix];
       locText.textContent = (dp.tiles.length > 1 ? "image " + h.image + "  " : "") + (h.ix * dp.bin) + ", " + (h.j * dp.bin) + (dp.bin > 1 ? " (±" + (dp.bin - 1) + ")" : "") + " : " + fmtG(v);
     });
-    canvas.addEventListener("mouseleave", function(){ locText.textContent = ""; });
+    canvas.addEventListener("mouseleave", function(){ locText.textContent = ""; loupeOff(); });
     canvas.addEventListener("click", function(e){
       var h = hit(e); if (!h || dp.tiles.length <= 1) return;
       dp.selected = dp.selected === h.image ? null : h.image; draw();

@@ -51,8 +51,8 @@ html,body{height:100%;}
 body{
   margin:0;background:var(--page-bg);color:var(--text);
   font-family:var(--font-ui);font-size:12.5px;line-height:1.5;
-  zoom:1.25; /* default render size -- same effect as a viewer manually zooming
-                their browser to 125%, just baked in so it doesn't require that */
+  zoom:1; /* default render size: the page's own pixels (master bakes in a 125%
+             zoom; this branch tries it at 100% so the two can be compared) */
 }
 button,input,select{font-family:var(--font-ui);}
 
@@ -684,7 +684,7 @@ table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:
 .modal.browse-modal{z-index:23;}
 
 /* The preview is a picture, so it gets more room than the form modals. */
-.modal.display-modal{width:min(1400px,76vw);height:94%;max-height:94%;}   /* 76vw: the body is zoomed 1.25, so this is 95% of the window */
+.modal.display-modal{width:min(1400px,95vw);height:94%;max-height:94%;}   /* 95% of the window (at master's 1.25 zoom this is 76vw) */
 .modal.display-modal .modal-body{display:flex;flex-direction:column;min-height:0;}
 #displayPanelHost{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
 /* The Display panel (cisTEM's DisplayPanel): toolbar, a dark scrolling stage

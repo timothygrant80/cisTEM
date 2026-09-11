@@ -93,14 +93,14 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `DELETE` | `/projects/:id` | Delete a project permanently (removes its `.db` file) |
 | `GET` | `/projects/:id/movies` | List imported movies |
 | `POST` | `/projects/:id/movie-groups/:gid/invert` | Invert a group against All Movies (self-reversing; `400` for All Movies) |
-| `GET` | `/projects/:id/movies/:id/preview.png` | Summed-frame PNG preview (MRC and TIFF; EER has no preview, `415`) |
+| `GET` | `/projects/:id/movies/:id/preview.png` | Summed-frame PNG preview (MRC and TIFF; EER has no preview, `415`). `?lowpass=<Å>` Gaussian low-pass filters the picture to that resolution |
 | `GET` | `/projects/:id/movie-groups` | List movie groups with member counts |
 | `GET` | `/projects/:id/movies/import-defaults` | Last-used import form values |
 | `POST` | `/projects/:id/movies/import` | Import movies into "All Movies". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, dose_per_frame, protein_is_white, apply_gain, gain_ref, apply_dark, dark_ref, resample_movies, desired_pixel_size_a, eer_frames_per_image, eer_super_res_factor}`. `400`s unless the required fields are set, referenced paths exist, and the glob matches at least one file not already imported. Files already in the project are skipped. Dimensions and frame count are read from each file's header; `skip_full_check` skips the (expensive) TIFF/EER frame count. Returns `{movie_count, skipped_count, failed}`. |
 | `POST` | `/projects/:id/movies/check-import` | Body: `{glob, files: [...]}` → `{glob_match_count, new_count, already_imported_count, glob_has_eer, files: {path: bool}}`, for the import dialog's live validation |
 | `GET` | `/projects/:id/images` | List image assets (imported micrographs *and* Align Movies output) |
 | `GET` | `/projects/:id/image-groups` | List image groups with member counts |
-| `GET` | `/projects/:id/images/:id/preview.png` | PNG preview of the micrograph (MRC and TIFF). Nothing is summed — an image is one exposure |
+| `GET` | `/projects/:id/images/:id/preview.png` | PNG preview of the micrograph (MRC and TIFF). Nothing is summed — an image is one exposure. `?lowpass=<Å>` Gaussian low-pass filters it to that resolution (the Find Particles panels' Low-pass box) |
 | `GET` | `/projects/:id/images/import-defaults` | Last-used image import form values |
 | `POST` | `/projects/:id/images/import` | Import micrographs into "All Images". Body: `{input_glob, voltage_kv, cs_mm, pixel_size_a, protein_is_white}` — no dose, gain/dark or EER fields, since an image is already averaged. `400`s unless voltage/Cs/pixel size are set and the glob matches at least one not-already-imported MRC/TIFF file (`.eer` never matches). Returns `{image_count, skipped_count, failed}`. |
 | `POST` | `/projects/:id/images/check-import` | Same shape as the movie version, for the Import Images dialog's live validation |

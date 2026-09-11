@@ -1494,9 +1494,19 @@ def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
     as a background job -- but it's deterministic for a given file, so the
     response is cached and revalidated rather than re-rendered.
     """
+    # ?lowpass=<A>: the Find Particles panels' Low-pass box (PickingBitmapPanel's
+    # Gaussian filter to that resolution), applied to the binned picture.
+    lowpass_a = None
+    if request.args.get("lowpass"):
+        try:
+            lowpass_a = float(request.args["lowpass"])
+        except ValueError:
+            return jsonify({"error": "lowpass must be a resolution in Angstroms"}), 400
+        if not lowpass_a > 0:
+            return jsonify({"error": "lowpass must be a resolution in Angstroms"}), 400
     conn = db.get_conn(project_id)
     row = conn.execute(
-        "SELECT NAME, FILENAME FROM {t} WHERE {id} = ?".format(
+        "SELECT NAME, FILENAME, PIXEL_SIZE FROM {t} WHERE {id} = ?".format(
             t=kind.asset_table, id=kind.id_column
         ),
         (asset_id,),
@@ -1516,12 +1526,16 @@ def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
         }), 415
 
     stat = Path(path).stat()
-    etag = '"r{}-{}-{}-{}-{}"'.format(preview.RENDER_VERSION, kind.noun, asset_id, int(stat.st_mtime), stat.st_size)
+    etag = '"r{}-{}-{}-{}-{}{}"'.format(preview.RENDER_VERSION, kind.noun, asset_id, int(stat.st_mtime), stat.st_size,
+                                         "-lp{:g}".format(lowpass_a) if lowpass_a else "")
     if request.headers.get("If-None-Match") == etag:
         return "", 304
 
     try:
-        png, meta = render(path)
+        if lowpass_a:
+            png, meta = render(path, lowpass_a=lowpass_a, pixel_size=row["PIXEL_SIZE"])
+        else:
+            png, meta = render(path)
     except preview.PreviewError as exc:
         return jsonify({"error": str(exc)}), 422
 

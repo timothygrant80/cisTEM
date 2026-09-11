@@ -133,10 +133,34 @@ def _sum_tiff(path, max_frames=None):
     return accumulator, frames, available
 
 
+def _bin_factor(shape):
+    """The integer bin that brings the longest edge within MAX_PREVIEW_EDGE."""
+    height, width = shape
+    return max(1, -(-max(height, width) // MAX_PREVIEW_EDGE))
+
+
+def gaussian_low_pass(image, pixel_size, resolution_a):
+    """PickingBitmapPanel::UpdateImageInBitmap()'s Low-pass: cisTEM's
+    Image::GaussianLowPassFilter(radius * sqrt(2)) with radius = pixel size /
+    resolution -- each Fourier component scaled by exp(-f^2 / (2 sigma^2)),
+    f in cycles per pixel of the image given (the binned preview here, so
+    the pixel size is the binned one). The mean is untouched.
+    """
+    if not pixel_size or pixel_size <= 0 or not resolution_a or resolution_a <= 0:
+        return image
+    sigma = (float(pixel_size) / float(resolution_a)) * np.sqrt(2.0)
+    height, width = image.shape
+    fy = np.fft.fftfreq(height).reshape(-1, 1)
+    fx = np.fft.rfftfreq(width).reshape(1, -1)
+    weight = np.exp(-(fx * fx + fy * fy) / (2.0 * sigma * sigma))
+    spectrum = np.fft.rfft2(image.astype(np.float32))
+    return np.fft.irfft2(spectrum * weight, s=image.shape).astype(np.float32)
+
+
 def _bin_image(image):
     """Integer-bins the image down so its longest edge fits MAX_PREVIEW_EDGE."""
     height, width = image.shape
-    factor = max(1, -(-max(height, width) // MAX_PREVIEW_EDGE))
+    factor = _bin_factor(image.shape)
     if factor == 1:
         return image
     # Crop to a whole number of bins before reshaping.
@@ -184,8 +208,10 @@ def _encode_png(gray):
     )
 
 
-def render_image_preview(path):
+def render_image_preview(path, lowpass_a=None, pixel_size=None):
     """Returns (png_bytes, {width, height}) for an already-averaged image.
+    `lowpass_a`, with the file's `pixel_size`, low-pass filters the binned
+    picture to that resolution (the Find Particles panels' Low-pass box).
 
     Same binning and contrast stretch as a movie preview, but reading only
     the first slice: an image asset is a single micrograph, and where the
@@ -194,11 +220,11 @@ def render_image_preview(path):
     POSITION_IN_STACK is 1 for every imported image. Summing them the way a
     movie preview does would blur unrelated exposures together.
     """
-    png, meta = render_movie_preview(path, max_frames=1)
+    png, meta = render_movie_preview(path, max_frames=1, lowpass_a=lowpass_a, pixel_size=pixel_size)
     return png, {"width": meta["width"], "height": meta["height"]}
 
 
-def render_movie_preview(path, max_frames=None):
+def render_movie_preview(path, max_frames=None, lowpass_a=None, pixel_size=None):
     """Returns (png_bytes, {width, height, frames_summed, frames_total}).
 
     Raises PreviewError for anything we can't render.
@@ -214,6 +240,8 @@ def render_movie_preview(path, max_frames=None):
         else:
             summed, frames, total = _sum_tiff(path, max_frames=max_frames)
         binned = _bin_image(summed)
+        if lowpass_a:
+            binned = gaussian_low_pass(binned, (pixel_size or 0) * _bin_factor(summed.shape), lowpass_a)
         gray = _to_grayscale_bytes(binned)
         png = _encode_png(gray)
     except PreviewError:

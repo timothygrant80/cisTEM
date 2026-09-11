@@ -79,7 +79,8 @@ def build_tasks(conn, project_id, params):
 
     ctf_dir = _ensure_dirs(project_id)
 
-    use_movies = str(params.get("estimate_using", "Movies")).lower().startswith("movie")
+    # Images when absent: the panel's default (cisTEM's ResetDefaults() picks Movies; the aligned sums are what most runs want).
+    use_movies = str(params.get("estimate_using", "Images")).lower().startswith("movie")
     frames_to_average = _num(params, "frames_to_average", 3, int)
     box_size = _num(params, "box_size", 512, int)
     amplitude_contrast = _num(params, "amplitude_contrast", 0.07, float)

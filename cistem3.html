@@ -1837,8 +1837,8 @@ From branch : <span id="versionBranch">—</span></p>
          dynamicOptions:{endpoint:"/image-groups", listKey:"image_groups", value:"group_id", label:"group_name", countKey:"image_count", countLabel:"images", emptyText:"No image groups yet — align movies or import images first"}}
       ],
       expertFields: [
-        {key:"estimate_using", label:"Estimate Using", unit:"", type:"select", options:["Movies","Images"], default:"Movies", group:"Search",
-         tooltip:"Should the CTF parameters be estimated from movie frames or the frame averages? Using movie frames usually generates stronger Thon rings but also takes longer to run. Images with no parent movie are estimated from the image regardless."},
+        {key:"estimate_using", label:"Estimate Using", unit:"", type:"select", options:["Movies","Images"], default:"Images", group:"Search",
+         tooltip:"Should the CTF parameters be estimated from movie frames or the frame averages? Using movie frames usually generates stronger Thon rings but also takes longer to run. Images with no parent movie are estimated from the image regardless. cisTEM starts on Movies; this panel starts on Images."},
         {key:"frames_to_average", label:"No. Movie Frames to Average", unit:"", type:"number", min:1, max:999999999, default:"3", group:"Search", enabledWhen:{key:"estimate_using", value:"Movies"},
          tooltip:"When estimating parameters from movie frames, enter how many frames should be included in the sub-averages used to calculate the amplitude spectra."},
         {key:"box_size", label:"Box Size", unit:"px", type:"number", min:128, max:99999999, default:"512", group:"Search",

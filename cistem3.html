@@ -427,7 +427,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 #resultsPages{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
 #resultsPages > .results-subpage,#resultspagePlaceholder{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
 #resultsPages > .results-subpage[hidden],#resultspagePlaceholder[hidden]{display:none;}
-.results-layout{display:grid;grid-template-columns:minmax(340px,36%) minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:320px;}
+.results-layout{display:grid;grid-template-columns:minmax(320px,30%) minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:320px;}
 .results-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;margin-bottom:0;}
 .ra-nav{justify-content:space-between;flex-wrap:nowrap;}
 /* The Define Filter dialog (cisTEM's MyFilterDialog): one row per field with
@@ -451,7 +451,9 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-list li.selected .ra-count{color:rgba(255,255,255,.8);}
 .ra-grid-scroll{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
 .ra-grid{border-collapse:separate;border-spacing:0;font-size:15.5px;min-width:100%;}
-.ra-grid th,.ra-grid td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;white-space:nowrap;}
+/* Horizontal separators only, and lighter than the panel dividers; the one vertical line parts the sticky name column from the job cells. */
+.ra-grid th,.ra-grid td{border-right:none;border-bottom:1px solid #EEF0F3;padding:0;white-space:nowrap;}
+.ra-grid th:first-child,.ra-grid td:first-child{border-right:1px solid var(--border);}
 .ra-grid th{position:sticky;top:0;z-index:2;background:var(--chrome);font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;}
 .ra-grid th.ra-job-head{text-align:center;padding:0;}
 .ra-grid th.ra-job-head button{font:inherit;color:var(--accent);background:none;border:none;padding:6px 8px;cursor:pointer;width:100%;}
@@ -463,7 +465,8 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-grid td.ra-cell.has{cursor:pointer;}
 .ra-grid td.ra-cell.has:hover{background:var(--accent-soft);}
 .ra-grid td.ra-cell.shown,.ra-grid td.ra-cell.shown:hover{background:var(--accent);}
-.ra-grid tr.shown-row td.ra-movie{color:var(--accent);}
+.ra-grid tr.shown-row td{background:#EBF3FD;}   /* the row being looked at, so "which micrograph is this?" answers itself */
+.ra-grid tr.shown-row td.ra-movie{color:var(--accent);background:#EBF3FD;}
 .ra-cell-glyph{display:inline-block;width:13px;height:13px;border:1px solid var(--border-strong);background:var(--surface);vertical-align:middle;font-size:14.5px;line-height:12px;color:var(--text-primary);text-align:center;}
 .ra-cell-glyph.active{background:var(--surface);color:var(--success);font-weight:700;}
 .ra-grid td.ra-cell.shown .ra-cell-glyph{border-color:#fff;}
@@ -473,7 +476,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-right-scroll{flex:1;min-height:0;overflow:auto;padding-right:6px;}
 .ra-job-details{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .ra-details-grid{grid-template-columns:repeat(3,1fr);}
-.ra-plot-head{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 4px;}
+.ra-plot-head{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 2px;}
 .ra-plot-title{font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;}
 .ra-legend{font-size:14.5px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;}
 .ra-swatch{display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);margin-left:8px;}
@@ -491,7 +494,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-figure{margin:0;}
 /* Picture and number frames are rounded grey surfaces with no outline, the grey counterpart of the white panels. */
 .ra-figure-frame{position:relative;border:none;border-radius:8px;background:var(--surface-sunken);aspect-ratio:1 / 1;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.ra-figure-frame img{max-width:100%;max-height:100%;display:block;}
+.ra-figure-frame img{width:100%;height:100%;object-fit:contain;display:block;}   /* a 512px diagnostic scales up to the frame: for Thon rings every pixel of display counts */
 .ra-figure-status{font-size:14.5px;color:var(--text-tertiary);padding:8px;text-align:center;}
 .ra-figure figcaption{font-size:14.5px;color:var(--text-secondary);margin-top:4px;font-weight:600;}
 .ra-figure.caption-top figcaption{margin:0 0 4px;}
@@ -563,17 +566,29 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 @media (max-width:1100px){ .c2d-plots{grid-template-columns:1fr;} }
 .ra-swatch-logp{border-top-color:var(--accent);} .ra-swatch-sigma{border-top-color:var(--plot-y);} .ra-swatch-moved{border-top-color:var(--success);}
 .ra-plot .line-moved{fill:none;stroke:var(--success);stroke-width:1.8;stroke-linejoin:round;} .ra-plot .dot-moved{fill:var(--success);}
-.ctf-result{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;align-items:stretch;}
-.ctf-numbers-figure{display:flex;flex-direction:column;}
-/* The numbers sit in a bordered box the size of the diagnostic image beside them, the rows spread down it. */
-.ctf-numbers{flex:1 1 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;align-content:space-evenly;padding:12px 18px;border:none;border-radius:8px;background:var(--surface-sunken);}
+/* The CTF view fills the panel's height: the diagnostic image is a square as tall as
+   the room above the 1D fit allows (so the largest it can be without scrolling), the
+   numbers box beside it takes the rest of the width, and the fit runs full width below. */
+.ra-result{height:100%;}
+.ctf-result{display:flex;flex-direction:column;gap:10px;height:100%;min-height:0;}
+.ctf-top{display:flex;gap:18px;flex:1 1 auto;min-height:0;}
+.ctf-top > .ra-figure{display:flex;flex-direction:column;flex:0 0 auto;min-height:0;max-width:62%;}
+.ctf-top > .ra-figure > .ra-figure-frame{flex:1 1 0;min-height:240px;aspect-ratio:1 / 1;align-self:flex-start;width:auto;}
+.ctf-top > .ra-figure.ctf-numbers-figure{flex:1 1 auto;min-width:0;max-width:none;display:flex;flex-direction:column;}
+/* The numbers sit in a box the size of the diagnostic image beside them, the rows spread down it:
+   label, a dotted leader, then the value in a right-hand column -- an instrument readout. */
+.ctf-numbers{flex:1 1 auto;display:grid;grid-template-columns:minmax(0,1fr) max-content;gap:4px 10px;align-content:space-evenly;padding:12px 16px;border:none;border-radius:8px;background:var(--surface-sunken);}
 .ctf-numbers .details-item{font-size:16px;}
-.ctf-fit-plot{grid-column:1 / -1;}
+.ctf-numbers .details-key{display:flex;align-items:baseline;gap:8px;overflow:visible;}
+.ctf-numbers .details-key::after{content:"";flex:1 1 auto;border-bottom:1px dotted var(--border-strong);transform:translateY(-4px);}
+.ctf-numbers .details-val{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ctf-fit-plot{flex:0 0 auto;}
+.ctf-fit-plot .ra-plot{height:280px;}   /* the room the tighter head and gap gave back goes to the curves */
 .ra-plot .line-amp{fill:none;stroke:var(--success);stroke-width:1.6;stroke-linejoin:round;}
 .ra-plot .line-fit{fill:none;stroke:var(--plot-y);stroke-width:1.6;stroke-linejoin:round;}
 .ra-plot .line-q{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linejoin:round;}
 .ra-swatch-amp{border-top-color:var(--success);} .ra-swatch-fit{border-top-color:var(--plot-y);} .ra-swatch-q{border-top-color:var(--accent);}
-@media (max-width:1100px){ .ctf-result{grid-template-columns:1fr;} }
+@media (max-width:1100px){ .ctf-top{flex-direction:column;} .ctf-top > .ra-figure{max-width:none;} }
 
 .rpkg-layout{min-height:340px;grid-template-columns:300px minmax(0,1fr);}
 #rpkgDetails{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
@@ -3358,7 +3373,7 @@ From branch : <span id="versionBranch">—</span></p>
   // taller picture. `series` = [{xs, ys, cls, dots}], one shared y scale.
   function drawLinePlot(svg, series, opts){
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    var W = Math.max(480, Math.round(svg.clientWidth) || 640), H = 250, L = 60, R = 14, T = 12, B = 44;
+    var W = Math.max(480, Math.round(svg.clientWidth) || 640), H = Math.round(svg.clientHeight) || 250, L = 60, R = 14, T = 12, B = 44;
     svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     svg._redraw = function(){ drawLinePlot(svg, series, opts); };
     var NS = "http://www.w3.org/2000/svg";
@@ -3901,8 +3916,9 @@ From branch : <span id="versionBranch">—</span></p>
     // ShowCTFResultsPanel's arrangement: the diagnostic image and the estimate's
     // numbers side by side at the same size, the 1D fit the full width below.
     var wrap = document.createElement("div"); wrap.className = "ctf-result"; box.appendChild(wrap);
-    var diag = makeFigure("Diagnostic image", "Filtered amplitude spectrum with the CTF fit in the lower-left quadrant", {captionTop: true}); wrap.appendChild(diag.root);
-    var numFig = document.createElement("figure"); numFig.className = "ra-figure caption-top ctf-numbers-figure"; wrap.appendChild(numFig);
+    var top = document.createElement("div"); top.className = "ctf-top"; wrap.appendChild(top);
+    var diag = makeFigure("Diagnostic image", "Filtered amplitude spectrum with the CTF fit in the lower-left quadrant", {captionTop: true}); top.appendChild(diag.root);
+    var numFig = document.createElement("figure"); numFig.className = "ra-figure caption-top ctf-numbers-figure"; top.appendChild(numFig);
     var numCap = document.createElement("figcaption"); numCap.textContent = "Estimated parameters"; numFig.appendChild(numCap);
     var numbers = document.createElement("div"); numbers.className = "ctf-numbers"; numFig.appendChild(numbers);
     var plot = makePlotBlock("1D Fit", [["ra-swatch-amp", "Spectrum"], ["ra-swatch-fit", "CTF fit"], ["ra-swatch-q", "Quality of fit"]]);

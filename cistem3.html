@@ -101,7 +101,7 @@ button,input,select{font-family:var(--font-ui);}
 /* Pages fill the window the way cisTEM's panels fill its frame; the one
    ceiling keeps a maximised window on a very wide monitor from stretching a
    form or a table of six columns across all of it. */
-.tabpage{max-width:1800px;}
+.tabpage{max-width:none;}   /* no ceiling: at 100% zoom a wide window reached the old 1800px cap and left a gap on the right; the panels fill the frame as cisTEM's do */
 
 /* Three levels: page title, section / tab labels, body. */
 .page-heading{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;}

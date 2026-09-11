@@ -6069,26 +6069,67 @@ From branch : <span id="versionBranch">—</span></p>
       if (!dp.fftTiles[i]) dp.fftTiles[i] = powerSpectrum(dp.tiles[i], dp.w, dp.h);
       return dp.fftTiles[i];
     }
-    // The power spectrum of the central 2^n square, log scaled, origin at the centre.
+    // The power spectrum of the whole image, log scaled, origin at the centre --
+    // cisTEM's Image goes through FFTW and so takes any size; here a radix-2
+    // transform handles power-of-two lengths and Bluestein's chirp-z algorithm
+    // (three power-of-two FFTs per line, the chirp and its transform cached per
+    // length) every other, so a 1240 x 1200 micrograph's spectrum is 1240 x 1200
+    // rather than the 1024 square that used to sit inside a dark border.
     function powerSpectrum(data, w, h){
-      var n = 1; while (n * 2 <= Math.min(w, h)) n *= 2;
-      var x0 = (w - n) >> 1, y0 = (h - n) >> 1;
-      var re = new Float32Array(n * n), im = new Float32Array(n * n);
-      var mean = 0; for (var j = 0; j < n; j++) for (var i = 0; i < n; i++) mean += data[(y0 + j) * w + x0 + i]; mean /= n * n;
-      for (var j2 = 0; j2 < n; j2++) for (var i2 = 0; i2 < n; i2++) re[j2 * n + i2] = data[(y0 + j2) * w + x0 + i2] - mean;
-      var rowRe = new Float32Array(n), rowIm = new Float32Array(n);
-      for (var r = 0; r < n; r++){ rowRe.set(re.subarray(r * n, r * n + n)); rowIm.set(im.subarray(r * n, r * n + n)); fft1d(rowRe, rowIm); re.set(rowRe, r * n); im.set(rowIm, r * n); }
-      for (var c = 0; c < n; c++){
-        for (var k = 0; k < n; k++){ rowRe[k] = re[k * n + c]; rowIm[k] = im[k * n + c]; }
-        fft1d(rowRe, rowIm);
-        for (var k2 = 0; k2 < n; k2++){ re[k2 * n + c] = rowRe[k2]; im[k2 * n + c] = rowIm[k2]; }
+      var re = new Float32Array(w * h), im = new Float32Array(w * h);
+      var mean = 0; for (var q = 0; q < data.length; q++) mean += data[q]; mean /= data.length;
+      for (var q2 = 0; q2 < data.length; q2++) re[q2] = data[q2] - mean;
+      var rowRe = new Float64Array(w), rowIm = new Float64Array(w);
+      for (var r = 0; r < h; r++){
+        for (var i = 0; i < w; i++){ rowRe[i] = re[r * w + i]; rowIm[i] = 0; }
+        fftAny(rowRe, rowIm);
+        for (var i1 = 0; i1 < w; i1++){ re[r * w + i1] = rowRe[i1]; im[r * w + i1] = rowIm[i1]; }
       }
-      var out = new Float32Array(w * h), half = n >> 1;
-      for (var y = 0; y < n; y++) for (var x = 0; x < n; x++){
-        var sx = (x + half) % n, sy = (y + half) % n, idx = sy * n + sx;
-        out[(y0 + y) * w + x0 + x] = Math.log(1 + Math.sqrt(re[idx] * re[idx] + im[idx] * im[idx]));
+      var colRe = new Float64Array(h), colIm = new Float64Array(h);
+      for (var c = 0; c < w; c++){
+        for (var k = 0; k < h; k++){ colRe[k] = re[k * w + c]; colIm[k] = im[k * w + c]; }
+        fftAny(colRe, colIm);
+        for (var k2 = 0; k2 < h; k2++){ re[k2 * w + c] = colRe[k2]; im[k2 * w + c] = colIm[k2]; }
+      }
+      var out = new Float32Array(w * h), hx = w >> 1, hy = h >> 1;
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++){
+        var sx = (x + hx) % w, sy = (y + hy) % h, idx = sy * w + sx;
+        out[y * w + x] = Math.log(1 + Math.sqrt(re[idx] * re[idx] + im[idx] * im[idx]));
       }
       return out;
+    }
+    var bluesteinPlans = {};
+    // In-place DFT of any length: radix-2 directly, otherwise Bluestein --
+    // X_k = w_k * sum_j (x_j w_j) conj(w_{k-j}) with w_j = exp(-i pi j^2 / n), a
+    // convolution done by zero-padded FFTs of length m >= 2n - 1.
+    function fftAny(re, im){
+      var n = re.length;
+      if ((n & (n - 1)) === 0){ fft1d(re, im); return; }
+      var plan = bluesteinPlans[n];
+      if (!plan){
+        var m = 1; while (m < 2 * n - 1) m *= 2;
+        var wr = new Float64Array(n), wi = new Float64Array(n), br = new Float64Array(m), bi = new Float64Array(m);
+        for (var j = 0; j < n; j++){
+          var ang = -Math.PI * ((j * j) % (2 * n)) / n;   // j^2 mod 2n keeps the chirp exact for large j
+          wr[j] = Math.cos(ang); wi[j] = Math.sin(ang);
+          br[j] = wr[j]; bi[j] = -wi[j];                 // conj(w_j), wrapped so index m - j is w_{-j}
+          if (j){ br[m - j] = wr[j]; bi[m - j] = -wi[j]; }
+        }
+        fft1d(br, bi);
+        plan = bluesteinPlans[n] = {m: m, wr: wr, wi: wi, br: br, bi: bi, ar: new Float64Array(m), ai: new Float64Array(m)};
+      }
+      var M = plan.m, ar = plan.ar, ai = plan.ai;
+      ar.fill(0); ai.fill(0);
+      for (var j2 = 0; j2 < n; j2++){ ar[j2] = re[j2] * plan.wr[j2] - im[j2] * plan.wi[j2]; ai[j2] = re[j2] * plan.wi[j2] + im[j2] * plan.wr[j2]; }
+      fft1d(ar, ai);
+      for (var k = 0; k < M; k++){ var tr = ar[k] * plan.br[k] - ai[k] * plan.bi[k]; ai[k] = ar[k] * plan.bi[k] + ai[k] * plan.br[k]; ar[k] = tr; }
+      // Inverse via the forward transform of the conjugate, scaled by 1/m.
+      for (var k1 = 0; k1 < M; k1++) ai[k1] = -ai[k1];
+      fft1d(ar, ai);
+      for (var k2 = 0; k2 < n; k2++){
+        var cr = ar[k2] / M, ci = -ai[k2] / M;
+        re[k2] = cr * plan.wr[k2] - ci * plan.wi[k2]; im[k2] = cr * plan.wi[k2] + ci * plan.wr[k2];
+      }
     }
     function fft1d(re, im){
       var n = re.length;

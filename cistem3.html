@@ -474,6 +474,12 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-legend-row{font-size:14.5px;color:var(--text-tertiary);margin-top:6px;flex-shrink:0;display:flex;align-items:center;gap:4px;}
 .ra-toggle[aria-pressed="true"]{background:var(--surface-sunken);box-shadow:inset 0 1px 2px rgba(0,0,0,.15);}
 .ra-right-scroll{flex:1;min-height:0;overflow:auto;padding-right:6px;}
+/* The group row under a result: status text, then the picker and the two buttons at the right, as cisTEM lays it out. */
+.ra-group-row{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:8px;margin-top:6px;border-top:1px solid var(--border);font-size:14.5px;}
+.ra-group-row label{display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-weight:600;}
+.ra-group-row select{min-width:180px;font-size:14.5px;padding:3px 6px;}
+.ra-group-status{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);}
+.ra-group-status.error{color:#B42318;}
 .ra-job-details{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .ra-details-grid{grid-template-columns:repeat(3,1fr);}
 .ra-plot-head{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 2px;}
@@ -3467,6 +3473,13 @@ From branch : <span id="versionBranch">—</span></p>
   // or Make Active to make it active; a column header makes that job
   // active for every asset it processed. On the right, Job Details (the
   // run's parameters, toggled) and the stage's own result view.
+  // What a results page's group row acts on: Align Movies the movie against
+  // movie groups (cisTEM's "Add Movie To Group"), Find CTF and Find Particles
+  // the image against image groups.
+  var MOVIE_GROUP_KIND = {noun: "movie", Noun: "Movie", allName: "All Movies", idsKey: "movie_ids", addPath: "/movies/add-to-group",
+    removePath: function(gid){ return "/movie-groups/" + gid + "/remove-movies"; }, groups: function(){ return state.movieGroups; }, reload: function(){ loadMovieGroups(); }};
+  var IMAGE_GROUP_KIND = {noun: "image", Noun: "Image", allName: "All Images", idsKey: "image_ids", addPath: "/images/add-to-group",
+    removePath: function(gid){ return "/image-groups/" + gid + "/remove-images"; }, groups: function(){ return state.imageGroups; }, reload: function(){ loadImageGroups(); }};
   function makeResultsPage(cfg){
     var page = { cfg: cfg, items: [], entries: [], selectedRowId: null, selectedItemId: null, current: null, showDetails: false, urls: [], inflight: null,
                  filter: {on: false, values: {}, sort: {key: "asset_id", desc: false}} };
@@ -3497,6 +3510,16 @@ From branch : <span id="versionBranch">—</span></p>
     var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
     var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = cfg.titleWord; right.appendChild(rightLabel);
     var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
+    // cisTEM's row under the result: a group picker with "Add <Movie|Image> To
+    // Group" and "Delete <Movie|Image> From Group" for the one being looked at
+    // (MyMovieAlignResultsPanel::OnAddToGroupClick / OnRemoveFromGroupClick);
+    // the picker lists every group but the All group, plus "New group…".
+    var gk = cfg.groupKind;
+    var groupRow = document.createElement("div"); groupRow.className = "ra-group-row"; groupRow.hidden = true; right.appendChild(groupRow);
+    groupRow.innerHTML = '<span class="ra-group-status" data-role="groupstatus"></span>' +
+      '<label>Group <select data-role="grouppick" title="The ' + gk.noun + ' group the two buttons act on."></select></label>' +
+      '<button class="small" data-role="groupremove" title="Take the shown ' + gk.noun + ' out of the chosen group (it stays in ' + gk.allName + ').">Delete ' + gk.Noun + ' From Group</button>' +
+      '<button class="small" data-role="groupadd" title="Put the shown ' + gk.noun + ' into the chosen group.">Add ' + gk.Noun + ' To Group</button>';
     var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
     var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
     var detailCells = cfg.details.map(function(d){
@@ -3698,11 +3721,12 @@ From branch : <span id="versionBranch">—</span></p>
       releaseUrls();
       if (!e || !shown){
         page.current = null;
-        empty.hidden = false; resultBox.hidden = true; details.hidden = true;
+        empty.hidden = false; resultBox.hidden = true; details.hidden = true; groupRow.hidden = true;
         rightLabel.textContent = cfg.titleWord;
         return;
       }
       empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
+      fillGroupPicker(); groupRow.hidden = false;
       rightLabel.textContent = cfg.titleWord + " — " + (e.name || e.rowId) + (shown.job_number ? " · Job " + shown.job_number : "") + (shown.is_active ? " (active)" : " (not active)");
       var id = shown[cfg.idKey];
       view.loading();
@@ -3745,6 +3769,39 @@ From branch : <span id="versionBranch">—</span></p>
         .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
         .then(function(){ loadImageGroups(); })
         .catch(function(err){ alert("Could not add to group: " + err.message); });
+    });
+    // ---- the shown movie / image against one group ----
+    var groupPick = groupRow.querySelector('[data-role="grouppick"]'), groupStatus = groupRow.querySelector('[data-role="groupstatus"]');
+    function fillGroupPicker(){
+      var keep = groupPick.value, groups = (gk.groups() || []).filter(function(g){ return g.group_id !== 0; });
+      groupPick.innerHTML = "";
+      groups.forEach(function(g){
+        var o = document.createElement("option"); o.value = g.group_id; o.textContent = g.group_name; o.dataset.name = g.group_name; groupPick.appendChild(o);
+      });
+      var nu = document.createElement("option"); nu.value = "new"; nu.textContent = "New group\u2026"; groupPick.appendChild(nu);
+      if (keep && Array.from(groupPick.options).some(function(o){ return o.value === keep; })) groupPick.value = keep;
+      groupRow.querySelector('[data-role="groupremove"]').disabled = groupPick.value === "new";
+    }
+    groupPick.addEventListener("change", function(){ groupRow.querySelector('[data-role="groupremove"]').disabled = groupPick.value === "new"; groupStatus.textContent = ""; });
+    function groupPost(path, body, done){
+      apiFetch(projectApiUrl(path), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+        .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+        .then(function(d){ groupStatus.classList.remove("error"); groupStatus.textContent = done(d); gk.reload(); setTimeout(fillGroupPicker, 400); })
+        .catch(function(err){ groupStatus.classList.add("error"); groupStatus.textContent = err.message; });
+    }
+    groupRow.querySelector('[data-role="groupadd"]').addEventListener("click", function(){
+      var e = entry(page.selectedRowId); if (!e) return;
+      var name;
+      if (groupPick.value === "new"){
+        name = prompt("Name of the new " + gk.noun + " group:"); name = name ? name.trim() : ""; if (!name) return;
+      } else name = groupPick.selectedOptions[0].dataset.name;
+      var body = {group_name: name}; body[gk.idsKey] = [e.rowId];
+      groupPost(gk.addPath, body, function(){ return (e.name || e.rowId) + " added to " + name + "."; });
+    });
+    groupRow.querySelector('[data-role="groupremove"]').addEventListener("click", function(){
+      var e = entry(page.selectedRowId); if (!e || groupPick.value === "new") return;
+      var name = groupPick.selectedOptions[0].dataset.name, body = {}; body[gk.idsKey] = [e.rowId];
+      groupPost(gk.removePath(Number(groupPick.value)), body, function(d){ return d.removed ? (e.name || e.rowId) + " removed from " + name + "." : (e.name || e.rowId) + " was not in " + name + "."; });
     });
     // ---- the All / By Filter radios and the Define Filter dialog ----
     function applyFilterState(on){
@@ -3853,6 +3910,7 @@ From branch : <span id="versionBranch">—</span></p>
     ],
     rowIdKey: "movie_asset_id", rowNameKey: "movie_name", rowLabel: "Movie", rowLabelPlural: "Movies",
     groupAssetKey: "movie_image_asset_id", addAllTitle: "Add the aligned images of every movie listed to an image group.",
+    groupKind: MOVIE_GROUP_KIND,
     itemPath: function(id){ return "/alignments/" + id; },
     activatePath: function(id){ return "/alignments/" + id + "/activate"; },
     afterActivate: function(){ loadImages(); },
@@ -3966,6 +4024,7 @@ From branch : <span id="versionBranch">—</span></p>
     ],
     rowIdKey: "image_asset_id", rowNameKey: "image_name", rowLabel: "Image", rowLabelPlural: "Images",
     groupAssetKey: "image_asset_id", addAllTitle: "Add every image listed to an image group.",
+    groupKind: IMAGE_GROUP_KIND,
     itemPath: function(id){ return "/ctf-estimates/" + id; },
     activatePath: function(id){ return "/ctf-estimates/" + id + "/activate"; },
     titleWord: "CTF Estimate",
@@ -4091,6 +4150,7 @@ From branch : <span id="versionBranch">—</span></p>
     listPath: "/picks", listKey: "picks", idKey: "picking_id", jobKey: "picking_job_id",
     rowIdKey: "image_asset_id", rowNameKey: "image_name", rowLabel: "Image", rowLabelPlural: "Images",
     groupAssetKey: "image_asset_id", addAllTitle: "Add every image listed to an image group.",
+    groupKind: IMAGE_GROUP_KIND,
     itemPath: function(id){ return "/picks/" + id; },
     activatePath: function(id){ return "/picks/" + id + "/activate"; },
     titleWord: "Picks",

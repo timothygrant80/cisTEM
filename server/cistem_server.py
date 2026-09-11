@@ -1504,6 +1504,8 @@ def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
             return jsonify({"error": "lowpass must be a resolution in Angstroms"}), 400
         if not lowpass_a > 0:
             return jsonify({"error": "lowpass must be a resolution in Angstroms"}), 400
+    # ?highpass=1: the panels' High-pass box (taper the edges, remove the density ramps).
+    highpass = request.args.get("highpass", "").lower() in ("1", "true", "yes", "on")
     conn = db.get_conn(project_id)
     row = conn.execute(
         "SELECT NAME, FILENAME, PIXEL_SIZE FROM {t} WHERE {id} = ?".format(
@@ -1526,14 +1528,14 @@ def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
         }), 415
 
     stat = Path(path).stat()
-    etag = '"r{}-{}-{}-{}-{}{}"'.format(preview.RENDER_VERSION, kind.noun, asset_id, int(stat.st_mtime), stat.st_size,
-                                         "-lp{:g}".format(lowpass_a) if lowpass_a else "")
+    etag = '"r{}-{}-{}-{}-{}{}{}"'.format(preview.RENDER_VERSION, kind.noun, asset_id, int(stat.st_mtime), stat.st_size,
+                                           "-lp{:g}".format(lowpass_a) if lowpass_a else "", "-hp" if highpass else "")
     if request.headers.get("If-None-Match") == etag:
         return "", 304
 
     try:
-        if lowpass_a:
-            png, meta = render(path, lowpass_a=lowpass_a, pixel_size=row["PIXEL_SIZE"])
+        if lowpass_a or highpass:
+            png, meta = render(path, lowpass_a=lowpass_a, pixel_size=row["PIXEL_SIZE"], highpass=highpass)
         else:
             png, meta = render(path)
     except preview.PreviewError as exc:

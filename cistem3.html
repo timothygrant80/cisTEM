@@ -4009,9 +4009,14 @@ From branch : <span id="versionBranch">—</span></p>
     var toggle = document.createElement("label"); toggle.className = "ra-radio";
     var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; toggle.appendChild(cb); toggle.appendChild(document.createTextNode(" Circles around particles"));
     side.appendChild(toggle);
-    // PickingResultsDisplayPanel's Low-pass box: a Gaussian filter of the
-    // picture to the typed resolution (40 A by default, the box greyed until
-    // ticked), rendered by the server (`?lowpass=` on the preview).
+    // PickingResultsDisplayPanel's filter boxes, rendered by the server
+    // (`?highpass=1&lowpass=` on the preview): High-pass, on by default as
+    // cisTEM's is, tapers the edges and removes the density ramps; Low-pass
+    // is a Gaussian filter to the typed resolution (40 A by default, the box
+    // greyed until ticked).
+    var hpToggle = document.createElement("label"); hpToggle.className = "ra-radio"; hpToggle.title = "Filter the image to remove density ramps.";
+    var hp = document.createElement("input"); hp.type = "checkbox"; hp.checked = true; hpToggle.appendChild(hp); hpToggle.appendChild(document.createTextNode(" High-pass"));
+    side.appendChild(hpToggle);
     var lpRow = document.createElement("div"); lpRow.className = "pick-lowpass"; side.appendChild(lpRow);
     var lpToggle = document.createElement("label"); lpToggle.className = "ra-radio"; lpToggle.title = "Low-pass filter the picture to the resolution typed, to bring the particles out of the noise.";
     var lp = document.createElement("input"); lp.type = "checkbox"; lpToggle.appendChild(lp); lpToggle.appendChild(document.createTextNode(" Low-pass"));
@@ -4054,14 +4059,17 @@ From branch : <span id="versionBranch">—</span></p>
     }
     cb.addEventListener("change", drawCircles);
     var picture = null;   // {path, exists, urls} of the picture shown, so the filter can re-fetch it
-    function lowpassQuery(){
-      var r = Number(lpRes.value);
-      return lp.checked && r > 0 ? (picture.path.indexOf("?") >= 0 ? "&" : "?") + "lowpass=" + r : "";
+    function filterQuery(){
+      var parts = [], r = Number(lpRes.value);
+      if (hp.checked) parts.push("highpass=1");
+      if (lp.checked && r > 0) parts.push("lowpass=" + r);
+      return parts.length ? (picture.path.indexOf("?") >= 0 ? "&" : "?") + parts.join("&") : "";
     }
     function reloadPicture(){
       if (!picture) return;
-      loadFigure(img, status, picture.path + lowpassQuery(), picture.exists, "micrograph", picture.urls);
+      loadFigure(img, status, picture.path + filterQuery(), picture.exists, "micrograph", picture.urls);
     }
+    hp.addEventListener("change", reloadPicture);
     lp.addEventListener("change", function(){ lpRes.disabled = !lp.checked; reloadPicture(); });
     lpRes.addEventListener("change", function(){ if (lp.checked) reloadPicture(); });
     return {

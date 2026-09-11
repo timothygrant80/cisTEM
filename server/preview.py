@@ -139,6 +139,77 @@ def _bin_factor(shape):
     return max(1, -(-max(height, width) // MAX_PREVIEW_EDGE))
 
 
+def taper_edges(image):
+    """Image::TaperEdges() in 2D: along each axis, the mean of the first and
+    last N/30 pixels of every line is taken, the two means' deviations from
+    their average smoothed by a 3-point running average along the edge, and
+    a ramp of that deviation (full at the edge, zero N/30 pixels in) is
+    subtracted at each end -- so the picture wraps around without a step,
+    which is what keeps the high-pass below from ringing off the borders.
+    """
+    out = np.array(image, dtype=np.float32, copy=True)
+    for axis in (1, 0):   # x edges, then y edges, as the C++ loops dimension 1 then 2
+        n = out.shape[axis]
+        width = n // 30
+        if width < 1 or n < 2 * width:
+            continue
+        lines = out if axis == 1 else out.T   # rows run along `axis`
+        start = lines[:, :width].mean(axis=1)
+        finish = lines[:, n - width:].mean(axis=1)
+        mid = 0.5 * (start + finish)
+        start, finish = start - mid, finish - mid
+        # 3-point running average along the edge, edges of the edge averaged over what exists.
+        pad_s = np.pad(start, 1, mode="edge"); pad_f = np.pad(finish, 1, mode="edge")
+        counts = np.full(start.shape, 3.0); counts[0] = counts[-1] = 2.0
+        sm_s = (pad_s[:-2] + pad_s[1:-1] + pad_s[2:] - np.where(np.arange(start.size) == 0, pad_s[0], 0) - np.where(np.arange(start.size) == start.size - 1, pad_s[-1], 0)) / counts
+        sm_f = (pad_f[:-2] + pad_f[1:-1] + pad_f[2:] - np.where(np.arange(finish.size) == 0, pad_f[0], 0) - np.where(np.arange(finish.size) == finish.size - 1, pad_f[-1], 0)) / counts
+        ramp = (width - np.arange(width)) / float(width)          # 1 at the edge pixel, 1/width at the inner end
+        lines[:, :width] -= sm_s[:, None] * ramp[None, :]
+        lines[:, n - width:] -= sm_f[:, None] * ramp[None, ::-1]
+    return out
+
+
+def _fourier_radius(shape):
+    """|f| in cycles per pixel for numpy's rfft2 layout of a `shape` image."""
+    height, width = shape
+    fy = np.fft.fftfreq(height).reshape(-1, 1)
+    fx = np.fft.rfftfreq(width).reshape(1, -1)
+    return np.sqrt(fx * fx + fy * fy)
+
+
+def high_pass_weight(shape):
+    """PickingBitmapPanel's High-pass: CosineMask(r, 2r, invert) in Fourier
+    space with r = 8 / width cycles per pixel -- so the mask radius proper is
+    r - edge/2 = 0, and each component is scaled by 1 - (1 + cos(pi f / 2r)) / 2
+    out to 2r, untouched beyond, the DC term removed. Takes out the density
+    ramps across a micrograph that would otherwise set the grey range.
+    """
+    radius = 8.0 / float(shape[1])
+    edge = 2.0 * radius
+    f = _fourier_radius(shape)
+    weight = np.ones(f.shape, dtype=np.float32)
+    inside = f <= edge
+    weight[inside] = 1.0 - (1.0 + np.cos(np.pi * f[inside] / edge)) / 2.0
+    weight[f <= 0.0] = 0.0
+    return weight
+
+
+def filter_preview(image, pixel_size=None, lowpass_a=None, highpass=False):
+    """UpdateImageInBitmap()'s filters on the binned picture, in its order:
+    taper and high-pass first, then the Gaussian low-pass, one transform pair."""
+    if not highpass and not lowpass_a:
+        return image
+    work = taper_edges(image) if highpass else np.asarray(image, dtype=np.float32)
+    weight = np.ones((work.shape[0], work.shape[1] // 2 + 1), dtype=np.float32)
+    if highpass:
+        weight *= high_pass_weight(work.shape)
+    if lowpass_a and pixel_size and pixel_size > 0 and lowpass_a > 0:
+        sigma = (float(pixel_size) / float(lowpass_a)) * np.sqrt(2.0)
+        f = _fourier_radius(work.shape)
+        weight *= np.exp(-(f * f) / (2.0 * sigma * sigma))
+    return np.fft.irfft2(np.fft.rfft2(work) * weight, s=work.shape).astype(np.float32)
+
+
 def gaussian_low_pass(image, pixel_size, resolution_a):
     """PickingBitmapPanel::UpdateImageInBitmap()'s Low-pass: cisTEM's
     Image::GaussianLowPassFilter(radius * sqrt(2)) with radius = pixel size /
@@ -208,10 +279,11 @@ def _encode_png(gray):
     )
 
 
-def render_image_preview(path, lowpass_a=None, pixel_size=None):
+def render_image_preview(path, lowpass_a=None, pixel_size=None, highpass=False):
     """Returns (png_bytes, {width, height}) for an already-averaged image.
     `lowpass_a`, with the file's `pixel_size`, low-pass filters the binned
-    picture to that resolution (the Find Particles panels' Low-pass box).
+    picture to that resolution and `highpass` removes its density ramps
+    (the Find Particles panels' Low-pass and High-pass boxes).
 
     Same binning and contrast stretch as a movie preview, but reading only
     the first slice: an image asset is a single micrograph, and where the
@@ -220,11 +292,11 @@ def render_image_preview(path, lowpass_a=None, pixel_size=None):
     POSITION_IN_STACK is 1 for every imported image. Summing them the way a
     movie preview does would blur unrelated exposures together.
     """
-    png, meta = render_movie_preview(path, max_frames=1, lowpass_a=lowpass_a, pixel_size=pixel_size)
+    png, meta = render_movie_preview(path, max_frames=1, lowpass_a=lowpass_a, pixel_size=pixel_size, highpass=highpass)
     return png, {"width": meta["width"], "height": meta["height"]}
 
 
-def render_movie_preview(path, max_frames=None, lowpass_a=None, pixel_size=None):
+def render_movie_preview(path, max_frames=None, lowpass_a=None, pixel_size=None, highpass=False):
     """Returns (png_bytes, {width, height, frames_summed, frames_total}).
 
     Raises PreviewError for anything we can't render.
@@ -240,8 +312,8 @@ def render_movie_preview(path, max_frames=None, lowpass_a=None, pixel_size=None)
         else:
             summed, frames, total = _sum_tiff(path, max_frames=max_frames)
         binned = _bin_image(summed)
-        if lowpass_a:
-            binned = gaussian_low_pass(binned, (pixel_size or 0) * _bin_factor(summed.shape), lowpass_a)
+        if lowpass_a or highpass:
+            binned = filter_preview(binned, (pixel_size or 0) * _bin_factor(summed.shape), lowpass_a, highpass)
         gray = _to_grayscale_bytes(binned)
         png = _encode_png(gray)
     except PreviewError:

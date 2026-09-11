@@ -516,11 +516,17 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .preview-bar select{font:inherit;font-size:15.5px;padding:3px 6px;border:1px solid var(--border-strong);background:var(--surface);max-width:280px;}
 .preview-status{color:var(--text-tertiary);font-size:15px;}
 .preview-status.error{color:var(--critical);}
-.preview-view .pick-result{grid-template-columns:1fr;}
+/* The picks view fills the panel's height: the micrograph is as tall as the panel
+   allows (its own aspect ratio, set from the image's sizes), the controls and
+   numbers take the width left beside it; the Actions preview, in a narrower
+   scrolling column, stacks them instead. */
+.pick-result{display:flex;gap:16px;align-items:stretch;height:100%;min-height:0;}
+.pick-frame{position:relative;flex:0 0 auto;align-self:flex-start;height:100%;max-width:calc(100% - 300px);aspect-ratio:1 / 1;border:none;border-radius:8px;overflow:hidden;background:var(--surface-sunken);min-height:120px;}
+.pick-frame img{display:block;width:100%;height:100%;object-fit:contain;}
+.pick-side{flex:1 1 auto;min-width:0;}
+.preview-view .pick-result{flex-direction:column;height:auto;}
+.preview-view .pick-frame{height:auto;width:100%;max-width:none;align-self:stretch;}
 .preview-view .pick-numbers{grid-template-columns:repeat(2,1fr);}
-.pick-result{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start;}
-.pick-frame{position:relative;border:none;border-radius:8px;overflow:hidden;background:var(--surface-sunken);min-height:120px;}
-.pick-frame img{display:block;width:100%;height:auto;}
 .pick-frame .ra-figure-status{position:absolute;left:0;right:0;top:40%;text-align:center;}
 .pick-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .pick-overlay circle{fill:none;stroke:#3CC24A;stroke-width:6;vector-effect:non-scaling-stroke;stroke-width:1.5px;}
@@ -4101,6 +4107,7 @@ From branch : <span id="versionBranch">—</span></p>
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       if (!current || !current.x_size || !current.y_size) return;
       var X = current.x_size, Y = current.y_size, px = current.pixel_size || 1;
+      frame.style.aspectRatio = X + " / " + Y;   // the frame takes the image's shape, so height sets width
       svg.setAttribute("viewBox", "0 0 " + X + " " + Y);
       svg.style.display = cb.checked ? "" : "none";
       var r = (current.maximum_radius || 0) / px;

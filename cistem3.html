@@ -6351,7 +6351,7 @@ From branch : <span id="versionBranch">—</span></p>
     // The loupe: while the right button is held, a square of the page under
     // the cursor at LOUPE_MAG times the drawn size, in the drawn pixels (so
     // at Fit it enlarges the binned picture; at 100% or more, real pixels).
-    var LOUPE_SIZE = 240, LOUPE_MAG = 4, loupe = {on: false, x: 0, y: 0};
+    var LOUPE_SIZE = 256, LOUPE_MAG = 2, loupe = {on: false, x: 0, y: 0};
     function paintLoupe(ctx){
       var lay = dp.lay, perCanvas = dp.w / lay.tw;                  // offscreen pixels per canvas pixel
       var side = LOUPE_SIZE / LOUPE_MAG;                             // canvas pixels the loupe covers

@@ -562,9 +562,12 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 @media (max-width:1100px){ .c2d-plots{grid-template-columns:1fr;} }
 .ra-swatch-logp{border-top-color:var(--accent);} .ra-swatch-sigma{border-top-color:var(--plot-y);} .ra-swatch-moved{border-top-color:var(--success);}
 .ra-plot .line-moved{fill:none;stroke:var(--success);stroke-width:1.8;stroke-linejoin:round;} .ra-plot .dot-moved{fill:var(--success);}
-.ctf-result{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:14px;align-items:start;}
-.ctf-numbers{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 18px;margin-top:10px;}
-.ctf-numbers .details-item{font-size:15.5px;}
+.ctf-result{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;align-items:stretch;}
+.ctf-numbers-figure{display:flex;flex-direction:column;}
+/* The numbers sit in a bordered box the size of the diagnostic image beside them, the rows spread down it. */
+.ctf-numbers{flex:1 1 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;align-content:space-evenly;padding:12px 18px;border:1px solid var(--border);background:var(--surface-sunken);}
+.ctf-numbers .details-item{font-size:16px;}
+.ctf-fit-plot{grid-column:1 / -1;}
 .ra-plot .line-amp{fill:none;stroke:var(--success);stroke-width:1.6;stroke-linejoin:round;}
 .ra-plot .line-fit{fill:none;stroke:var(--plot-y);stroke-width:1.6;stroke-linejoin:round;}
 .ra-plot .line-q{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linejoin:round;}
@@ -3894,13 +3897,16 @@ From branch : <span id="versionBranch">—</span></p>
     ["Tilt Axis", function(c){ return fmtVal(c.tilt_axis, 2) + " °"; }]
   ];
   function buildCtfResultView(box){
+    // ShowCTFResultsPanel's arrangement: the diagnostic image and the estimate's
+    // numbers side by side at the same size, the 1D fit the full width below.
     var wrap = document.createElement("div"); wrap.className = "ctf-result"; box.appendChild(wrap);
-    var diag = makeFigure("Diagnostic image", "Filtered amplitude spectrum with the CTF fit in the lower-left quadrant"); wrap.appendChild(diag.root);
-    var col = document.createElement("div"); col.className = "live-plot-col"; wrap.appendChild(col);
+    var diag = makeFigure("Diagnostic image", "Filtered amplitude spectrum with the CTF fit in the lower-left quadrant", {captionTop: true}); wrap.appendChild(diag.root);
+    var numFig = document.createElement("figure"); numFig.className = "ra-figure caption-top ctf-numbers-figure"; wrap.appendChild(numFig);
+    var numCap = document.createElement("figcaption"); numCap.textContent = "Estimated parameters"; numFig.appendChild(numCap);
+    var numbers = document.createElement("div"); numbers.className = "ctf-numbers"; numFig.appendChild(numbers);
     var plot = makePlotBlock("1D Fit", [["ra-swatch-amp", "Spectrum"], ["ra-swatch-fit", "CTF fit"], ["ra-swatch-q", "Quality of fit"]]);
     plot.svg.setAttribute("aria-label", "Rotational average of the spectrum, the CTF fit and the quality of fit against spatial frequency");
-    col.appendChild(plot.root);
-    var numbers = document.createElement("div"); numbers.className = "ctf-numbers"; col.appendChild(numbers);
+    plot.root.className = "ctf-fit-plot"; wrap.appendChild(plot.root);
     var cells = CTF_NUMBERS.map(function(pair){
       var item = document.createElement("div"); item.className = "details-item";
       var k = document.createElement("span"); k.className = "details-key"; k.textContent = pair[0];

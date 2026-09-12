@@ -258,6 +258,21 @@ class VolumeTests(unittest.TestCase):
         self.assertTrue(0.0 <= canvas.min() and canvas.max() <= 1.0 + 1e-6)
 
 
+class RoundsAvailableTests(unittest.TestCase):
+    def test_lists_the_rounds_on_disk_in_order(self):
+        import tempfile, os
+        d = tempfile.mkdtemp()
+        for name in ("startup3d_0_0.mrc", "startup3d_0_0_masked.mrc", "startup3d_initial_0_0.mrc", "startup3d_3_0.mrc", "startup3d_10_0.mrc", "startup3d_10_1.mrc"):
+            open(os.path.join(d, name), "wb").close()
+        state = {"scratch": d, "rounds": 4, "starts": 3, "number_of_classes": 1}
+        rounds = ab.rounds_available(state)
+        self.assertEqual([r["n"] for r in rounds], [0, 3, 10])
+        self.assertEqual([(r["start"], r["round"]) for r in rounds], [(0, 0), (0, 3), (2, 2)])
+        self.assertEqual(rounds[1]["label"], "Start 1 \u00b7 Round 4")
+        self.assertEqual(rounds[2]["files"], [os.path.join(d, "startup3d_10_0.mrc")])
+        self.assertEqual(ab.rounds_available({"scratch": os.path.join(d, "missing"), "rounds": 4}), [])
+
+
 if __name__ == "__main__":
     unittest.main()
 

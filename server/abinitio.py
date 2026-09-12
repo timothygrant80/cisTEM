@@ -48,6 +48,7 @@ between 2500 and 20000 averages.
 import json
 import math
 import os
+import re
 import random
 import shutil
 import subprocess
@@ -1218,6 +1219,35 @@ def resume(project_id, parent_row):
         conn.close()
 
 
+_ROUND_FILE = re.compile(r"^startup3d_(\d+)_(\d+)\.mrc$")
+
+
+def rounds_available(state):
+    """The reconstructions still in the scratch directory, one per finished
+    round: [{n, start, round, label, files}] in order, `n` the output number
+    (rounds x start + round, 0-based) startup3d_<n>_<class>.mrc was written
+    under, `files` its per-class volumes. What lets the live view look back
+    at how a run developed -- cisTEM keeps these files too, but its panel
+    only ever shows the newest."""
+    scratch = state.get("scratch")
+    if not scratch or not os.path.isdir(scratch):
+        return []
+    by_n = {}
+    for name in os.listdir(scratch):
+        m = _ROUND_FILE.match(name)
+        if m:
+            by_n.setdefault(int(m.group(1)), {})[int(m.group(2))] = os.path.join(scratch, name)
+    rounds = max(1, int(state.get("rounds") or 1))
+    out = []
+    for n in sorted(by_n):
+        files = [by_n[n].get(k) for k in range(int(state.get("number_of_classes") or 1))]
+        if not files or files[0] is None:
+            continue
+        out.append({"n": n, "start": n // rounds, "round": n % rounds,
+                    "label": "Start {} \u00b7 Round {}".format(n // rounds + 1, n % rounds + 1), "files": files})
+    return out
+
+
 def live_result(conn, row):
     """The Jobs tab's Latest Result: the current reconstruction's orthogonal
     views and the sigma-per-iteration plot (AbInitio3DPanel's
@@ -1239,15 +1269,23 @@ def live_result(conn, row):
         "history": [h for h in history if h.get("average_sigma") is not None],
         "volume_ids": state.get("volume_ids", []), "startup_id": state.get("startup_id"),
         "package_name": state.get("package_name"),
+        # every round still on disk, so the view can step back through them
+        "available_rounds": [{"n": r["n"], "start": r["start"], "round": r["round"], "label": r["label"], "volume": r["files"][0]} for r in rounds_available(state)],
     }
 
 
-def current_picture(conn, row, class_index=0):
-    """PNG of the current reconstruction's orthogonal views, for the live view."""
+def current_picture(conn, row, class_index=0, output_number=None):
+    """PNG of the current reconstruction's orthogonal views, for the live
+    view -- or, with `output_number`, of the reconstruction an earlier round
+    wrote (rounds_available())."""
     state = _load_state(conn, row["JOB_ID"])
     if not state:
         return None
-    files = [p for p in (state.get("display_files") or []) if p and os.path.isfile(p)]
+    if output_number is not None:
+        match = [r for r in rounds_available(state) if r["n"] == output_number]
+        files = [p for p in (match[0]["files"] if match else []) if p and os.path.isfile(p)]
+    else:
+        files = [p for p in (state.get("display_files") or []) if p and os.path.isfile(p)]
     if not files:
         return None
     path = files[min(class_index, len(files) - 1)]

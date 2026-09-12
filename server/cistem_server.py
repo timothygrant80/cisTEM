@@ -2574,14 +2574,20 @@ def abinitio_defaults(project_id):
 @auth.project_access_required
 def abinitio_current_picture(project_id, job_id):
     """Orthogonal views of a running (or finished) ab-initio or Refine 3D
-    job's current reconstruction, for the Jobs tab's live view."""
+    job's current reconstruction, for the Jobs tab's live view. For an
+    ab-initio job `?n=` picks an earlier round's reconstruction instead
+    (its output number, from the live result's `available_rounds`)."""
     row = _fetch_job_row(project_id, job_id)
     driver = DRIVERS.get(row["STAGE"]) if row is not None else None
     if driver is None or not hasattr(driver, "current_picture"):
         return jsonify({"error": "not a 3D job"}), 404
+    n = request.args.get("n", default=None, type=int)
     conn = db.get_conn(project_id)
     try:
-        got = driver.current_picture(conn, row, request.args.get("class", default=0, type=int))
+        if n is not None and driver is abinitio:
+            got = driver.current_picture(conn, row, request.args.get("class", default=0, type=int), output_number=n)
+        else:
+            got = driver.current_picture(conn, row, request.args.get("class", default=0, type=int))
     finally:
         conn.close()
     if got is None:

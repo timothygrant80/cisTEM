@@ -4601,7 +4601,7 @@ From branch : <span id="versionBranch">—</span></p>
         averages.img.style.maxWidth = full.montage ? (full.montage.width * 2) + "px" : "";
         averages.svg.style.maxWidth = averages.img.style.maxWidth;
         loadFigure(averages.img, averages.status, "/classifications/" + full.classification_id + "/averages.png", full.class_average_file_exists, "class averages", page.urls);
-        setExpand(averages.expand, full.class_average_file_exists ? {path: full.class_average_file, title: full.name + " — class averages", section: 1} : null);
+        setExpand(averages.expand, full.class_average_file_exists ? {path: full.class_average_file, title: full.name + " — class averages", section: 1, greys: "local"} : null);
         if (page.selectedClass != null) showClass(page.selectedClass); else redrawOverlay();
       }).catch(function(err){ averages.status.textContent = "Could not load this classification: " + err.message; });
     }
@@ -4728,7 +4728,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.img.style.maxWidth = "720px";
         figures.appendChild(fig.root);
         loadFigure(fig.img, fig.status, "/volumes/" + v.volume_asset_id + "/preview.png", v.file_exists, "volume", page.urls);
-        setExpand(fig.expand, v.file_exists ? {path: v.filename, title: v.name || "Volume", section: "middle"} : null);
+        setExpand(fig.expand, v.file_exists ? {path: v.filename, title: v.name || "Volume", section: "middle", greys: "local"} : null);
       });
     }
     return page;
@@ -4962,7 +4962,7 @@ From branch : <span id="versionBranch">—</span></p>
       fig.img.style.maxWidth = "720px"; fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
       if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "volume", page.urls);
       else fig.status.textContent = "No reconstruction for this class.";
-      setExpand(fig.expand, c.volume_file_exists ? {path: c.volume_filename, title: c.volume_name || "Reconstruction", section: "middle"} : null);
+      setExpand(fig.expand, c.volume_file_exists ? {path: c.volume_filename, title: c.volume_name || "Reconstruction", section: "middle", greys: "local"} : null);
     }
     classSelect.addEventListener("change", function(){ page.classIndex = Number(classSelect.value) || 0; releaseUrls(); showClass(); });
     pkgSelect.addEventListener("change", function(){ page.packageId = Number(pkgSelect.value); page.selectedId = null; renderList(); });
@@ -6693,7 +6693,10 @@ From branch : <span id="versionBranch">—</span></p>
       dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
       var seq = ++dp.seq, path = src.path;
       var fileChanged = path !== dp.path;
-      if (fileChanged){ dp.global = null; dp.manual = null; dp.selected = null; dp.singleView = false; }
+      // A new file starts in the greys its caller asks for: Local for volumes and class averages (each slice or
+      // average on its own min / max), Auto for everything else (the mean +- 2.5 sigma rule) -- as the DisplayPanels
+      // cisTEM opens for those do. Reopening the same file keeps whatever the user chose.
+      if (fileChanged){ dp.global = null; dp.manual = null; dp.selected = null; dp.singleView = false; dp.mode = src.greys === "local" ? "local" : "auto"; setPressed(); }
       dp.path = path; dp.tiles = []; dp.fftTiles = []; canvas.width = canvas.height = 0;
       message.hidden = false; message.textContent = "Loading…";
       apiFetch(apiUrl("/display/info") + "?path=" + encodeURIComponent(path)).then(function(r){
@@ -8046,7 +8049,7 @@ From branch : <span id="versionBranch">—</span></p>
   });
   els.volDisplayBtn.addEventListener("click", function(){
     var v = state.volumes.filter(function(x){ return x.VOLUME_ASSET_ID === state.selectedVolumeId; })[0]; if (!v) return;
-    openDisplayModal({title: (v.NAME || "Volume") + " \u2014 slices", path: v.FILENAME, section: Math.max(1, Math.round((v.Z_SIZE || 1) / 2)), pixelSize: v.PIXEL_SIZE});
+    openDisplayModal({title: (v.NAME || "Volume") + " \u2014 slices", path: v.FILENAME, section: Math.max(1, Math.round((v.Z_SIZE || 1) / 2)), pixelSize: v.PIXEL_SIZE, greys: "local"});
   });
   els.volRemoveBtn.addEventListener("click", function(){
     var ids = Array.from(state.selectedVolumeIds); if (!ids.length) return;
@@ -8878,7 +8881,7 @@ From branch : <span id="versionBranch">—</span></p>
     function showTabN(n){
       sv.tab = n;
       img.src = n === 0 ? d.original_png : d.sharpened_png;
-      setExpand(expand, {path: n === 0 ? d.original_path : d.volume_path, title: (d.volume_name || "Volume") + (n === 0 ? "" : " (sharpened)"), section: "middle", pixelSize: d.pixel_size});
+      setExpand(expand, {path: n === 0 ? d.original_path : d.volume_path, title: (d.volume_name || "Volume") + (n === 0 ? "" : " (sharpened)"), section: "middle", greys: "local", pixelSize: d.pixel_size});
       tabs.querySelectorAll("button").forEach(function(b, i){ b.setAttribute("aria-pressed", i === n ? "true" : "false"); });
     }
     ["Original 3D", "Sharpened 3D"].forEach(function(label, i){
@@ -9568,7 +9571,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
         fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
     },
     // MyRefine3DPanel while it runs: the FSC of the newest refinement and the
@@ -9585,7 +9588,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
     },
     // AutoRefine3DPanel while it runs: the FSC of the newest refinement, the
@@ -9613,7 +9616,7 @@ From branch : <span id="versionBranch">—</span></p>
           : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
         loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
     },
     // RefineCTFPanel while it runs: the defocus-change histogram filling
@@ -9653,7 +9656,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.root.hidden = !result.has_picture && !running;
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = result.has_picture ? "Loading…" : "The reconstruction has not been merged yet."; fig.img.style.maxWidth = "720px";
         if (result.has_picture) loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", true, "reconstruction", urls);
-        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle"} : null);
+        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
     },
     // MyRefine2DPanel while it runs: the newest class averages
@@ -9680,7 +9683,7 @@ From branch : <span id="versionBranch">—</span></p>
         fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
         fig.img.style.maxWidth = result.montage ? (result.montage.width * 2) + "px" : "";
         loadFigure(fig.img, fig.status, "/classifications/" + result.classification_id + "/averages.png", result.class_average_file_exists, "class averages", urls);
-        setExpand(fig.expand, result.class_average_file_exists ? {path: result.class_average_file, title: result.name + " — class averages", section: 1} : null);
+        setExpand(fig.expand, result.class_average_file_exists ? {path: result.class_average_file, title: result.name + " — class averages", section: 1, greys: "local"} : null);
       };
     }
   };

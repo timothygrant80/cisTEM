@@ -538,7 +538,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .pick-edit-note{font-size:14px;color:var(--text-secondary);margin-bottom:10px;line-height:1.4;}
 .pick-side .ra-radio{margin-bottom:6px;}
 .pick-side-head{font-size:13.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;}
-.pick-side-head + .pick-side-head,.pick-side .pick-lowpass + .pick-side-head{margin-top:16px;}
+.pick-side-head + .pick-side-head,.pick-side .pick-lowpass + .pick-side-head,.pick-side .pick-numbers + div > .pick-side-head:first-child{margin-top:16px;}
 .pick-lowpass{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
 .pick-lowpass .ra-radio{margin-bottom:0;}
 .pick-lowpass input[type=number]{width:64px;padding:2px 6px;font-family:var(--font-mono);font-size:14.5px;}
@@ -4089,7 +4089,7 @@ From branch : <span id="versionBranch">—</span></p>
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "pick-overlay"); frame.appendChild(svg);
     var expand = makeExpandButton(frame);
     var side = document.createElement("div"); side.className = "pick-side"; wrap.appendChild(side);
-    function sideHead(text){ var h = document.createElement("div"); h.className = "pick-side-head"; h.textContent = text; side.appendChild(h); }
+    function sideHead(text, into){ var h = document.createElement("div"); h.className = "pick-side-head"; h.textContent = text; (into || side).appendChild(h); }
     sideHead("Display");
     var toggle = document.createElement("label"); toggle.className = "ra-radio";
     var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; toggle.appendChild(cb); toggle.appendChild(document.createTextNode(" Show particle circles"));
@@ -4112,15 +4112,15 @@ From branch : <span id="versionBranch">—</span></p>
     // circle removes it, Shift-drag erases along the way, Ctrl-drag removes
     // every pick in a rectangle; Undo / Redo walk the history. Edits are
     // saved when the shown result changes (as cisTEM does) or with Save.
-    var undoBtn, redoBtn, saveBtn, editNote;
+    var undoBtn, redoBtn, saveBtn, editNote, editBox = document.createElement("div");   // appended after Pick info
     if (editable){
-      sideHead("Edit picks");
-      var editRow = document.createElement("div"); editRow.className = "pick-edit-row"; side.appendChild(editRow);
+      sideHead("Edit picks", editBox);
+      var editRow = document.createElement("div"); editRow.className = "pick-edit-row"; editBox.appendChild(editRow);
       undoBtn = document.createElement("button"); undoBtn.className = "small"; undoBtn.textContent = "Undo"; undoBtn.disabled = true;
       redoBtn = document.createElement("button"); redoBtn.className = "small"; redoBtn.textContent = "Redo"; redoBtn.disabled = true;
       saveBtn = document.createElement("button"); saveBtn.className = "small primary"; saveBtn.textContent = "Save"; saveBtn.disabled = true; saveBtn.title = "Write the edited picks to the project now (they are also saved when you move to another result).";
       editRow.appendChild(undoBtn); editRow.appendChild(redoBtn); editRow.appendChild(saveBtn);
-      editNote = document.createElement("div"); editNote.className = "pick-edit-note"; side.appendChild(editNote);
+      editNote = document.createElement("div"); editNote.className = "pick-edit-note"; editBox.appendChild(editNote);
       editNote.textContent = "Click to add a pick, click a circle to remove it. Shift-drag erases; Ctrl-drag removes a rectangle.";
     }
     sideHead("Pick info");
@@ -4138,6 +4138,7 @@ From branch : <span id="versionBranch">—</span></p>
       var v = document.createElement("span"); v.className = "details-val"; v.textContent = "\u2014";
       item.appendChild(k); item.appendChild(v); numbers.appendChild(item); return v;
     });
+    if (editable) side.appendChild(editBox);
     var current = null;
     function drawCircles(){
       while (svg.firstChild) svg.removeChild(svg.firstChild);

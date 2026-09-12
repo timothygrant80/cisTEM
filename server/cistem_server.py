@@ -2592,12 +2592,38 @@ def abinitio_current_picture(project_id, job_id):
         conn.close()
     if got is None:
         return jsonify({"error": "no reconstruction yet"}), 404
-    png, _meta, path = got
+    png, meta, path = got
     stat = Path(path).stat()
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = '"r{}-abinitio-{}-{}-{}"'.format(preview.RENDER_VERSION, job_id, int(stat.st_mtime), stat.st_size)
     response.headers["Cache-Control"] = "private, no-cache"
+    # how the picture relates to the map: the box in pixels and the factor each panel was scaled by
+    response.headers["X-Picture-Box"] = str(meta.get("box", ""))
+    response.headers["X-Picture-Scale"] = "{:.4f}".format(meta.get("scale", 1.0))
+    response.headers["X-Picture-Upscaled"] = "1" if meta.get("upscaled") else "0"
     return response
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/abinitio/volume.mrc", methods=["GET"])
+@auth.project_access_required
+def abinitio_volume_download(project_id, job_id):
+    """The reconstruction the live view shows, as an MRC file to save --
+    the current one, or with `?n=` an earlier round's; `?class=` picks the
+    class. Named after the job, the round and the class."""
+    row = _fetch_job_row(project_id, job_id)
+    if row is None or row["STAGE"] != abinitio.STAGE:
+        return jsonify({"error": "not an ab-initio job"}), 404
+    conn = db.get_conn(project_id)
+    try:
+        got = abinitio.volume_file(conn, row, request.args.get("class", default=0, type=int), request.args.get("n", default=None, type=int))
+    finally:
+        conn.close()
+    if got is None:
+        return jsonify({"error": "no such reconstruction"}), 404
+    path, label = got
+    directory, name = os.path.split(path)
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in (row["NAME"] or "abinitio"))
+    return send_from_directory(directory, name, as_attachment=True, download_name="{}_{}.mrc".format(safe, label), mimetype="application/octet-stream")
 
 
 # ---- 3D refinements (REFINEMENT_LIST) -- MyRefinementResultsPanel ----

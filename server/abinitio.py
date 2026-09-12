@@ -1274,6 +1274,26 @@ def live_result(conn, row):
     }
 
 
+def volume_file(conn, row, class_index=0, output_number=None):
+    """The file behind current_picture(): the current reconstruction's, or an
+    earlier round's with `output_number`. (path, label) or None."""
+    state = _load_state(conn, row["JOB_ID"])
+    if not state:
+        return None
+    if output_number is not None:
+        match = [r for r in rounds_available(state) if r["n"] == output_number]
+        if not match:
+            return None
+        files, label = match[0]["files"], "start{}_round{}".format(match[0]["start"] + 1, match[0]["round"] + 1)
+    else:
+        files, label = state.get("display_files") or [], "current"
+    files = [p for p in files if p and os.path.isfile(p)]
+    if not files:
+        return None
+    k = min(class_index, len(files) - 1)
+    return files[k], label + ("_class{}".format(k + 1) if len(files) > 1 else "")
+
+
 def current_picture(conn, row, class_index=0, output_number=None):
     """PNG of the current reconstruction's orthogonal views, for the live
     view -- or, with `output_number`, of the reconstruction an earlier round

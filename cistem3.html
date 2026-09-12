@@ -573,10 +573,17 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ref-list select{width:100%;}
 .c2d-overlay rect{fill:none;stroke:#ffd23f;stroke-width:3;}
 .c2d-caption{font-size:15.5px;color:var(--text-secondary);margin:6px 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-/* The ab-initio live view's round picker: which reconstruction the picture below shows. */
-.live-round-row{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:14.5px;}
-.live-round-label{font-weight:600;color:var(--text-secondary);margin-right:4px;}
-.live-round-row select{min-width:220px;font-size:14.5px;padding:3px 6px;}
+/* The ab-initio live view's reconstruction card: title and round picker in a head row,
+   the picture centred on a dark rounded stage, the caption below. */
+.live-orth-card{margin-top:14px;}
+.live-orth-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+.live-orth-controls{display:flex;align-items:center;gap:6px;font-size:14.5px;}
+.live-orth-controls select{min-width:220px;font-size:14.5px;padding:3px 6px;}
+.live-orth-sep{width:1px;height:20px;background:var(--border);margin:0 4px;}
+.live-orth-stage{display:flex;justify-content:center;align-items:center;padding:16px;background:#2B2F33;border-radius:8px;min-height:200px;}
+.live-orth-stage .c2d-frame.c2d-orth{border:none;background:transparent;}
+.live-orth-stage .c2d-frame img{max-width:100%;height:auto;}
+.live-orth-caption{margin-top:8px;}
 .c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
 .c2d-list table{width:100%;border-collapse:collapse;font-size:15.5px;}
 .c2d-list th{position:sticky;top:0;background:var(--chrome);font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
@@ -3339,7 +3346,7 @@ From branch : <span id="versionBranch">—</span></p>
   // Fetch a PNG through apiFetch (an <img src> can't carry the bearer
   // token) and hand it to an <img> as a blob URL, remembered in `urls` so
   // the page can revoke it when the picture changes.
-  function loadFigure(img, status, path, exists, what, urls){
+  function loadFigure(img, status, path, exists, what, urls, onResponse){
     if (!exists){
       status.hidden = false;
       status.textContent = "The " + what + " file isn’t on disk" + (what === "spectrum" ? " (simulated jobs don’t write one)." : ".");
@@ -3349,6 +3356,7 @@ From branch : <span id="versionBranch">—</span></p>
     img.hidden = true; status.hidden = false; status.textContent = "Loading…";
     apiFetch(projectApiUrl(path), {cache: "no-cache"}).then(function(r){
       if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      if (onResponse) onResponse(r);
       return r.blob();
     }).then(function(blob){
       var url = URL.createObjectURL(blob);
@@ -9561,43 +9569,51 @@ From branch : <span id="versionBranch">—</span></p>
     ab_initio_3d: function(body){
       var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
       var plot = makePlotBlock("Average sigma", [["ra-swatch-sigma", "per iteration"]]); box.appendChild(plot.root);
-      // Which round's reconstruction to show: the newest (the default, which
-      // follows the run as it goes) or any earlier one still in the scratch
-      // directory -- cisTEM's panel only shows the newest; seeing how the map
-      // developed is the reason to look back.
-      var roundRow = document.createElement("div"); roundRow.className = "live-round-row"; roundRow.hidden = true; box.appendChild(roundRow);
-      roundRow.innerHTML = '<span class="live-round-label">Reconstruction</span>' +
-        '<button class="small" data-role="rprev" title="The round before">&larr;</button>' +
-        '<select data-role="rpick" title="Which round\u2019s reconstruction to show"></select>' +
-        '<button class="small" data-role="rnext" title="The round after">&rarr;</button>' +
-        '<button class="small" data-role="rlatest" title="Follow the newest reconstruction as the run goes on">Latest</button>';
-      var rpick = roundRow.querySelector('[data-role="rpick"]'), chosen = null;   // null: follow the newest
-      var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.root.style.marginTop = "12px"; box.appendChild(fig.root);
-      fig.frame.classList.add("c2d-orth");
-      var last = null;
+      // The reconstruction as a card: a head with the title and the round
+      // picker (any earlier round still in the scratch directory, or Latest,
+      // which follows the run -- cisTEM's panel only shows the newest) and a
+      // Download of the shown map; the picture centred on a dark stage; a
+      // caption saying which round it is and how it was scaled.
+      var card = document.createElement("div"); card.className = "live-orth-card"; box.appendChild(card);
+      card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
+        '<div class="live-orth-controls">' +
+          '<button class="small" data-role="rprev" title="The round before">&larr;</button>' +
+          '<select data-role="rpick" title="Which round\u2019s reconstruction to show"></select>' +
+          '<button class="small" data-role="rnext" title="The round after">&rarr;</button>' +
+          '<button class="small" data-role="rlatest" title="Follow the newest reconstruction as the run goes on">Latest</button>' +
+          '<span class="live-orth-sep"></span>' +
+          '<button class="small" data-role="rdownload" title="Save the shown reconstruction as an MRC file">Download</button>' +
+        '</div></div>' +
+        '<div class="live-orth-stage"></div>' +
+        '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
+      var stage = card.querySelector(".live-orth-stage"), rpick = card.querySelector('[data-role="rpick"]'), chosen = null;   // null: follow the newest
+      var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); stage.appendChild(fig.frame);
+      var capLeft = card.querySelector('[data-role="capleft"]'), capRight = card.querySelector('[data-role="capright"]');
+      var last = null, shownQuery = "";
+      function pickedRound(){ var rounds = (last && last.result.available_rounds) || []; return chosen != null ? rounds.filter(function(r){ return r.n === chosen; })[0] || null : null; }
       function showRound(){
         if (!last) return;
         var result = last.result, urls = last.urls, rounds = result.available_rounds || [];
-        var pick = chosen != null ? rounds.filter(function(r){ return r.n === chosen; })[0] : null;
-        if (chosen != null && !pick){ chosen = null; }
+        var pick = pickedRound(); if (chosen != null && !pick) chosen = null;
         rpick.value = pick ? String(pick.n) : "latest";
-        roundRow.querySelector('[data-role="rprev"]').disabled = !rounds.length || (pick ? rounds.indexOf(pick) === 0 : rounds.length < 2);
-        roundRow.querySelector('[data-role="rnext"]').disabled = !pick;
-        roundRow.querySelector('[data-role="rlatest"]').disabled = !pick;
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
-        fig.img.style.maxWidth = "720px";
-        if (pick){
-          fig.left.textContent = pick.label + " (earlier round)" + (result.number_of_classes > 1 ? " · class 1 of " + result.number_of_classes : "");
-          loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png?n=" + pick.n, true, "reconstruction", urls);
-          setExpand(fig.expand, {path: pick.volume, title: result.label + " — " + pick.label, section: "middle", greys: "local"});
-        } else {
-          fig.left.textContent = result.label + (result.number_of_classes > 1 ? " · class 1 of " + result.number_of_classes : "");
-          loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-          setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
-        }
+        card.querySelector('[data-role="rprev"]').disabled = !rounds.length || (pick ? rounds.indexOf(pick) === 0 : rounds.length < 2);
+        card.querySelector('[data-role="rnext"]').disabled = !pick;
+        card.querySelector('[data-role="rlatest"]').disabled = !pick;
+        card.querySelector('[data-role="rdownload"]').disabled = !(pick || result.current_volume);
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
+        var which = pick ? pick.label + " \u00b7 earlier round" : result.label + " \u00b7 " + (rounds.length ? "latest" : "current");
+        var classes = result.number_of_classes > 1 ? " \u00b7 class 1 of " + result.number_of_classes : "";
+        capLeft.textContent = which + classes;
+        shownQuery = pick ? "?n=" + pick.n : "";
+        loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png" + shownQuery, pick ? true : result.has_picture, "reconstruction", urls, function(r){
+          var boxPx = r.headers.get("X-Picture-Box"), scale = Number(r.headers.get("X-Picture-Scale") || 1), up = r.headers.get("X-Picture-Upscaled") === "1";
+          if (boxPx) capLeft.textContent = which + classes + " \u00b7 box " + boxPx + " px" + (up ? ", shown scaled \u00d7" + scale.toFixed(1) : (scale < 0.999 ? ", binned \u00d7" + (1 / scale).toFixed(1) : ""));
+        });
+        var src = pick ? pick.volume : result.current_volume;
+        setExpand(fig.expand, src ? {path: src, title: result.label + (pick ? " \u2014 " + pick.label : ""), section: "middle", greys: "local"} : null);
       }
       rpick.addEventListener("change", function(){ chosen = rpick.value === "latest" ? null : Number(rpick.value); showRound(); });
-      roundRow.querySelector('[data-role="rlatest"]').addEventListener("click", function(){ chosen = null; showRound(); });
+      card.querySelector('[data-role="rlatest"]').addEventListener("click", function(){ chosen = null; showRound(); });
       function stepRound(delta){
         var rounds = (last && last.result.available_rounds) || []; if (!rounds.length) return;
         var idx = chosen != null ? rounds.findIndex(function(r){ return r.n === chosen; }) : rounds.length;   // "latest" sits after the last listed
@@ -9605,23 +9621,36 @@ From branch : <span id="versionBranch">—</span></p>
         if (next < 0) return;
         chosen = next >= rounds.length ? null : rounds[next].n; showRound();
       }
-      roundRow.querySelector('[data-role="rprev"]').addEventListener("click", function(){ stepRound(-1); });
-      roundRow.querySelector('[data-role="rnext"]').addEventListener("click", function(){ stepRound(1); });
+      card.querySelector('[data-role="rprev"]').addEventListener("click", function(){ stepRound(-1); });
+      card.querySelector('[data-role="rnext"]').addEventListener("click", function(){ stepRound(1); });
+      var dl = card.querySelector('[data-role="rdownload"]');
+      dl.addEventListener("click", function(){
+        if (!last) return;
+        dl.disabled = true;
+        var name = "";
+        apiFetch(projectApiUrl("/jobs/" + live.jobId + "/abinitio/volume.mrc" + shownQuery)).then(function(r){
+          if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+          var cd = r.headers.get("Content-Disposition") || ""; var m = /filename="?([^";]+)"?/.exec(cd); name = m ? m[1] : "reconstruction.mrc";
+          return r.blob();
+        }).then(function(blob){
+          var url = URL.createObjectURL(blob), a = document.createElement("a");
+          a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+        }).catch(function(err){ alert("Could not download the reconstruction: " + err.message); }).then(function(){ dl.disabled = false; });
+      });
       return function(result, base, urls){
         last = {result: result, urls: urls};
+        var h = result.history || [];
+        drawLinePlot(plot.svg, h.length ? [{xs: h.map(function(e){ return e.iteration; }), ys: h.map(function(e){ return e.average_sigma; }), cls: "line-y", dots: "dot-y"}] : [],
+          {xLabel: "iteration", xMin: 1, xStep: Math.max(1, Math.ceil(((result.starts || 1) * (result.rounds || 1)) / 10)), xTick: function(v){ return String(Math.round(v)); }, yLabel: "sigma", emptyText: "No refinement cycle has finished yet."});
         var rounds = result.available_rounds || [];
-        roundRow.hidden = !rounds.length;
         var keep = rpick.value; rpick.innerHTML = "";
         rounds.forEach(function(r){ var o = document.createElement("option"); o.value = String(r.n); o.textContent = r.label; rpick.appendChild(o); });
         var latest = document.createElement("option"); latest.value = "latest"; latest.textContent = "Latest (" + result.label + ")"; rpick.appendChild(latest);
         rpick.value = keep && Array.from(rpick.options).some(function(o){ return o.value === keep; }) ? keep : "latest";
-        var h = result.history || [];
-        drawLinePlot(plot.svg, h.length ? [{xs: h.map(function(e){ return e.iteration; }), ys: h.map(function(e){ return e.average_sigma; }), cls: "line-y", dots: "dot-y"}] : [],
-          {xLabel: "iteration", xMin: 1, xStep: Math.max(1, Math.ceil(((result.starts || 1) * (result.rounds || 1)) / 10)), xTick: function(v){ return String(Math.round(v)); }, yLabel: "sigma", emptyText: "No refinement cycle has finished yet."});
         var job = selectedJob();
         var running = job && !TERMINAL_STATUSES[job.status];
-        fig.right.textContent = running ? (result.phase || "") + " · start " + (result.start + 1) + " of " + result.starts + ", round " + (result.round + 1) + " of " + result.rounds +
-          (result.high_res ? " · " + Number(result.high_res).toFixed(1) + " Å, " + Number(result.percent_used).toFixed(1) + "%" : "") : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
+        capRight.textContent = running ? (result.phase || "") + " \u00b7 start " + (result.start + 1) + " of " + result.starts + ", round " + (result.round + 1) + " of " + result.rounds +
+          (result.high_res ? " \u00b7 " + Number(result.high_res).toFixed(1) + " \u00c5, " + Number(result.percent_used).toFixed(1) + "%" : "") : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         showRound();
       };
     },

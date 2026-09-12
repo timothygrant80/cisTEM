@@ -273,6 +273,31 @@ class RoundsAvailableTests(unittest.TestCase):
         self.assertEqual(ab.rounds_available({"scratch": os.path.join(d, "missing"), "rounds": 4}), [])
 
 
+class OrthogonalViewsPngTests(unittest.TestCase):
+    def test_small_box_is_scaled_up_to_the_panel_size(self):
+        import tempfile, os, struct, zlib
+        import volumes
+        d = tempfile.mkdtemp(); path = os.path.join(d, "v.mrc")
+        rng = np.random.RandomState(0)
+        vol = rng.normal(size=(32, 32, 32)).astype(np.float32)
+        volumes.write_mrc_volume(path, vol, 1.5)
+        png, meta = volumes.orthogonal_views_png(path, 0.0)
+        self.assertEqual(meta["box"], 32)
+        self.assertEqual(meta["panel"], 256)
+        self.assertTrue(meta["upscaled"])
+        self.assertAlmostEqual(meta["scale"], 8.0)
+        self.assertEqual((meta["width"], meta["height"]), (768, 512))
+        w, h = struct.unpack(">II", png[16:24])
+        self.assertEqual((w, h), (768, 512))
+        # a box larger than the panel is binned, not enlarged
+        big = rng.normal(size=(300, 300, 300)).astype(np.float32)
+        volumes.write_mrc_volume(path, big, 1.0)
+        _png, meta2 = volumes.orthogonal_views_png(path, 0.0)
+        self.assertFalse(meta2["upscaled"])
+        self.assertEqual(meta2["panel"], 256)
+        self.assertLess(meta2["scale"], 1.0)
+
+
 if __name__ == "__main__":
     unittest.main()
 

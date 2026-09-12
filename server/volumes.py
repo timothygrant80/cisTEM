@@ -319,18 +319,34 @@ def orthogonal_views(volume, mask_radius_px=0.0, max_edge=160, include_projectio
     return canvas
 
 
-def orthogonal_views_png(path, mask_radius_a=0.0):
+ORTH_PANEL = 256   # each panel of the picture is drawn this size: a small box is scaled up to it, a large one binned down
+
+
+def orthogonal_views_png(path, mask_radius_a=0.0, panel=ORTH_PANEL):
     """PNG of orthogonal_views() for a volume file, in cisTEM's display
-    orientation (y up within each panel, projections above slices)."""
+    orientation (y up within each panel, projections above slices). Each
+    panel is `panel` px: a box smaller than that is scaled up (bilinear)
+    so a 108 px ab-initio map is not a postage stamp, a larger one is
+    binned down as before; `scale` in the meta says by how much, and
+    `upscaled` whether it was enlarged."""
     volume, pixel_size = read_mrc_volume(path)
-    canvas = orthogonal_views(volume, mask_radius_a / pixel_size if pixel_size and mask_radius_a else 0.0)
+    canvas = orthogonal_views(volume, mask_radius_a / pixel_size if pixel_size and mask_radius_a else 0.0, max_edge=panel)
     gray = (np.clip(canvas, 0.0, 1.0) * 255.0).astype(np.uint8)
+    box = int(volume.shape[0])
+    th = gray.shape[0] // 2
+    upscaled = box < panel   # a box that only reached the panel size by resampling after binning is not "scaled up"
+    if th != panel:
+        from PIL import Image as _PILImage
+        factor = panel / float(th)
+        im = _PILImage.fromarray(gray).resize((int(round(gray.shape[1] * factor)), int(round(gray.shape[0] * factor))), _PILImage.BILINEAR)
+        gray = np.asarray(im, dtype=np.uint8)
+        th = gray.shape[0] // 2
     # Each panel's first row is its bottom (MRC order). _encode_png writes
     # bottom-up, which flips the whole canvas; flip each half so the rows
     # of panels stay in their places while the panels themselves turn.
-    th = gray.shape[0] // 2
     ordered = np.concatenate([gray[th:2 * th], gray[0:th]], axis=0)  # slices first -> end up below
-    return preview._encode_png(ordered), {"width": gray.shape[1], "height": gray.shape[0], "pixel_size": pixel_size}
+    return preview._encode_png(ordered), {"width": gray.shape[1], "height": gray.shape[0], "pixel_size": pixel_size,
+                                          "box": box, "panel": th, "scale": th / float(box), "upscaled": upscaled}
 
 
 # ---------------------------------------------------------------------------

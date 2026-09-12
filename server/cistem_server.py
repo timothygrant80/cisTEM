@@ -3355,6 +3355,44 @@ def activate_pick(project_id, picking_id):
         conn.close()
 
 
+@app.route("/api/projects/<project_id>/picks/<int:picking_id>/positions", methods=["PUT"])
+@auth.project_access_required
+def replace_pick_positions(project_id, picking_id):
+    """A manual edit of one picking (cisTEM's PickingBitmapPanel: click to
+    add, click a circle to remove): body `{positions: [{x, y, peak_height?}]}`
+    in Angstroms replaces the picking's positions, sets MANUAL_EDIT, and
+    rebuilds the image's position assets when this picking is the active
+    one. Returns the picking as GET /picks/:pid does."""
+    body = request.get_json(force=True, silent=True) or {}
+    positions = body.get("positions")
+    if not isinstance(positions, list):
+        return jsonify({"error": "positions must be a list of {x, y}"}), 400
+    clean = []
+    for p in positions:
+        try:
+            x, y = float(p["x"]), float(p["y"])
+            ph = float(p.get("peak_height") or 0.0)
+        except (KeyError, TypeError, ValueError):
+            return jsonify({"error": "each position needs numeric x and y"}), 400
+        if not (math.isfinite(x) and math.isfinite(y) and math.isfinite(ph)):
+            return jsonify({"error": "each position needs numeric x and y"}), 400
+        clean.append({"x": x, "y": y, "peak_height": ph})
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            image_id = stages.find_particles.replace_picks(conn, picking_id, clean)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 409
+        if image_id is None:
+            return jsonify({"error": "no such picking"}), 404
+        row = conn.execute(_PICK_SELECT + "WHERE pl.PICKING_ID = ?", (picking_id,)).fetchone()
+        d = _pick_json(row, conn)
+        d["positions"] = stages.find_particles.picks_for(conn, picking_id)
+        return jsonify(d)
+    finally:
+        conn.close()
+
+
 @app.route("/api/projects/<project_id>/preview/pick", methods=["POST"])
 @auth.project_access_required
 def preview_pick(project_id):

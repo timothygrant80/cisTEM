@@ -151,6 +151,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/projects/:id/picks` | `{ "picks": [...] }` — every particle picking with image name/size, job number, pick count and `is_active` |
 | `GET` | `/projects/:id/picks/:pid` | One picking plus `positions` (Å from the image origin) |
 | `POST` | `/projects/:id/picks/:pid/activate` | Make these picks the image's particle positions |
+| `PUT` | `/projects/:id/picks/:pid/positions` | Replace one picking's positions with an edited list (`{positions: [{x, y, peak_height?}]}`, Å); sets `MANUAL_EDIT` and rebuilds the image's position assets when the picking is active |
 | `GET` | `/projects/:id/alignments/:aid/sum.png`, `/spectrum.png` | PNG renders of the aligned sum and its amplitude spectrum |
 | `GET` | `/display/info`, `/display/section`, `/display/range` | The Display panel's data for any image file on the server (`?path=`): header; `&count=` sections from `&section=` (0 = frame sum) binned to `&max_edge=` as concatenated float32 with the header in `X-Display-Info`; the stack's grey range |
 | `GET` | `/run-profiles` | The machine's run profiles (system-wide, any logged-in user) — feeds the Run Profile picker |

@@ -287,6 +287,34 @@ def activate_picking(conn, picking_id):
     return row["PARENT_IMAGE_ASSET_ID"]
 
 
+def replace_picks(conn, picking_id, positions):
+    """MyPickingResultsPanel's save of a manual edit (the block under
+    UserHasEditedParticleCoordinates()): the picking's rows in the job's
+    results table are replaced by the edited list -- added picks get new
+    ids and a peak height of 0, as cisTEM's ParticlePositionAsset does --
+    MANUAL_EDIT is set, and when this picking is the image's active one its
+    position assets are rebuilt from it. Returns the image asset id, None
+    if the picking is unknown; ValueError when the job recorded no picks."""
+    row = conn.execute("SELECT PICKING_JOB_ID, PARENT_IMAGE_ASSET_ID FROM PARTICLE_PICKING_LIST WHERE PICKING_ID=?", (picking_id,)).fetchone()
+    if row is None:
+        return None
+    job_id, image_id = row["PICKING_JOB_ID"], row["PARENT_IMAGE_ASSET_ID"]
+    table = results_table(job_id)
+    if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone() is None:
+        raise ValueError("this job's picks were never recorded (a simulated run)")
+    with conn:
+        conn.execute("DELETE FROM {} WHERE PICKING_ID=?".format(table), (picking_id,))
+        conn.executemany(
+            "INSERT INTO {}(PICKING_ID, PARENT_IMAGE_ASSET_ID, X_POSITION, Y_POSITION, PEAK_HEIGHT, TEMPLATE_ASSET_ID, "
+            "TEMPLATE_PSI, TEMPLATE_THETA, TEMPLATE_PHI) VALUES (?,?,?,?,?,?,?,?,?)".format(table),
+            [(picking_id, image_id, float(p["x"]), float(p["y"]), float(p.get("peak_height") or 0.0), -1, 0.0, 0.0, 0.0) for p in positions])
+        conn.execute("UPDATE PARTICLE_PICKING_LIST SET MANUAL_EDIT=1 WHERE PICKING_ID=?", (picking_id,))
+        active = conn.execute("SELECT ACTIVE_PICKING_ID FROM IMAGE_ASSETS WHERE IMAGE_ASSET_ID=?", (image_id,)).fetchone()
+        if active is not None and active[0] == picking_id:
+            _replace_active_picks(conn, image_id, picking_id, job_id)
+    return image_id
+
+
 def activate_job_results(conn, job_id):
     ids = [r["PICKING_ID"] for r in conn.execute("SELECT PICKING_ID FROM PARTICLE_PICKING_LIST WHERE PICKING_JOB_ID=? ORDER BY PICKING_ID", (job_id,))]
     failed = []

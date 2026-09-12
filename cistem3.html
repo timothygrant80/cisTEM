@@ -531,6 +531,11 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .pick-frame .ra-figure-status{position:absolute;left:0;right:0;top:40%;text-align:center;}
 .pick-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .pick-overlay circle{fill:none;stroke:#3CC24A;stroke-width:6;vector-effect:non-scaling-stroke;stroke-width:1.5px;}
+.pick-overlay rect.sel{fill:rgba(47,95,166,.15);stroke:#2F5FA6;vector-effect:non-scaling-stroke;stroke-width:1.5px;stroke-dasharray:5 3;}
+.pick-frame.editable img{cursor:crosshair;}
+.pick-frame.editable{touch-action:none;user-select:none;}
+.pick-edit-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+.pick-edit-note{font-size:14px;color:var(--text-secondary);margin-bottom:10px;line-height:1.4;}
 .pick-side .ra-radio{margin-bottom:6px;}
 .pick-side-head{font-size:13.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;}
 .pick-side-head + .pick-side-head,.pick-side .pick-lowpass + .pick-side-head{margin-top:16px;}
@@ -3744,8 +3749,10 @@ From branch : <span id="versionBranch">—</span></p>
       fillGroupPicker(); groupRow.hidden = false;
       rightLabel.textContent = cfg.titleWord + " — " + (e.name || e.rowId) + (shown.job_number ? " · Job " + shown.job_number : "") + (shown.is_active ? " (active)" : " (not active)");
       var id = shown[cfg.idKey];
+      // A view with unsaved edits (the picks) writes them first, as cisTEM does on moving to another result.
+      var pending = view.flush ? view.flush() : Promise.resolve();
       view.loading();
-      apiFetch(projectApiUrl(cfg.itemPath(id))).then(function(r){
+      pending.then(function(){ return apiFetch(projectApiUrl(cfg.itemPath(id))); }).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       }).then(function(full){
@@ -4072,9 +4079,11 @@ From branch : <span id="versionBranch">—</span></p>
   // "Circles around particles" toggle), and the count, image id, iciness and
   // defocus the display panel prints. Coordinates are Angstroms from the
   // image origin, y up, as find_particles reports them.
-  function buildPicksResultView(box){
+  // opts.readOnly: the Actions preview shows picks but does not edit them (cisTEM's preview panel is read-only too).
+  function buildPicksResultView(box, opts){
+    var editable = !(opts && opts.readOnly);
     var wrap = document.createElement("div"); wrap.className = "pick-result"; box.appendChild(wrap);
-    var frame = document.createElement("div"); frame.className = "pick-frame"; wrap.appendChild(frame);
+    var frame = document.createElement("div"); frame.className = "pick-frame" + (editable ? " editable" : ""); wrap.appendChild(frame);
     var img = document.createElement("img"); img.alt = "Micrograph with picked particles"; img.hidden = true; frame.appendChild(img);
     var status = document.createElement("span"); status.className = "ra-figure-status"; status.textContent = "Loading\u2026"; frame.appendChild(status);
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "pick-overlay"); frame.appendChild(svg);
@@ -4099,6 +4108,21 @@ From branch : <span id="versionBranch">—</span></p>
     var lpRes = document.createElement("input"); lpRes.type = "number"; lpRes.min = "1"; lpRes.step = "1"; lpRes.value = "40"; lpRes.disabled = true; lpRes.title = "Resolution of the low-pass filter, in Angstroms.";
     var lpUnit = document.createElement("span"); lpUnit.className = "pick-lowpass-unit"; lpUnit.textContent = "\u00c5";
     lpRow.appendChild(lpToggle); lpRow.appendChild(lpRes); lpRow.appendChild(lpUnit);
+    // cisTEM's PickingBitmapPanel editing: a click adds a pick, a click on a
+    // circle removes it, Shift-drag erases along the way, Ctrl-drag removes
+    // every pick in a rectangle; Undo / Redo walk the history. Edits are
+    // saved when the shown result changes (as cisTEM does) or with Save.
+    var undoBtn, redoBtn, saveBtn, editNote;
+    if (editable){
+      sideHead("Edit picks");
+      var editRow = document.createElement("div"); editRow.className = "pick-edit-row"; side.appendChild(editRow);
+      undoBtn = document.createElement("button"); undoBtn.className = "small"; undoBtn.textContent = "Undo"; undoBtn.disabled = true;
+      redoBtn = document.createElement("button"); redoBtn.className = "small"; redoBtn.textContent = "Redo"; redoBtn.disabled = true;
+      saveBtn = document.createElement("button"); saveBtn.className = "small primary"; saveBtn.textContent = "Save"; saveBtn.disabled = true; saveBtn.title = "Write the edited picks to the project now (they are also saved when you move to another result).";
+      editRow.appendChild(undoBtn); editRow.appendChild(redoBtn); editRow.appendChild(saveBtn);
+      editNote = document.createElement("div"); editNote.className = "pick-edit-note"; side.appendChild(editNote);
+      editNote.textContent = "Click to add a pick, click a circle to remove it. Shift-drag erases; Ctrl-drag removes a rectangle.";
+    }
     sideHead("Pick info");
     var numbers = document.createElement("div"); numbers.className = "ctf-numbers pick-numbers"; side.appendChild(numbers);
     var rows = [
@@ -4136,6 +4160,95 @@ From branch : <span id="versionBranch">—</span></p>
       });
     }
     cb.addEventListener("change", drawCircles);
+    // ---- editing ----
+    var edit = {history: [], idx: -1, dirty: false, drag: null, rect: null};
+    function setEditButtons(){
+      if (!editable) return;
+      undoBtn.disabled = edit.idx <= 0; redoBtn.disabled = edit.idx >= edit.history.length - 1; saveBtn.disabled = !edit.dirty;
+      editNote.textContent = edit.dirty ? "Edited \u2014 unsaved. Saved when you move to another result, or with Save." :
+        "Click to add a pick, click a circle to remove it. Shift-drag erases; Ctrl-drag removes a rectangle.";
+    }
+    function resetHistory(){
+      edit.history = current && current.positions ? [current.positions.slice()] : []; edit.idx = edit.history.length - 1; edit.dirty = false; setEditButtons();
+    }
+    function commit(){
+      // a new step in the history, forgetting any redo branch (cisTEM's SetCurrentAsLastStepInHistory)
+      edit.history = edit.history.slice(0, edit.idx + 1); edit.history.push(current.positions.slice()); edit.idx = edit.history.length - 1;
+      edit.dirty = true; cells[0].textContent = String(current.positions.length); setEditButtons(); drawCircles();
+    }
+    function restore(step){
+      edit.idx = step; current.positions = edit.history[step].slice(); edit.dirty = true;
+      cells[0].textContent = String(current.positions.length); setEditButtons(); drawCircles();
+    }
+    // Client coordinates to Angstroms from the image origin, y up (PixelToAngstromX/Y).
+    function toAngstrom(ev){
+      var r = img.getBoundingClientRect(), X = current.x_size, Y = current.y_size, px = current.pixel_size || 1;
+      return {x: (ev.clientX - r.left) / r.width * X * px, y: (r.bottom - ev.clientY) / r.height * Y * px, inside: ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom};
+    }
+    function removeNear(pt){
+      var rad = current.maximum_radius || 0, before = current.positions.length;
+      current.positions = current.positions.filter(function(p){ var dx = p.x - pt.x, dy = p.y - pt.y; return dx * dx + dy * dy > rad * rad; });
+      return before - current.positions.length;
+    }
+    function removeWithin(a, b){
+      var x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y), before = current.positions.length;
+      current.positions = current.positions.filter(function(p){ return !(p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1); });
+      return before - current.positions.length;
+    }
+    function drawRect(a, b){
+      if (edit.rect) svg.removeChild(edit.rect);
+      edit.rect = null;
+      if (!a || !b) return;
+      var px = current.pixel_size || 1, Y = current.y_size;
+      var r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("class", "sel");
+      r.setAttribute("x", (Math.min(a.x, b.x) / px).toFixed(1)); r.setAttribute("y", (Y - Math.max(a.y, b.y) / px).toFixed(1));
+      r.setAttribute("width", (Math.abs(a.x - b.x) / px).toFixed(1)); r.setAttribute("height", (Math.abs(a.y - b.y) / px).toFixed(1));
+      svg.appendChild(r); edit.rect = r;
+    }
+    if (editable){
+      frame.addEventListener("pointerdown", function(ev){
+        if (ev.button !== 0 || !current || !current.x_size || img.hidden) return;
+        var pt = toAngstrom(ev); if (!pt.inside) return;
+        ev.preventDefault(); frame.setPointerCapture(ev.pointerId);
+        edit.drag = {mode: ev.ctrlKey || ev.metaKey ? "rect" : ev.shiftKey ? "erase" : "click", start: pt, moved: false, removed: 0};
+        if (edit.drag.mode === "erase") edit.drag.removed += removeNear(pt), drawCircles();
+      });
+      frame.addEventListener("pointermove", function(ev){
+        if (!edit.drag) return;
+        var pt = toAngstrom(ev); edit.drag.moved = true;
+        if (edit.drag.mode === "rect") drawRect(edit.drag.start, pt);
+        else if (edit.drag.mode === "erase" && pt.inside){ if (removeNear(pt)){ edit.drag.removed++; drawCircles(); } }
+      });
+      function finishDrag(ev){
+        var d = edit.drag; if (!d) return; edit.drag = null;
+        var pt = toAngstrom(ev);
+        if (d.mode === "rect"){ drawRect(null, null); if (removeWithin(d.start, pt)) commit(); }
+        else if (d.mode === "erase"){ if (d.removed) commit(); }
+        else if (pt.inside){
+          // a click: take out what it lands on, else add a pick there (peak height 0, as cisTEM's hand picks)
+          if (!removeNear(pt)) current.positions.push({x: pt.x, y: pt.y, peak_height: 0});
+          commit();
+        }
+      }
+      frame.addEventListener("pointerup", finishDrag);
+      frame.addEventListener("pointercancel", function(){ edit.drag = null; drawRect(null, null); });
+      undoBtn.addEventListener("click", function(){ if (edit.idx > 0) restore(edit.idx - 1); });
+      redoBtn.addEventListener("click", function(){ if (edit.idx < edit.history.length - 1) restore(edit.idx + 1); });
+      saveBtn.addEventListener("click", function(){ flush(); });
+    }
+    // Write the edits back (PUT /picks/:id/positions); the view keeps showing the same picking.
+    function flush(){
+      if (!editable || !edit.dirty || !current || !state.projectId) return Promise.resolve();
+      var pick = current, positions = pick.positions.map(function(p){ return {x: p.x, y: p.y, peak_height: p.peak_height || 0}; });
+      edit.dirty = false; setEditButtons();
+      return apiFetch(projectApiUrl("/picks/" + pick.picking_id + "/positions"), {method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify({positions: positions})})
+        .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
+        .then(function(d){
+          if (current === pick){ pick.manual_edit = d.manual_edit; pick.pick_count = d.pick_count; if (editNote) editNote.textContent = "Saved " + d.pick_count + " picks."; }
+          loadPositionGroups(); loadPositions();
+        })
+        .catch(function(err){ if (current === pick){ edit.dirty = true; setEditButtons(); editNote.textContent = "Could not save the picks: " + err.message; } else alert("Could not save the edited picks: " + err.message); });
+    }
     var picture = null;   // {path, exists, urls} of the picture shown, so the filter can re-fetch it
     function filterQuery(){
       var parts = [], r = Number(lpRes.value);
@@ -4153,8 +4266,10 @@ From branch : <span id="versionBranch">—</span></p>
     return {
       loading: function(){ img.hidden = true; status.hidden = false; status.textContent = "Loading\u2026"; while (svg.firstChild) svg.removeChild(svg.firstChild); },
       error: function(msg){ status.textContent = "Could not load these picks: " + msg; },
+      flush: flush,
       update: function(c, urls, picturePath, filePath){
-        current = c;
+        current = c; if (current.positions) current.positions = current.positions.slice();
+        drawRect(null, null); edit.drag = null; resetHistory();
         rows.forEach(function(pair, i){ cells[i].textContent = pair[1](c); });
         picture = {path: picturePath || ("/images/" + c.image_asset_id + "/preview.png"), exists: c.image_file_exists !== false, urls: urls};
         reloadPicture();
@@ -8914,7 +9029,7 @@ From branch : <span id="versionBranch">—</span></p>
       .then(function(res){
         if (!res.ok) throw new Error((res.data && res.data.error) || "preview failed");
         var result = res.data;
-        if (!pv.view){ els.previewView.innerHTML = ""; pv.view = buildPicksResultView(els.previewView); }
+        if (!pv.view){ els.previewView.innerHTML = ""; pv.view = buildPicksResultView(els.previewView, {readOnly: true}); }
         previewReleaseUrls();
         pv.view.loading();
         pv.view.update(result, pv.urls, "/images/" + result.image_asset_id + "/preview.png");

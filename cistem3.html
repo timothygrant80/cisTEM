@@ -577,7 +577,13 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .c2d-list tr.selected:hover td{background:var(--accent);}
 .c2d-pkg-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:15.5px;}
 .c2d-list.c2d-list-short{flex:0 0 auto;max-height:150px;}
-.c2d-sel-head{font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 4px;display:flex;justify-content:space-between;align-items:baseline;}
+/* The left column of the 2D page: the Classifications box takes the height, the Selections box below it its own. */
+.ra-left-stack{display:flex;flex-direction:column;gap:16px;min-height:0;min-width:0;}
+.ra-left-stack > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;margin-bottom:0;}
+.ra-left-stack > .groupbox:first-child{flex:1 1 auto;}
+.ra-left-stack > .ra-left-selections{flex:0 0 auto;}
+.c2d-sel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.c2d-sel-head .groupbox-label{margin-bottom:12px;}
 .c2d-sel-hint{font-size:14.5px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0;}
 .c2d-overlay rect.c2d-picked{fill:rgba(47,95,166,.28);stroke:var(--accent);stroke-width:3;}
 .c2d-overlay text{font:700 19px var(--font-mono);fill:#fff;paint-order:stroke;stroke:var(--accent);stroke-width:3px;}
@@ -4243,8 +4249,11 @@ From branch : <span id="versionBranch">—</span></p>
     var page = {items: [], packages: [], packageId: null, selectedId: null, current: null, selectedClass: null, showDetails: false, urls: [], selections: [], selectionId: null};
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
     var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
-    var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
+    // Two boxes down the left, as cisTEM's ClassificationsListPanel and its
+    // selection manager are separate panels: the classifications, then the selections.
+    var left = document.createElement("div"); left.className = "ra-left-stack"; layout.appendChild(left);
     left.innerHTML =
+      '<div class="groupbox ra-left">' +
       '<span class="groupbox-label">Classifications</span>' +
       '<div class="c2d-pkg-row"><label>Refinement Package</label><select data-role="package"></select></div>' +
       '<div class="c2d-list"><table><thead><tr><th>Classification</th><th>Classes</th><th>Res.</th><th>Used</th><th>Job</th></tr></thead><tbody></tbody></table></div>' +
@@ -4252,7 +4261,9 @@ From branch : <span id="versionBranch">—</span></p>
         '<button class="small ra-toggle" data-role="details" aria-pressed="false">Show Job Details</button>' +
         '<button class="small danger" data-role="delete" disabled title="Remove this classification, its per-particle results and its class averages file. A classification that later ones started from stays referenced by them.">Delete</button>' +
       '</div>' +
-      '<div class="c2d-sel-head"><span>Selections</span><span class="c2d-sel-hint" data-role="selhint"></span></div>' +
+      '</div>' +
+      '<div class="groupbox ra-left ra-left-selections">' +
+      '<div class="c2d-sel-head"><span class="groupbox-label">Selections</span><span class="c2d-sel-hint" data-role="selhint"></span></div>' +
       '<div class="c2d-list c2d-list-short"><table><thead><tr><th>Selection</th><th>Classes</th><th>Particles</th></tr></thead><tbody data-role="selbody"></tbody></table></div>' +
       '<div class="asset-toolbar">' +
         '<button class="small" data-role="selnew" disabled title="A new, empty selection on the shown classification. Click class averages to add them to it.">New</button>' +
@@ -4261,6 +4272,7 @@ From branch : <span id="versionBranch">—</span></p>
         '<button class="small" data-role="selclear" disabled title="Empty the selection.">Clear</button>' +
         '<button class="small" data-role="selinvert" disabled title="Select every class that isn\u2019t selected, and vice versa.">Invert</button>' +
         '<button class="small primary" data-role="selpackage" disabled title="Cut the members of the selected classes into a new refinement package (cisTEM\u2019s New Refinement Package wizard, class-average path).">New Package\u2026</button>' +
+      '</div>' +
       '</div>';
     var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
     var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Class Averages"; right.appendChild(rightLabel);

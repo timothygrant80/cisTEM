@@ -298,6 +298,34 @@ class OrthogonalViewsPngTests(unittest.TestCase):
         self.assertLess(meta2["scale"], 1.0)
 
 
+class ReconstructionStarTests(unittest.TestCase):
+    def rows(self):
+        # three refined (active) with 20 A scores, three left inactive with stale 8 A scores
+        return [{"position_in_stack": i + 1, "image_is_active": 1 if i < 3 else -1, "score": [12.0, 15.5, 9.0, 31.0, 33.5, 30.2][i], "sigma": 3.0} for i in range(6)]
+
+    def test_inactive_rows_score_below_every_refined_one(self):
+        import random
+        out = ab.reconstruction_rows(self.rows(), False, 4.17, random.Random(0))
+        active = [r for r in out if r["image_is_active"] >= 0]
+        inactive = [r for r in out if r["image_is_active"] < 0]
+        self.assertEqual([r["score"] for r in active], [12.0, 15.5, 9.0])
+        self.assertTrue(all(r["score"] == 8.0 for r in inactive))
+        self.assertTrue(all(r["sigma"] == 1.0 for r in out))
+        # the top fifth of the refined is asked for as the percent used itself
+        self.assertAlmostEqual(ab.reconstruction_score_threshold(4.17), 0.0417)
+        self.assertEqual(ab.reconstruction_score_threshold(25.0), 1.0)
+        self.assertEqual(ab.reconstruction_score_threshold(4.17, initial=True), 0.2)
+
+    def test_initial_reconstruction_keeps_cistem_draw(self):
+        import random
+        rows = [{"position_in_stack": i + 1, "image_is_active": 1, "score": 0.0, "sigma": 1.0} for i in range(2000)]
+        out = ab.reconstruction_rows(rows, True, 10.0, random.Random(1))
+        active = sum(1 for r in out if r["image_is_active"] > 0)
+        self.assertTrue(150 < active < 250)          # about 10% drawn
+        self.assertTrue(all(r["sigma"] == 10.0 for r in out))
+        self.assertTrue(all(r["score"] == 0.0 for r in out))   # no floor applied to the initial star
+
+
 if __name__ == "__main__":
     unittest.main()
 

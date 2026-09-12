@@ -688,6 +688,58 @@ def _output_number(state):
     return state["rounds"] * state["start"] + state["round"]
 
 
+RECON_PERCENT_MULTIPLIER = 5.0   # SetupRefinementJob() refines this many times the percent used; the reconstruction keeps a fifth of them
+
+
+def reconstruction_rows(rows, initial, current_percent_used, rng):
+    """The rows reconstruct3d reads for one class. The initial reconstruction
+    draws its particles at random and writes sigma 10 (WritecisTEMStarFiles'
+    percent_used_override / sigma_override); a refinement round hands over
+    refine3d's output with sigma 1 -- and gives every particle refine3d left
+    inactive a score one below the lowest refined score. reconstruct3d's
+    percentage threshold ranks *all* rows by score, and an inactive row
+    keeps the score of whichever earlier round last refined it; at a new
+    start those are 8 A scores against this round's 20 A ones, and in the
+    run that showed this up they crowded out the refined particles until
+    the map was built from nine of them, then none. Pushed below the refined
+    minimum they still count in the denominator but never win a place, so
+    the threshold ranks only this round's refined particles, as the comment
+    beside cisTEM's 0.2 says it means to. (reconstruct3d skips inactive
+    rows regardless, so their score is never used for anything else.)"""
+    out = []
+    for r in rows:
+        r = dict(r)
+        if initial:
+            r["image_is_active"] = -1 if rng.uniform(-1.0, 1.0) < 1.0 - 2.0 * current_percent_used / 100.0 else 1
+            r["sigma"] = 10.0
+        else:
+            r["sigma"] = 1.0
+        out.append(r)
+    if not initial:
+        refined = [float(r.get("score") or 0.0) for r in out if float(r.get("image_is_active") or 0) >= 0]
+        floor = (min(refined) if refined else 0.0) - 1.0
+        for r in out:
+            if float(r.get("image_is_active") or 0) < 0:
+                r["score"] = floor
+    return out
+
+
+def reconstruction_score_threshold(current_percent_used, initial=False):
+    """reconstruct3d's `score_threshold` (< 1 is a fraction of the rows, by
+    score). cisTEM's SetupReconstructionJob() passes 0.2 while the
+    refinement refines fewer than all particles (RECON_PERCENT_MULTIPLIER x
+    the percent used) and 1.0 once it refines them all. With the inactive
+    rows ranked below the refined ones (reconstruction_rows), the fraction
+    that keeps the top fifth of the refined particles -- what the 0.2 was
+    for -- is the percent used itself; the initial reconstruction keeps
+    cisTEM's literal values (all its scores are zero anyway)."""
+    if current_percent_used * RECON_PERCENT_MULTIPLIER >= 100.0:
+        return 1.0
+    if initial:
+        return 0.2
+    return max(current_percent_used / 100.0, 1e-4)
+
+
 def _launch_reconstruction(conn, project_id, job_id, state):
     """SetupReconstructionJob() + RunReconstructionJob()."""
     s = state["settings"]
@@ -697,22 +749,12 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     class_rows = _load_rows(state, "input" if initial else "output")
     written = []
     for k, rows in enumerate(class_rows):
-        out = []
-        for r in rows:
-            r = dict(r)
-            if initial:
-                # WritecisTEMStarFiles(percent_used_override, sigma_override=10)
-                r["image_is_active"] = -1 if rng.uniform(-1.0, 1.0) < 1.0 - 2.0 * state["current_percent_used"] / 100.0 else 1
-                r["sigma"] = 10.0
-            else:
-                r["sigma"] = 1.0
-            out.append(r)
+        out = reconstruction_rows(rows, initial, state["current_percent_used"], rng)
         p = str(Path(state["scratch"]) / "recon_input_{}_class{}.star".format(_output_number(state), k + 1))
         starfile.write_star(p, out)
         written.append(p)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
-    percent_multiplier = 5.0
-    score_threshold = 0.2 if state["current_percent_used"] * percent_multiplier < 100.0 else 1.0
+    score_threshold = reconstruction_score_threshold(state["current_percent_used"], initial)
     symmetry = s["symmetry"] if state["apply_symmetry"] else "C1"
     scratch = Path(state["scratch"])
     tasks = []
@@ -1060,6 +1102,11 @@ def _cycle(conn, project_id, parent_id, state):
         state.update({"current_high_res": sched["high_res"], "next_high_res": sched["next_high_res"], "current_percent_used": sched["percent_used"]})
         at_three_quarters = state["round"] == int(math.floor(state["rounds"] * 0.75 + 0.5))
         if at_three_quarters and s["symmetry"] != "C1" and not s["always_apply_symmetry"] and state["start"] == 0:
+            # align_symmetry runs here for minutes: record that the merge is consumed and
+            # the alignment is what is running, so a server restart resumes at the
+            # alignment instead of finishing the round a second time.
+            state["phase"] = "align_symmetry"; state["child_job_id"] = None
+            _save(conn, parent_id, state)
             _align_symmetry(project_id, parent_id, state)
         _mask_then_refine(conn, project_id, parent_id, state)
         return
@@ -1197,6 +1244,23 @@ def cancel(conn, project_id, parent_id):
     return False
 
 
+def _resume_alignment(project_id, parent_id):
+    with _lock:
+        conn = db.get_conn(project_id)
+        try:
+            state = _load_state(conn, parent_id)
+            parent = _parent_row(conn, parent_id)
+            if not state or parent is None or state.get("phase") != "align_symmetry" or parent["STATUS"] not in ("queued", "running"):
+                return
+            try:
+                _align_symmetry(project_id, parent_id, state)
+                _mask_then_refine(conn, project_id, parent_id, state)
+            except Exception as exc:  # noqa: BLE001
+                _finish(conn, project_id, parent_id, state, "failed", "could not continue after the restart: {}".format(exc))
+        finally:
+            conn.close()
+
+
 def resume(project_id, parent_row):
     conn = db.get_conn(project_id)
     try:
@@ -1205,6 +1269,13 @@ def resume(project_id, parent_row):
             with conn:
                 conn.execute("UPDATE JOBS SET STATUS='failed', ERROR='Server restarted before this run recorded its plan', FINISHED_AT=? WHERE JOB_ID=?",
                              (now_iso(), parent_row["JOB_ID"]))
+            return
+        if state.get("phase") == "align_symmetry":
+            # Died while align_symmetry ran (its round is already recorded): run it again and carry on.
+            _log(project_id, parent_row["JOB_ID"], "server restarted during the symmetry alignment (start {}, round {}); running it again".format(
+                state["start"] + 1, state["round"]))
+            threading.Thread(target=_resume_alignment, args=(project_id, parent_row["JOB_ID"]), daemon=True,
+                             name="abinitio-" + parent_row["JOB_ID"]).start()
             return
         child_id = state.get("child_job_id")
         child = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (child_id,)).fetchone() if child_id else None

@@ -4209,6 +4209,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (editable){
       frame.addEventListener("pointerdown", function(ev){
         if (ev.button !== 0 || !current || !current.x_size || img.hidden) return;
+        if (ev.target.closest && ev.target.closest(".fig-expand")) return;   // the expand icon opens the Display window, it is not a pick
         var pt = toAngstrom(ev); if (!pt.inside) return;
         ev.preventDefault(); frame.setPointerCapture(ev.pointerId);
         edit.drag = {mode: ev.ctrlKey || ev.metaKey ? "rect" : ev.shiftKey ? "erase" : "click", start: pt, moved: false, removed: 0};

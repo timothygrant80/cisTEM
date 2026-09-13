@@ -34,6 +34,7 @@ import glob as glob_module
 import json
 import math
 import os
+import tempfile
 import shlex
 import shutil
 import struct
@@ -48,6 +49,7 @@ from flask import Flask, abort, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 import abinitio
+import starfile
 import auth
 import classification
 import db
@@ -2668,6 +2670,67 @@ def get_refinement(project_id, refinement_id):
     if d is None:
         return jsonify({"error": "no such refinement"}), 404
     return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/refinements/<int:refinement_id>/parameters", methods=["GET"])
+@auth.project_access_required
+def get_refinement_parameters(project_id, refinement_id):
+    """RefinementParametersDialog's table: one class's per-particle parameters
+    (`?class=`, 1-based, default 1) as `{class_number, columns, rows}` with
+    `rows` a list of lists in `columns`' order (refinements.RESULT_KEYS)."""
+    class_number = request.args.get("class", default=1, type=int)
+    conn = db.get_conn(project_id)
+    try:
+        if conn.execute("SELECT 1 FROM REFINEMENT_LIST WHERE REFINEMENT_ID=?", (refinement_id,)).fetchone() is None:
+            return jsonify({"error": "no such refinement"}), 404
+        try:
+            rows = refinements.load_rows(conn, refinement_id, class_number)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 404
+    finally:
+        conn.close()
+    keys = list(refinements.RESULT_KEYS)
+    return jsonify({"refinement_id": refinement_id, "class_number": class_number, "columns": keys, "rows": [[r[k] for k in keys] for r in rows]})
+
+
+@app.route("/api/projects/<project_id>/refinements/<int:refinement_id>/parameters.<fmt>", methods=["GET"])
+@auth.project_access_required
+def download_refinement_parameters(project_id, refinement_id, fmt):
+    """The dialog's Save: one class's parameters as a Frealign par file
+    (`.par`, Refinement::WriteSingleClassFrealignParameterFile(), what cisTEM
+    saves) or a cisTEM star file (`.star`), named after the refinement."""
+    if fmt not in ("par", "star"):
+        return jsonify({"error": "format must be par or star"}), 404
+    class_number = request.args.get("class", default=1, type=int)
+    conn = db.get_conn(project_id)
+    try:
+        ref = conn.execute("SELECT NAME FROM REFINEMENT_LIST WHERE REFINEMENT_ID=?", (refinement_id,)).fetchone()
+        if ref is None:
+            return jsonify({"error": "no such refinement"}), 404
+        try:
+            rows = refinements.load_rows(conn, refinement_id, class_number)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 404
+    finally:
+        conn.close()
+    tmp = tempfile.NamedTemporaryFile(suffix="." + fmt, delete=False)
+    tmp.close()
+    try:
+        if fmt == "par":
+            package_io.write_frealign_par(tmp.name, rows)
+        else:
+            starfile.write_star(tmp.name, rows, keys=refinements.RESULT_KEYS)
+        with open(tmp.name, "rb") as fh:
+            data = fh.read()
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in (ref["NAME"] or "refinement")).strip("_") or "refinement"
+    response = app.response_class(data, mimetype="text/plain")
+    response.headers["Content-Disposition"] = 'attachment; filename="{}_class{}.{}"'.format(safe, class_number, fmt)
+    return response
 
 
 @app.route("/api/projects/<project_id>/refine3d/defaults", methods=["GET"])

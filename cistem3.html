@@ -566,6 +566,18 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .modal.plot-modal .modal-body{display:flex;align-items:center;justify-content:center;min-height:0;flex:1 1 auto;}
 .plot-modal-svg{width:100%;height:100%;max-height:100%;aspect-ratio:auto;border:none;}
 .modal.plot-modal{display:flex;flex-direction:column;}
+/* The parameters dialog: a wide, tall table with the class buttons in the head and Save in a foot row. */
+.modal.params-modal{width:min(1800px,96vw);height:94%;max-height:94%;display:flex;flex-direction:column;}
+.modal.params-modal .modal-body{display:flex;flex-direction:column;min-height:0;flex:1 1 auto;gap:10px;}
+.params-scroll{flex:1 1 auto;min-height:0;overflow:auto;border:1px solid var(--border);border-radius:4px;margin:0;}
+.params-table{min-width:100%;}
+.params-table th{position:sticky;top:0;z-index:1;white-space:nowrap;}
+.params-table td{font-family:var(--font-mono);font-size:14px;padding:4px 10px;white-space:nowrap;}
+.params-table tbody tr.alt td{background:#FAFBFC;}
+.params-classes{display:flex;gap:4px;margin-left:auto;margin-right:14px;}
+.params-classes button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent);}
+.params-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:none;}
+.params-status{flex:1 1 auto;color:var(--text-secondary);font-size:14.5px;}
 .field-static{margin:0;font-size:15.5px;}
 .ref-list{font-size:15.5px;}
 .job-actions{white-space:nowrap;} .job-actions .small + .small{margin-left:6px;}
@@ -1778,6 +1790,36 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
 </div>
 
+<div class="scrim" id="paramsScrim"></div>
+<!-- cisTEM's RefinementParametersDialog: one class's per-particle parameters
+     in a table, a class per button, Save writing them as a par file. -->
+<div class="modal params-modal" id="paramsModal">
+  <div class="modal-head">
+    <div class="modal-title" id="paramsTitle">Parameters</div>
+    <div class="params-classes" id="paramsClasses"></div>
+    <button class="log-close" id="paramsClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="table-scroll params-scroll">
+      <table class="queue params-table">
+        <thead><tr>
+          <th class="num">Position In Stack</th><th class="num">Psi Angle (°)</th><th class="num">Theta Angle (°)</th><th class="num">Phi Angle (°)</th>
+          <th class="num">X-Shift (Å)</th><th class="num">Y-Shift (Å)</th><th class="num">Defocus 1 (Å)</th><th class="num">Defocus 2 (Å)</th>
+          <th class="num">Defocus Angle (°)</th><th class="num">Phase Shift (°)</th><th class="num">Beam Tilt X (mrad)</th><th class="num">Beam Tilt Y (mrad)</th>
+          <th class="num">Image Shift X (Å)</th><th class="num">Image Shift Y (Å)</th><th class="num">Voltage (kV)</th><th class="num">Cs (mm)</th>
+          <th class="num">Amplitude Contrast</th><th class="num">Pixel Size (Å)</th><th class="num">Occupancy</th><th class="num">logP</th>
+          <th class="num">Sigma</th><th class="num">Score</th><th>Image Active?</th>
+        </tr></thead>
+        <tbody id="paramsBody"></tbody>
+      </table>
+    </div>
+    <div class="params-foot">
+      <span class="params-status" id="paramsStatus"></span>
+      <button class="small" id="paramsSaveStar" title="Save this class’s parameters as a cisTEM star file">Save as star</button>
+      <button class="small primary" id="paramsSave" title="Save this class’s parameters as a Frealign par file (what cisTEM’s dialog writes)">Save</button>
+    </div>
+  </div>
+</div>
 <div class="scrim" id="plotScrim"></div>
 <div class="modal plot-modal" id="plotModal">
   <div class="modal-head">
@@ -2808,7 +2850,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
    "browseTitle","browseNote",
-   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost","plotScrim","plotModal","plotModalClose","plotModalTitle","plotModalSvg",
+   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost","plotScrim","plotModal","plotModalClose","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
@@ -4914,6 +4956,63 @@ From branch : <span id="versionBranch">—</span></p>
     draw(els.plotModalSvg);
   }
   function closePlotModal(){ els.plotModal.classList.remove("open"); els.plotScrim.classList.remove("open"); }
+  // cisTEM's RefinementParametersDialog (MyRefinementResultsPanel::PopupParametersClick):
+  // the shown refinement's per-particle parameters for one class at a time, the
+  // classes as buttons (the left / right keys step through them), Save writing
+  // the class as a Frealign par file as cisTEM does, or as a cisTEM star file.
+  var params = {refinement: null, classIndex: 0, rows: []};
+  function fmtCell(v, digits){ return v == null ? "\u2014" : Number(v).toFixed(digits); }
+  var paramsVirtual = makeVirtualBody(els.paramsBody, 23, function(r, i){
+    var deg = function(v){ return fmtCell(v, 2); };
+    return "<tr" + (i % 2 ? " class='alt'" : "") + "><td class='num'>" + r[0] + "</td>" +
+      ["<td class='num'>" + deg(r[1]), deg(r[2]), deg(r[3]), fmtCell(r[4], 2), fmtCell(r[5], 2), fmtCell(r[6], 1), fmtCell(r[7], 1), deg(r[8]), deg(r[9]),
+       fmtCell(r[19] * 1000, 2), fmtCell(r[20] * 1000, 2), fmtCell(r[21], 2), fmtCell(r[22], 2), fmtCell(r[16], 1), fmtCell(r[17], 2), fmtCell(r[18], 3), fmtCell(r[15], 4),
+       fmtCell(r[10], 2), fmtCell(r[11], 0), fmtCell(r[12], 4), fmtCell(r[13], 2)].join("</td><td class='num'>") + "</td>" +
+      "<td>" + (Number(r[14]) >= 0 ? "Yes" : "No") + "</td></tr>";
+  });
+  function openParamsDialog(refinement, classIndex){
+    params.refinement = refinement; params.classIndex = classIndex || 0;
+    els.paramsModal.classList.add("open"); els.paramsScrim.classList.add("open");
+    els.paramsClasses.innerHTML = "";
+    if (refinement.classes.length > 1){
+      refinement.classes.forEach(function(c, i){
+        var b = document.createElement("button"); b.className = "small"; b.textContent = String(c.class_number); b.title = "Class " + c.class_number;
+        b.addEventListener("click", function(){ loadParams(i); }); els.paramsClasses.appendChild(b);
+      });
+    }
+    loadParams(params.classIndex);
+  }
+  function loadParams(classIndex){
+    params.classIndex = classIndex;
+    var ref = params.refinement, cls = ref.classes[classIndex] || ref.classes[0];
+    Array.from(els.paramsClasses.children).forEach(function(b, i){ b.setAttribute("aria-pressed", String(i === classIndex)); });
+    els.paramsTitle.textContent = "Parameters \u2014 " + ref.name + (ref.classes.length > 1 ? " \u00b7 class #" + cls.class_number : "");
+    els.paramsStatus.textContent = "Loading\u2026"; paramsVirtual.clear("");
+    els.paramsSave.disabled = els.paramsSaveStar.disabled = true;
+    apiFetch(projectApiUrl("/refinements/" + ref.refinement_id + "/parameters?class=" + cls.class_number)).then(function(r){
+      if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(d){
+      if (params.refinement !== ref || params.classIndex !== classIndex) return;
+      params.rows = d.rows || [];
+      paramsVirtual.setItems(params.rows);
+      var active = params.rows.filter(function(r){ return Number(r[14]) >= 0; }).length;
+      els.paramsStatus.textContent = params.rows.length + " particle" + (params.rows.length === 1 ? "" : "s") + ", " + active + " active";
+      els.paramsSave.disabled = els.paramsSaveStar.disabled = !params.rows.length;
+    }).catch(function(err){ els.paramsStatus.textContent = "Could not load the parameters: " + err.message; });
+  }
+  function closeParamsDialog(){ els.paramsModal.classList.remove("open"); els.paramsScrim.classList.remove("open"); }
+  els.paramsClose.addEventListener("click", closeParamsDialog);
+  els.paramsScrim.addEventListener("click", closeParamsDialog);
+  els.paramsSave.addEventListener("click", function(){ var c = params.refinement.classes[params.classIndex]; downloadFile("/refinements/" + params.refinement.refinement_id + "/parameters.par?class=" + c.class_number, "parameters.par", els.paramsSave); });
+  els.paramsSaveStar.addEventListener("click", function(){ var c = params.refinement.classes[params.classIndex]; downloadFile("/refinements/" + params.refinement.refinement_id + "/parameters.star?class=" + c.class_number, "parameters.star", els.paramsSaveStar); });
+  document.addEventListener("keydown", function(e){
+    if (!els.paramsModal.classList.contains("open")) return;
+    if (e.key === "Escape") closeParamsDialog();
+    else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && params.refinement && params.refinement.classes.length > 1){
+      var n = params.refinement.classes.length; loadParams((params.classIndex + (e.key === "ArrowRight" ? 1 : n - 1)) % n);
+    }
+  });
   els.plotModalClose.addEventListener("click", closePlotModal);
   els.plotScrim.addEventListener("click", closePlotModal);
   document.addEventListener("keydown", function(e){ if (e.key === "Escape" && els.plotModal.classList.contains("open")) closePlotModal(); });
@@ -4973,6 +5072,10 @@ From branch : <span id="versionBranch">—</span></p>
     var dlBtn = document.createElement("button"); dlBtn.className = "small primary"; dlBtn.textContent = "Download"; dlBtn.title = "Save the shown reconstruction as an MRC file"; dlBtn.disabled = true; figHead.appendChild(dlBtn);
     var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); figCol.appendChild(fig.root);
     var angular = makeAngularBlock(); pair.appendChild(angular.root);
+    // cisTEM's Parameters button, above the angular distribution: the per-particle parameters dialog.
+    var paramsBtn = document.createElement("button"); paramsBtn.className = "small"; paramsBtn.textContent = "Parameters"; paramsBtn.title = "Show this refinement’s per-particle parameters, and save them as a par file"; paramsBtn.disabled = true;
+    angular.root.querySelector(".ra-plot-head").insertBefore(paramsBtn, angular.root.querySelector(".ra-legend"));
+    paramsBtn.addEventListener("click", function(){ if (page.current) openParamsDialog(page.current, page.classIndex); });
     var dlVolume = null;
     dlBtn.addEventListener("click", function(){ if (dlVolume != null) downloadFile("/volumes/" + dlVolume + "/file.mrc", "volume.mrc", dlBtn); });
     els.resultsPages.appendChild(root);
@@ -5050,6 +5153,7 @@ From branch : <span id="versionBranch">—</span></p>
       drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps);
       angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name + (full.classes.length > 1 ? " \u00b7 class #" + c.class_number : ""));
       dlVolume = c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists ? c.reconstructed_volume_asset_id : null; dlBtn.disabled = dlVolume == null;
+      paramsBtn.disabled = false;
       fig.left.textContent = (c.volume_name || "Reconstruction") + (c.reconstructed_volume_asset_id >= 0 ? " (asset #" + c.reconstructed_volume_asset_id + ")" : "");
       fig.right.textContent = c.estimated_resolution ? "est. " + Number(c.estimated_resolution).toFixed(2) + " Å" : "";
       fig.img.style.maxWidth = "720px"; fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";

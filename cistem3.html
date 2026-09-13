@@ -605,13 +605,9 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .live-orth-stage .c2d-frame.c2d-orth{border:none;background:transparent;}
 .live-orth-stage .c2d-frame img{max-width:100%;height:auto;}
 .live-orth-caption{margin-top:8px;}
-/* Refine 3D / Auto Refine live views: picture left, plots right, plots underneath when the panel is narrow. */
-.live-split{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;}
-.live-split-pic{flex:0 1 800px;min-width:min(100%,520px);max-width:100%;}
-.live-split-plots{flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:12px;}
-.live-split .live-orth-card{margin-top:0;}
-.live-split .live-orth-stage img{max-width:100%;}
-.live-split-plots .ang-frame{max-width:620px;}   /* the disc need not span the whole plots column */
+/* The live pair (Refine 3D / Auto Refine): the reconstruction card and the angular distribution at equal width. */
+.rf-pair .live-orth-card{margin-top:0;}
+.rf-pair .live-orth-stage img{max-width:100%;}
 .c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
 .c2d-list table{width:100%;border-collapse:collapse;font-size:15.5px;}
 .c2d-list th{position:sticky;top:0;background:var(--chrome);font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
@@ -9734,31 +9730,87 @@ From branch : <span id="versionBranch">—</span></p>
       a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
     }).catch(function(err){ alert("Could not download: " + err.message); }).then(function(){ if (btn) btn.disabled = false; });
   }
-  // The 3D refinement live views' arrangement: the reconstruction card on the
-  // left and the plots stacked on the right, the plots wrapping underneath
-  // when the panel is too narrow for both (MyRefine3DPanel puts its
-  // OrthResultsPanel and plots side by side the same way).
-  function liveSplit(body){
-    var root = document.createElement("div"); root.className = "live-split"; root.style.gridColumn = "1 / -1"; body.appendChild(root);
-    var picCol = document.createElement("div"); picCol.className = "live-split-pic"; root.appendChild(picCol);
-    var plots = document.createElement("div"); plots.className = "live-split-plots"; root.appendChild(plots);
-    var card = document.createElement("div"); card.className = "live-orth-card"; picCol.appendChild(card);
+  // The Refine 3D / Auto Refine live view, laid out as the Refine 3D results
+  // page is: the FSC across the top, then the reconstruction on the left and
+  // the angular distribution on the right. Every round the job has written
+  // is a refinement in the project, so the view reads whichever the round
+  // picker names through GET /refinements/:id (the newest by default,
+  // following the run), and Download saves that round's volume asset.
+  function refinementLiveView(body, captionRight){
+    var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
+    var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); box.appendChild(plot.root);
+    var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
+    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps); });
+    var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; box.appendChild(pair);
+    var card = document.createElement("div"); card.className = "live-orth-card"; pair.appendChild(card);
     card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
-      '<div class="live-orth-controls"><button class="small primary" data-role="rdownload" title="Save the shown reconstruction as an MRC file" disabled>Download</button></div></div>' +
+      '<div class="live-orth-controls">' +
+        '<button class="small" data-role="rprev" title="The round before">&larr;</button>' +
+        '<select data-role="rpick" title="Which round\u2019s refinement to show"></select>' +
+        '<button class="small" data-role="rnext" title="The round after">&rarr;</button>' +
+        '<button class="small" data-role="rlatest" title="Follow the newest round as the run goes on">Latest</button>' +
+        '<span class="live-orth-sep"></span>' +
+        '<button class="small primary" data-role="rdownload" title="Save the shown reconstruction as an MRC file" disabled>Download</button>' +
+      '</div></div>' +
       '<div class="live-orth-stage"></div>' +
       '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
-    var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.frame.classList.add("c2d-orth"); card.querySelector(".live-orth-stage").appendChild(fig.frame);
-    var dl = card.querySelector('[data-role="rdownload"]');
-    dl.addEventListener("click", function(){ downloadFile("/jobs/" + live.jobId + "/abinitio/volume.mrc", "reconstruction.mrc", dl); });
-    var angular = makeAngularBlock(); plots.appendChild(angular.root);
-    var out = {root: root, plots: plots, left: card.querySelector('[data-role="capleft"]'), right: card.querySelector('[data-role="capright"]'), fig: fig, angular: angular};
-    out.show = function(path, exists, urls, expandSrc){
+    var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); card.querySelector(".live-orth-stage").appendChild(fig.frame);
+    var angular = makeAngularBlock(); pair.appendChild(angular.root);
+    var rpick = card.querySelector('[data-role="rpick"]'), capLeft = card.querySelector('[data-role="capleft"]'), capRight = card.querySelector('[data-role="capright"]'), dl = card.querySelector('[data-role="rdownload"]');
+    var last = null, chosen = null, cache = {}, shownVolume = null;   // chosen: a refinement id, or null for the newest
+    function rounds(){ return ((last && last.result.history) || []).filter(function(h){ return h.refinement_id != null; }); }
+    function currentRid(){ var rs = rounds(); if (chosen != null && rs.some(function(h){ return h.refinement_id === chosen; })) return chosen; chosen = null; return rs.length ? rs[rs.length - 1].refinement_id : last && last.result.refinement_id; }
+    function render(full, rid){
+      var c = full.classes[0] || {};
+      lastFsc = {stats: c.statistics || [], ps: full.resolution_statistics_pixel_size, title: "Fourier Shell Correlation \u2014 " + full.name};
+      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps);
+      angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name);
+      var est = c.estimated_resolution ? " \u00b7 est. " + Number(c.estimated_resolution).toFixed(2) + " \u00c5" : "";
+      capLeft.textContent = full.name + (chosen != null ? " \u00b7 earlier round" : "") + (full.classes.length > 1 ? " \u00b7 class 1 of " + full.classes.length : "") + est;
       fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
-      loadFigure(fig.img, fig.status, path, exists, "reconstruction", urls);
-      setExpand(fig.expand, expandSrc);
-      dl.disabled = !expandSrc;
+      shownVolume = c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists ? c.reconstructed_volume_asset_id : null;
+      dl.disabled = shownVolume == null;
+      if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "reconstruction", last.urls);
+      else fig.status.textContent = "No reconstruction for this round.";
+      setExpand(fig.expand, c.volume_file_exists ? {path: c.volume_filename, title: full.name, section: "middle", greys: "local"} : null);
+    }
+    function showRound(){
+      if (!last) return;
+      var rs = rounds(), rid = currentRid();
+      rpick.value = chosen != null ? String(chosen) : "latest";
+      var idx = rs.findIndex(function(h){ return h.refinement_id === rid; });
+      card.querySelector('[data-role="rprev"]').disabled = idx <= 0;
+      card.querySelector('[data-role="rnext"]').disabled = chosen == null;
+      card.querySelector('[data-role="rlatest"]').disabled = chosen == null;
+      if (rid == null){ fig.status.hidden = false; fig.status.textContent = "No round has finished yet."; return; }
+      if (cache[rid]){ render(cache[rid], rid); return; }
+      fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
+      apiFetch(projectApiUrl("/refinements/" + rid)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
+        cache[rid] = full;
+        if (currentRid() === rid) render(full, rid);
+      }).catch(function(err){ fig.status.textContent = "Could not load this round: " + err.message; });
+    }
+    function stepRound(delta){
+      var rs = rounds(); if (!rs.length) return;
+      var idx = rs.findIndex(function(h){ return h.refinement_id === currentRid(); }), next = idx + delta;
+      if (next < 0) return;
+      chosen = next >= rs.length - 1 ? null : rs[next].refinement_id; showRound();
+    }
+    rpick.addEventListener("change", function(){ chosen = rpick.value === "latest" ? null : Number(rpick.value); showRound(); });
+    card.querySelector('[data-role="rlatest"]').addEventListener("click", function(){ chosen = null; showRound(); });
+    card.querySelector('[data-role="rprev"]').addEventListener("click", function(){ stepRound(-1); });
+    card.querySelector('[data-role="rnext"]').addEventListener("click", function(){ stepRound(1); });
+    dl.addEventListener("click", function(){ if (shownVolume != null) downloadFile("/volumes/" + shownVolume + "/file.mrc", "reconstruction.mrc", dl); });
+    return function(result, base, urls){
+      last = {result: result, urls: urls};
+      var rs = rounds(), keep = rpick.value; rpick.innerHTML = "";
+      rs.slice(0, -1).forEach(function(h){ var o = document.createElement("option"); o.value = String(h.refinement_id); o.textContent = h.label + (h.estimated_resolution ? " \u00b7 " + Number(h.estimated_resolution).toFixed(2) + " \u00c5" : ""); rpick.appendChild(o); });
+      var latest = document.createElement("option"); latest.value = "latest"; latest.textContent = "Latest (" + result.label + ")"; rpick.appendChild(latest);
+      rpick.value = keep && Array.from(rpick.options).some(function(o){ return o.value === keep; }) ? keep : "latest";
+      var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
+      capRight.textContent = captionRight(result, running);
+      showRound();
     };
-    return {root: root, plots: plots, card: out};
   }
   var LIVE_VIEWS = {
     motion_correction: function(body){
@@ -9877,48 +9929,17 @@ From branch : <span id="versionBranch">—</span></p>
     // MyRefine3DPanel while it runs: the FSC of the newest refinement and the
     // current reconstruction (ShowRefinementResultsPanel).
     refine3d: function(body){
-      var split = liveSplit(body), card = split.card;
-      var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); split.plots.insertBefore(plot.root, split.plots.firstChild);
-      var lastFsc = {fsc: [], ps: null, title: "Fourier Shell Correlation"};
-      addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.fsc, lastFsc.ps); });
-      return function(result, base, urls){
-        lastFsc = {fsc: result.fsc || [], ps: result.pixel_size, title: "Fourier Shell Correlation \u2014 " + result.label};
-        drawFscPlot(plot.svg, lastFsc.fsc, lastFsc.ps);
-        card.angular.draw(result.angular_distribution, "Angular Distribution \u2014 " + result.label);
-        var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
-        card.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
-        var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
-        card.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
-        card.show("/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, urls, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
-      };
+      return refinementLiveView(body, function(result, running){
+        return running ? (result.phase || "") + " \u00b7 round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
+      });
     },
-    // AutoRefine3DPanel while it runs: the FSC of the newest refinement, the
-    // estimated resolution and the percentage of particles per round, and
-    // the current reconstruction.
+    // AutoRefine3DPanel while it runs: the same view, its caption carrying the round's limits and percentage.
     auto_refine3d: function(body){
-      var split = liveSplit(body), card = split.card, plots = split.plots;
-      var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.insertBefore(fscPlot.root, plots.firstChild);
-      var lastFsc = {fsc: [], ps: null, title: "Fourier Shell Correlation"};
-      addPlotZoom(fscPlot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.fsc, lastFsc.ps); });
-      var resPlot = makePlotBlock("Estimated resolution", [["ra-swatch-logp", "Å per round"]]); plots.appendChild(resPlot.root);
-      var pctPlot = makePlotBlock("Particles used", [["ra-swatch-moved", "% per round"]]); plots.appendChild(pctPlot.root);
-      return function(result, base, urls){
-        lastFsc = {fsc: result.fsc || [], ps: result.pixel_size, title: "Fourier Shell Correlation \u2014 " + result.label};
-        drawFscPlot(fscPlot.svg, lastFsc.fsc, lastFsc.ps);
-        card.angular.draw(result.angular_distribution, "Angular Distribution \u2014 " + result.label);
-        var res = result.resolution_per_round || [], pct = result.percent_used_per_round || [];
-        var xs = res.map(function(_, i){ return i + 1; });
-        var opts = {xLabel: "round", xMin: 1, xStep: Math.max(1, Math.ceil(Math.max(res.length, 2) / 10)), xTick: function(v){ return String(Math.round(v)); }, emptyText: "No round has finished yet."};
-        drawLinePlot(resPlot.svg, res.length ? [{xs: xs, ys: res, cls: "line-x", dots: "dot-x"}] : [], Object.assign({}, opts, {yLabel: "Å"}));
-        drawLinePlot(pctPlot.svg, pct.length ? [{xs: pct.map(function(_, i){ return i + 1; }), ys: pct, cls: "line-moved", dots: "dot-moved"}] : [], Object.assign({}, opts, {yLabel: "%", yMin: 0, yMax: 100}));
-        var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
-        card.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
-        var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
-        card.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + (result.final_round ? " (final)" : "") +
-          (result.high_res_limits ? " · limit " + result.high_res_limits.map(function(v){ return Number(v).toFixed(1); }).join(" / ") + " Å, " + Number(result.current_percent_used).toFixed(1) + "%" : "")
+      return refinementLiveView(body, function(result, running){
+        return running ? (result.phase || "") + " \u00b7 round " + (result.round + 1) + (result.final_round ? " (final)" : "") +
+          (result.high_res_limits ? " \u00b7 limit " + result.high_res_limits.map(function(v){ return Number(v).toFixed(1); }).join(" / ") + " \u00c5, " + Number(result.current_percent_used).toFixed(1) + "%" : "")
           : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
-        card.show("/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, urls, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
-      };
+      });
     },
     // RefineCTFPanel while it runs: the defocus-change histogram filling
     // (DefocusHistorgramPlotPanel), the beam tilt once found with its two

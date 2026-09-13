@@ -535,6 +535,11 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .pick-frame.editable img{cursor:crosshair;}
 .pick-frame.editable{touch-action:none;user-select:none;}
 .pick-edit-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+/* The New Refinement Package dialog's class pages: rows of class tick boxes. */
+.np-classes{display:flex;flex-direction:column;gap:4px;}
+.np-classes > label.ra-radio{margin:0;}
+.np-class-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.np-class-head{font-weight:600;color:var(--text-secondary);min-width:120px;}
 .pick-edit-note{font-size:14px;color:var(--text-secondary);margin-bottom:10px;line-height:1.4;}
 .pick-side .ra-radio{margin-bottom:6px;}
 .pick-side-head{font-size:13.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;}
@@ -1561,7 +1566,15 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
   <div class="modal-body">
     <p class="page-sub" style="margin:0 0 12px;" id="npIntro">Cuts every particle in a particle position group out of its image into a stack, with the image's CTF estimate carried along, and starts the package with a &ldquo;Random Parameters&rdquo; refinement &mdash; cisTEM&rsquo;s New Refinement Package wizard.</p>
+    <div class="field" id="npSourceField"><label for="npSource">Make From</label><select id="npSource"><option value="group">A particle position group</option><option value="package">An existing refinement package</option></select></div>
     <div class="field" id="npGroupField"><label for="npGroup">Particle Position Group</label><select id="npGroup"></select></div>
+    <div class="field" id="npSrcPackageField" hidden><label for="npSrcPackage">Source Refinement Package</label><select id="npSrcPackage"></select></div>
+    <div class="field" id="npSrcRefinementField" hidden title="The refinement whose angles, shifts, CTF and scores become the new package&rsquo;s starting parameters."><label for="npSrcRefinement">Parameters From Refinement</label><select id="npSrcRefinement"></select></div>
+    <div class="field field-checkbox" id="npCarryAllField" hidden title="Every particle of the source package, pointing at its stack file; untick to keep only the particles whose highest-occupancy class is one of the chosen ones, cut into a stack of their own."><input type="checkbox" id="npCarryAll" checked /><label for="npCarryAll">Carry over all particles (share the source stack)</label></div>
+    <div class="field" id="npCarryClassesField" hidden><label>Keep Particles Of Classes</label><div class="np-classes" id="npCarryClasses"></div></div>
+    <div class="field" id="npClassSourcesField" hidden title="Which source class each new class takes its parameters from; several classes are resolved by the rule below."><label>Parameters For Each New Class</label><div class="np-classes" id="npClassSources"></div></div>
+    <div class="field" id="npMultiRuleField" hidden><label for="npMultiRule">When Several Source Classes</label><select id="npMultiRule"><option value="best">Take the highest-occupancy class</option><option value="random">Take a class at random</option></select></div>
+    <div class="field field-checkbox" id="npRandomOccField" hidden title="Give each particle a random occupancy in every new class (the wizard&rsquo;s Randomise Occupancies), so a 3D classification starts unbiased; untick for 100% everywhere."><input type="checkbox" id="npRandomOcc" checked /><label for="npRandomOcc">Randomise occupancies</label></div>
     <div class="field" id="npSelectionField" hidden><label>Class Selection</label><div class="form-note" style="margin:0;" id="npSelectionLabel"></div></div>
     <div class="field field-checkbox" id="npRecentreField" hidden title="Move each pick by the x/y shift the classification found for it, so the new stack is cut around the particle's centre (the wizard's Re-centre picks page)."><input type="checkbox" id="npRecentre" checked /><label for="npRecentre">Re-centre picks using the classification&rsquo;s shifts</label></div>
     <div class="field field-checkbox" id="npDedupField" hidden title="After re-centring, two picks on the same image that fall within the threshold of each other are the same particle; the one that moved least is kept."><input type="checkbox" id="npDedup" checked /><label for="npDedup">Remove duplicate picks</label></div>
@@ -2857,7 +2870,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
    "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
-   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel",
+   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npRandomOccField","npRandomOcc",
    "npRecentreField","npRecentre","npDedupField","npDedup","npDedupThresholdField","npDedupThreshold","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
    "ppGroupList","ppGroupAddBtn","ppGroupRenameBtn","ppGroupRemoveBtn","ppGroupInvertBtn","ppGroupFromImagesBtn",
    "ppSelectAllCheckbox","ppListBody","ppListNote","ppRemoveBtn","ppRemoveAllBtn","ppAddToGroupBtn","ppDisplayBtn",
@@ -8376,7 +8389,10 @@ From branch : <span id="versionBranch">—</span></p>
   function openNewPackageModal(selection){
     np.selection = selection || null;
     var fromClasses = !!np.selection;
+    els.npSourceField.hidden = fromClasses;
+    els.npSource.value = "group"; np.source = null;
     els.npGroupField.hidden = fromClasses;
+    npSourceChanged();
     els.npSelectionField.hidden = els.npRecentreField.hidden = els.npDedupField.hidden = els.npDedupThresholdField.hidden = !fromClasses;
     els.npIntro.textContent = fromClasses
       ? "Cuts the members of the selected class averages out of their images into a new stack, with each image\u2019s CTF estimate carried along, and starts the package with a \u201cRandom Parameters\u201d refinement \u2014 the class-average path of cisTEM\u2019s New Refinement Package wizard."
@@ -8411,11 +8427,71 @@ From branch : <span id="versionBranch">—</span></p>
   }
   els.npRecentre.addEventListener("change", npSyncDedup);
   els.npDedup.addEventListener("change", npSyncDedup);
+  // The template-package path of the wizard (TemplateWizardPage with a package
+  // chosen): the source package and one of its refinements, whose parameters
+  // are carried over; the box and pixel size are the source's and the stack
+  // is shared unless only some classes' particles are kept.
+  function npFromPackage(){ return !np.selection && els.npSource.value === "package"; }
+  function npSourceChanged(){
+    var fromPkg = npFromPackage();
+    els.npGroupField.hidden = !!np.selection || fromPkg;
+    els.npSrcPackageField.hidden = els.npSrcRefinementField.hidden = els.npCarryAllField.hidden = !fromPkg;
+    els.npBox.disabled = els.npPixel.disabled = fromPkg;
+    if (fromPkg){
+      els.npIntro.textContent = "A new package over an existing package\u2019s particles, with the angles, shifts and CTF of one of its refinements as the starting parameters \u2014 the wizard\u2019s template-package path: how a 3D classification is started from a refinement, or a symmetry changed. Every particle carried over means the new package points at the same stack file; keeping some classes\u2019 particles cuts them into a stack of their own.";
+      els.npSrcPackage.innerHTML = "";
+      (state.packages || []).forEach(function(p){ var o = document.createElement("option"); o.value = p.refinement_package_asset_id; o.textContent = p.name + " (" + p.particle_count + ")"; if (p.refinement_package_asset_id === state.selectedPackageId) o.selected = true; els.npSrcPackage.appendChild(o); });
+      np.parentApplied = false;
+      npSourcePackageChanged();
+    } else {
+      npSyncClassUi(null);
+      refreshPackageDefaults();
+    }
+  }
+  function npSourcePackageChanged(){
+    np.parentApplied = false; np.source = null;
+    els.npSrcRefinement.innerHTML = "";
+    refreshPackageDefaults();
+  }
+  // The class pages (class_setup_pageA .. E): which source classes' particles to keep, and each new class's source.
+  function npSyncClassUi(src){
+    var n = Math.max(1, Number(els.npClasses.value) || 1), fromPkg = npFromPackage() && src;
+    var srcClasses = fromPkg ? (src.number_of_classes || 1) : 1;
+    els.npCarryClassesField.hidden = !(fromPkg && srcClasses > 1 && !els.npCarryAll.checked);
+    els.npClassSourcesField.hidden = els.npMultiRuleField.hidden = !(fromPkg && srcClasses > 1);
+    els.npRandomOccField.hidden = !(fromPkg && n > 1);
+    if (!fromPkg) return;
+    if (els.npCarryClasses.children.length !== srcClasses){
+      els.npCarryClasses.innerHTML = "";
+      for (var k = 1; k <= srcClasses; k++){
+        var lab = document.createElement("label"); lab.className = "ra-radio";
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; cb.value = String(k); lab.appendChild(cb);
+        lab.appendChild(document.createTextNode(" #" + k + (src.average_occupancy && src.average_occupancy[k - 1] != null ? " (" + Number(src.average_occupancy[k - 1]).toFixed(1) + "%)" : "")));
+        els.npCarryClasses.appendChild(lab);
+      }
+    }
+    var have = Array.from(els.npClassSources.children).map(function(row){ return Array.from(row.querySelectorAll("input:checked")).map(function(c){ return Number(c.value); }); });
+    els.npClassSources.innerHTML = "";
+    for (var i = 1; i <= n; i++){
+      var row = document.createElement("div"); row.className = "np-class-row";
+      var head = document.createElement("span"); head.className = "np-class-head"; head.textContent = "New class #" + i + " \u2190"; row.appendChild(head);
+      for (var c = 1; c <= srcClasses; c++){
+        var l = document.createElement("label"); l.className = "ra-radio";
+        var b = document.createElement("input"); b.type = "checkbox"; b.value = String(c);
+        b.checked = have[i - 1] ? have[i - 1].indexOf(c) >= 0 : c === ((i - 1) % srcClasses) + 1;   // the wizard's default: new class i from source class i, cycling
+        l.appendChild(b); l.appendChild(document.createTextNode(" #" + c)); row.appendChild(l);
+      }
+      els.npClassSources.appendChild(row);
+    }
+  }
   function refreshPackageDefaults(){
     if (!state.projectId) return;
     var query;
     if (np.selection) query = "selection_ids=" + np.selection.selection_id;
-    else {
+    else if (npFromPackage()){
+      if (els.npSrcPackage.value === "") return;
+      query = "source_package_id=" + Number(els.npSrcPackage.value) + (els.npSrcRefinement.value ? "&source_refinement_id=" + Number(els.npSrcRefinement.value) : "");
+    } else {
       var gid = els.npGroup.value;
       if (gid === "") return;
       query = "particle_group_id=" + Number(gid) + "&largest_dimension_a=" + (Number(els.npSize.value) || 150);
@@ -8424,6 +8500,24 @@ From branch : <span id="versionBranch">—</span></p>
       .then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
         if (!d) return;
         if (!els.npName.value.trim() || /^Refinement Package #\d+$/.test(els.npName.value.trim())) els.npName.value = d.next_name;
+        if (npFromPackage()){
+          // the source's sizes are fixed (the stack is its); its values are the starting point, applied once
+          els.npPixel.value = d.pixel_size; els.npBox.value = d.box_size; els.npBoxHint.textContent = "\u2014 the source package\u2019s";
+          if (!els.npSrcRefinement.options.length){
+            (d.refinements || []).forEach(function(r){ var o = document.createElement("option"); o.value = r.REFINEMENT_ID; o.textContent = r.NAME + " (#" + r.REFINEMENT_ID + ", " + r.NUMBER_OF_CLASSES + " class" + (r.NUMBER_OF_CLASSES === 1 ? "" : "es") + ")"; els.npSrcRefinement.appendChild(o); });
+            if (els.npSrcRefinement.options.length) els.npSrcRefinement.selectedIndex = els.npSrcRefinement.options.length - 1;
+          }
+          if (!np.parentApplied){
+            np.parentApplied = true;
+            if (d.symmetry) els.npSymmetry.value = d.symmetry;
+            if (d.molecular_weight_kda != null) els.npMw.value = d.molecular_weight_kda;
+            if (d.largest_dimension_a != null) els.npSize.value = d.largest_dimension_a;
+            if (d.number_of_classes != null) els.npClasses.value = d.number_of_classes;
+          }
+          np.source = d.source_refinement || null;
+          npSyncClassUi(np.source);
+          return;
+        }
         if (!np.pixelTouched && d.pixel_size) els.npPixel.value = d.pixel_size;
         if (!np.boxTouched && d.box_size) els.npBox.value = d.box_size;
         // A class-selection package inherits the parent package's symmetry,
@@ -8563,7 +8657,12 @@ From branch : <span id="versionBranch">—</span></p>
   els.newPackageModalClose.addEventListener("click", closeNewPackageModal);
   els.newPackageScrim.addEventListener("click", closeNewPackageModal);
   els.npGroup.addEventListener("change", refreshPackageDefaults);
-  els.npSize.addEventListener("input", refreshPackageDefaults);
+  els.npSource.addEventListener("change", npSourceChanged);
+  els.npSrcPackage.addEventListener("change", npSourcePackageChanged);
+  els.npSrcRefinement.addEventListener("change", function(){ np.source = null; refreshPackageDefaults(); });
+  els.npCarryAll.addEventListener("change", function(){ npSyncClassUi(np.source); });
+  els.npClasses.addEventListener("input", function(){ npSyncClassUi(np.source); });
+  els.npSize.addEventListener("input", function(){ if (!npFromPackage()) refreshPackageDefaults(); });
   els.npBox.addEventListener("input", function(){ np.boxTouched = true; });
   els.npPixel.addEventListener("input", function(){ np.pixelTouched = true; });
   els.npCreateBtn.addEventListener("click", function(){
@@ -8578,12 +8677,26 @@ From branch : <span id="versionBranch">—</span></p>
       body.recentre = els.npRecentre.checked;
       body.remove_duplicates = els.npRecentre.checked && els.npDedup.checked;
       body.duplicate_threshold_a = Number(els.npDedupThreshold.value) || 0.25 * (Number(els.npSize.value) || 150);
+    } else if (npFromPackage()){
+      if (els.npSrcPackage.value === "" || els.npSrcRefinement.value === ""){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Pick the source package and the refinement to take the parameters from."; return; }
+      body.source_package_id = Number(els.npSrcPackage.value); body.source_refinement_id = Number(els.npSrcRefinement.value);
+      delete body.box_size; delete body.output_pixel_size;
+      if (!els.npCarryAll.checked){
+        body.carry_over_classes = Array.from(els.npCarryClasses.querySelectorAll("input:checked")).map(function(c){ return Number(c.value); });
+        if (!body.carry_over_classes.length){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Tick at least one class whose particles to keep."; return; }
+      }
+      var srcRows = Array.from(els.npClassSources.children).map(function(row){ return Array.from(row.querySelectorAll("input:checked")).map(function(c){ return Number(c.value); }); });
+      if (srcRows.length){
+        if (srcRows.some(function(r){ return !r.length; })){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Every new class needs at least one source class."; return; }
+        body.class_sources = srcRows; body.multi_class_rule = els.npMultiRule.value;
+      }
+      body.randomise_occupancies = els.npRandomOcc.checked;
     } else {
       if (els.npGroup.value === ""){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Pick a particle position group."; return; }
       body.particle_group_id = Number(els.npGroup.value);
     }
     els.npCreateBtn.disabled = true; els.npCreateBtn.textContent = "Creating\u2026";
-    els.npNote.classList.remove("blocked"); els.npNote.textContent = np.selection ? "Cutting the selected classes\u2019 particles from their images \u2014 this can take a while." : "Cutting particles from every image in the group \u2014 this can take a while for a large group.";
+    els.npNote.classList.remove("blocked"); els.npNote.textContent = np.selection ? "Cutting the selected classes\u2019 particles from their images \u2014 this can take a while." : npFromPackage() ? (els.npCarryAll.checked ? "Copying the parameters over \u2014 the stack is shared, so this is quick." : "Cutting the kept particles into a stack of their own.") : "Cutting particles from every image in the group \u2014 this can take a while for a large group.";
     apiFetch(projectApiUrl("/refinement-packages"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
       .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
       .then(function(res){

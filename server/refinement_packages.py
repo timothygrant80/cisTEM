@@ -351,6 +351,8 @@ def create_package(conn, project_id, params, log=None):
     """MyNewRefinementPackageWizard::OnFinished() for a new package from a
     particle position group (`particle_group_id`) or from 2D class-average
     selections (`selection_ids`). Returns the new package's id and particle count."""
+    if params.get("source_package_id") is not None:
+        return create_package_from_package(conn, project_id, params, log)
     source = {}
     if params.get("selection_ids"):
         particles, source = _particles_of_selections(conn, params)
@@ -451,6 +453,168 @@ def create_package(conn, project_id, params, log=None):
     insert_initial_refinement(conn, refinement_id, package_id, "Random Parameters", class_rows, box_size, output_pixel_size, molecular_weight)
     return dict(source, refinement_package_asset_id=package_id, name=name, particles=len(contained), stack_filename=stack_path,
                 box_size=box_size, output_pixel_size=output_pixel_size, refinement_id=refinement_id)
+
+
+def package_source_defaults(conn, source_package_id, source_refinement_id=None):
+    """What the wizard prefills when the template is an existing package
+    (TemplateWizardPage with a package chosen): its box and pixel size --
+    fixed, the stack is reused -- and its symmetry, molecular weight,
+    largest dimension and class count to start from; plus the package's
+    refinements to choose the parameters from, and the chosen one's class
+    count and per-class average occupancy for the class pages."""
+    pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (int(source_package_id),)).fetchone()
+    if pkg is None:
+        raise ValueError("no such refinement package")
+    refs = [dict(r) for r in conn.execute("SELECT REFINEMENT_ID, NAME, NUMBER_OF_CLASSES, NUMBER_OF_PARTICLES FROM REFINEMENT_LIST "
+                                          "WHERE REFINEMENT_PACKAGE_ASSET_ID=? ORDER BY REFINEMENT_ID", (int(source_package_id),)).fetchall()]
+    out = {"particle_count": conn.execute("SELECT COUNT(*) FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(int(source_package_id))).fetchone()[0]
+           if _table_exists(conn, "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(int(source_package_id))) else 0,
+           "box_size": pkg["STACK_BOX_SIZE"], "pixel_size": pkg["OUTPUT_PIXEL_SIZE"], "symmetry": pkg["SYMMETRY"],
+           "molecular_weight_kda": pkg["MOLECULAR_WEIGHT"], "largest_dimension_a": pkg["PARTICLE_SIZE"], "number_of_classes": pkg["NUMBER_OF_CLASSES"],
+           "stack_filename": pkg["STACK_FILENAME"], "refinements": refs}
+    rid = int(source_refinement_id) if source_refinement_id is not None else (refs[-1]["REFINEMENT_ID"] if refs else None)
+    ref = next((r for r in refs if r["REFINEMENT_ID"] == rid), None)
+    if ref is not None:
+        occ = []
+        for k in range(1, (ref["NUMBER_OF_CLASSES"] or 1) + 1):
+            row = conn.execute("SELECT AVERAGE_OCCUPANCY FROM REFINEMENT_DETAILS_{} WHERE CLASS_NUMBER=?".format(rid), (k,)).fetchone() \
+                if _table_exists(conn, "REFINEMENT_DETAILS_{}".format(rid)) else None
+            occ.append(row[0] if row else None)
+        out["source_refinement"] = {"refinement_id": rid, "name": ref["NAME"], "number_of_classes": ref["NUMBER_OF_CLASSES"], "average_occupancy": occ}
+    return out
+
+
+def create_package_from_package(conn, project_id, params, log=None):
+    """MyNewRefinementPackageWizard::OnFinished()'s branch for a template
+    package: a new package over an existing one's particles with the
+    parameters of one of its refinements carried over -- how a 3D
+    classification is started from a refinement, or a symmetry changed.
+    `source_package_id`, `source_refinement_id`; `carry_over_classes` (source
+    class numbers, or absent for every particle) keeps only the particles
+    whose highest-occupancy class is listed -- with every particle kept the
+    new package points at the *same stack file* (CarryOverYes: no stack is
+    written), otherwise the kept slices are copied into a new stack and
+    renumbered; `class_sources` gives each new class the source class(es) its
+    parameters come from (default: new class i from source class i, cycling),
+    several resolved by `multi_class_rule` "best" (highest occupancy) or
+    "random"; `randomise_occupancies` (default on with several classes) gives
+    each new class |U(-1,1)| x 200 / N as the wizard does, else 100. The box
+    and pixel size are the source's; symmetry, molecular weight, largest
+    dimension and class count are the caller's (prefilled from the source)."""
+    import refinements
+
+    src_id = int(params["source_package_id"])
+    pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (src_id,)).fetchone()
+    if pkg is None:
+        raise ValueError("no such refinement package")
+    rid = params.get("source_refinement_id")
+    if rid is None:
+        row = conn.execute("SELECT MAX(REFINEMENT_ID) FROM REFINEMENT_LIST WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (src_id,)).fetchone()
+        rid = row[0]
+    ref = conn.execute("SELECT * FROM REFINEMENT_LIST WHERE REFINEMENT_ID=? AND REFINEMENT_PACKAGE_ASSET_ID=?", (int(rid), src_id)).fetchone() if rid is not None else None
+    if ref is None:
+        raise ValueError("the refinement to take the parameters from must belong to the source package")
+    rid = int(rid)
+    source_classes = int(ref["NUMBER_OF_CLASSES"] or 1)
+    number_of_classes = max(1, int(params.get("number_of_classes") or 1))
+    symmetry = str(params.get("symmetry") or pkg["SYMMETRY"] or "C1").upper()
+    if symmetry not in SYMMETRIES:
+        raise ValueError("unknown symmetry {}".format(symmetry))
+    molecular_weight = float(params.get("molecular_weight_kda") or pkg["MOLECULAR_WEIGHT"] or 300.0)
+    largest_dimension = float(params.get("largest_dimension_a") or pkg["PARTICLE_SIZE"] or 150.0)
+    box_size, output_pixel_size = int(pkg["STACK_BOX_SIZE"]), float(pkg["OUTPUT_PIXEL_SIZE"])
+    rule = str(params.get("multi_class_rule") or "best").lower()
+    randomise = params.get("randomise_occupancies")
+    randomise = (number_of_classes > 1) if randomise is None else bool(randomise)
+
+    # the source refinement's rows per class, by position in stack
+    by_class = []
+    for k in range(1, source_classes + 1):
+        by_class.append({r["position_in_stack"]: r for r in refinements.load_rows(conn, rid, k)})
+    src_table = "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(src_id)
+    if not _table_exists(conn, src_table):
+        raise ValueError("the source package has no particles")
+    particles = [dict(r) for r in conn.execute("SELECT * FROM {} ORDER BY POSITION_IN_STACK".format(src_table)).fetchall()]
+    if not particles:
+        raise ValueError("the source package has no particles")
+
+    def best_class(pos):
+        return max(range(source_classes), key=lambda k: float(by_class[k].get(pos, {}).get("occupancy") or 0.0))
+
+    carry = params.get("carry_over_classes")
+    carry_all = not carry or source_classes == 1 or set(int(c) for c in carry) >= set(range(1, source_classes + 1))
+    if not carry_all:
+        wanted = set(int(c) for c in carry)
+        particles = [p for p in particles if (best_class(p["POSITION_IN_STACK"]) + 1) in wanted]
+        if not particles:
+            raise ValueError("no particle has its highest occupancy in the chosen classes")
+
+    # which source class(es) each new class takes its parameters from
+    sources = params.get("class_sources")
+    if not sources:
+        sources = [[((i % source_classes) + 1)] for i in range(number_of_classes)]
+    sources = [[int(c) for c in (src or [])] or [((i % source_classes) + 1)] for i, src in enumerate(list(sources)[:number_of_classes])]
+    while len(sources) < number_of_classes:
+        sources.append([((len(sources) % source_classes) + 1)])
+    for src in sources:
+        if any(c < 1 or c > source_classes for c in src):
+            raise ValueError("class_sources names a class the source refinement does not have")
+
+    package_id = conn.execute("SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) + 1 FROM REFINEMENT_PACKAGE_ASSETS").fetchone()[0]
+    refinement_id = conn.execute("SELECT COALESCE(MAX(REFINEMENT_ID), 0) + 1 FROM REFINEMENT_LIST").fetchone()[0]
+    name = (params.get("name") or "").strip() or "Refinement Package #{}".format(package_id)
+    rng = random.Random()
+
+    if carry_all:
+        stack_path = pkg["STACK_FILENAME"]
+        positions = {p["POSITION_IN_STACK"]: p["POSITION_IN_STACK"] for p in particles}
+    else:
+        # CarryOverNo: the kept slices copied into a stack of their own, renumbered from 1.
+        stack_path = str(db.project_dir(project_id) / "Assets" / "ParticleStacks" / "particle_stack_{}.mrc".format(package_id))
+        Path(stack_path).parent.mkdir(parents=True, exist_ok=True)
+        writer = MrcStackWriter(stack_path, box_size, output_pixel_size)
+        positions = {}
+        try:
+            for p in particles:
+                writer.append(read_mrc_section(pkg["STACK_FILENAME"], p["POSITION_IN_STACK"]))
+                positions[p["POSITION_IN_STACK"]] = writer.count
+        finally:
+            writer.close()
+        if log:
+            log("wrote {} particles of {} to {}".format(len(particles), pkg["NAME"], stack_path))
+
+    contained = [{"position_id": p["ORIGINAL_PARTICLE_POSITION_ASSET_ID"], "image_id": p["PARENT_IMAGE_ASSET_ID"], "position_in_stack": positions[p["POSITION_IN_STACK"]],
+                  "x": p["X_POSITION"], "y": p["Y_POSITION"], "pixel_size": p["PIXEL_SIZE"], "defocus1": p["DEFOCUS_1"], "defocus2": p["DEFOCUS_2"],
+                  "defocus_angle": p["DEFOCUS_ANGLE"], "phase_shift": p["PHASE_SHIFT"], "cs": p["SPHERICAL_ABERRATION"], "voltage": p["MICROSCOPE_VOLTAGE"],
+                  "amplitude_contrast": p["AMPLITUDE_CONTRAST"], "subset": p["ASSIGNED_SUBSET"]} for p in particles]
+
+    def pick(pos, src):
+        if len(src) == 1:
+            k = src[0] - 1
+        elif rule == "random":
+            k = src[rng.randrange(len(src))] - 1
+        else:
+            k = max((c - 1 for c in src), key=lambda kk: float(by_class[kk].get(pos, {}).get("occupancy") or 0.0))
+        return by_class[k].get(pos) or by_class[0].get(pos)
+
+    class_rows = []
+    for i in range(number_of_classes):
+        rows = []
+        for p in particles:
+            a = pick(p["POSITION_IN_STACK"], sources[i])
+            if a is None:
+                raise ValueError("the source refinement has no row for particle {}".format(p["POSITION_IN_STACK"]))
+            occupancy = abs(rng.uniform(-1.0, 1.0) * (200.0 / number_of_classes)) if (randomise and number_of_classes > 1) else 100.0
+            rows.append((positions[p["POSITION_IN_STACK"]], a["psi"], a["theta"], a["phi"], a["x_shift"], a["y_shift"], a["defocus_1"], a["defocus_2"],
+                         a["defocus_angle"], a["phase_shift"], occupancy, a["logp"], a["sigma"], a["score"], a["image_is_active"], a["pixel_size"],
+                         a["voltage"], a["cs"], a["amplitude_contrast"], a["beam_tilt_x"], a["beam_tilt_y"], a["image_shift_x"], a["image_shift_y"], a["assigned_subset"]))
+        class_rows.append(rows)
+
+    insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
+                   number_of_classes, contained, refinement_id, white_protein=bool(pkg["STACK_HAS_WHITE_PROTEIN"]))
+    insert_initial_refinement(conn, refinement_id, package_id, "Parameters from {}".format(ref["NAME"]), class_rows, box_size, output_pixel_size, molecular_weight, angular=True)
+    return {"refinement_package_asset_id": package_id, "name": name, "particles": len(contained), "stack_filename": stack_path, "shared_stack": carry_all,
+            "box_size": box_size, "output_pixel_size": output_pixel_size, "refinement_id": refinement_id, "source_package_id": src_id, "source_refinement_id": rid}
 
 
 def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
@@ -577,7 +741,9 @@ def delete_package(conn, package_id, remove_stack=True):
                        "REFINEMENT_PACKAGE_REFINEMENTS_LIST", "REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST"):
             conn.execute("DROP TABLE IF EXISTS {}_{}".format(prefix, package_id))
         conn.execute("DELETE FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (package_id,))
-    if remove_stack and row["STACK_FILENAME"] and os.path.isfile(row["STACK_FILENAME"]):
+    # A package made over another's particles shares its stack file: only remove it when no package still points at it.
+    still_used = conn.execute("SELECT COUNT(*) FROM REFINEMENT_PACKAGE_ASSETS WHERE STACK_FILENAME=?", (row["STACK_FILENAME"],)).fetchone()[0] if row["STACK_FILENAME"] else 0
+    if remove_stack and row["STACK_FILENAME"] and not still_used and os.path.isfile(row["STACK_FILENAME"]):
         try:
             os.remove(row["STACK_FILENAME"])
         except OSError:

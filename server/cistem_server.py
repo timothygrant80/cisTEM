@@ -2333,10 +2333,18 @@ def refinement_package_defaults(project_id):
     group_id = request.args.get("particle_group_id", type=int)
     largest = request.args.get("largest_dimension_a", type=float) or 150.0
     selection_ids = [int(x) for x in request.args.get("selection_ids", "").split(",") if x.strip().isdigit()]
-    if group_id is None and not selection_ids:
-        return jsonify({"error": "particle_group_id or selection_ids is required"}), 400
+    source_package_id = request.args.get("source_package_id", type=int)
+    if group_id is None and not selection_ids and source_package_id is None:
+        return jsonify({"error": "particle_group_id, selection_ids or source_package_id is required"}), 400
     conn = db.get_conn(project_id)
-    if selection_ids:
+    if source_package_id is not None:
+        # From an existing package: its sizes (fixed) and values, and its refinements to copy parameters from.
+        try:
+            out = refinement_packages.package_source_defaults(conn, source_package_id, request.args.get("source_refinement_id", type=int))
+        except ValueError as exc:
+            conn.close()
+            return jsonify({"error": str(exc)}), 400
+    elif selection_ids:
         # From class averages: the parent package's box and pixel size (BoxSizeWizardPage).
         try:
             out = refinement_packages.selection_defaults(conn, selection_ids)

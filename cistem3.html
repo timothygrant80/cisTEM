@@ -4930,7 +4930,7 @@ From branch : <span id="versionBranch">—</span></p>
   // frame carrying a zoom icon that opens it at window size (#plotModal).
   function makeAngularBlock(){
     var root = document.createElement("div");
-    var head = document.createElement("div"); head.className = "ra-plot-head"; head.innerHTML = '<span class="ra-plot-title">Angular Distribution</span><span class="ra-legend">views per bin, all symmetry mates</span>'; root.appendChild(head);
+    var head = document.createElement("div"); head.className = "ra-plot-head"; head.innerHTML = '<span class="ra-plot-title">Angular Distribution</span>'; root.appendChild(head);
     var frame = document.createElement("div"); frame.className = "ang-frame"; root.appendChild(frame);
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "ra-plot ang-plot"); svg.setAttribute("viewBox", "0 0 340 240"); frame.appendChild(svg);
     var zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "fig-expand"; zoom.title = "Enlarge";
@@ -5074,7 +5074,7 @@ From branch : <span id="versionBranch">—</span></p>
     var angular = makeAngularBlock(); pair.appendChild(angular.root);
     // cisTEM's Parameters button, above the angular distribution: the per-particle parameters dialog.
     var paramsBtn = document.createElement("button"); paramsBtn.className = "small"; paramsBtn.textContent = "Parameters"; paramsBtn.title = "Show this refinement’s per-particle parameters, and save them as a par file"; paramsBtn.disabled = true;
-    angular.root.querySelector(".ra-plot-head").insertBefore(paramsBtn, angular.root.querySelector(".ra-legend"));
+    angular.root.querySelector(".ra-plot-head").appendChild(paramsBtn);   // at the right of the head, cisTEM's placing
     paramsBtn.addEventListener("click", function(){ if (page.current) openParamsDialog(page.current, page.classIndex); });
     var dlVolume = null;
     dlBtn.addEventListener("click", function(){ if (dlVolume != null) downloadFile("/volumes/" + dlVolume + "/file.mrc", "volume.mrc", dlBtn); });

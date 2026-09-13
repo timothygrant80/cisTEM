@@ -4714,6 +4714,9 @@ From branch : <span id="versionBranch">—</span></p>
     els.resultsPages.appendChild(root);
     page.root = root;
     var tbody = left.querySelector("tbody");
+    // STARTUP_LIST names a run "Refinement #n", as cisTEM's AddStartupJob() does; on this page that reads
+    // as a 3D refinement, so the run is shown as "Ab-Initio #n" (the stored name is untouched).
+    function startupLabel(r){ return /^Refinement #\d+$/.test(r.name || "") ? "Ab-Initio #" + r.startup_id : (r.name || "Ab-Initio #" + r.startup_id); }
     function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
     page.load = function(){
       if (!state.projectId || !state.connected) return Promise.resolve();
@@ -4729,7 +4732,7 @@ From branch : <span id="versionBranch">—</span></p>
         var tr = document.createElement("tr");
         tr.classList.toggle("selected", r.startup_id === page.selectedId);
         tr.innerHTML = "<td></td><td></td><td class='num'>" + r.number_of_starts + " × " + r.number_of_cycles + "</td><td class='num'>" + fmtVal(r.initial_res_limit, 0) + "→" + fmtVal(r.final_res_limit, 0) + " Å</td><td>" + (r.job_number ? "#" + r.job_number : "—") + "</td>";
-        tr.children[0].textContent = r.name; tr.children[1].textContent = r.package_name || ("#" + r.refinement_package_asset_id);
+        tr.children[0].textContent = startupLabel(r); tr.children[1].textContent = r.package_name || ("#" + r.refinement_package_asset_id);
         tr.addEventListener("click", function(){ page.selectedId = r.startup_id; render(); });
         tbody.appendChild(tr);
       });
@@ -4745,7 +4748,7 @@ From branch : <span id="versionBranch">—</span></p>
       releaseUrls();
       var r = page.items.filter(function(x){ return x.startup_id === page.selectedId; })[0];
       if (!r){ empty.hidden = false; resultBox.hidden = true; rightLabel.textContent = "Reconstruction"; return; }
-      empty.hidden = true; resultBox.hidden = false; rightLabel.textContent = "Reconstruction — " + r.name;
+      empty.hidden = true; resultBox.hidden = false; rightLabel.textContent = "Reconstruction — " + startupLabel(r);
       DETAILS.forEach(function(d, i){ cells[i].textContent = d[1](r); });
       figures.innerHTML = "";
       (r.volumes || []).forEach(function(v){

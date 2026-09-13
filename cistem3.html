@@ -575,7 +575,8 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .c2d-caption{font-size:15.5px;color:var(--text-secondary);margin:6px 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 /* The ab-initio live view's reconstruction card: title and round picker in a head row,
    the picture centred on a dark rounded stage, the caption below. */
-.live-orth-card{margin-top:14px;}
+.live-orth-card{margin-top:0;}
+.live-sigma-plot{margin-top:14px;}
 .live-orth-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
 .live-orth-controls{display:flex;align-items:center;gap:6px;font-size:14.5px;}
 .live-orth-controls select{min-width:220px;font-size:14.5px;padding:3px 6px;}
@@ -9568,12 +9569,12 @@ From branch : <span id="versionBranch">—</span></p>
     // current reconstruction's orthogonal views (OrthResultsPanel).
     ab_initio_3d: function(body){
       var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
-      var plot = makePlotBlock("Average sigma", [["ra-swatch-sigma", "per iteration"]]); box.appendChild(plot.root);
-      // The reconstruction as a card: a head with the title and the round
-      // picker (any earlier round still in the scratch directory, or Latest,
-      // which follows the run -- cisTEM's panel only shows the newest) and a
-      // Download of the shown map; the picture centred on a dark stage; a
-      // caption saying which round it is and how it was scaled.
+      // The reconstruction first, as a card: a head with the title and the
+      // round picker (any earlier round still in the scratch directory, or
+      // Latest, which follows the run -- cisTEM's panel only shows the newest)
+      // and a Download of the shown map; the picture centred on a dark stage;
+      // a caption saying which round it is and how it was scaled. The sigma
+      // plot sits below it.
       var card = document.createElement("div"); card.className = "live-orth-card"; box.appendChild(card);
       card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
         '<div class="live-orth-controls">' +
@@ -9586,6 +9587,7 @@ From branch : <span id="versionBranch">—</span></p>
         '</div></div>' +
         '<div class="live-orth-stage"></div>' +
         '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
+      var plot = makePlotBlock("Average sigma", [["ra-swatch-sigma", "per iteration"]]); plot.root.className = "live-sigma-plot"; box.appendChild(plot.root);
       var stage = card.querySelector(".live-orth-stage"), rpick = card.querySelector('[data-role="rpick"]'), chosen = null;   // null: follow the newest
       var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); stage.appendChild(fig.frame);
       var capLeft = card.querySelector('[data-role="capleft"]'), capRight = card.querySelector('[data-role="capright"]');

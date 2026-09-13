@@ -626,6 +626,13 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ctf-numbers .details-key::after{content:"";flex:1 1 auto;border-bottom:1px dotted var(--border-strong);transform:translateY(-4px);}
 .ctf-numbers .details-val{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
 .ctf-fit-plot{flex:0 0 auto;}
+/* The Ab-Initio results page: the Find CTF arrangement with 3 : 2 orthogonal-view pictures
+   (one per class, stacked) on the left and the run's numbers beside them. */
+.abi-result{display:flex;flex-direction:column;gap:10px;min-height:0;}
+.abi-top{flex:0 0 auto;align-items:stretch;}   /* the row is as tall as the pictures, and the numbers box matches them */
+.abi-figures{display:flex;flex-direction:column;gap:12px;flex:0 0 auto;width:min(720px,62%);}
+.abi-figure .ra-figure-frame{aspect-ratio:3 / 2;}
+.abi-figure .ra-nyquist{font-family:var(--font-ui);}
 .ctf-fit-plot .ra-plot{height:280px;}   /* the room the tighter head and gap gave back goes to the curves */
 .ra-plot .line-amp{fill:none;stroke:var(--success);stroke-width:1.6;stroke-linejoin:round;}
 .ra-plot .line-fit{fill:none;stroke:var(--plot-y);stroke-width:1.6;stroke-linejoin:round;}
@@ -4679,8 +4686,15 @@ From branch : <span id="versionBranch">—</span></p>
     var empty = document.createElement("div"); empty.className = "empty-note"; empty.textContent = "No ab-initio reconstructions in this project yet";
     var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Ab-Initio 3D from the Actions tab on a refinement package; each run’s volume appears here and under 3D Volumes on the Assets tab."; empty.appendChild(hint);
     scroll.appendChild(empty);
-    var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
-    var details = document.createElement("div"); details.className = "details-grid ra-details-grid"; resultBox.appendChild(details);
+    // The Find CTF page's arrangement: the picture(s) on the left with their
+    // captions above, and beside them, in a box the same height, the run's
+    // numbers as label - dotted leader - value.
+    var resultBox = document.createElement("div"); resultBox.className = "ra-result abi-result"; resultBox.hidden = true; scroll.appendChild(resultBox);
+    var top = document.createElement("div"); top.className = "ctf-top abi-top"; resultBox.appendChild(top);
+    var figures = document.createElement("div"); figures.className = "abi-figures"; top.appendChild(figures);
+    var numFig = document.createElement("figure"); numFig.className = "ra-figure caption-top ctf-numbers-figure"; top.appendChild(numFig);
+    var numCap = document.createElement("figcaption"); numCap.textContent = "Run parameters"; numFig.appendChild(numCap);
+    var details = document.createElement("div"); details.className = "ctf-numbers"; numFig.appendChild(details);
     var DETAILS = [
       ["Startup ID", function(r){ return fmtVal(r.startup_id) + (r.job_number ? " (Job " + r.job_number + ")" : ""); }],
       ["Refinement Package", function(r){ return r.package_name || fmtVal(r.refinement_package_asset_id); }],
@@ -4697,7 +4711,6 @@ From branch : <span id="versionBranch">—</span></p>
       var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
       item.appendChild(k); item.appendChild(v); details.appendChild(item); return v;
     });
-    var figures = document.createElement("div"); resultBox.appendChild(figures);
     els.resultsPages.appendChild(root);
     page.root = root;
     var tbody = left.querySelector("tbody");
@@ -4736,9 +4749,8 @@ From branch : <span id="versionBranch">—</span></p>
       DETAILS.forEach(function(d, i){ cells[i].textContent = d[1](r); });
       figures.innerHTML = "";
       (r.volumes || []).forEach(function(v){
-        var fig = classMontageFigure("Orthogonal projections and slices of " + (v.name || "the volume")); fig.frame.classList.add("c2d-orth"); fig.root.style.marginTop = "12px";
-        fig.left.textContent = (v.name || "Volume") + " (asset #" + v.volume_asset_id + ")"; fig.right.textContent = "projections above, central slices below";
-        fig.img.style.maxWidth = "720px";
+        var fig = makeFigure((v.name || "Volume") + " (asset #" + v.volume_asset_id + ")", "Orthogonal projections and slices of " + (v.name || "the volume"), {captionTop: true});
+        fig.root.classList.add("abi-figure"); fig.extra.textContent = "projections above, central slices below";
         figures.appendChild(fig.root);
         loadFigure(fig.img, fig.status, "/volumes/" + v.volume_asset_id + "/preview.png", v.file_exists, "volume", page.urls);
         setExpand(fig.expand, v.file_exists ? {path: v.filename, title: v.name || "Volume", section: "middle", greys: "local"} : null);

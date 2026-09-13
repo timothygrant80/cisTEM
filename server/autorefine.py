@@ -960,8 +960,23 @@ def live_result(conn, row):
         "resolution_per_round": state.get("resolution_per_round", []), "percent_used_per_round": state.get("percent_used_per_round", []),
         "high_res_limits": state.get("class_high_res_limits"), "current_percent_used": state.get("current_percent_used"),
         "fsc": [{"resolution": s["resolution"], "fsc": s["fsc"], "part_fsc": s["part_fsc"]} for s in stats if s["resolution"]],
+        "angular_distribution": refinements.load_angular_distribution(conn, rid, 1),
         "pixel_size": state["pixel_size"], "volume_ids": state.get("volume_ids", []), "package_name": state.get("package_name"),
     }
+
+
+def volume_file(conn, row, class_index=0, output_number=None):
+    """The current reconstruction's file for the live view's Download: (path, label) or None."""
+    state = _load_state(conn, row["JOB_ID"])
+    if not state:
+        return None
+    files = [p for p in (state.get("reference_files") or []) if p and os.path.isfile(p)]
+    if not files:
+        return None
+    k = min(class_index, len(files) - 1)
+    last = (state.get("history") or [{}])[-1]
+    label = "refinement{}".format(last.get("refinement_id", "")) if last.get("refinement_id") is not None else "current"
+    return files[k], label + ("_class{}".format(k + 1) if len(files) > 1 else "")
 
 
 def current_picture(conn, row, class_index=0):

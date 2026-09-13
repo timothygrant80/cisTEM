@@ -2502,6 +2502,23 @@ def add_volumes_to_group(project_id):
     return _add_to_group(project_id, VOLUME_KIND)
 
 
+@app.route("/api/projects/<project_id>/volumes/<int:volume_id>/file.mrc", methods=["GET"])
+@auth.project_access_required
+def volume_download(project_id, volume_id):
+    """The volume asset's MRC file to save, named after the asset."""
+    conn = db.get_conn(project_id)
+    row = conn.execute("SELECT NAME, FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (volume_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such volume"}), 404
+    path = row["FILENAME"]
+    if not path or not Path(path).is_file():
+        return jsonify({"error": "volume file is missing: {}".format(path)}), 404
+    directory, name = os.path.split(path)
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in (row["NAME"] or "volume")).strip("_") or "volume"
+    return send_from_directory(directory, name, as_attachment=True, download_name="{}.mrc".format(safe), mimetype="application/octet-stream")
+
+
 @app.route("/api/projects/<project_id>/volumes/<int:volume_id>/preview.png", methods=["GET"])
 @auth.project_access_required
 def volume_preview(project_id, volume_id):
@@ -2608,14 +2625,16 @@ def abinitio_current_picture(project_id, job_id):
 @auth.project_access_required
 def abinitio_volume_download(project_id, job_id):
     """The reconstruction the live view shows, as an MRC file to save --
-    the current one, or with `?n=` an earlier round's; `?class=` picks the
-    class. Named after the job, the round and the class."""
+    the current one, or for an ab-initio job with `?n=` an earlier round's;
+    `?class=` picks the class. Named after the job, the round and the class.
+    Any 3D driver with a `volume_file()` (ab-initio, Refine 3D, Auto Refine)."""
     row = _fetch_job_row(project_id, job_id)
-    if row is None or row["STAGE"] != abinitio.STAGE:
-        return jsonify({"error": "not an ab-initio job"}), 404
+    driver = DRIVERS.get(row["STAGE"]) if row is not None else None
+    if driver is None or not hasattr(driver, "volume_file"):
+        return jsonify({"error": "not a 3D job"}), 404
     conn = db.get_conn(project_id)
     try:
-        got = abinitio.volume_file(conn, row, request.args.get("class", default=0, type=int), request.args.get("n", default=None, type=int))
+        got = driver.volume_file(conn, row, request.args.get("class", default=0, type=int), request.args.get("n", default=None, type=int))
     finally:
         conn.close()
     if got is None:

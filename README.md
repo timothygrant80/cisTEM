@@ -133,6 +133,8 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `POST` | `/projects/:id/volumes/check-import` | The volume counterpart of `/images/check-import`, plus `pixel_size_hint` (the first new file's header) and `box_sizes` |
 | `POST` | `/projects/:id/volumes/import` | Body `{input_glob, pixel_size_a}` → every matching MRC volume not yet an asset becomes one, named after the file (`{volume_count, skipped_count, failed, volumes: [{volume_asset_id, name, x_size, y_size, z_size, cubic}]}`); files that are not 3D MRC volumes come back in `failed` |
 | `GET` | `/projects/:id/volumes/:vid/preview.png` | Orthogonal projections (top) and central slices (bottom) of the volume |
+| `GET` | `/projects/:id/volumes/:vid/file.mrc` | The volume asset's MRC file, as an attachment named after the asset |
+| `GET` | `/projects/:id/jobs/:jid/abinitio/volume.mrc` | A running or finished 3D job's current reconstruction as an MRC file (`?n=` an earlier ab-initio round, `?class=`) |
 | `GET` | `/projects/:id/startups` | Every ab-initio run (`STARTUP_LIST`) with its settings and result volumes |
 | `GET` | `/projects/:id/abinitio/defaults` | `AbInitio3DPanel::SetDefaults()` for a package (`?refinement_package_id=`): symmetry, mask radius, search ranges, class count, and the class selections a class-average run can start from |
 | `GET` | `/projects/:id/jobs/:jid/abinitio/current.png` | Orthogonal views of a running or finished ab-initio or Refine 3D job's current reconstruction (`?class=`) |

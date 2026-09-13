@@ -92,6 +92,14 @@ def load_statistics(conn, refinement_id, class_number):
             for r in conn.execute("SELECT * FROM {} ORDER BY SHELL".format(table)).fetchall()]
 
 
+def load_angular_distribution(conn, refinement_id, class_number):
+    """One class's 18 x 72 angular histogram (REFINEMENT_ANGULAR_DISTRIBUTION_<id>_<k>), bin order; [] when none."""
+    table = "REFINEMENT_ANGULAR_DISTRIBUTION_{}_{}".format(int(refinement_id), int(class_number))
+    if not _table_exists(conn, table):
+        return []
+    return [r[0] for r in conn.execute("SELECT NUMBER_IN_BIN FROM {} ORDER BY BIN_NUMBER".format(table)).fetchall()]
+
+
 def load_details(conn, refinement_id):
     table = "REFINEMENT_DETAILS_{}".format(int(refinement_id))
     if not _table_exists(conn, table):

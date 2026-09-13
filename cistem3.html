@@ -558,6 +558,14 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .c2d-frame.c2d-orth{background:#000;display:inline-block;max-width:100%;}
 .ra-plot .fsc-threshold{stroke:var(--text-tertiary);stroke-dasharray:4 3;stroke-width:1;}
 .ang-plot{background:#fff;height:auto;aspect-ratio:340 / 240;}
+.ang-frame{position:relative;}
+.c2d-plots.rf-pair{grid-template-columns:repeat(2,minmax(0,1fr));}   /* two equal columns: the reconstruction and the angular distribution */
+.rf-pair .ra-plot-head{margin-bottom:6px;}
+/* The plot at window size (the angular distribution's zoom icon). */
+.modal.plot-modal{width:min(1400px,95vw);height:94%;max-height:94%;}
+.modal.plot-modal .modal-body{display:flex;align-items:center;justify-content:center;min-height:0;flex:1 1 auto;}
+.plot-modal-svg{width:100%;height:100%;max-height:100%;aspect-ratio:auto;border:none;}
+.modal.plot-modal{display:flex;flex-direction:column;}
 .field-static{margin:0;font-size:15.5px;}
 .ref-list{font-size:15.5px;}
 .job-actions{white-space:nowrap;} .job-actions .small + .small{margin-left:6px;}
@@ -591,6 +599,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .live-split-plots{flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:12px;}
 .live-split .live-orth-card{margin-top:0;}
 .live-split .live-orth-stage img{max-width:100%;}
+.live-split-plots .ang-frame{max-width:620px;}   /* the disc need not span the whole plots column */
 .c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
 .c2d-list table{width:100%;border-collapse:collapse;font-size:15.5px;}
 .c2d-list th{position:sticky;top:0;background:var(--chrome);font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
@@ -1769,6 +1778,14 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
 </div>
 
+<div class="scrim" id="plotScrim"></div>
+<div class="modal plot-modal" id="plotModal">
+  <div class="modal-head">
+    <div class="modal-title" id="plotModalTitle">Angular Distribution</div>
+    <button class="log-close" id="plotModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body"><svg id="plotModalSvg" class="ra-plot ang-plot plot-modal-svg" viewBox="0 0 340 240"></svg></div>
+</div>
 <div class="scrim" id="displayScrim"></div>
 <!-- cisTEM's DisplayPanel as a modal: the asset panels' Display buttons open
      a file here, and its own Open button browses the server's files. The
@@ -2791,7 +2808,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
    "browseTitle","browseNote",
-   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost",
+   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost","plotScrim","plotModal","plotModalClose","plotModalTitle","plotModalSvg",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
@@ -4793,119 +4810,16 @@ From branch : <span id="versionBranch">—</span></p>
 
   // ---- Refine 3D: MyRefinementResultsPanel -- a package's refinements, the FSC
   // curves, the angular distribution and the reconstruction of the shown class.
-  function makeRefinementResultsPage(){
-    var page = {items: [], packages: [], packageId: null, selectedId: null, classIndex: 0, current: null, showDetails: false, urls: []};
-    var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
-    var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
-    var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
-    left.innerHTML = '<span class="groupbox-label">Refinements</span>' +
-      '<div class="c2d-pkg-row"><label>Refinement Package</label><select data-role="package"></select></div>' +
-      '<div class="c2d-list"><table><thead><tr><th>Refinement</th><th>Classes</th><th>Est. Res.</th><th>Job</th></tr></thead><tbody></tbody></table></div>' +
-      '<div class="asset-toolbar"><button class="small ra-toggle" data-role="details" aria-pressed="false">Show Job Details</button></div>';
-    var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
-    var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Refinement"; right.appendChild(rightLabel);
-    var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
-    var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
-    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
-    var DETAILS = [
-      ["Refinement ID", function(r, c){ return fmtVal(r.refinement_id) + (r.job_number ? " (Job " + r.job_number + ")" : ""); }],
-      ["Date of Run", function(r){ return fmtWhenDate(r.datetime_of_run); }],
-      ["Refinement Package", function(r){ return r.package_name || fmtVal(r.refinement_package_asset_id); }],
-      ["Starting Refinement", function(r){ return r.starting_refinement_id != null && r.starting_refinement_id >= 0 ? "#" + r.starting_refinement_id : "—"; }],
-      ["Reference Volume", function(r, c){ return c && c.reference_volume_asset_id >= 0 ? "#" + c.reference_volume_asset_id : "generated from parameters"; }],
-      ["Low / High Res. Limit", function(r, c){ return c ? fmtVal(c.low_resolution_limit, 1) + " / " + fmtVal(c.high_resolution_limit, 1) + " Å" : "—"; }],
-      ["Mask Radius", function(r, c){ return c ? fmtVal(c.mask_radius, 1) + " Å" : "—"; }],
-      ["Signed CC Limit", function(r, c){ return c ? fmtVal(c.signed_cc_resolution_limit, 1) + " Å" : "—"; }],
-      ["Global Mask / Step", function(r, c){ return c ? fmtVal(c.global_mask_radius, 1) + " Å / " + fmtVal(c.angular_search_step, 2) + "°" : "—"; }],
-      ["Results to Refine", function(r, c){ return c ? fmtVal(c.number_results_to_refine) : "—"; }],
-      ["Search Range X / Y", function(r, c){ return c ? fmtVal(c.search_range_x, 1) + " / " + fmtVal(c.search_range_y, 1) + " Å" : "—"; }],
-      ["Percent Used", function(r){ return fmtVal(r.percent_used, 1) + " %"; }],
-      ["Refine CTF", function(r, c){ return c ? fmtYesNo(c.should_refine_ctf) : "—"; }],
-      ["Auto-Mask / Mask", function(r, c){ return c ? fmtYesNo(c.should_automask) + " / " + (c.should_use_supplied_mask ? "volume #" + c.mask_asset_id : "none") : "—"; }],
-      ["Average Occupancy", function(r, c){ return c ? fmtVal(c.average_occupancy, 2) + " %" : "—"; }],
-      ["Estimated Resolution", function(r, c){ return c ? fmtVal(c.estimated_resolution, 2) + " Å" : "—"; }],
-      ["Reconstructed Volume", function(r, c){ return c && c.reconstructed_volume_asset_id >= 0 ? (c.volume_name || "#" + c.reconstructed_volume_asset_id) : "—"; }],
-      ["Particles", function(r){ return fmtVal(r.number_of_particles); }]
-    ];
-    var cells = DETAILS.map(function(d){
-      var item = document.createElement("div"); item.className = "details-item";
-      var k = document.createElement("span"); k.className = "details-key"; k.textContent = d[0];
-      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
-      item.appendChild(k); item.appendChild(v); grid.appendChild(item); return v;
-    });
-    var empty = document.createElement("div"); empty.className = "empty-note"; empty.textContent = "No 3D refinements in this project yet";
-    var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Refine 3D from the Actions tab; each round’s refinement appears here with its FSC curve and reconstruction."; empty.appendChild(hint);
-    scroll.appendChild(empty);
-    var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
-    var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
-    var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
-    var pair = document.createElement("div"); pair.className = "c2d-plots"; pair.style.gridTemplateColumns = "minmax(0,1.4fr) minmax(0,1fr)"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
-    var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); pair.appendChild(fig.root);
-    var angBlock = document.createElement("div");
-    var angHead = document.createElement("div"); angHead.className = "ra-plot-head"; angHead.innerHTML = '<span class="ra-plot-title">Angular Distribution</span><span class="ra-legend">views per bin, all symmetry mates</span>'; angBlock.appendChild(angHead);
-    var ang = document.createElementNS("http://www.w3.org/2000/svg", "svg"); ang.setAttribute("class", "ra-plot ang-plot"); ang.setAttribute("viewBox", "0 0 340 240"); angBlock.appendChild(ang);
-    pair.appendChild(angBlock);
-    els.resultsPages.appendChild(root);
-    page.root = root;
-    var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody"), classSelect = classRow.querySelector("select");
-    var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
-    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
-    page.load = function(){
-      if (!state.projectId || !state.connected) return Promise.resolve();
-      return Promise.all([
-        apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
-        apiFetch(projectApiUrl("/refinements")).then(function(r){ return r.ok ? r.json() : {refinements: []}; })
-      ]).then(function(res){
-        page.packages = (res[0] && res[0].refinement_packages) || [];
-        page.items = ((res[1] && res[1].refinements) || []).filter(function(r){ return r.classes.some(function(c){ return c.reconstructed_volume_asset_id >= 0; }) || r.starting_refinement_id >= 0; });
-        if (!page.packages.some(function(p){ return p.refinement_package_asset_id === page.packageId; })){
-          var withResults = {}; page.items.forEach(function(r){ withResults[r.refinement_package_asset_id] = true; });
-          var first = page.packages.filter(function(p){ return withResults[p.refinement_package_asset_id]; })[0] || page.packages[0];
-          page.packageId = first ? first.refinement_package_asset_id : null;
-        }
-        pkgSelect.innerHTML = "";
-        page.packages.forEach(function(p){
-          var o = document.createElement("option"); o.value = p.refinement_package_asset_id;
-          var n = page.items.filter(function(r){ return r.refinement_package_asset_id === p.refinement_package_asset_id; }).length;
-          o.textContent = p.name + " (" + n + " refinement" + (n === 1 ? "" : "s") + ")"; o.selected = p.refinement_package_asset_id === page.packageId; pkgSelect.appendChild(o);
-        });
-        renderList();
-      }).catch(function(){});
-    };
-    function visible(){ return page.items.filter(function(r){ return r.refinement_package_asset_id === page.packageId; }); }
-    function renderList(){
-      var rows = visible();
-      if (!rows.some(function(r){ return r.refinement_id === page.selectedId; })){ page.selectedId = rows.length ? rows[rows.length - 1].refinement_id : null; page.classIndex = 0; }
-      tbody.innerHTML = "";
-      rows.forEach(function(r){
-        var tr = document.createElement("tr"); tr.classList.toggle("selected", r.refinement_id === page.selectedId);
-        var est = r.classes.map(function(c){ return c.estimated_resolution ? Number(c.estimated_resolution).toFixed(1) : "—"; }).join(" / ");
-        tr.innerHTML = "<td></td><td class='num'>" + r.number_of_classes + "</td><td class='num'>" + est + " Å</td><td>" + (r.job_number ? "#" + r.job_number : "—") + "</td>";
-        tr.firstChild.textContent = r.name; tr.firstChild.title = r.name;
-        tr.addEventListener("click", function(){ page.selectedId = r.refinement_id; page.classIndex = 0; renderList(); });
-        tbody.appendChild(tr);
-      });
-      show();
-    }
-    page.showJob = function(job){
-      var r = page.items.filter(function(x){ return x.job_id === job.id; }).pop();
-      if (!r && job.metrics && job.metrics.refinement_id != null) r = page.items.filter(function(x){ return x.refinement_id === job.metrics.refinement_id; })[0];
-      if (!r) return false;
-      page.packageId = r.refinement_package_asset_id; pkgSelect.value = page.packageId;
-      page.selectedId = r.refinement_id; page.classIndex = 0;
-      renderList();
-      return true;
-    };
     // AngularDistributionPlotPanelHistogram: the 18 x 72 histogram painted on a
-    // disc with theta linear in radius (90 degrees at the rim) and phi around
-    // it, coloured on cisTEM's colour bar from 0 to 4.5 x the mean bin
-    // ("N+" saturates at red), with the bar beside it, white dashed circles at
-    // theta = 30 and 60 with white labels, and black phi labels round the rim.
-    // cisTEM paints from bitmap coordinates (y down), so phi runs clockwise on
-    // screen while the labels read anticlockwise; kept as it is so the picture
-    // matches the desktop panel's.
-    var ANG_RAMP = [[0, [0, 0, 128]], [127 / 1019, [0, 0, 255]], [382 / 1019, [0, 255, 255]], [509 / 1019, [127, 255, 255]], [637 / 1019, [255, 255, 127]], [764 / 1019, [255, 255, 0]], [1, [255, 0, 0]]];
-    function angColour(t){
+  // disc with theta linear in radius (90 degrees at the rim) and phi around
+  // it, coloured on cisTEM's colour bar from 0 to 4.5 x the mean bin
+  // ("N+" saturates at red), with the bar beside it, white dashed circles at
+  // theta = 30 and 60 with white labels, and black phi labels round the rim.
+  // cisTEM paints from bitmap coordinates (y down), so phi runs clockwise on
+  // screen while the labels read anticlockwise; kept as it is so the picture
+  // matches the desktop panel's.
+  var ANG_RAMP = [[0, [0, 0, 128]], [127 / 1019, [0, 0, 255]], [382 / 1019, [0, 255, 255]], [509 / 1019, [127, 255, 255]], [637 / 1019, [255, 255, 127]], [764 / 1019, [255, 255, 0]], [1, [255, 0, 0]]];
+  function angColour(t){
       t = Math.max(0, Math.min(1, t));
       for (var i = 1; i < ANG_RAMP.length; i++){
         if (t <= ANG_RAMP[i][0]){
@@ -4914,8 +4828,8 @@ From branch : <span id="versionBranch">—</span></p>
         }
       }
       return "rgb(255,0,0)";
-    }
-    function drawAngular(hist){
+  }
+  function drawAngularPlot(ang, hist){
       while (ang.firstChild) ang.removeChild(ang.firstChild);
       var NS = "http://www.w3.org/2000/svg";
       function el(tag, attrs, text){ var e = document.createElementNS(NS, tag); Object.keys(attrs).forEach(function(k){ e.setAttribute(k, attrs[k]); }); if (text != null) e.textContent = text; ang.appendChild(e); return e; }
@@ -4968,7 +4882,136 @@ From branch : <span id="versionBranch">—</span></p>
       el("rect", {x: barX, y: barY, width: barW, height: barH, fill: "url(#" + gradId + ")", stroke: "#000", "stroke-width": lw});
       label(String(minValue), barX + barW / 2, barY + barH + margin, "middle", "hanging");
       label(maxValue + "+", barX + barW / 2, barY - margin, "middle", "auto");
+  }
+  // An Angular Distribution block: the head with its title, the plot on a
+  // frame carrying a zoom icon that opens it at window size (#plotModal).
+  function makeAngularBlock(){
+    var root = document.createElement("div");
+    var head = document.createElement("div"); head.className = "ra-plot-head"; head.innerHTML = '<span class="ra-plot-title">Angular Distribution</span><span class="ra-legend">views per bin, all symmetry mates</span>'; root.appendChild(head);
+    var frame = document.createElement("div"); frame.className = "ang-frame"; root.appendChild(frame);
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("class", "ra-plot ang-plot"); svg.setAttribute("viewBox", "0 0 340 240"); frame.appendChild(svg);
+    var zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "fig-expand"; zoom.title = "Enlarge";
+    zoom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>'; frame.appendChild(zoom);
+    var hist = null, title = "Angular Distribution";
+    zoom.addEventListener("click", function(){ openPlotModal(title, function(target){ drawAngularPlot(target, hist); }); });
+    return {root: root, svg: svg, draw: function(h, t){ hist = h; if (t) title = t; drawAngularPlot(svg, h); zoom.hidden = !(h && h.length); }};
+  }
+  function openPlotModal(title, draw){
+    els.plotModalTitle.textContent = title;
+    els.plotModal.classList.add("open"); els.plotScrim.classList.add("open");
+    draw(els.plotModalSvg);
+  }
+  function closePlotModal(){ els.plotModal.classList.remove("open"); els.plotScrim.classList.remove("open"); }
+  els.plotModalClose.addEventListener("click", closePlotModal);
+  els.plotScrim.addEventListener("click", closePlotModal);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && els.plotModal.classList.contains("open")) closePlotModal(); });
+  function makeRefinementResultsPage(){
+    var page = {items: [], packages: [], packageId: null, selectedId: null, classIndex: 0, current: null, showDetails: false, urls: []};
+    var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
+    var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
+    var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
+    left.innerHTML = '<span class="groupbox-label">Refinements</span>' +
+      '<div class="c2d-pkg-row"><label>Refinement Package</label><select data-role="package"></select></div>' +
+      '<div class="c2d-list"><table><thead><tr><th>Refinement</th><th>Classes</th><th>Est. Res.</th><th>Job</th></tr></thead><tbody></tbody></table></div>' +
+      '<div class="asset-toolbar"><button class="small ra-toggle" data-role="details" aria-pressed="false">Show Job Details</button></div>';
+    var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
+    var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Refinement"; right.appendChild(rightLabel);
+    var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
+    var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
+    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
+    var DETAILS = [
+      ["Refinement ID", function(r, c){ return fmtVal(r.refinement_id) + (r.job_number ? " (Job " + r.job_number + ")" : ""); }],
+      ["Date of Run", function(r){ return fmtWhenDate(r.datetime_of_run); }],
+      ["Refinement Package", function(r){ return r.package_name || fmtVal(r.refinement_package_asset_id); }],
+      ["Starting Refinement", function(r){ return r.starting_refinement_id != null && r.starting_refinement_id >= 0 ? "#" + r.starting_refinement_id : "—"; }],
+      ["Reference Volume", function(r, c){ return c && c.reference_volume_asset_id >= 0 ? "#" + c.reference_volume_asset_id : "generated from parameters"; }],
+      ["Low / High Res. Limit", function(r, c){ return c ? fmtVal(c.low_resolution_limit, 1) + " / " + fmtVal(c.high_resolution_limit, 1) + " Å" : "—"; }],
+      ["Mask Radius", function(r, c){ return c ? fmtVal(c.mask_radius, 1) + " Å" : "—"; }],
+      ["Signed CC Limit", function(r, c){ return c ? fmtVal(c.signed_cc_resolution_limit, 1) + " Å" : "—"; }],
+      ["Global Mask / Step", function(r, c){ return c ? fmtVal(c.global_mask_radius, 1) + " Å / " + fmtVal(c.angular_search_step, 2) + "°" : "—"; }],
+      ["Results to Refine", function(r, c){ return c ? fmtVal(c.number_results_to_refine) : "—"; }],
+      ["Search Range X / Y", function(r, c){ return c ? fmtVal(c.search_range_x, 1) + " / " + fmtVal(c.search_range_y, 1) + " Å" : "—"; }],
+      ["Percent Used", function(r){ return fmtVal(r.percent_used, 1) + " %"; }],
+      ["Refine CTF", function(r, c){ return c ? fmtYesNo(c.should_refine_ctf) : "—"; }],
+      ["Auto-Mask / Mask", function(r, c){ return c ? fmtYesNo(c.should_automask) + " / " + (c.should_use_supplied_mask ? "volume #" + c.mask_asset_id : "none") : "—"; }],
+      ["Average Occupancy", function(r, c){ return c ? fmtVal(c.average_occupancy, 2) + " %" : "—"; }],
+      ["Estimated Resolution", function(r, c){ return c ? fmtVal(c.estimated_resolution, 2) + " Å" : "—"; }],
+      ["Reconstructed Volume", function(r, c){ return c && c.reconstructed_volume_asset_id >= 0 ? (c.volume_name || "#" + c.reconstructed_volume_asset_id) : "—"; }],
+      ["Particles", function(r){ return fmtVal(r.number_of_particles); }]
+    ];
+    var cells = DETAILS.map(function(d){
+      var item = document.createElement("div"); item.className = "details-item";
+      var k = document.createElement("span"); k.className = "details-key"; k.textContent = d[0];
+      var v = document.createElement("span"); v.className = "details-val"; v.textContent = "—";
+      item.appendChild(k); item.appendChild(v); grid.appendChild(item); return v;
+    });
+    var empty = document.createElement("div"); empty.className = "empty-note"; empty.textContent = "No 3D refinements in this project yet";
+    var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Refine 3D from the Actions tab; each round’s refinement appears here with its FSC curve and reconstruction."; empty.appendChild(hint);
+    scroll.appendChild(empty);
+    var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
+    var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
+    var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
+    // The reconstruction and the angular distribution side by side at equal width, the
+    // distribution with a zoom icon that opens it at window size; Download saves the shown map.
+    var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
+    var figCol = document.createElement("div"); pair.appendChild(figCol);
+    var figHead = document.createElement("div"); figHead.className = "ra-plot-head"; figHead.innerHTML = '<span class="ra-plot-title">Reconstruction</span>'; figCol.appendChild(figHead);
+    var dlBtn = document.createElement("button"); dlBtn.className = "small"; dlBtn.textContent = "Download"; dlBtn.title = "Save the shown reconstruction as an MRC file"; dlBtn.disabled = true; figHead.appendChild(dlBtn);
+    var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); figCol.appendChild(fig.root);
+    var angular = makeAngularBlock(); pair.appendChild(angular.root);
+    var dlVolume = null;
+    dlBtn.addEventListener("click", function(){ if (dlVolume != null) downloadFile("/volumes/" + dlVolume + "/file.mrc", "volume.mrc", dlBtn); });
+    els.resultsPages.appendChild(root);
+    page.root = root;
+    var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody"), classSelect = classRow.querySelector("select");
+    var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
+    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
+    page.load = function(){
+      if (!state.projectId || !state.connected) return Promise.resolve();
+      return Promise.all([
+        apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
+        apiFetch(projectApiUrl("/refinements")).then(function(r){ return r.ok ? r.json() : {refinements: []}; })
+      ]).then(function(res){
+        page.packages = (res[0] && res[0].refinement_packages) || [];
+        page.items = ((res[1] && res[1].refinements) || []).filter(function(r){ return r.classes.some(function(c){ return c.reconstructed_volume_asset_id >= 0; }) || r.starting_refinement_id >= 0; });
+        if (!page.packages.some(function(p){ return p.refinement_package_asset_id === page.packageId; })){
+          var withResults = {}; page.items.forEach(function(r){ withResults[r.refinement_package_asset_id] = true; });
+          var first = page.packages.filter(function(p){ return withResults[p.refinement_package_asset_id]; })[0] || page.packages[0];
+          page.packageId = first ? first.refinement_package_asset_id : null;
+        }
+        pkgSelect.innerHTML = "";
+        page.packages.forEach(function(p){
+          var o = document.createElement("option"); o.value = p.refinement_package_asset_id;
+          var n = page.items.filter(function(r){ return r.refinement_package_asset_id === p.refinement_package_asset_id; }).length;
+          o.textContent = p.name + " (" + n + " refinement" + (n === 1 ? "" : "s") + ")"; o.selected = p.refinement_package_asset_id === page.packageId; pkgSelect.appendChild(o);
+        });
+        renderList();
+      }).catch(function(){});
+    };
+    function visible(){ return page.items.filter(function(r){ return r.refinement_package_asset_id === page.packageId; }); }
+    function renderList(){
+      var rows = visible();
+      if (!rows.some(function(r){ return r.refinement_id === page.selectedId; })){ page.selectedId = rows.length ? rows[rows.length - 1].refinement_id : null; page.classIndex = 0; }
+      tbody.innerHTML = "";
+      rows.forEach(function(r){
+        var tr = document.createElement("tr"); tr.classList.toggle("selected", r.refinement_id === page.selectedId);
+        var est = r.classes.map(function(c){ return c.estimated_resolution ? Number(c.estimated_resolution).toFixed(1) : "—"; }).join(" / ");
+        tr.innerHTML = "<td></td><td class='num'>" + r.number_of_classes + "</td><td class='num'>" + est + " Å</td><td>" + (r.job_number ? "#" + r.job_number : "—") + "</td>";
+        tr.firstChild.textContent = r.name; tr.firstChild.title = r.name;
+        tr.addEventListener("click", function(){ page.selectedId = r.refinement_id; page.classIndex = 0; renderList(); });
+        tbody.appendChild(tr);
+      });
+      show();
     }
+    page.showJob = function(job){
+      var r = page.items.filter(function(x){ return x.job_id === job.id; }).pop();
+      if (!r && job.metrics && job.metrics.refinement_id != null) r = page.items.filter(function(x){ return x.refinement_id === job.metrics.refinement_id; })[0];
+      if (!r) return false;
+      page.packageId = r.refinement_package_asset_id; pkgSelect.value = page.packageId;
+      page.selectedId = r.refinement_id; page.classIndex = 0;
+      renderList();
+      return true;
+    };
     function show(){
       releaseUrls();
       var item = page.items.filter(function(r){ return r.refinement_id === page.selectedId; })[0];
@@ -4990,7 +5033,8 @@ From branch : <span id="versionBranch">—</span></p>
       var c = full.classes[page.classIndex] || full.classes[0];
       DETAILS.forEach(function(d, i){ cells[i].textContent = d[1](full, c); });
       drawFscPlot(plot.svg, c.statistics || [], full.resolution_statistics_pixel_size);
-      drawAngular(c.angular_distribution);
+      angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name + (full.classes.length > 1 ? " \u00b7 class #" + c.class_number : ""));
+      dlVolume = c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists ? c.reconstructed_volume_asset_id : null; dlBtn.disabled = dlVolume == null;
       fig.left.textContent = (c.volume_name || "Reconstruction") + (c.reconstructed_volume_asset_id >= 0 ? " (asset #" + c.reconstructed_volume_asset_id + ")" : "");
       fig.right.textContent = c.estimated_resolution ? "est. " + Number(c.estimated_resolution).toFixed(2) + " Å" : "";
       fig.img.style.maxWidth = "720px"; fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
@@ -9551,6 +9595,20 @@ From branch : <span id="versionBranch">—</span></p>
   // What each stage's live result looks like -- the same views the Results
   // tab uses, fed from the task's own files (pictures are fetched from
   // /jobs/:id/tasks/:n/<name>.png, which exist before the job finalizes).
+  // Fetch a project file through the API (so the token goes with it) and hand it to the browser to save,
+  // named as the server's Content-Disposition says; `btn` is greyed while it downloads.
+  function downloadFile(path, fallbackName, btn){
+    if (btn) btn.disabled = true;
+    var name = fallbackName;
+    return apiFetch(projectApiUrl(path)).then(function(r){
+      if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      var cd = r.headers.get("Content-Disposition") || ""; var m = /filename="?([^";]+)"?/.exec(cd); if (m) name = m[1];
+      return r.blob();
+    }).then(function(blob){
+      var url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    }).catch(function(err){ alert("Could not download: " + err.message); }).then(function(){ if (btn) btn.disabled = false; });
+  }
   // The 3D refinement live views' arrangement: the reconstruction card on the
   // left and the plots stacked on the right, the plots wrapping underneath
   // when the panel is too narrow for both (MyRefine3DPanel puts its
@@ -9560,14 +9618,20 @@ From branch : <span id="versionBranch">—</span></p>
     var picCol = document.createElement("div"); picCol.className = "live-split-pic"; root.appendChild(picCol);
     var plots = document.createElement("div"); plots.className = "live-split-plots"; root.appendChild(plots);
     var card = document.createElement("div"); card.className = "live-orth-card"; picCol.appendChild(card);
-    card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span></div><div class="live-orth-stage"></div>' +
+    card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
+      '<div class="live-orth-controls"><button class="small" data-role="rdownload" title="Save the shown reconstruction as an MRC file" disabled>Download</button></div></div>' +
+      '<div class="live-orth-stage"></div>' +
       '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
     var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.frame.classList.add("c2d-orth"); card.querySelector(".live-orth-stage").appendChild(fig.frame);
-    var out = {root: root, plots: plots, left: card.querySelector('[data-role="capleft"]'), right: card.querySelector('[data-role="capright"]'), fig: fig};
+    var dl = card.querySelector('[data-role="rdownload"]');
+    dl.addEventListener("click", function(){ downloadFile("/jobs/" + live.jobId + "/abinitio/volume.mrc", "reconstruction.mrc", dl); });
+    var angular = makeAngularBlock(); plots.appendChild(angular.root);
+    var out = {root: root, plots: plots, left: card.querySelector('[data-role="capleft"]'), right: card.querySelector('[data-role="capright"]'), fig: fig, angular: angular};
     out.show = function(path, exists, urls, expandSrc){
       fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
       loadFigure(fig.img, fig.status, path, exists, "reconstruction", urls);
       setExpand(fig.expand, expandSrc);
+      dl.disabled = !expandSrc;
     };
     return {root: root, plots: plots, card: out};
   }
@@ -9667,19 +9731,7 @@ From branch : <span id="versionBranch">—</span></p>
       card.querySelector('[data-role="rprev"]').addEventListener("click", function(){ stepRound(-1); });
       card.querySelector('[data-role="rnext"]').addEventListener("click", function(){ stepRound(1); });
       var dl = card.querySelector('[data-role="rdownload"]');
-      dl.addEventListener("click", function(){
-        if (!last) return;
-        dl.disabled = true;
-        var name = "";
-        apiFetch(projectApiUrl("/jobs/" + live.jobId + "/abinitio/volume.mrc" + shownQuery)).then(function(r){
-          if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
-          var cd = r.headers.get("Content-Disposition") || ""; var m = /filename="?([^";]+)"?/.exec(cd); name = m ? m[1] : "reconstruction.mrc";
-          return r.blob();
-        }).then(function(blob){
-          var url = URL.createObjectURL(blob), a = document.createElement("a");
-          a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
-        }).catch(function(err){ alert("Could not download the reconstruction: " + err.message); }).then(function(){ dl.disabled = false; });
-      });
+      dl.addEventListener("click", function(){ if (last) downloadFile("/jobs/" + live.jobId + "/abinitio/volume.mrc" + shownQuery, "reconstruction.mrc", dl); });
       return function(result, base, urls){
         last = {result: result, urls: urls};
         var h = result.history || [];
@@ -9701,9 +9753,10 @@ From branch : <span id="versionBranch">—</span></p>
     // current reconstruction (ShowRefinementResultsPanel).
     refine3d: function(body){
       var split = liveSplit(body), card = split.card;
-      var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); split.plots.appendChild(plot.root);
+      var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); split.plots.insertBefore(plot.root, split.plots.firstChild);
       return function(result, base, urls){
         drawFscPlot(plot.svg, result.fsc || [], result.pixel_size);
+        card.angular.draw(result.angular_distribution, "Angular Distribution \u2014 " + result.label);
         var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
         card.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
         var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
@@ -9716,11 +9769,12 @@ From branch : <span id="versionBranch">—</span></p>
     // the current reconstruction.
     auto_refine3d: function(body){
       var split = liveSplit(body), card = split.card, plots = split.plots;
-      var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.appendChild(fscPlot.root);
+      var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.insertBefore(fscPlot.root, plots.firstChild);
       var resPlot = makePlotBlock("Estimated resolution", [["ra-swatch-logp", "Å per round"]]); plots.appendChild(resPlot.root);
       var pctPlot = makePlotBlock("Particles used", [["ra-swatch-moved", "% per round"]]); plots.appendChild(pctPlot.root);
       return function(result, base, urls){
         drawFscPlot(fscPlot.svg, result.fsc || [], result.pixel_size);
+        card.angular.draw(result.angular_distribution, "Angular Distribution \u2014 " + result.label);
         var res = result.resolution_per_round || [], pct = result.percent_used_per_round || [];
         var xs = res.map(function(_, i){ return i + 1; });
         var opts = {xLabel: "round", xMin: 1, xStep: Math.max(1, Math.ceil(Math.max(res.length, 2) / 10)), xTick: function(v){ return String(Math.round(v)); }, emptyText: "No round has finished yet."};

@@ -585,6 +585,12 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .live-orth-stage .c2d-frame.c2d-orth{border:none;background:transparent;}
 .live-orth-stage .c2d-frame img{max-width:100%;height:auto;}
 .live-orth-caption{margin-top:8px;}
+/* Refine 3D / Auto Refine live views: picture left, plots right, plots underneath when the panel is narrow. */
+.live-split{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;}
+.live-split-pic{flex:0 1 800px;min-width:min(100%,520px);max-width:100%;}
+.live-split-plots{flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:12px;}
+.live-split .live-orth-card{margin-top:0;}
+.live-split .live-orth-stage img{max-width:100%;}
 .c2d-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--border);}
 .c2d-list table{width:100%;border-collapse:collapse;font-size:15.5px;}
 .c2d-list th{position:sticky;top:0;background:var(--chrome);font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
@@ -9545,6 +9551,26 @@ From branch : <span id="versionBranch">—</span></p>
   // What each stage's live result looks like -- the same views the Results
   // tab uses, fed from the task's own files (pictures are fetched from
   // /jobs/:id/tasks/:n/<name>.png, which exist before the job finalizes).
+  // The 3D refinement live views' arrangement: the reconstruction card on the
+  // left and the plots stacked on the right, the plots wrapping underneath
+  // when the panel is too narrow for both (MyRefine3DPanel puts its
+  // OrthResultsPanel and plots side by side the same way).
+  function liveSplit(body){
+    var root = document.createElement("div"); root.className = "live-split"; root.style.gridColumn = "1 / -1"; body.appendChild(root);
+    var picCol = document.createElement("div"); picCol.className = "live-split-pic"; root.appendChild(picCol);
+    var plots = document.createElement("div"); plots.className = "live-split-plots"; root.appendChild(plots);
+    var card = document.createElement("div"); card.className = "live-orth-card"; picCol.appendChild(card);
+    card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span></div><div class="live-orth-stage"></div>' +
+      '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
+    var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.frame.classList.add("c2d-orth"); card.querySelector(".live-orth-stage").appendChild(fig.frame);
+    var out = {root: root, plots: plots, left: card.querySelector('[data-role="capleft"]'), right: card.querySelector('[data-role="capright"]'), fig: fig};
+    out.show = function(path, exists, urls, expandSrc){
+      fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
+      loadFigure(fig.img, fig.status, path, exists, "reconstruction", urls);
+      setExpand(fig.expand, expandSrc);
+    };
+    return {root: root, plots: plots, card: out};
+  }
   var LIVE_VIEWS = {
     motion_correction: function(body){
       var col = document.createElement("div"); col.className = "live-plot-col"; body.appendChild(col);
@@ -9674,30 +9700,25 @@ From branch : <span id="versionBranch">—</span></p>
     // MyRefine3DPanel while it runs: the FSC of the newest refinement and the
     // current reconstruction (ShowRefinementResultsPanel).
     refine3d: function(body){
-      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
-      var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); box.appendChild(plot.root);
-      var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); box.appendChild(fig.root);
+      var split = liveSplit(body), card = split.card;
+      var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); split.plots.appendChild(plot.root);
       return function(result, base, urls){
         drawFscPlot(plot.svg, result.fsc || [], result.pixel_size);
         var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
-        fig.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
+        card.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
         var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
-        fig.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
-        loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
+        card.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + " of " + result.rounds : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
+        card.show("/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, urls, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
     },
     // AutoRefine3DPanel while it runs: the FSC of the newest refinement, the
     // estimated resolution and the percentage of particles per round, and
     // the current reconstruction.
     auto_refine3d: function(body){
-      var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
-      var plots = document.createElement("div"); plots.className = "c2d-plots"; box.appendChild(plots);
+      var split = liveSplit(body), card = split.card, plots = split.plots;
       var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.appendChild(fscPlot.root);
       var resPlot = makePlotBlock("Estimated resolution", [["ra-swatch-logp", "Å per round"]]); plots.appendChild(resPlot.root);
       var pctPlot = makePlotBlock("Particles used", [["ra-swatch-moved", "% per round"]]); plots.appendChild(pctPlot.root);
-      var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); box.appendChild(fig.root);
       return function(result, base, urls){
         drawFscPlot(fscPlot.svg, result.fsc || [], result.pixel_size);
         var res = result.resolution_per_round || [], pct = result.percent_used_per_round || [];
@@ -9706,14 +9727,12 @@ From branch : <span id="versionBranch">—</span></p>
         drawLinePlot(resPlot.svg, res.length ? [{xs: xs, ys: res, cls: "line-x", dots: "dot-x"}] : [], Object.assign({}, opts, {yLabel: "Å"}));
         drawLinePlot(pctPlot.svg, pct.length ? [{xs: pct.map(function(_, i){ return i + 1; }), ys: pct, cls: "line-moved", dots: "dot-moved"}] : [], Object.assign({}, opts, {yLabel: "%", yMin: 0, yMax: 100}));
         var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
-        fig.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
+        card.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
         var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
-        fig.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + (result.final_round ? " (final)" : "") +
+        card.right.textContent = running ? (result.phase || "") + " · round " + (result.round + 1) + (result.final_round ? " (final)" : "") +
           (result.high_res_limits ? " · limit " + result.high_res_limits.map(function(v){ return Number(v).toFixed(1); }).join(" / ") + " Å, " + Number(result.current_percent_used).toFixed(1) + "%" : "")
           : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…"; fig.img.style.maxWidth = "720px";
-        loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, "reconstruction", urls);
-        setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
+        card.show("/jobs/" + live.jobId + "/abinitio/current.png", result.has_picture, urls, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
     },
     // RefineCTFPanel while it runs: the defocus-change histogram filling

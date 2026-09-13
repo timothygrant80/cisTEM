@@ -404,8 +404,35 @@ def _job_actions(row):
 
 def _task_progress_for(conn, row):
     if row["STAGE"] in DRIVERS:
-        return DRIVERS[row["STAGE"]].progress_info(json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None)
+        state = json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None
+        info = dict(DRIVERS[row["STAGE"]].progress_info(state) or {})
+        step = _current_step(conn, row, state)
+        if step:
+            info["step"] = step
+        return info
     return _task_progress(conn, row)
+
+
+def _current_step(conn, parent_row, state):
+    """A multi-run job's running child as `step`: its label (the child's
+    name without the parent's), its task counts and finish times, and when
+    it started -- so the Jobs tab can draw the progress bar and the time
+    left for the step that is actually running, from its first result on,
+    rather than waiting a whole round for the first tick of the parent's
+    round count."""
+    child_id = (state or {}).get("child_job_id")
+    if not child_id:
+        return None
+    child = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (child_id,)).fetchone()
+    if child is None:
+        return None
+    label = child["NAME"] or ""
+    prefix = (parent_row["NAME"] or "") + " \u00b7 "
+    if label.startswith(prefix):
+        label = label[len(prefix):]
+    step = {"job_id": child_id, "label": label, "status": child["STATUS"], "started_at": child["STARTED_AT"] or child["CREATED_AT"]}
+    step.update(_task_progress(conn, child))
+    return step
 
 
 def _fetch_job_row(project_id, job_id):

@@ -9494,7 +9494,10 @@ From branch : <span id="versionBranch">—</span></p>
       track.className = "progress-track";
       var fill = document.createElement("div");
       fill.className = "progress-fill " + job.status;
-      fill.style.width = (job.progress != null ? job.progress : (job.status === "completed" ? 100 : 0)) + "%";
+      // A multi-run job's bar is the step that is running (its child's tasks
+      // done), not the parent's round count: it moves from the first result.
+      var stepFrac = job.status === "running" && job.step && job.step.task_count ? 100 * (job.step.tasks_done || 0) / job.step.task_count : null;
+      fill.style.width = (stepFrac != null ? stepFrac : job.progress != null ? job.progress : (job.status === "completed" ? 100 : 0)) + "%";
       track.appendChild(fill);
       tdProgress.appendChild(track);
       var eta = document.createElement("div");
@@ -9578,6 +9581,12 @@ From branch : <span id="versionBranch">—</span></p>
   }
   function progressNote(job){
     if (job.status === "running"){
+      if (job.step && job.step.task_count){
+        // the running step's own count and time left (JobTracker's rule on its tasks), with the parent's round count before it
+        var st = job.step, stepEta = estimateRemaining({task_count: st.task_count, tasks_done: st.tasks_done, first_task_finished_at: st.first_task_finished_at, started_at: st.started_at});
+        var rounds = job.task_count ? job.tasks_done + "/" + job.task_count + " \u00b7 " : "";
+        return rounds + st.label + ": " + (st.tasks_done || 0) + "/" + st.task_count + " \u00b7 " + (stepEta == null ? "estimating\u2026" : (stepEta < 1 ? "finishing" : fmtDuration(stepEta) + " left"));
+      }
       var eta = estimateRemaining(job);
       var done = job.task_count ? job.tasks_done + "/" + job.task_count + " \u00b7 " : "";
       return done + (eta == null ? "estimating\u2026" : (eta < 1 ? "finishing" : fmtDuration(eta) + " left"));

@@ -4831,6 +4831,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
   function drawAngularPlot(ang, hist){
       while (ang.firstChild) ang.removeChild(ang.firstChild);
+      ang.setAttribute("viewBox", "0 0 340 240");   // the disc is laid out in these units whatever the SVG's size
       var NS = "http://www.w3.org/2000/svg";
       function el(tag, attrs, text){ var e = document.createElementNS(NS, tag); Object.keys(attrs).forEach(function(k){ e.setAttribute(k, attrs[k]); }); if (text != null) e.textContent = text; ang.appendChild(e); return e; }
       var W = 340, H = 240;
@@ -4896,9 +4897,20 @@ From branch : <span id="versionBranch">—</span></p>
     zoom.addEventListener("click", function(){ openPlotModal(title, function(target){ drawAngularPlot(target, hist); }); });
     return {root: root, svg: svg, draw: function(h, t){ hist = h; if (t) title = t; drawAngularPlot(svg, h); zoom.hidden = !(h && h.length); }};
   }
+  // A zoom icon on a plot block: the plot redrawn at window size in #plotModal.
+  // `titleFn()` names the overlay, `drawFn(svg)` draws the current data into it.
+  function addPlotZoom(block, titleFn, drawFn){
+    var frame = document.createElement("div"); frame.className = "ang-frame";
+    block.svg.parentNode.insertBefore(frame, block.svg); frame.appendChild(block.svg);
+    var zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "fig-expand"; zoom.title = "Enlarge";
+    zoom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>'; frame.appendChild(zoom);
+    zoom.addEventListener("click", function(){ openPlotModal(titleFn(), drawFn); });
+    return zoom;
+  }
   function openPlotModal(title, draw){
     els.plotModalTitle.textContent = title;
     els.plotModal.classList.add("open"); els.plotScrim.classList.add("open");
+    els.plotModalSvg.removeAttribute("viewBox");
     draw(els.plotModalSvg);
   }
   function closePlotModal(){ els.plotModal.classList.remove("open"); els.plotScrim.classList.remove("open"); }
@@ -4951,12 +4963,14 @@ From branch : <span id="versionBranch">—</span></p>
     var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
     var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
+    var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
+    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps); });
     // The reconstruction and the angular distribution side by side at equal width, the
     // distribution with a zoom icon that opens it at window size; Download saves the shown map.
     var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
     var figCol = document.createElement("div"); pair.appendChild(figCol);
     var figHead = document.createElement("div"); figHead.className = "ra-plot-head"; figHead.innerHTML = '<span class="ra-plot-title">Reconstruction</span>'; figCol.appendChild(figHead);
-    var dlBtn = document.createElement("button"); dlBtn.className = "small"; dlBtn.textContent = "Download"; dlBtn.title = "Save the shown reconstruction as an MRC file"; dlBtn.disabled = true; figHead.appendChild(dlBtn);
+    var dlBtn = document.createElement("button"); dlBtn.className = "small primary"; dlBtn.textContent = "Download"; dlBtn.title = "Save the shown reconstruction as an MRC file"; dlBtn.disabled = true; figHead.appendChild(dlBtn);
     var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); figCol.appendChild(fig.root);
     var angular = makeAngularBlock(); pair.appendChild(angular.root);
     var dlVolume = null;
@@ -5032,7 +5046,8 @@ From branch : <span id="versionBranch">—</span></p>
       var full = page.current; if (!full) return;
       var c = full.classes[page.classIndex] || full.classes[0];
       DETAILS.forEach(function(d, i){ cells[i].textContent = d[1](full, c); });
-      drawFscPlot(plot.svg, c.statistics || [], full.resolution_statistics_pixel_size);
+      lastFsc = {stats: c.statistics || [], ps: full.resolution_statistics_pixel_size, title: "Fourier Shell Correlation \u2014 " + full.name + (full.classes.length > 1 ? " \u00b7 class #" + c.class_number : "")};
+      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps);
       angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name + (full.classes.length > 1 ? " \u00b7 class #" + c.class_number : ""));
       dlVolume = c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists ? c.reconstructed_volume_asset_id : null; dlBtn.disabled = dlVolume == null;
       fig.left.textContent = (c.volume_name || "Reconstruction") + (c.reconstructed_volume_asset_id >= 0 ? " (asset #" + c.reconstructed_volume_asset_id + ")" : "");
@@ -9619,7 +9634,7 @@ From branch : <span id="versionBranch">—</span></p>
     var plots = document.createElement("div"); plots.className = "live-split-plots"; root.appendChild(plots);
     var card = document.createElement("div"); card.className = "live-orth-card"; picCol.appendChild(card);
     card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
-      '<div class="live-orth-controls"><button class="small" data-role="rdownload" title="Save the shown reconstruction as an MRC file" disabled>Download</button></div></div>' +
+      '<div class="live-orth-controls"><button class="small primary" data-role="rdownload" title="Save the shown reconstruction as an MRC file" disabled>Download</button></div></div>' +
       '<div class="live-orth-stage"></div>' +
       '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
     var fig = classMontageFigure("Orthogonal projections and slices of the current reconstruction"); fig.frame.classList.add("c2d-orth"); card.querySelector(".live-orth-stage").appendChild(fig.frame);
@@ -9688,7 +9703,7 @@ From branch : <span id="versionBranch">—</span></p>
           '<button class="small" data-role="rnext" title="The round after">&rarr;</button>' +
           '<button class="small" data-role="rlatest" title="Follow the newest reconstruction as the run goes on">Latest</button>' +
           '<span class="live-orth-sep"></span>' +
-          '<button class="small" data-role="rdownload" title="Save the shown reconstruction as an MRC file">Download</button>' +
+          '<button class="small primary" data-role="rdownload" title="Save the shown reconstruction as an MRC file">Download</button>' +
         '</div></div>' +
         '<div class="live-orth-stage"></div>' +
         '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
@@ -9754,8 +9769,11 @@ From branch : <span id="versionBranch">—</span></p>
     refine3d: function(body){
       var split = liveSplit(body), card = split.card;
       var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); split.plots.insertBefore(plot.root, split.plots.firstChild);
+      var lastFsc = {fsc: [], ps: null, title: "Fourier Shell Correlation"};
+      addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.fsc, lastFsc.ps); });
       return function(result, base, urls){
-        drawFscPlot(plot.svg, result.fsc || [], result.pixel_size);
+        lastFsc = {fsc: result.fsc || [], ps: result.pixel_size, title: "Fourier Shell Correlation \u2014 " + result.label};
+        drawFscPlot(plot.svg, lastFsc.fsc, lastFsc.ps);
         card.angular.draw(result.angular_distribution, "Angular Distribution \u2014 " + result.label);
         var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
         card.left.textContent = result.label + " — Refinement #" + result.refinement_id + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
@@ -9770,10 +9788,13 @@ From branch : <span id="versionBranch">—</span></p>
     auto_refine3d: function(body){
       var split = liveSplit(body), card = split.card, plots = split.plots;
       var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.insertBefore(fscPlot.root, plots.firstChild);
+      var lastFsc = {fsc: [], ps: null, title: "Fourier Shell Correlation"};
+      addPlotZoom(fscPlot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.fsc, lastFsc.ps); });
       var resPlot = makePlotBlock("Estimated resolution", [["ra-swatch-logp", "Å per round"]]); plots.appendChild(resPlot.root);
       var pctPlot = makePlotBlock("Particles used", [["ra-swatch-moved", "% per round"]]); plots.appendChild(pctPlot.root);
       return function(result, base, urls){
-        drawFscPlot(fscPlot.svg, result.fsc || [], result.pixel_size);
+        lastFsc = {fsc: result.fsc || [], ps: result.pixel_size, title: "Fourier Shell Correlation \u2014 " + result.label};
+        drawFscPlot(fscPlot.svg, lastFsc.fsc, lastFsc.ps);
         card.angular.draw(result.angular_distribution, "Angular Distribution \u2014 " + result.label);
         var res = result.resolution_per_round || [], pct = result.percent_used_per_round || [];
         var xs = res.map(function(_, i){ return i + 1; });

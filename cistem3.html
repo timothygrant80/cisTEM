@@ -660,6 +660,8 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .abi-figures{display:flex;flex-direction:column;gap:12px;flex:0 0 auto;width:min(720px,62%);}
 .abi-figure .ra-figure-frame{aspect-ratio:3 / 2;}
 .abi-figure .ra-nyquist{font-family:var(--font-ui);}
+.abi-figure figcaption{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.abi-figure .abi-download{margin-left:auto;}
 .ctf-fit-plot .ra-plot{height:280px;}   /* the room the tighter head and gap gave back goes to the curves */
 .ra-plot .line-amp{fill:none;stroke:var(--success);stroke-width:1.6;stroke-linejoin:round;}
 .ra-plot .line-fit{fill:none;stroke:var(--plot-y);stroke-width:1.6;stroke-linejoin:round;}
@@ -4819,6 +4821,10 @@ From branch : <span id="versionBranch">—</span></p>
       (r.volumes || []).forEach(function(v){
         var fig = makeFigure((v.name || "Volume") + " (asset #" + v.volume_asset_id + ")", "Orthogonal projections and slices of " + (v.name || "the volume"), {captionTop: true});
         fig.root.classList.add("abi-figure"); fig.extra.textContent = "projections above, central slices below";
+        // Download of the volume's MRC, at the right of the caption above the picture.
+        var dl = document.createElement("button"); dl.className = "small primary abi-download"; dl.textContent = "Download"; dl.title = "Save this volume as an MRC file"; dl.disabled = !v.file_exists;
+        dl.addEventListener("click", function(){ downloadFile("/volumes/" + v.volume_asset_id + "/file.mrc", "volume.mrc", dl); });
+        fig.root.querySelector("figcaption").appendChild(dl);
         figures.appendChild(fig.root);
         loadFigure(fig.img, fig.status, "/volumes/" + v.volume_asset_id + "/preview.png", v.file_exists, "volume", page.urls);
         setExpand(fig.expand, v.file_exists ? {path: v.filename, title: v.name || "Volume", section: "middle", greys: "local"} : null);

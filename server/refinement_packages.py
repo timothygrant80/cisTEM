@@ -347,12 +347,14 @@ def selection_defaults(conn, selection_ids):
             "parent_package_ids": pkg_ids}
 
 
-def create_package(conn, project_id, params, log=None):
+def create_package(conn, project_id, params, log=None, progress=None):
     """MyNewRefinementPackageWizard::OnFinished() for a new package from a
     particle position group (`particle_group_id`) or from 2D class-average
-    selections (`selection_ids`). Returns the new package's id and particle count."""
+    selections (`selection_ids`). Returns the new package's id and particle count.
+    `progress(done, total, message)`, when given, is called as particles are
+    cut -- the wizard's OneSecondProgressDialog."""
     if params.get("source_package_id") is not None:
-        return create_package_from_package(conn, project_id, params, log)
+        return create_package_from_package(conn, project_id, params, log, progress)
     source = {}
     if params.get("selection_ids"):
         particles, source = _particles_of_selections(conn, params)
@@ -393,8 +395,11 @@ def create_package(conn, project_id, params, log=None):
     writer = MrcStackWriter(stack_path, box_size, output_pixel_size)
     contained = []
     current_image_id, image, edge = None, None, 0.0
+    total = len(particles)
     try:
-        for p in particles:
+        for n, p in enumerate(particles, 1):
+            if progress and (n % 10 == 0 or n == total or n == 1):
+                progress(n, total, "Cutting particles from image {}".format(p["PARENT_IMAGE_ASSET_ID"]))
             if p["PARENT_IMAGE_ASSET_ID"] != current_image_id:
                 image = read_mrc_section(p["FILENAME"], 1)
                 # Image::ReplaceOutliersWithMean(6)
@@ -484,7 +489,7 @@ def package_source_defaults(conn, source_package_id, source_refinement_id=None):
     return out
 
 
-def create_package_from_package(conn, project_id, params, log=None):
+def create_package_from_package(conn, project_id, params, log=None, progress=None):
     """MyNewRefinementPackageWizard::OnFinished()'s branch for a template
     package: a new package over an existing one's particles with the
     parameters of one of its refinements carried over -- how a 3D
@@ -575,7 +580,9 @@ def create_package_from_package(conn, project_id, params, log=None):
         writer = MrcStackWriter(stack_path, box_size, output_pixel_size)
         positions = {}
         try:
-            for p in particles:
+            for n, p in enumerate(particles, 1):
+                if progress and (n % 10 == 0 or n == len(particles) or n == 1):
+                    progress(n, len(particles), "Copying particles into the new stack")
                 writer.append(read_mrc_section(pkg["STACK_FILENAME"], p["POSITION_IN_STACK"]))
                 positions[p["POSITION_IN_STACK"]] = writer.count
         finally:
@@ -600,6 +607,8 @@ def create_package_from_package(conn, project_id, params, log=None):
     class_rows = []
     for i in range(number_of_classes):
         rows = []
+        if progress:
+            progress(i, number_of_classes, "Copying the parameters for class {} of {}".format(i + 1, number_of_classes))
         for p in particles:
             a = pick(p["POSITION_IN_STACK"], sources[i])
             if a is None:

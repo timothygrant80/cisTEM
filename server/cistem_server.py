@@ -34,6 +34,7 @@ import glob as glob_module
 import json
 import math
 import os
+import secrets
 import tempfile
 import shlex
 import shutil
@@ -2360,15 +2361,49 @@ def refinement_package_defaults(project_id):
     return jsonify(out)
 
 
+# Package creation in the background: task id -> {state, done, total, message, result | error}.
+# The wizard's OneSecondProgressDialog, as a task the dialog polls.
+_package_tasks = {}
+_package_tasks_lock = threading.Lock()
+
+
+def _run_package_task(task_id, project_id, body):
+    def progress(done, total, message):
+        with _package_tasks_lock:
+            _package_tasks[task_id].update({"done": done, "total": total, "message": message})
+    conn = db.get_conn(project_id)
+    try:
+        result = refinement_packages.create_package(conn, project_id, body, progress=progress)
+        with _package_tasks_lock:
+            _package_tasks[task_id].update({"state": "done", "result": result, "done": _package_tasks[task_id].get("total"), "message": "Done"})
+    except ValueError as exc:
+        with _package_tasks_lock:
+            _package_tasks[task_id].update({"state": "failed", "error": str(exc)})
+    except Exception as exc:  # noqa: BLE001 - the dialog needs the reason, not a 500 nobody sees
+        with _package_tasks_lock:
+            _package_tasks[task_id].update({"state": "failed", "error": "could not create the package: {}".format(exc)})
+    finally:
+        conn.close()
+
+
 @app.route("/api/projects/<project_id>/refinement-packages", methods=["POST"])
 @auth.project_access_required
 def create_refinement_package(project_id):
     """Body {particle_group_id, name, symmetry, molecular_weight_kda,
     largest_dimension_a, number_of_classes, box_size, output_pixel_size}:
     cuts the stack and writes the package and its "Random Parameters"
-    refinement, as the wizard's Finish does. Synchronous -- a project of a
-    few hundred thousand particles will take a while."""
+    refinement, as the wizard's Finish does. Synchronous by default -- a
+    project of a few hundred thousand particles will take a while -- or,
+    with `?async=1`, started in the background and answered `202` with a
+    `task_id` to poll at GET /refinement-packages/tasks/:id, which is how
+    the dialog draws its progress bar."""
     body = request.get_json(force=True, silent=True) or {}
+    if request.args.get("async") in ("1", "true", "yes"):
+        task_id = secrets.token_hex(6)
+        with _package_tasks_lock:
+            _package_tasks[task_id] = {"state": "running", "done": 0, "total": None, "message": "Starting\u2026", "project_id": project_id}
+        threading.Thread(target=_run_package_task, args=(task_id, project_id, body), daemon=True, name="package-" + task_id).start()
+        return jsonify({"task_id": task_id}), 202
     conn = db.get_conn(project_id)
     try:
         try:
@@ -2380,6 +2415,17 @@ def create_refinement_package(project_id):
         return jsonify(result), 201
     finally:
         conn.close()
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>", methods=["GET"])
+@auth.project_access_required
+def refinement_package_task(project_id, task_id):
+    """A background package creation: {state: running|done|failed, done, total, message, result?, error?}."""
+    with _package_tasks_lock:
+        task = _package_tasks.get(task_id)
+        if task is None or task.get("project_id") != project_id:
+            return jsonify({"error": "no such task (tasks are kept until the server restarts)"}), 404
+        return jsonify({k: v for k, v in task.items() if k != "project_id"})
 
 
 @app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["GET"])

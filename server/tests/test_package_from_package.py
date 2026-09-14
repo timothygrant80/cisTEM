@@ -85,6 +85,14 @@ class FromPackageTests(unittest.TestCase):
         self.assertEqual([r["occupancy"] for r in rows], [100.0] * (N // 2))
         self.assertEqual([r["position_in_stack"] for r in rows], list(range(1, N // 2 + 1)))
 
+    def test_progress_is_reported(self):
+        calls = []
+        rp.create_package_from_package(self.conn, self.project, {"source_package_id": 1, "source_refinement_id": 1, "carry_over_classes": [1], "number_of_classes": 2},
+                                       progress=lambda d, t, m: calls.append((d, t, m)))
+        self.assertTrue(any("Copying particles" in c[2] for c in calls))
+        self.assertTrue(any("class 2 of 2" in c[2] for c in calls))
+        self.assertEqual(max(c[0] for c in calls if "Copying particles" in c[2]), N // 2)
+
     def test_refinement_must_belong_to_the_source(self):
         with self.assertRaises(ValueError):
             rp.create_package_from_package(self.conn, self.project, {"source_package_id": 1, "source_refinement_id": 99})

@@ -536,6 +536,8 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .pick-frame.editable{touch-action:none;user-select:none;}
 .pick-edit-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
 /* The New Refinement Package dialog's class pages: rows of class tick boxes. */
+.np-progress{margin:8px 0 4px;}
+.np-progress .progress-track{width:100%;}
 .np-classes{display:flex;flex-direction:column;gap:4px;}
 .np-classes > label.ra-radio{margin:0;}
 .np-class-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -1593,6 +1595,7 @@ From branch : <span id="versionBranch">—</span></p>
     <div class="submit-row">
       <button class="primary" id="npCreateBtn">Create</button>
     </div>
+    <div class="np-progress" id="npProgress" hidden><div class="progress-track"><div class="progress-fill running" id="npProgressFill"></div></div><div class="progress-eta" id="npProgressText"></div></div>
     <p class="form-note" id="npNote"></p>
   </div>
 </div>
@@ -2870,7 +2873,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
    "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
-   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npRandomOccField","npRandomOcc",
+   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npRandomOccField","npRandomOcc","npProgress","npProgressFill","npProgressText",
    "npRecentreField","npRecentre","npDedupField","npDedup","npDedupThresholdField","npDedupThreshold","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
    "ppGroupList","ppGroupAddBtn","ppGroupRenameBtn","ppGroupRemoveBtn","ppGroupInvertBtn","ppGroupFromImagesBtn",
    "ppSelectAllCheckbox","ppListBody","ppListNote","ppRemoveBtn","ppRemoveAllBtn","ppAddToGroupBtn","ppDisplayBtn",
@@ -8411,7 +8414,7 @@ From branch : <span id="versionBranch">—</span></p>
     }
     np.boxTouched = np.pixelTouched = false; np.parentApplied = false;
     els.npNote.textContent = ""; els.npNote.classList.remove("blocked");
-    els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create";
+    els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create"; els.npProgress.hidden = true;
     els.newPackageModal.classList.add("open"); els.newPackageScrim.classList.add("open");
     refreshPackageDefaults();
   }
@@ -8696,11 +8699,31 @@ From branch : <span id="versionBranch">—</span></p>
       body.particle_group_id = Number(els.npGroup.value);
     }
     els.npCreateBtn.disabled = true; els.npCreateBtn.textContent = "Creating\u2026";
-    els.npNote.classList.remove("blocked"); els.npNote.textContent = np.selection ? "Cutting the selected classes\u2019 particles from their images \u2014 this can take a while." : npFromPackage() ? (els.npCarryAll.checked ? "Copying the parameters over \u2014 the stack is shared, so this is quick." : "Cutting the kept particles into a stack of their own.") : "Cutting particles from every image in the group \u2014 this can take a while for a large group.";
-    apiFetch(projectApiUrl("/refinement-packages"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+    els.npNote.classList.remove("blocked"); els.npNote.textContent = "";
+    // The wizard's progress dialog: the creation runs in the background and the bar follows its task.
+    els.npProgress.hidden = false; els.npProgressFill.style.width = "0%"; els.npProgressText.textContent = "Starting\u2026";
+    function showProgress(t){
+      var pct = t.total ? Math.round(100 * (t.done || 0) / t.total) : 0;
+      els.npProgressFill.style.width = pct + "%";
+      els.npProgressText.textContent = (t.message || "") + (t.total ? " \u00b7 " + (t.done || 0) + " / " + t.total : "");
+    }
+    function poll(taskId){
+      return apiFetch(projectApiUrl("/refinement-packages/tasks/" + taskId)).then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); }).then(function(res){
+        if (!res.ok) throw new Error((res.data && res.data.error) || "lost the creation task");
+        if (res.data.state === "failed") throw new Error(res.data.error || "could not create the package");
+        showProgress(res.data);
+        if (res.data.state === "done") return res.data.result;
+        return new Promise(function(resolve){ setTimeout(resolve, 400); }).then(function(){ return poll(taskId); });
+      });
+    }
+    apiFetch(projectApiUrl("/refinement-packages?async=1"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
       .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
       .then(function(res){
         if (!res.ok) throw new Error((res.data && res.data.error) || "could not create the package");
+        return res.data.task_id ? poll(res.data.task_id) : res.data;
+      })
+      .then(function(result){
+        var res = {data: result};
         state.selectedPackageId = res.data.refinement_package_asset_id;
         closeNewPackageModal();
         loadPackages();
@@ -8711,7 +8734,7 @@ From branch : <span id="versionBranch">—</span></p>
         }
       })
       .catch(function(err){ els.npNote.classList.add("blocked"); els.npNote.textContent = err.message; })
-      .finally(function(){ els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create"; });
+      .finally(function(){ els.npCreateBtn.disabled = false; els.npCreateBtn.textContent = "Create"; els.npProgress.hidden = true; });
   });
 
   // ---------- start button gating ----------

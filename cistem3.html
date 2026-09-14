@@ -481,8 +481,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-group-row select{min-width:180px;font-size:14.5px;padding:3px 6px;}
 .ra-group-status{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);}
 .ra-group-status.error{color:#B42318;}
-.ra-job-details{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
-.ra-details-grid{grid-template-columns:repeat(3,1fr);}
+.ra-job-details{margin-bottom:14px;}
 .ra-plot-head{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 2px;}
 .ra-plot-title{font-size:14px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;}
 .ra-legend{font-size:14.5px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;}
@@ -655,6 +654,9 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ctf-numbers .details-key{display:flex;align-items:baseline;gap:8px;overflow:visible;}
 .ctf-numbers .details-key::after{content:"";flex:1 1 auto;border-bottom:1px dotted var(--border-strong);transform:translateY(-4px);}
 .ctf-numbers .details-val{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+/* Show Job Details: the run's parameters in the same readout box, three label - leader - value pairs to a row. */
+.ctf-numbers.ra-job-numbers{grid-template-columns:repeat(3,minmax(0,1fr) max-content);gap:5px 22px;align-content:start;flex:none;}
+.ra-job-numbers .details-val{white-space:normal;overflow-wrap:anywhere;}
 .ctf-fit-plot{flex:0 0 auto;}
 /* The Ab-Initio results page: the Find CTF arrangement with 3 : 2 orthogonal-view pictures
    (one per class, stacked) on the left and the run's numbers beside them. */
@@ -3640,7 +3642,7 @@ From branch : <span id="versionBranch">—</span></p>
       '<button class="small" data-role="groupremove" title="Take the shown ' + gk.noun + ' out of the chosen group (it stays in ' + gk.allName + ').">Remove from Group</button>' +
       '<button class="small" data-role="groupadd" title="Put the shown ' + gk.noun + ' into the chosen group.">Add to Group</button>';
     var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
-    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
+    var grid = document.createElement("div"); grid.className = "ctf-numbers ra-job-numbers"; details.appendChild(grid);
     var detailCells = cfg.details.map(function(d){
       var item = document.createElement("div"); item.className = "details-item" + (d.wide ? " details-item-wide" : "");
       var k = document.createElement("span"); k.className = "details-key"; k.textContent = d.label;
@@ -4494,7 +4496,7 @@ From branch : <span id="versionBranch">—</span></p>
     var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Class Averages"; right.appendChild(rightLabel);
     var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
     var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
-    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
+    var grid = document.createElement("div"); grid.className = "ctf-numbers ra-job-numbers"; details.appendChild(grid);
     var DETAILS = [
       ["Classification ID", function(c){ return fmtVal(c.classification_id) + (c.job_number ? " (Job " + c.job_number + ")" : ""); }],
       ["Date of Run", function(c){ return fmtWhenDate(c.datetime_of_run); }],
@@ -5047,7 +5049,7 @@ From branch : <span id="versionBranch">—</span></p>
     var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = "Refinement"; right.appendChild(rightLabel);
     var scroll = document.createElement("div"); scroll.className = "ra-right-scroll"; right.appendChild(scroll);
     var details = document.createElement("div"); details.className = "ra-job-details"; details.hidden = true; scroll.appendChild(details);
-    var grid = document.createElement("div"); grid.className = "details-grid ra-details-grid"; details.appendChild(grid);
+    var grid = document.createElement("div"); grid.className = "ctf-numbers ra-job-numbers"; details.appendChild(grid);
     var DETAILS = [
       ["Refinement ID", function(r, c){ return fmtVal(r.refinement_id) + (r.job_number ? " (Job " + r.job_number + ")" : ""); }],
       ["Date of Run", function(r){ return fmtWhenDate(r.datetime_of_run); }],

@@ -1,6 +1,8 @@
 #include "../../core/core_headers.h"
 #include "./ctffind.h"
 
+using json = nlohmann::json;
+
 void CTFTilt::Init(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
                    float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
                    bool wanted_debug, std::string wanted_debug_json_output_filename) {
@@ -110,10 +112,8 @@ void CTFTilt::Init(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf
 CTFTilt::~CTFTilt( ) {
     // Write out the json file
     if ( debug ) {
-        wxJSONWriter writer;
-        wxString     json_string;
-        writer.Write(debug_json_output, json_string);
-        wxFile debug_file;
+        wxString json_string = wxString::FromUTF8(debug_json_output.dump(4));
+        wxFile   debug_file;
         debug_file.Open(debug_json_output_filename, wxFile::write);
         debug_file.Write(json_string);
         debug_file.Close( );
@@ -167,7 +167,7 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
     input_image.complex_values[0] = 0.0f + I * 0.0f;
     input_image.BackwardFFT( );
     if ( debug && subtract_average ) {
-        debug_json_output["search_tiles"] = wxJSONValue(wxJSONTYPE_ARRAY);
+        debug_json_output["search_tiles"] = json::array( );
     }
     // for ( iy = -(n_sections_y - 1) * n_steps / 2; iy <= (n_sections_y - 1) * n_steps / 2; iy++ ) {
     //     for ( ix = -(n_sections_x - 1) * n_steps / 2; ix <= (n_sections_x - 1) * n_steps / 2; ix++ ) {
@@ -178,11 +178,11 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
             // tmp_count++;
             input_image.ClipInto(&sub_section, 0.0f, false, 0.0f, float(ix) / 2.0 * sub_section_dimension_x / float(n_steps), float(iy) / 2.0 * sub_section_dimension_y / float(n_steps), 0);
             if ( debug && subtract_average ) {
-                debug_json_output["search_tiles"].Append(wxJSONValue(wxJSONTYPE_OBJECT));
-                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["x"]      = float(ix) / 2.0 * sub_section_dimension_x / float(n_steps);
-                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["y"]      = float(iy) / 2.0 * sub_section_dimension_y / float(n_steps);
-                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["width"]  = sub_section_dimension_x;
-                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["height"] = sub_section_dimension_y;
+                debug_json_output["search_tiles"].push_back(json::object( ));
+                debug_json_output["search_tiles"].back( )["x"]      = float(ix) / 2.0 * sub_section_dimension_x / float(n_steps);
+                debug_json_output["search_tiles"].back( )["y"]      = float(iy) / 2.0 * sub_section_dimension_y / float(n_steps);
+                debug_json_output["search_tiles"].back( )["width"]  = sub_section_dimension_x;
+                debug_json_output["search_tiles"].back( )["height"] = sub_section_dimension_y;
             }
             sub_section.CosineRectangularMask(0.9f * sub_section.physical_address_of_box_center_x, 0.9f * sub_section.physical_address_of_box_center_y, 0.0f, 0.1f * sub_section.logical_x_dimension);
             if ( debug ) {
@@ -321,7 +321,7 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
 
     refine_mode = 1;
     if ( debug ) {
-        debug_json_output["tilt_axis_and_angle_search"] = wxJSONValue(wxJSONTYPE_ARRAY);
+        debug_json_output["tilt_axis_and_angle_search"] = json::array( );
     }
     for ( tilt_angle = 0.0f; tilt_angle <= 80.0f; tilt_angle += angle_step ) {
         for ( tilt_axis = 0.0f; tilt_axis < 360.0f; tilt_axis += axis_step ) {
@@ -330,10 +330,10 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
             start_values[3] = average_defocus;
             variance        = -ScoreValues(start_values);
             if ( debug ) {
-                debug_json_output["tilt_axis_and_angle_search"].Append(wxJSONValue(wxJSONTYPE_ARRAY));
-                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(tilt_axis);
-                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(tilt_angle);
-                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(variance);
+                debug_json_output["tilt_axis_and_angle_search"].push_back(json::array( ));
+                debug_json_output["tilt_axis_and_angle_search"].back( ).push_back(tilt_axis);
+                debug_json_output["tilt_axis_and_angle_search"].back( ).push_back(tilt_angle);
+                debug_json_output["tilt_axis_and_angle_search"].back( ).push_back(variance);
             }
             if ( variance > variance_max ) {
                 variance_max    = variance;

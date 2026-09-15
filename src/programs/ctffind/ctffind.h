@@ -3,6 +3,8 @@
 
 #define use_epa_rather_than_zero_counting
 
+#include <nlohmann/json.hpp>
+
 double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]);
 double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[]);
 //TODO: gives this function a good name that describes what it actually does (it actually rescales the power spectrum!)
@@ -58,9 +60,9 @@ class CTFTilt {
     bool defocus_astigmatism_determined;
     bool power_spectra_calculated;
 
-    bool        debug;
-    wxJSONValue debug_json_output;
-    std::string debug_json_output_filename;
+    bool           debug;
+    nlohmann::json debug_json_output;
+    std::string    debug_json_output_filename;
 
   public:
     // Provide empty default constructor for when tilt is not going to be estimated

@@ -82,10 +82,6 @@ noinst_HEADERS = core/stopwatch.h \
                  core/command_line_parser.h \
                  core/event_loop.h \
                  core/template_matching.h \
-                 core/json/json_defs.h \
-                 core/json/jsonval.h \
-                 core/json/jsonreader.h \
-                 core/json/jsonwriter.h \
                  core/stopwatch.h \
                  core/ccl3d.h \
                  core/eer_file.h \
@@ -488,9 +484,6 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/socket_communication_utils/tcp_socket.cpp \
                        core/command_line_parser.cpp \
                        core/event_loop.cpp \
-                       core/json/jsonval.cpp \
-                       core/json/jsonreader.cpp \
-                       core/json/jsonwriter.cpp \
                        core/ccl3d.cpp \
                        core/template_matching.cpp \
                        core/eer_file.cpp \

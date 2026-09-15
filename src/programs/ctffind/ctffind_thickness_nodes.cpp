@@ -1,23 +1,25 @@
 #include "../../core/core_headers.h"
 #include "./ctffind.h"
 
+using json = nlohmann::json;
+
 // Helper function to write the current spectrum and fit into the debug json object
-void write_fit_result_JSON_debug(wxJSONValue& debug_json_output, char* name, int number_of_bins_in_1d_spectra, double* rotational_average_astig, double* rotational_average_astig_fit, double* spatial_frequency = nullptr) {
+void write_fit_result_JSON_debug(json& debug_json_output, char* name, int number_of_bins_in_1d_spectra, double* rotational_average_astig, double* rotational_average_astig_fit, double* spatial_frequency = nullptr) {
     if ( spatial_frequency != nullptr ) {
-        debug_json_output["spatial_frequency"] = wxJSONValue(wxJSONTYPE_ARRAY);
+        debug_json_output["spatial_frequency"] = json::array( );
         for ( int counter = 0; counter < number_of_bins_in_1d_spectra; counter++ ) {
-            debug_json_output["spatial_frequency"].Append(spatial_frequency[counter]);
+            debug_json_output["spatial_frequency"].push_back(spatial_frequency[counter]);
         }
     }
 
-    debug_json_output[name]                             = wxJSONValue(wxJSONTYPE_OBJECT);
-    debug_json_output[name]["rotational_average_astig"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    debug_json_output[name]                             = json::object( );
+    debug_json_output[name]["rotational_average_astig"] = json::array( );
     for ( int counter = 0; counter < number_of_bins_in_1d_spectra; counter++ ) {
-        debug_json_output[name]["rotational_average_astig"].Append(rotational_average_astig[counter]);
+        debug_json_output[name]["rotational_average_astig"].push_back(rotational_average_astig[counter]);
     }
-    debug_json_output[name]["rotational_average_astig_fit"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    debug_json_output[name]["rotational_average_astig_fit"] = json::array( );
     for ( int counter = 0; counter < number_of_bins_in_1d_spectra; counter++ ) {
-        debug_json_output[name]["rotational_average_astig_fit"].Append(rotational_average_astig_fit[counter]);
+        debug_json_output[name]["rotational_average_astig_fit"].push_back(rotational_average_astig_fit[counter]);
     }
 }
 
@@ -75,7 +77,7 @@ float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_val
     return score;
 }
 
-void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
+void do_1D_bruteforce(CTFNodeFitInput* input, json& debug_json_output) {
     int   counter;
     float current_sq_sf;
     float azimuth_for_1d_plots = input->current_ctf->ReturnAzimuthToUseFor1DPlots( );
@@ -110,14 +112,14 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     int    num_scores;
     brute_force_search->Run(&all_values, &all_scores, &num_values, &num_scores);
 
-    debug_json_output["1D_brute_force_search"]               = wxJSONValue(wxJSONTYPE_OBJECT);
-    debug_json_output["1D_brute_force_search"]["all_values"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    debug_json_output["1D_brute_force_search"]               = json::object( );
+    debug_json_output["1D_brute_force_search"]["all_values"] = json::array( );
     for ( int counter = 0; counter < num_values; counter++ ) {
-        debug_json_output["1D_brute_force_search"]["all_values"].Append(all_values[counter] * input->pixel_size_for_fitting);
+        debug_json_output["1D_brute_force_search"]["all_values"].push_back(all_values[counter] * input->pixel_size_for_fitting);
     }
-    debug_json_output["1D_brute_force_search"]["all_scores"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    debug_json_output["1D_brute_force_search"]["all_scores"] = json::array( );
     for ( int counter = 0; counter < num_scores; counter++ ) {
-        debug_json_output["1D_brute_force_search"]["all_scores"].Append(all_scores[counter]);
+        debug_json_output["1D_brute_force_search"]["all_scores"].push_back(all_scores[counter]);
     }
     //delete[] all_values;
     //delete[] all_scores;
@@ -137,7 +139,7 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     delete input->comparison_object_1D->curve;
 }
 
-void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
+void do_2D_refinement(CTFNodeFitInput* input, json& debug_json_output) {
     int   counter;
     float current_sq_sf;
 
@@ -177,7 +179,7 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     delete conjugate_gradient_minimizer;
 }
 
-void recalculate_1D_spectra(CTFNodeFitInput* input, double* rotational_average_astig_renormalized, float* number_of_extrema_profile, wxJSONValue debug_json_output) {
+void recalculate_1D_spectra(CTFNodeFitInput* input, double* rotational_average_astig_renormalized, float* number_of_extrema_profile, json debug_json_output) {
     input->average_spectrum->ComputeEquiPhaseAverageOfPowerSpectrum(input->current_ctf, &(input->equiphase_average_pre_max), &(input->equiphase_average_post_max));
     // Replace the old curve with EPA values
     //double* rotational_average_astig_renormalized = new double[input->number_of_bins_in_1d_spectra];
@@ -317,7 +319,7 @@ void ComputeFRCBetween1DSpectrumAndFitNodes(int number_of_bins, double average[]
     }
 }
 
-int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_renormalized, float* number_of_extrema_profile, wxJSONValue debug_json_output) {
+int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_renormalized, float* number_of_extrema_profile, json debug_json_output) {
     int          last_bin_with_good_fit;
     static float low_threshold              = 0.1;
     static float frc_significance_threshold = 0.5; // In analogy to the usual criterion when comparing experimental results to the atomic model
@@ -412,12 +414,12 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
 
 CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     // Store debug output in a JSON object
-    wxJSONValue debug_json_output;
+    json debug_json_output;
 
     float first_thickness_estimate = input->current_ctf->ThicknessWhereIntegrateDefocusModulationIsZero(powf(input->spatial_frequency[input->last_bin_with_good_fit], 2.0));
     wxPrintf("Estimating sample thickness. Initial estimate is %.0f A based on goodness of fit\n", first_thickness_estimate * input->pixel_size_for_fitting);
     if ( input->debug ) {
-        debug_json_output["thickness_estimates"]            = wxJSONValue(wxJSONTYPE_OBJECT);
+        debug_json_output["thickness_estimates"]            = json::object( );
         debug_json_output["thickness_estimates"]["initial"] = first_thickness_estimate * input->pixel_size_for_fitting;
         write_fit_result_JSON_debug(debug_json_output, "initial_fit", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, input->spatial_frequency);
     }
@@ -470,17 +472,17 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     float*  number_of_extrema_profile             = new float[input->number_of_bins_in_1d_spectra];
     recalculate_1D_spectra(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
     if ( input->debug ) {
-        debug_json_output["frc"]                          = wxJSONValue(wxJSONTYPE_OBJECT);
-        debug_json_output["frc"]["renormalized_spectrum"] = wxJSONValue(wxJSONTYPE_ARRAY);
+        debug_json_output["frc"]                          = json::object( );
+        debug_json_output["frc"]["renormalized_spectrum"] = json::array( );
         for ( int counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
-            debug_json_output["frc"]["renormalized_spectrum"].Append(rotational_average_astig_renormalized[counter]);
+            debug_json_output["frc"]["renormalized_spectrum"].push_back(rotational_average_astig_renormalized[counter]);
         }
         for ( int counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
-            debug_json_output["frc"]["fit"].Append(input->rotational_average_astig_fit[counter]);
+            debug_json_output["frc"]["fit"].push_back(input->rotational_average_astig_fit[counter]);
         }
-        debug_json_output["frc"]["number_of_extrema_profile"] = wxJSONValue(wxJSONTYPE_ARRAY);
+        debug_json_output["frc"]["number_of_extrema_profile"] = json::array( );
         for ( int counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
-            debug_json_output["frc"]["number_of_extrema_profile"].Append(number_of_extrema_profile[counter]);
+            debug_json_output["frc"]["number_of_extrema_profile"].push_back(number_of_extrema_profile[counter]);
         }
     }
     int last_bin_with_good_fit = calculate_new_frc(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
@@ -492,10 +494,8 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     if ( input->debug ) {
         // Write out the json debug file
         MyDebugPrint("Printing thickness debug files to %s\n", input->debug_filename + "thickness.json");
-        wxJSONWriter writer;
-        wxString     json_string;
-        writer.Write(debug_json_output, json_string);
-        wxFile debug_file;
+        wxString json_string = wxString::FromUTF8(debug_json_output.dump(4));
+        wxFile   debug_file;
         debug_file.Open(input->debug_filename + "thickness.json", wxFile::write);
         debug_file.Write(json_string);
         debug_file.Close( );

@@ -1,15 +1,68 @@
 #include "../../core/core_headers.h"
 
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <pugixml/pugixml.hpp>
+
+using json = nlohmann::json;
+
+// Warp's XML is read with pugixml, which hands back UTF-8 C strings; wrap them
+// in wxString so the comparisons and ToDouble() calls below stay as they were.
+static wxString XmlName(const pugi::xml_node& node) {
+    return wxString::FromUTF8(node.name( ));
+}
+
+// Returns "" when the attribute is missing, as the wxWidgets XML reader this replaces did.
+static wxString XmlAttribute(const pugi::xml_node& node, const char* name) {
+    return wxString::FromUTF8(node.attribute(name).value( ));
+}
+
+// Live2D's latest_run.json fields are read through these so that a value
+// written either as a JSON string ("1234") or as a JSON number (1234) is
+// accepted; the JSON reader this replaces converted numbers to strings
+// before parsing them and so accepted both.
+static wxString JsonToWxString(const json& value) {
+    if ( value.is_string( ) )
+        return wxString::FromUTF8(value.get<std::string>( ).c_str( ));
+    if ( value.is_null( ) )
+        return wxString( );
+    return wxString::FromUTF8(value.dump( ).c_str( ));
+}
+
+static bool JsonToLong(const json& value, long& out) {
+    if ( value.is_number_integer( ) ) {
+        out = value.get<long>( );
+        return true;
+    }
+    if ( value.is_number_float( ) ) {
+        out = long(value.get<double>( ));
+        return true;
+    }
+    if ( value.is_string( ) )
+        return JsonToWxString(value).ToLong(&out);
+    return false;
+}
+
+static bool JsonToDouble(const json& value, double& out) {
+    if ( value.is_number( ) ) {
+        out = value.get<double>( );
+        return true;
+    }
+    if ( value.is_string( ) )
+        return JsonToWxString(value).ToDouble(&out);
+    return false;
+}
+
 class
         WarpToCistemApp : public MyApp {
 
   public:
     bool                          DoCalculation( );
-    bool                          GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions);
-    MovieAsset                    LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size);
+    bool                          GetSettingsFromWarp(const pugi::xml_document& warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions);
+    MovieAsset                    LoadMovieFromWarp(const pugi::xml_document& warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size);
     ImageAsset                    LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
     ArrayOfParticlePositionAssets LoadParticlePositionsFromWarp(wxString star_filename, ImageAsset new_image_asset, int starting_id);
-    CTF                           LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename);
+    CTF                           LoadCTFFromWarp(const pugi::xml_document& warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename);
     RefinementPackage*            LoadRefinementPackageFromLive2D(wxString star_filename, wxString stack_filename, double pixel_size, double particle_mass, double voltage, double spherical_aberration, double amplitude_contrast, double picking_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement);
     ArrayofClassifications        LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename);
     void                          DoInteractiveUserInput( );
@@ -85,39 +138,39 @@ void WarpToCistemApp::DoInteractiveUserInput( ) {
     my_current_job.ManualSetArguments("tttbbfbbbtfb", warp_directory.ToUTF8( ).data( ), cistem_parent_directory.ToUTF8( ).data( ), project_name.ToUTF8( ).data( ), do_import_images, do_scale_images_and_make_spectra, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates, do_import_refinement_package, live_2d_directory.ToUTF8( ).data( ), particle_mass, do_import_classification_results);
 }
 
-bool WarpToCistemApp::GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions) {
-    wxXmlNode* child_1 = warp_settings_doc.GetRoot( )->GetChildren( );
-    wxString   str_warp_picking_radius;
-    wxString   str_warp_picking_threshold;
-    wxString   str_distance;
+bool WarpToCistemApp::GetSettingsFromWarp(const pugi::xml_document& warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions) {
+    pugi::xml_node child_1 = warp_settings_doc.document_element( ).first_child( );
+    wxString       str_warp_picking_radius;
+    wxString       str_warp_picking_threshold;
+    wxString       str_distance;
     while ( child_1 ) {
-        if ( child_1->GetName( ) == "Picking" ) {
-            wxXmlNode* child_2 = child_1->GetChildren( );
+        if ( XmlName(child_1) == "Picking" ) {
+            pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
-                if ( child_2->GetAttribute("Name") == "Diameter" ) {
-                    str_warp_picking_radius = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "Diameter" ) {
+                    str_warp_picking_radius = XmlAttribute(child_2, "Value");
                     if ( ! str_warp_picking_radius.ToDouble(&warp_picking_radius) )
                         SendErrorAndCrash("Couldn't convert Radius into a double");
                     warp_picking_radius = warp_picking_radius / 2; // Radius vs Diameter
                 }
-                if ( child_2->GetAttribute("Name") == "MinimumScore" ) {
-                    str_warp_picking_threshold = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "MinimumScore" ) {
+                    str_warp_picking_threshold = XmlAttribute(child_2, "Value");
                     if ( ! str_warp_picking_threshold.ToDouble(&warp_picking_threshold) )
                         SendErrorAndCrash("Couldn't convert Threshold into a double");
                 }
-                if ( child_2->GetAttribute("Name") == "MinimumDistance" ) {
-                    str_distance = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "MinimumDistance" ) {
+                    str_distance = XmlAttribute(child_2, "Value");
                     if ( ! str_distance.ToDouble(&warp_minimum_distance_from_exclusions) )
                         SendErrorAndCrash("Couldn't convert Minimum Distance into a double");
                 }
-                if ( child_2->GetAttribute("Name") == "ModelPath" ) {
-                    boxnet_name = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "ModelPath" ) {
+                    boxnet_name = XmlAttribute(child_2, "Value");
                 }
 
-                child_2 = child_2->GetNext( );
+                child_2 = child_2.next_sibling( );
             }
         }
-        child_1 = child_1->GetNext( );
+        child_1 = child_1.next_sibling( );
     }
     if ( boxnet_name == "" ) {
         SendErrorAndCrash("Could not parse boxnet particle picker from warp settings");
@@ -125,7 +178,7 @@ bool WarpToCistemApp::GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxStr
     return true;
 }
 
-MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size) {
+MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size) {
     MovieAsset new_asset            = MovieAsset( );
     new_asset.filename              = movie_filename;
     new_asset.asset_name            = new_asset.filename.GetName( );
@@ -143,13 +196,13 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
     double     voltage                   = 300;
     double     dose_rate                 = 1.0;
     bool       is_valid                  = true;
-    wxXmlNode* child_1                   = warp_doc.GetRoot( )->GetChildren( );
+    pugi::xml_node child_1               = warp_doc.document_element( ).first_child( );
     while ( child_1 ) {
-        if ( (child_1)->GetName( ) == "OptionsCTF" ) {
-            wxXmlNode* child_2 = child_1->GetChildren( );
+        if ( XmlName(child_1) == "OptionsCTF" ) {
+            pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
-                if ( child_2->GetAttribute("Name") == "PixelSizeX" ) {
-                    wxString str_pixel_size = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "PixelSizeX" ) {
+                    wxString str_pixel_size = XmlAttribute(child_2, "Value");
                     if ( ! str_pixel_size.ToDouble(&pixel_size) ) {
                         SendInfo("Couldn't convert Pixel Size to a double");
                         is_valid = false;
@@ -160,48 +213,48 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
                         new_asset.output_binning_factor = binning_factor;
                     }
                 }
-                if ( child_2->GetAttribute("Name") == "GainPath" ) {
-                    wxFileName gain_filename     = wxFileName(child_2->GetAttribute("Value"), wxPATH_WIN);
+                if ( XmlAttribute(child_2, "Name") == "GainPath" ) {
+                    wxFileName gain_filename     = wxFileName(XmlAttribute(child_2, "Value"), wxPATH_WIN);
                     wxString   adjusted_filename = warp_folder + gain_filename.GetFullName( ); // This requires that the gain filename be in the warp folder! todo locate gain file more flexibly... user selected?
                     new_asset.gain_filename      = adjusted_filename;
                 }
-                if ( child_2->GetAttribute("Name") == "Cs" ) {
-                    wxString str_cs = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "Cs" ) {
+                    wxString str_cs = XmlAttribute(child_2, "Value");
                     if ( ! str_cs.ToDouble(&cs) ) {
                         SendInfo("Couldn't convert Spherical Aberration to a double");
                         is_valid = false;
                     }
                     new_asset.spherical_aberration = cs;
                 }
-                if ( child_2->GetAttribute("Name") == "Voltage" ) {
-                    wxString str_voltage = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "Voltage" ) {
+                    wxString str_voltage = XmlAttribute(child_2, "Value");
                     if ( ! str_voltage.ToDouble(&voltage) ) {
                         SendInfo("Couldn't convert Voltage to a double");
                         is_valid = false;
                     }
                     new_asset.microscope_voltage = voltage;
                 }
-                if ( child_2->GetAttribute("Name") == "Dimensions" ) {
-                    dimension_string = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "Dimensions" ) {
+                    dimension_string = XmlAttribute(child_2, "Value");
                 }
-                child_2 = child_2->GetNext( );
+                child_2 = child_2.next_sibling( );
             }
         }
-        else if ( (child_1)->GetName( ) == "OptionsMovieExport" ) {
-            wxXmlNode* child_2 = child_1->GetChildren( );
+        else if ( XmlName(child_1) == "OptionsMovieExport" ) {
+            pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
-                if ( child_2->GetAttribute("Name") == "DosePerAngstromFrame" ) {
-                    wxString str_dose_rate = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "DosePerAngstromFrame" ) {
+                    wxString str_dose_rate = XmlAttribute(child_2, "Value");
                     if ( ! str_dose_rate.ToDouble(&dose_rate) ) {
                         SendInfo("Couldn't convert Dose Rate to a double");
                         is_valid = false;
                     }
                     new_asset.dose_per_frame = dose_rate;
                 }
-                child_2 = child_2->GetNext( );
+                child_2 = child_2.next_sibling( );
             }
         }
-        child_1 = child_1->GetNext( );
+        child_1 = child_1.next_sibling( );
     }
     double x_size_angstroms = 0.0;
     double y_size_angstroms = 0.0;
@@ -248,7 +301,7 @@ ImageAsset WarpToCistemApp::LoadImageFromWarp(wxString image_filename, unsigned 
     return new_asset;
 }
 
-CTF WarpToCistemApp::LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename) {
+CTF WarpToCistemApp::LoadCTFFromWarp(const pugi::xml_document& warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename) {
     double   defocus = 0.0;
     wxString str_defocus;
     double   defocus_delta = 0.0;
@@ -275,70 +328,70 @@ CTF WarpToCistemApp::LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, f
     double   resolution_estimate = 0.0;
     wxString str_resolution_estimate;
 
-    str_resolution_estimate = warp_doc.GetRoot( )->GetAttribute("CTFResolutionEstimate");
+    str_resolution_estimate = XmlAttribute(warp_doc.document_element( ), "CTFResolutionEstimate");
     if ( ! str_resolution_estimate.ToDouble(&resolution_estimate) ) {
         SendErrorAndCrash("Couldn't convert resolution estimate to a double");
     }
-    wxXmlNode* child_1 = warp_doc.GetRoot( )->GetChildren( );
+    pugi::xml_node child_1 = warp_doc.document_element( ).first_child( );
     while ( child_1 ) {
         // TODO - parse `PS1D` eventually... but not yet.
-        if ( (child_1)->GetName( ) == "OptionsCTF" ) {
-            wxXmlNode* child_2 = child_1->GetChildren( );
+        if ( XmlName(child_1) == "OptionsCTF" ) {
+            pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
-                if ( child_2->GetAttribute("Name") == "Amplitude" ) {
-                    str_amplitude_contrast = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "Amplitude" ) {
+                    str_amplitude_contrast = XmlAttribute(child_2, "Value");
                     if ( ! str_amplitude_contrast.ToDouble(&amplitude_contrast) ) {
                         SendErrorAndCrash("Couldn't convert Amplitude to a double");
                     }
                 }
-                if ( child_2->GetAttribute("Name") == "RangeMax" ) {
-                    str_maximum_range = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "RangeMax" ) {
+                    str_maximum_range = XmlAttribute(child_2, "Value");
                     if ( ! str_maximum_range.ToDouble(&maximum_range) ) {
                         SendErrorAndCrash("Couldn't convert RangeMax to a double");
                     }
                     maximum_frequency = maximum_range / (2 * pixel_size);
                 }
-                if ( child_2->GetAttribute("Name") == "RangeMin" ) {
-                    str_minimum_range = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "RangeMin" ) {
+                    str_minimum_range = XmlAttribute(child_2, "Value");
                     if ( ! str_minimum_range.ToDouble(&minimum_range) ) {
                         SendErrorAndCrash("Couldn't convert RangeMin to a double");
                     }
                     minimum_frequency = minimum_range / (2 * pixel_size);
                 }
-                child_2 = child_2->GetNext( );
+                child_2 = child_2.next_sibling( );
             }
         }
-        else if ( (child_1)->GetName( ) == "CTF" ) {
-            wxXmlNode* child_2 = child_1->GetChildren( );
+        else if ( XmlName(child_1) == "CTF" ) {
+            pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
-                if ( child_2->GetAttribute("Name") == "DefocusAngle" ) {
-                    str_defocus_angle = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "DefocusAngle" ) {
+                    str_defocus_angle = XmlAttribute(child_2, "Value");
                     if ( ! str_defocus_angle.ToDouble(&defocus_angle) ) {
                         SendErrorAndCrash("Couldn't convert DefocusAngle to a double");
                     }
                 }
-                if ( child_2->GetAttribute("Name") == "Defocus" ) {
-                    str_defocus = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "Defocus" ) {
+                    str_defocus = XmlAttribute(child_2, "Value");
                     if ( ! str_defocus.ToDouble(&defocus) ) {
                         SendErrorAndCrash("Couldn't convert Defocus to a double");
                     }
                 }
-                if ( child_2->GetAttribute("Name") == "DefocusDelta" ) {
-                    str_defocus_delta = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "DefocusDelta" ) {
+                    str_defocus_delta = XmlAttribute(child_2, "Value");
                     if ( ! str_defocus_delta.ToDouble(&defocus_delta) ) {
                         SendErrorAndCrash("Couldn't convert DefocusDelta to a double");
                     }
                 }
-                if ( child_2->GetAttribute("Name") == "PhaseShift" ) {
-                    str_phase_shift = child_2->GetAttribute("Value");
+                if ( XmlAttribute(child_2, "Name") == "PhaseShift" ) {
+                    str_phase_shift = XmlAttribute(child_2, "Value");
                     if ( ! str_phase_shift.ToDouble(&phase_shift) ) {
                         SendErrorAndCrash("Couldn't convert Phaseshift to a double");
                     }
                 }
-                child_2 = child_2->GetNext( );
+                child_2 = child_2.next_sibling( );
             }
         }
-        child_1 = child_1->GetNext( );
+        child_1 = child_1.next_sibling( );
     }
 
     defocus_1 = (defocus + defocus_delta / 2.0) * 10000; // convert to Å, warp uses um
@@ -547,48 +600,55 @@ RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
 
 ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename) {
     ArrayofClassifications classification_list;
-    wxJSONValue            root;
-    wxJSONReader           reader;
-    wxFileInputStream      latest_settings(latest_settings_filename);
-    reader.Parse(latest_settings, &root);
-    wxJSONValue cycles = root["cycles"];
-    long        particle_count;
-    long        number;
-    long        class_count;
-    double      high_res_lim;
-    double      mask_radius;
-    int         cycle_count                 = cycles.Size( );
-    int         parent_id                   = -1;
-    int         refinement_package_asset_id = 1;
-    float       low_resolution_limit        = 300.0; // Currently hardcoded in live2d
-    float       angular_search_step         = 15.0; // Currently hardcoded in live2d
-    float       search_range                = 49.5; // Currently hardcoded in live2d
-    float       smoothing_factor            = 1.0; // Currently hardcoded in live2d
-    bool        include_blank_edges         = true; // Currently hardcoded in live2d
-    bool        auto_percent_used           = true; // Currently hardcoded in live2d
+    std::ifstream          latest_settings(latest_settings_filename.ToUTF8( ).data( ));
+    if ( ! latest_settings.is_open( ) )
+        SendErrorAndCrash("Couldn't open " + latest_settings_filename);
+    json root = json::parse(latest_settings, nullptr, false);
+    if ( root.is_discarded( ) )
+        SendErrorAndCrash("Couldn't parse " + latest_settings_filename + " as JSON");
+    json   cycles = root.is_object( ) && root.contains("cycles") && root["cycles"].is_array( ) ? root["cycles"] : json::array( );
+    long   particle_count;
+    long   number;
+    long   class_count;
+    double high_res_lim;
+    double mask_radius;
+    int    cycle_count                 = int(cycles.size( ));
+    int    parent_id                   = -1;
+    int    refinement_package_asset_id = 1;
+    float  low_resolution_limit        = 300.0; // Currently hardcoded in live2d
+    float  angular_search_step         = 15.0; // Currently hardcoded in live2d
+    float  search_range                = 49.5; // Currently hardcoded in live2d
+    float  smoothing_factor            = 1.0; // Currently hardcoded in live2d
+    bool   include_blank_edges         = true; // Currently hardcoded in live2d
+    bool   auto_percent_used           = true; // Currently hardcoded in live2d
     // iterate over classifications
     ProgressBar* my_progress = new ProgressBar(cycle_count);
     for ( int i = 0; i < cycle_count; i++ ) {
         Classification*  classification = new Classification( );
         cisTEMParameters parameters;
-        wxJSONValue      cycle = cycles[i];
-        cycle["particle_count"].AsString( ).ToLong(&particle_count);
+        json             cycle = cycles[i];
+        if ( ! JsonToLong(cycle["particle_count"], particle_count) )
+            SendErrorAndCrash("Couldn't read particle_count of a Live2D cycle");
         classification->SizeAndFillWithEmpty(particle_count);
-        cycle["number"].AsString( ).ToLong(&number);
+        if ( ! JsonToLong(cycle["number"], number) )
+            SendErrorAndCrash("Couldn't read number of a Live2D cycle");
         classification->classification_id                        = number + 1; // Start from 1, not 0.
         classification->refinement_package_asset_id              = refinement_package_asset_id;
         classification->name                                     = wxString::Format("Live2D Cycle #%ld", number);
-        classification->class_average_file                       = live_2d_path + cycle["name"].AsString( ) + ".mrc";
+        classification->class_average_file                       = live_2d_path + JsonToWxString(cycle["name"]) + ".mrc";
         classification->classification_was_imported_or_generated = true;
         classification->datetime_of_run                          = wxDateTime::Now( );
         classification->starting_classification_id               = parent_id;
         classification->number_of_particles                      = particle_count;
-        cycle["settings"]["class_number"].AsString( ).ToLong(&class_count);
+        if ( ! JsonToLong(cycle["settings"]["class_number"], class_count) )
+            SendErrorAndCrash("Couldn't read settings.class_number of a Live2D cycle");
         classification->number_of_classes    = class_count;
         classification->low_resolution_limit = low_resolution_limit;
-        cycle["high_res_limit"].AsString( ).ToDouble(&high_res_lim);
+        if ( ! JsonToDouble(cycle["high_res_limit"], high_res_lim) )
+            SendErrorAndCrash("Couldn't read high_res_limit of a Live2D cycle");
         classification->high_resolution_limit = high_res_lim;
-        cycle["settings"]["mask_radius"].AsString( ).ToDouble(&mask_radius);
+        if ( ! JsonToDouble(cycle["settings"]["mask_radius"], mask_radius) )
+            SendErrorAndCrash("Couldn't read settings.mask_radius of a Live2D cycle");
         classification->mask_radius         = mask_radius;
         classification->angular_search_step = angular_search_step;
         classification->search_range_x      = search_range;
@@ -602,7 +662,7 @@ ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString l
 
         // Load in data from the class file and move it to an ArrayOfClassificationResults.
         // This may eventually be worth moving into a class method for classification... I have to imagine this will be used elsewhere...
-        parameters.ReadFromcisTEMStarFile(live_2d_path + cycle["name"].AsString( ) + ".star");
+        parameters.ReadFromcisTEMStarFile(live_2d_path + JsonToWxString(cycle["name"]) + ".star");
         MyDebugAssertTrue(particle_count == parameters.ReturnNumberofLines( ), "Wrong number of particles in Star File");
         for ( int line_number = 0; line_number < particle_count; line_number++ ) {
             classification->classification_results[line_number].position_in_stack                  = parameters.ReturnPositionInStack(line_number);
@@ -677,8 +737,8 @@ bool WarpToCistemApp::DoCalculation( ) {
     double        warp_picking_threshold                = 0.0;
     double        warp_minimum_distance_from_exclusions = 0.0;
     wxString      warp_settings_file                    = warp_directory + "previous.settings";
-    wxXmlDocument settings_doc;
-    if ( wxFileName::Exists(warp_settings_file) && settings_doc.Load(warp_settings_file) && settings_doc.IsOk( ) ) {
+    pugi::xml_document settings_doc;
+    if ( wxFileName::Exists(warp_settings_file) && settings_doc.load_file(warp_settings_file.ToUTF8( ).data( )) && settings_doc.document_element( ) ) {
         GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius, warp_picking_threshold, warp_minimum_distance_from_exclusions);
     }
     else
@@ -689,7 +749,7 @@ bool WarpToCistemApp::DoCalculation( ) {
     wxDir::GetAllFiles(warp_directory, &all_files, "*.mrcs", wxDIR_FILES);
     wxDir::GetAllFiles(warp_directory, &all_files, "*.tif", wxDIR_FILES);
     all_files.Sort( );
-    wxXmlDocument                 doc;
+    pugi::xml_document            doc;
     size_t                        number_of_files = all_files.GetCount( );
     wxString                      xml_filename;
     wxString                      image_filename;
@@ -716,7 +776,7 @@ bool WarpToCistemApp::DoCalculation( ) {
         xml_filename       = xml_filename.Mid(0, split_point);
         xml_filename.Append(".xml");
         // Check if warp xml exists before trying to do any more inserts
-        if ( wxFileName::Exists(xml_filename) && doc.Load(xml_filename) && doc.IsOk( ) ) {
+        if ( wxFileName::Exists(xml_filename) && doc.load_file(xml_filename.ToUTF8( ).data( )) && doc.document_element( ) ) {
             new_movie_asset = LoadMovieFromWarp(doc, warp_directory, all_files.Item(counter), counter, wanted_binned_pixel_size);
             if ( new_movie_asset.is_valid ) {
                 movie_list.AddAsset(&new_movie_asset);

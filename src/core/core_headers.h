@@ -179,10 +179,6 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "myapp.h"
 #include "rle3d.h"
 #include "local_resolution_estimator.h"
-#include "json/json_defs.h"
-#include "json/jsonwriter.h"
-#include "json/jsonreader.h"
-#include "json/jsonval.h"
 #include "ccl3d.h"
 #include "pdb.h"
 

@@ -68,23 +68,86 @@
 #include <vector>
 #include <atomic>
 
+#include <nlohmann/json.hpp>
+
 #include "../../core/core_headers.h"
 #include "../../core/socket_communication_utils/socket_codes.h"
 
-// wxJSON's AsInt() only accepts values it stored as SHORT (or as LONG on a
-// 32-bit build), so on 64-bit Linux any integer above 32767 -- a particle
-// range in a big stack, a beam-tilt search position -- trips its assertion.
-// Read every integer through the widest signed accessor instead.
-static int JsonToInt(const wxJSONValue& value) {
-    if ( value.IsInt( ) )
-        return value.AsInt( );
-    if ( value.IsInt64( ) )
-        return int(value.AsInt64( ));
-    if ( value.IsUInt64( ) )
-        return int(value.AsUInt64( ));
-    if ( value.IsDouble( ) )
-        return int(value.AsDouble( ));
-    return value.AsInt( );
+using json = nlohmann::json;
+
+// Tolerant accessors: a value of the wrong JSON type never throws, it yields
+// the conversion's natural default (0, false, ""), so a malformed field from
+// the server is handled by the protocol checks below rather than by an
+// uncaught exception. Integers are read through the widest signed type, so a
+// particle range in a big stack or a beam-tilt search position is never
+// truncated before the final int().
+static long long JsonToLongLong(const json& value) {
+    if ( value.is_number_integer( ) )
+        return value.get<long long>( );
+    if ( value.is_number_float( ) )
+        return (long long)value.get<double>( );
+    if ( value.is_boolean( ) )
+        return value.get<bool>( ) ? 1 : 0;
+    if ( value.is_string( ) )
+        return atoll(value.get<std::string>( ).c_str( ));
+    return 0;
+}
+
+static int JsonToInt(const json& value) {
+    return int(JsonToLongLong(value));
+}
+
+static long JsonToLong(const json& value) {
+    return long(JsonToLongLong(value));
+}
+
+static double JsonToDouble(const json& value) {
+    if ( value.is_number( ) )
+        return value.get<double>( );
+    if ( value.is_boolean( ) )
+        return value.get<bool>( ) ? 1.0 : 0.0;
+    if ( value.is_string( ) )
+        return atof(value.get<std::string>( ).c_str( ));
+    return 0.0;
+}
+
+static bool JsonToBool(const json& value) {
+    if ( value.is_boolean( ) )
+        return value.get<bool>( );
+    if ( value.is_number( ) )
+        return value.get<double>( ) != 0.0;
+    return false;
+}
+
+// A JSON string as UTF-8; other scalars/containers as their JSON text, null as "".
+static std::string JsonToStdString(const json& value) {
+    if ( value.is_string( ) )
+        return value.get<std::string>( );
+    if ( value.is_null( ) )
+        return std::string( );
+    return value.dump( );
+}
+
+static wxString JsonToWxString(const json& value) {
+    std::string utf8 = JsonToStdString(value);
+    return wxString::FromUTF8(utf8.data( ), utf8.size( ));
+}
+
+// wxString -> JSON string value (UTF-8).
+static std::string ToUtf8(const wxString& text) {
+    return text.utf8_string( );
+}
+
+// Member lookup that yields null for a missing key or a non-object, so nested
+// lookups like JsonMember(message["program"], "executable") are always safe.
+static const json& JsonMember(const json& value, const char* key) {
+    static const json null_value;
+    if ( value.is_object( ) ) {
+        json::const_iterator it = value.find(key);
+        if ( it != value.end( ) )
+            return *it;
+    }
+    return null_value;
 }
 
 SETUP_SOCKET_CODES
@@ -198,19 +261,16 @@ static bool WriteFrame(wxSocketBase* sock, wxUint8 kind, const std::string& payl
     return true;
 }
 
-static std::string JsonToString(wxJSONValue value) {
-    wxJSONWriter writer(wxJSONWRITER_NONE);
-    writer.SetDoubleFmtString("%.9g");
-    wxString text;
-    writer.Write(value, text);
-    return std::string(text.ToUTF8( ).data( ));
+// Compact, single-line JSON text. An invalid UTF-8 byte in a string (a
+// worker's log line in a non-UTF-8 locale, say) is replaced with U+FFFD
+// rather than aborting the frame.
+static std::string JsonToString(const json& value) {
+    return value.dump(-1, ' ', false, json::error_handler_t::replace);
 }
 
-static bool ParseJson(const std::vector<unsigned char>& payload, wxJSONValue& out) {
-    wxString     text = wxString::FromUTF8(reinterpret_cast<const char*>(payload.data( )), payload.size( ));
-    wxJSONReader reader(wxJSONREADER_STRICT);
-    int          errors = reader.Parse(text, &out);
-    return errors == 0 && out.IsObject( );
+static bool ParseJson(const std::vector<unsigned char>& payload, json& out) {
+    out = json::parse(payload.begin( ), payload.end( ), nullptr, /*allow_exceptions=*/false);
+    return ! out.is_discarded( ) && out.is_object( );
 }
 
 static long NowMs( ) {
@@ -252,7 +312,7 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     bool          package_complete;
     int           expected_task_count;
     int           tasks_received;
-    wxJSONValue   task_refs;                // array: index -> ref (or null)
+    json          task_refs;                // array: index -> ref (or null)
     std::vector<int> progress_counts;       // per task, for task_progress.result_number
     bool             forward_progress;      // package.forward_progress: relay intermediate results at all?
 
@@ -274,7 +334,7 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     void         OnEventLoopEnter(wxEventLoopBase* loop);
 
     // ---- v1: sending ----
-    long SendToServer(const wxString& type, wxJSONValue fields, bool buffer_for_resend = true);
+    long SendToServer(const wxString& type, json fields, bool buffer_for_resend = true);
     void SendLog(const wxString& level, const wxString& text);
     void SendWorkers( );
     void SendTaskDone(int task, const JobResult* result);
@@ -287,9 +347,9 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     // state (and wx sockets) live there, exactly as SocketCommunicator
     // CallAfter()s every legacy handler onto it. ----
     void HandleServerMessageText(std::string payload);
-    void HandleServerMessage(wxJSONValue message);
-    void HandlePackage(wxJSONValue message);
-    void HandleTasks(wxJSONValue message);
+    void HandleServerMessage(json message);
+    void HandlePackage(json message);
+    void HandleTasks(json message);
     void HandlePackageEnd( );
     void HandleCancel(const wxString& reason);
     void ProtocolFailure(const wxString& reason);
@@ -433,16 +493,16 @@ class ServerLinkThread : public wxThread {
     }
 
     bool SendHello(wxSocketClient* sock, bool resume) {
-        wxJSONValue hello;
-        hello["type"] = wxString("hello");
-        wxJSONValue versions(wxJSONTYPE_ARRAY);
-        versions.Append(kProtocolVersion);
+        json hello;
+        hello["type"] = "hello";
+        json versions = json::array( );
+        versions.push_back(kProtocolVersion);
         hello["protocol_versions"] = versions;
-        hello["token"]             = app->token;
-        wxJSONValue controller;
-        controller["name"]    = wxString("cistem_job_controller");
-        controller["version"] = wxString(CISTEM_JOB_CONTROLLER_VERSION);
-        controller["host"]    = wxGetHostName( );
+        hello["token"]             = ToUtf8(app->token);
+        json controller;
+        controller["name"]    = "cistem_job_controller";
+        controller["version"] = CISTEM_JOB_CONTROLLER_VERSION;
+        controller["host"]    = ToUtf8(wxGetHostName( ));
         controller["pid"]     = (long)wxGetProcessId( );
         hello["controller"]   = controller;
         {
@@ -495,8 +555,8 @@ class ServerLinkThread : public wxThread {
                             return (wxThread::ExitCode)0;
                         }
                         if ( now - app->last_tx_ms > kPingAfterIdleSeconds * 1000 ) {
-                            wxJSONValue ping;
-                            ping["type"] = wxString("ping");
+                            json ping;
+                            ping["type"] = "ping";
                             app->our_seq++;
                             ping["seq"] = app->our_seq;
                             ping["t"]   = now;
@@ -521,18 +581,18 @@ class ServerLinkThread : public wxThread {
                     app->ProtocolFailure(wxString::Format("unknown frame kind 0x%02x", kind));
                     return (wxThread::ExitCode)0;
                 }
-                wxJSONValue message;
+                json message;
                 if ( ! ParseJson(payload, message) ) {
                     app->ProtocolFailure("frame from server is not a JSON object");
                     return (wxThread::ExitCode)0;
                 }
-                wxString type = message.HasMember("type") ? message["type"].AsString( ) : wxString( );
+                wxString type = JsonToWxString(JsonMember(message, "type"));
 
                 if ( ! welcomed ) {
                     if ( type == "reject" ) {
-                        wxString code = message.HasMember("code") ? message["code"].AsString( ) : "?";
+                        wxString code = message.contains("code") ? JsonToWxString(message["code"]) : "?";
                         fprintf(stderr, "cistem_job_controller: rejected by server: %s %s\n", code.ToUTF8( ).data( ),
-                                message.HasMember("reason") ? message["reason"].AsString( ).ToUTF8( ).data( ) : "");
+                                JsonToStdString(JsonMember(message, "reason")).c_str( ));
                         if ( code == "already_connected" ) {
                             // Our previous connection hasn't been declared dead yet; wait and retry.
                             sock->Destroy( );
@@ -544,7 +604,7 @@ class ServerLinkThread : public wxThread {
                         return (wxThread::ExitCode)0;
                     }
                     if ( type != "welcome" ) {
-                        wxString detail = message.HasMember("reason") ? " (" + message["reason"].AsString( ) + ")" : wxString( );
+                        wxString detail = message.contains("reason") ? " (" + JsonToWxString(message["reason"]) + ")" : wxString( );
                         app->ProtocolFailure("expected welcome from server, got " + type + detail);
                         return (wxThread::ExitCode)0;
                     }
@@ -553,8 +613,8 @@ class ServerLinkThread : public wxThread {
                         wxMutexLocker lock(app->link_mutex);
                         app->server_socket = sock;
                         app->ever_welcomed = true;
-                        if ( message.HasMember("resume") && message["resume"].AsBool( ) ) {
-                            long resume_from = message.HasMember("resume_from_seq") ? message["resume_from_seq"].AsLong( ) : 0;
+                        if ( JsonToBool(JsonMember(message, "resume")) ) {
+                            long resume_from = JsonToLong(JsonMember(message, "resume_from_seq"));
                             int  resent      = 0;
                             for ( std::deque<std::pair<long, std::string>>::iterator it = app->unacked.begin( ); it != app->unacked.end( ); ++it ) {
                                 if ( it->first > resume_from ) {
@@ -572,13 +632,13 @@ class ServerLinkThread : public wxThread {
                 }
 
                 if ( type == "ack" ) {
-                    long upto = message.HasMember("upto") ? message["upto"].AsLong( ) : 0;
+                    long upto = JsonToLong(JsonMember(message, "upto"));
                     wxMutexLocker lock(app->link_mutex);
                     while ( ! app->unacked.empty( ) && app->unacked.front( ).first <= upto )
                         app->unacked.pop_front( );
                 }
                 else if ( type == "ping" ) {
-                    app->SendToServer("pong", wxJSONValue( ), false);
+                    app->SendToServer("pong", json::object( ), false);
                 }
                 else if ( type == "pong" ) {
                 }
@@ -637,7 +697,7 @@ JobControllerApp::JobControllerApp( ) {
     package_complete                    = false;
     expected_task_count                 = 0;
     tasks_received                      = 0;
-    task_refs                           = wxJSONValue(wxJSONTYPE_ARRAY);
+    task_refs                           = json::array( );
     have_assigned_master                = false;
     master_socket                       = NULL;
     number_of_workers_already_connected = 0;
@@ -708,10 +768,10 @@ void JobControllerApp::OnEventLoopEnter(wxEventLoopBase* loop) {
 // v1 sending
 // ---------------------------------------------------------------------------
 
-long JobControllerApp::SendToServer(const wxString& type, wxJSONValue fields, bool buffer_for_resend) {
+long JobControllerApp::SendToServer(const wxString& type, json fields, bool buffer_for_resend) {
     wxMutexLocker lock(link_mutex);
     our_seq++;
-    fields["type"] = type;
+    fields["type"] = ToUtf8(type);
     fields["seq"]  = our_seq;
     fields["t"]    = NowMs( );
     std::string frame = JsonToString(fields);
@@ -725,9 +785,9 @@ long JobControllerApp::SendToServer(const wxString& type, wxJSONValue fields, bo
 }
 
 void JobControllerApp::SendLog(const wxString& level, const wxString& text) {
-    wxJSONValue fields;
-    fields["level"] = level;
-    fields["text"]  = text;
+    json fields;
+    fields["level"] = ToUtf8(level);
+    fields["text"]  = ToUtf8(text);
     SendToServer("log", fields);
 }
 
@@ -737,7 +797,7 @@ int JobControllerApp::ExpectedWorkers( ) {
 }
 
 void JobControllerApp::SendWorkers( ) {
-    wxJSONValue fields;
+    json fields;
     fields["connected"] = number_of_workers_already_connected;
     fields["expected"]  = ExpectedWorkers( );
     SendToServer("workers", fields);
@@ -753,17 +813,17 @@ void JobControllerApp::SendTaskDone(int task, const JobResult* result) {
     task_reported[task] = 1;
     tasks_ok++;
 
-    wxJSONValue fields;
+    json fields;
     fields["task"]   = task;
-    fields["status"] = wxString("ok");
-    if ( task_refs.HasMember(unsigned(task)) && ! task_refs[unsigned(task)].IsNull( ) )
+    fields["status"] = "ok";
+    if ( unsigned(task) < task_refs.size( ) && ! task_refs[unsigned(task)].is_null( ) )
         fields["ref"] = task_refs[unsigned(task)];
     if ( result != NULL && result->result_size > 0 ) {
-        wxJSONValue data(wxJSONTYPE_ARRAY);
+        json data = json::array( );
         for ( int counter = 0; counter < result->result_size; counter++ )
-            data.Append(double(result->result_data[counter]));
-        wxJSONValue res;
-        res["kind"]      = wxString("floats");
+            data.push_back(double(result->result_data[counter]));
+        json res;
+        res["kind"]      = "floats";
         res["data"]      = data;
         fields["result"] = res;
     }
@@ -779,30 +839,30 @@ void JobControllerApp::SendTaskProgress(const JobResult& result) {
     if ( task < 0 || task >= int(progress_counts.size( )) )
         return;
     progress_counts[task]++;
-    wxJSONValue data(wxJSONTYPE_ARRAY);
+    json data = json::array( );
     for ( int counter = 0; counter < result.result_size; counter++ )
-        data.Append(double(result.result_data[counter]));
-    wxJSONValue res;
-    res["kind"] = wxString("floats");
+        data.push_back(double(result.result_data[counter]));
+    json res;
+    res["kind"] = "floats";
     res["data"] = data;
-    wxJSONValue fields;
+    json fields;
     fields["task"]          = task;
     fields["result_number"] = progress_counts[task];
     fields["expected"]      = 0; // the legacy queue carries no total; 0 = unknown
     fields["result"]        = res;
-    if ( task_refs.HasMember(unsigned(task)) && ! task_refs[unsigned(task)].IsNull( ) )
+    if ( unsigned(task) < task_refs.size( ) && ! task_refs[unsigned(task)].is_null( ) )
         fields["ref"] = task_refs[unsigned(task)];
     SendToServer("task_progress", fields);
 }
 
 void JobControllerApp::SendJobDone(const wxString& status, long cpu_ms, const wxString& error) {
-    wxJSONValue fields;
-    fields["status"]       = status;
+    json fields;
+    fields["status"]       = ToUtf8(status);
     fields["cpu_ms"]       = cpu_ms;
     fields["tasks_ok"]     = tasks_ok;
     fields["tasks_failed"] = tasks_failed;
     if ( ! error.IsEmpty( ) )
-        fields["error"] = error;
+        fields["error"] = ToUtf8(error);
     long seq = SendToServer("job_done", fields);
     wxMutexLocker lock(link_mutex);
     job_done_seq     = seq;
@@ -814,7 +874,7 @@ void JobControllerApp::SendJobDone(const wxString& status, long cpu_ms, const wx
 // ---------------------------------------------------------------------------
 
 void JobControllerApp::HandleServerMessageText(std::string payload) {
-    wxJSONValue                message;
+    json                       message;
     std::vector<unsigned char> bytes(payload.begin( ), payload.end( ));
     if ( ! ParseJson(bytes, message) ) {
         ProtocolFailure("frame from server is not a JSON object");
@@ -823,20 +883,20 @@ void JobControllerApp::HandleServerMessageText(std::string payload) {
     HandleServerMessage(message);
 }
 
-void JobControllerApp::HandleServerMessage(wxJSONValue message) {
-    wxString type = message.HasMember("type") ? message["type"].AsString( ) : wxString( );
-    long     seq  = message.HasMember("seq") ? message["seq"].AsLong( ) : 0;
+void JobControllerApp::HandleServerMessage(json message) {
+    wxString type = JsonToWxString(JsonMember(message, "type"));
+    long     seq  = JsonToLong(JsonMember(message, "seq"));
     if ( seq > 0 )
         last_server_seq = wxMax(last_server_seq, seq);
 
     if ( type == "ack" ) {
-        long upto = message.HasMember("upto") ? message["upto"].AsLong( ) : 0;
+        long upto = JsonToLong(JsonMember(message, "upto"));
         wxMutexLocker lock(link_mutex);
         while ( ! unacked.empty( ) && unacked.front( ).first <= upto )
             unacked.pop_front( );
     }
     else if ( type == "ping" ) {
-        SendToServer("pong", wxJSONValue( ), false);
+        SendToServer("pong", json::object( ), false);
     }
     else if ( type == "pong" ) {
     }
@@ -850,11 +910,11 @@ void JobControllerApp::HandleServerMessage(wxJSONValue message) {
         HandlePackageEnd( );
     }
     else if ( type == "cancel" ) {
-        HandleCancel(message.HasMember("reason") ? message["reason"].AsString( ) : wxString( ));
+        HandleCancel(JsonToWxString(JsonMember(message, "reason")));
     }
     else if ( type == "protocol_error" ) {
         fprintf(stderr, "cistem_job_controller: server reported a protocol error: %s\n",
-                message.HasMember("reason") ? message["reason"].AsString( ).ToUTF8( ).data( ) : "");
+                JsonToStdString(JsonMember(message, "reason")).c_str( ));
         Shutdown(EXIT_PROTOCOL_ERROR, true);
     }
     else if ( type == "welcome" || type == "reject" ) {
@@ -865,12 +925,12 @@ void JobControllerApp::HandleServerMessage(wxJSONValue message) {
     }
 }
 
-void JobControllerApp::HandlePackage(wxJSONValue message) {
+void JobControllerApp::HandlePackage(json message) {
     if ( package_started ) {
         ProtocolFailure("second package for the same job");
         return;
     }
-    if ( ! message.HasMember("program") || ! message.HasMember("profile") || ! message.HasMember("task_count") ) {
+    if ( ! message.contains("program") || ! message.contains("profile") || ! message.contains("task_count") ) {
         ProtocolFailure("package is missing program, profile or task_count");
         return;
     }
@@ -881,86 +941,87 @@ void JobControllerApp::HandlePackage(wxJSONValue message) {
         return;
     }
 
-    wxJSONValue profile_json = message["profile"];
+    const json& profile_json = message["profile"];
     RunProfile  profile;
-    profile.name               = profile_json.HasMember("name") ? profile_json["name"].AsString( ) : "unnamed";
+    profile.name               = profile_json.contains("name") ? JsonToWxString(profile_json["name"]) : "unnamed";
     profile.manager_command    = "$command";
     profile.gui_address        = "";
-    profile.controller_address = profile_json.HasMember("controller_address") ? profile_json["controller_address"].AsString( ) : "";
-    if ( profile_json.HasMember("run_commands") && profile_json["run_commands"].IsArray( ) ) {
-        wxJSONValue commands = profile_json["run_commands"];
-        for ( unsigned counter = 0; counter < unsigned(commands.Size( )); counter++ ) {
-            wxJSONValue c = commands[counter];
-            profile.AddCommand(c.HasMember("command") ? c["command"].AsString( ) : "$command",
-                               c.HasMember("copies") ? JsonToInt(c["copies"]) : 1,
-                               c.HasMember("threads_per_copy") ? JsonToInt(c["threads_per_copy"]) : 1,
-                               c.HasMember("override_total_copies") ? c["override_total_copies"].AsBool( ) : false,
-                               c.HasMember("overridden_total_copies") ? JsonToInt(c["overridden_total_copies"]) : 0,
-                               c.HasMember("delay_ms") ? JsonToInt(c["delay_ms"]) : 0);
+    profile.controller_address = profile_json.contains("controller_address") ? JsonToWxString(profile_json["controller_address"]) : "";
+    if ( profile_json.contains("run_commands") && profile_json["run_commands"].is_array( ) ) {
+        const json& commands = profile_json["run_commands"];
+        for ( unsigned counter = 0; counter < unsigned(commands.size( )); counter++ ) {
+            const json& c = commands[counter];
+            profile.AddCommand(c.contains("command") ? JsonToWxString(c["command"]) : "$command",
+                               c.contains("copies") ? JsonToInt(c["copies"]) : 1,
+                               c.contains("threads_per_copy") ? JsonToInt(c["threads_per_copy"]) : 1,
+                               c.contains("override_total_copies") ? JsonToBool(c["override_total_copies"]) : false,
+                               c.contains("overridden_total_copies") ? JsonToInt(c["overridden_total_copies"]) : 0,
+                               c.contains("delay_ms") ? JsonToInt(c["delay_ms"]) : 0);
         }
     }
-    wxString executable = message["program"].HasMember("executable") ? message["program"]["executable"].AsString( )
-                                                                       : message["program"]["name"].AsString( );
+    const json& program    = message["program"];
+    wxString    executable = program.contains("executable") ? JsonToWxString(program["executable"])
+                                                            : JsonToWxString(JsonMember(program, "name"));
 
-    forward_progress = ! message.HasMember("forward_progress") || message["forward_progress"].AsBool( );
+    forward_progress = ! message.contains("forward_progress") || JsonToBool(message["forward_progress"]);
     current_job_package.Reset(profile, executable, expected_task_count);
-    task_refs = wxJSONValue(wxJSONTYPE_ARRAY);
+    task_refs = json::array( );
     task_reported.assign(expected_task_count, 0);
     progress_counts.assign(expected_task_count, 0);
     tasks_received = 0;
 }
 
-void JobControllerApp::HandleTasks(wxJSONValue message) {
+void JobControllerApp::HandleTasks(json message) {
     if ( ! package_started || package_complete ) {
         ProtocolFailure("tasks outside a package");
         return;
     }
-    int first_index = message.HasMember("first_index") ? JsonToInt(message["first_index"]) : -1;
+    int first_index = message.contains("first_index") ? JsonToInt(message["first_index"]) : -1;
     if ( first_index != tasks_received ) {
         ProtocolFailure(wxString::Format("tasks out of order: expected first_index %i, got %i", tasks_received, first_index));
         return;
     }
-    if ( ! message.HasMember("tasks") || ! message["tasks"].IsArray( ) ) {
+    if ( ! message.contains("tasks") || ! message["tasks"].is_array( ) ) {
         ProtocolFailure("tasks message without a tasks array");
         return;
     }
-    wxJSONValue tasks = message["tasks"];
-    for ( unsigned counter = 0; counter < unsigned(tasks.Size( )); counter++ ) {
-        wxJSONValue task  = tasks[counter];
-        int         index = task.HasMember("index") ? JsonToInt(task["index"]) : -1;
+    const json& tasks = message["tasks"];
+    for ( unsigned counter = 0; counter < unsigned(tasks.size( )); counter++ ) {
+        const json& task  = tasks[counter];
+        int         index = task.contains("index") ? JsonToInt(task["index"]) : -1;
         if ( index != tasks_received || index >= expected_task_count ) {
             ProtocolFailure(wxString::Format("task index %i where %i was expected", index, tasks_received));
             return;
         }
-        if ( ! task.HasMember("args") || ! task["args"].IsArray( ) ) {
+        if ( ! task.contains("args") || ! task["args"].is_array( ) ) {
             ProtocolFailure(wxString::Format("task %i has no args array", index));
             return;
         }
-        wxJSONValue args = task["args"];
+        const json& args = task["args"];
         RunJob&     job  = current_job_package.jobs[index];
-        job.Reset(int(args.Size( )));
+        job.Reset(int(args.size( )));
         job.job_number = index;
-        for ( unsigned a = 0; a < unsigned(args.Size( )); a++ ) {
-            wxJSONValue arg   = args[a];
-            wxString    atype = arg.HasMember("type") ? arg["type"].AsString( ) : wxString( );
-            if ( ! arg.HasMember("value") ) {
+        for ( unsigned a = 0; a < unsigned(args.size( )); a++ ) {
+            const json& arg   = args[a];
+            wxString    atype = JsonToWxString(JsonMember(arg, "type"));
+            if ( ! arg.contains("value") ) {
                 ProtocolFailure(wxString::Format("task %i argument %u has no value", index, a));
                 return;
             }
             if ( atype == "text" )
-                job.arguments[a].SetStringArgument(arg["value"].AsString( ).ToUTF8( ).data( ));
+                job.arguments[a].SetStringArgument(JsonToStdString(arg["value"]).c_str( ));
             else if ( atype == "int" )
                 job.arguments[a].SetIntArgument(JsonToInt(arg["value"]));
             else if ( atype == "float" )
-                job.arguments[a].SetFloatArgument(float(arg["value"].AsDouble( )));
+                job.arguments[a].SetFloatArgument(float(JsonToDouble(arg["value"])));
             else if ( atype == "bool" )
-                job.arguments[a].SetBoolArgument(arg["value"].AsBool( ));
+                job.arguments[a].SetBoolArgument(JsonToBool(arg["value"]));
             else {
                 ProtocolFailure(wxString::Format("task %i argument %u has unknown type '%s'", index, a, atype));
                 return;
             }
         }
-        task_refs.Append(task.HasMember("ref") ? task["ref"] : wxJSONValue(wxJSONTYPE_NULL));
+        task_refs.push_back(task.contains("ref") ? task["ref"] : json( ));
         tasks_received++;
     }
 }
@@ -986,8 +1047,8 @@ void JobControllerApp::HandleCancel(const wxString& reason) {
 
 void JobControllerApp::ProtocolFailure(const wxString& reason) {
     fprintf(stderr, "cistem_job_controller: protocol error: %s\n", reason.ToUTF8( ).data( ));
-    wxJSONValue fields;
-    fields["reason"] = reason;
+    json fields;
+    fields["reason"] = ToUtf8(reason);
     SendToServer("protocol_error", fields, false);
     Shutdown(EXIT_PROTOCOL_ERROR, true);
 }
@@ -1146,11 +1207,11 @@ void JobControllerApp::HandleSocketAllJobsFinished(wxSocketBase* connected_socke
         if ( ! task_reported[task] ) {
             task_reported[task] = 1;
             tasks_failed++;
-            wxJSONValue fields;
+            json fields;
             fields["task"]   = task;
-            fields["status"] = wxString("failed");
-            fields["error"]  = wxString("the master finished without reporting a result for this task");
-            if ( task_refs.HasMember(unsigned(task)) && ! task_refs[unsigned(task)].IsNull( ) )
+            fields["status"] = "failed";
+            fields["error"]  = "the master finished without reporting a result for this task";
+            if ( unsigned(task) < task_refs.size( ) && ! task_refs[unsigned(task)].is_null( ) )
                 fields["ref"] = task_refs[unsigned(task)];
             SendToServer("task_done", fields);
         }

@@ -32,6 +32,7 @@ What the loop does on each tick, per spec section:
 
 import logging
 import os
+import shlex
 import selectors
 import socket
 import subprocess
@@ -91,6 +92,29 @@ class Sink:
     def on_controller_seq(self, job_id, seq):
         """The highest controller `seq` processed so far -- persist it if you
         want reconnection to survive a server restart (see restore())."""
+
+
+def local_controller_of(manager_command, controller_executable):
+    """The executable a manager command would launch on this machine, or
+    None when that cannot be told from here.
+
+    `$command` expands to `<controller> <hosts> <port> <token>`, so a manager
+    command whose first word *is* `$command` -- bare, or with a directory
+    stuck to its front (`/opt/cistem/bin/$command`, the way to name a
+    controller that is not on PATH) -- launches the controller locally, and
+    its first word after expansion is what to look for. Anything else in
+    front (`ssh node $command`, `nohup $command`, `sbatch --wrap="$command"`)
+    launches it through another program, possibly on another machine, and
+    the only test is running it."""
+    manager = (manager_command or "$command").strip() or "$command"
+    first = manager.split(None, 1)[0]
+    if not first.endswith("$command") or "$" in first[:-len("$command")]:
+        return None
+    try:
+        controller_first = shlex.split(controller_executable)[0]
+    except (ValueError, IndexError):
+        return None
+    return first[:-len("$command")] + controller_first
 
 
 class JobSpec:

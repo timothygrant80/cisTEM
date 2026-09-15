@@ -142,6 +142,25 @@ class HappyPathTests(unittest.TestCase):
             h.stop()
 
 
+class LocalControllerOfTests(unittest.TestCase):
+    """local_controller_of(): which executable a manager command launches here."""
+
+    def test_bare_and_prefixed_command(self):
+        self.assertEqual(jr.local_controller_of("$command", "cistem_job_controller"), "cistem_job_controller")
+        self.assertEqual(jr.local_controller_of("", "cistem_job_controller"), "cistem_job_controller")
+        self.assertEqual(jr.local_controller_of("/opt/cistem/bin/$command", "cistem_job_controller"),
+                         "/opt/cistem/bin/cistem_job_controller")
+        self.assertEqual(jr.local_controller_of("$command --worker-timeout 3600", "cistem_job_controller"),
+                         "cistem_job_controller")
+        # a multi-word default controller ("python3 fake_controller.py") is judged on its first word
+        self.assertEqual(jr.local_controller_of("$command", "python3 /x/fake_controller.py"), "python3")
+
+    def test_launch_through_another_program_is_undecidable(self):
+        for manager in ("ssh head-node $command", "nohup $command", "sbatch --wrap=\"$command\"",
+                        "env FOO=1 $command", "$program_name $command"):
+            self.assertIsNone(jr.local_controller_of(manager, "cistem_job_controller"), manager)
+
+
 class FailureTests(unittest.TestCase):
     def test_controller_that_exits_before_hello_fails_fast(self):
         sink = RecordingSink()

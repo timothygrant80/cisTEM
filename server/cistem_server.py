@@ -126,15 +126,30 @@ CONTROLLER_COMMAND = os.environ.get("CISTEM_JOB_CONTROLLER", "cistem_job_control
 _job_runner = None
 
 
-def _controller_available():
-    """True if the first word of CONTROLLER_COMMAND resolves on PATH or is an
-    existing file -- the same test the simulation fallback makes for stage
-    binaries."""
-    try:
-        first = shlex.split(CONTROLLER_COMMAND)[0]
-    except (ValueError, IndexError):
-        return False
+def _controller_available(manager_command="$command"):
+    """True if the controller a run profile's manager command would launch
+    can be found -- the same test the simulation fallback makes for stage
+    binaries. The manager command is expanded first (job_runner's
+    local_controller_of), so `/opt/cistem/bin/$command` is checked at that
+    path and a plain `$command` on PATH; a manager command that launches
+    the controller through another program (`ssh node $command`) cannot be
+    checked from here and is taken at its word -- if it is wrong the
+    controller's own failure fails the job with the reason in its log."""
+    first = job_runner.local_controller_of(manager_command, CONTROLLER_COMMAND)
+    if first is None:
+        return True
     return shutil.which(first) is not None or os.path.isfile(first)
+
+
+def _manager_command_for(params):
+    """The manager command of the job's run profile ("$command" when the
+    profile is unknown; submit reports that separately)."""
+    sys_conn = db.get_system_conn()
+    try:
+        profile = db.load_run_profile_by_name(sys_conn, params.get("run_profile"))
+    finally:
+        sys_conn.close()
+    return (profile or {}).get("manager_command") or "$command"
 
 
 class DbSink(job_runner.Sink):
@@ -3697,6 +3712,11 @@ def _profile_json(p):
         "manager_run_command": p["manager_command"],
         "gui_address": p["gui_address"],
         "controller_address": p["controller_address"],
+        # Whether the controller this manager command launches can be found
+        # (null when it launches through another program and can't be told).
+        "controller_found": (None if job_runner.local_controller_of(p["manager_command"], CONTROLLER_COMMAND) is None
+                             else _controller_available(p["manager_command"])),
+        "controller_launched": job_runner.local_controller_of(p["manager_command"], CONTROLLER_COMMAND),
         "run_commands": p["run_commands"],
         "total_jobs": p["total_jobs"],
     }
@@ -3862,9 +3882,10 @@ def create_job(project_id):
     conn.close()
 
     adapter = stages.ADAPTERS.get(stage)
-    if adapter is not None and _job_runner is not None and _controller_available():
+    manager = _manager_command_for(params) if (adapter is not None or stage in DRIVERS) else "$command"
+    if adapter is not None and _job_runner is not None and _controller_available(manager):
         return _submit_to_runner(project_id, job_id, adapter, params)
-    if stage in DRIVERS and _job_runner is not None and _controller_available():
+    if stage in DRIVERS and _job_runner is not None and _controller_available(manager):
         return _start_driver(DRIVERS[stage], project_id, job_id, params)
     if adapter is not None or stage in DRIVERS:
         # This stage *can* run for real; say exactly what is stopping it,
@@ -3872,9 +3893,11 @@ def create_job(project_id):
         if _job_runner is None:
             why = "the job runner is not listening (see the server's startup output)"
         else:
-            why = "'{}' was not found on the server's PATH -- build it from the cisTEM tree " \
-                  "(src/programs/cistem_job_controller) and install it next to unblur, or set " \
-                  "CISTEM_JOB_CONTROLLER".format(CONTROLLER_COMMAND)
+            why = "'{}', the controller run profile {!r} launches, was not found -- build it from the " \
+                  "cisTEM tree (src/programs/cistem_job_controller) and install it next to unblur, set " \
+                  "CISTEM_JOB_CONTROLLER, or put its directory in front of $command in the profile's " \
+                  "manager command".format(job_runner.local_controller_of(manager, CONTROLLER_COMMAND),
+                                           params.get("run_profile"))
         append_log(project_id, job_id, "[{}] simulating: {}".format(now_iso(), why))
 
     with _live_lock:

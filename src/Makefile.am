@@ -65,8 +65,6 @@ noinst_HEADERS = core/stopwatch.h \
                  core/tiff_file.h \
                  core/image_file.h \
                  core/f2c.h \
-                 core/gui_core_headers.h \
-                 core/gui_job_controller.h \
                  core/classification.h \
                  core/classification_selection.h \
                  core/basic_star_file_reader.h \
@@ -84,172 +82,19 @@ noinst_HEADERS = core/stopwatch.h \
                  core/stopwatch.h \
                  core/ccl3d.h \
                  core/eer_file.h \
-                 gui/job_panel.h \
-                 gui/gui_functions.h \
-                 gui/DatabaseUpdateDialog.h \
-                 gui/ResultsDataViewListCtrl.h \
-                 gui/BitmapPanel.h \
-                 gui/PickingBitmapPanel.h \
-                 gui/my_controls.h \
-                 gui/UnblurResultsPanel.h \
-                 gui/CTF1DPanel.h \
-                 gui/MyAssetPanelParent.h \
-                 gui/MyImageAssetPanel.h \
-                 gui/MyParticlePositionAssetPanel.h \
-                 gui/MyVolumeAssetPanel.h \
-                 gui/MyVolumeImportDialog.h \
-                 gui/MyMovieFilterDialog.h \
-                 gui/MyImageImportDialog.h \
-                 gui/ShowCTFResultsPanel.h \
-                 gui/FindCTFPanel.h \
-                 gui/FindParticlesPanel.h \
-                 gui/MyMovieAlignResultsPanel.h \
-                 gui/MyFindCTFResultsPanel.h \
-                 gui/PickingResultsDisplayPanel.h \
-                 gui/MyRunProfilesPanel.h \
-                 gui/MyAddRunCommandDialog.h \
-                 gui/MyNewProjectWizard.h \
-                 gui/MyNewRefinementPackageWizard.h \
-                 gui/NewTemplateMatchesPackageWizard.h \
-                 gui/MyResultsPanel.h \
-                 gui/MyAssetsPanel.h \
-                 gui/ActionsPanelSpa.h \
-                 gui/ActionsPanelTm.h \
-                 gui/MySettingsPanel.h \
-                 gui/PickingResultsPanel.h \
-                 gui/MyParticlePositionExportDialog.h \
-                 gui/MyPickingJobExportDialog.h \
-                 gui/MyFrealignExportDialog.h \
-                 gui/MyRelionExportDialog.h \
-                 gui/MyRefinementPackageAssetPanel.h \
-                 gui/TemplateMatchesPackageAssetPanel.h \
-                 gui/MyRenameDialog.h \
-                 gui/MyVolumeChooserDialog.h \
-                 gui/MyRefine3DPanel.h \
-                 gui/Generate3DPanel.h \
-                 gui/AutoRefine3dPanel.h \
-                 gui/DisplayRefinementResultsPanel.h \
-                 gui/PopupTextDialog.h \
-                 gui/PlotFSCPanel.h \
-                 gui/MyFSCPanel.h \
-                 gui/MyRefinementResultsPanel.h \
-                 gui/AngularDistributionPlotPanel.h \
-                 gui/AlignMoviesPanel.h \
-                 gui/ErrorDialog.h \
-                 gui/MainFrame.h \
-                 gui/mathplot.h \
-                 gui/MyMovieAssetPanel.h \
-                 gui/MovieImportDialog.h \
-                 gui/MyRefine2DPanel.h \
-                 gui/Refine2DResultsPanel.h \
-                 gui/ClassificationPlotPanel.h \
-                 gui/ClassumSelectionCopyFromDialog.h \
-                 gui/MyOverviewPanel.h \
-                 gui/DisplayPanel.h \
-                 gui/DisplayFrame.h \
-                 gui/ProjectX_gui.h \
-                 gui/gui_globals.h \
-                 gui/ImportRefinementPackageWizard.h \
-                 gui/AbInitioPlotPanel.h \
-                 gui/AbInitio3DPanel.h \
-                 gui/AssetPickerComboPanel.h \
-                 gui/ExportRefinementPackageWizard.h \
-                 gui/RefinementParametersDialog.h \
-                 gui/LargeAngularPlotDialog.h \
-                 gui/Sharpen3DPanel.h \
-                 gui/PlotCurvePanel.h \
-                 gui/MatchTemplatePanel.h \
-                 gui/DistributionPlotDialog.h \
-                 gui/RefineCTFPanel.h \
-                 gui/ShowTemplateMatchResultsPanel.h \
-                 gui/MyExperimentalPanel.h \
-                 gui/MatchTemplateResultsPanel.h \
-                 gui/MatchTemplatePanel.h \
-                 gui/RefineTemplatePanel.h \
-                 gui/icons/action_icon.cpp \
-                 gui/icons/assets_icon.cpp \
-                 gui/icons/ctf_icon.cpp \
-                 gui/icons/image_icon.cpp \
-                 gui/icons/movie_align_icon.cpp \
-                 gui/icons/movie_icon.cpp \
-                 gui/icons/overview_icon.cpp \
-                 gui/icons/results_icon.cpp \
-                 gui/icons/settings_icon.cpp \
-                 gui/icons/particle_position_icon.cpp \
-                 gui/icons/virus_icon.cpp \
-                 gui/icons/refinement_package_icon.cpp \
-                 gui/icons/growth.cpp \
-                 gui/icons/run_profiles_icon.cpp \
-                 gui/icons/open_eye_icon_20.cpp \
-                 gui/icons/checked_checkbox_icon_20.cpp \
-                 gui/icons/unchecked_checkbox_icon_20.cpp \
-                 gui/icons/checked_checkbox_eye_icon_20.cpp \
-                 gui/icons/unchecked_checkbox_eye_icon_20.cpp \
-                 gui/icons/dlp_alignment.cpp \
-                 gui/icons/ctffind_definitions.cpp \
-                 gui/icons/ctffind_diagnostic_image.cpp \
-                 gui/icons/ctffind_example_1dfit.cpp \
-                 gui/icons/niko_picture1.cpp \
-                 gui/icons/niko_picture2.cpp \
-                 gui/icons/2d_classification_icon.cpp \
-                 gui/icons/classification_infotext1.cpp \
-                 gui/icons/classification_infotext2.cpp \
-                 gui/icons/classification_infotext3.cpp \
-                 gui/icons/classification_infotext4.cpp \
-                 gui/icons/display_auto_icon.cpp \
-                 gui/icons/display_fft_icon.cpp \
-                 gui/icons/display_global_icon.cpp \
-                 gui/icons/display_histogram_icon.cpp \
-                 gui/icons/display_invert_icon.cpp \
-                 gui/icons/display_local_icon.cpp \
-                 gui/icons/display_manual_icon.cpp \
-                 gui/icons/display_next_icon.cpp \
-                 gui/icons/display_open_icon.cpp \
-                 gui/icons/display_previous_disabled_icon.cpp \
-                 gui/icons/display_previous_icon.cpp \
-                 gui/icons/display_refresh_icon.cpp \
-                 gui/icons/display_high_quality_icon.cpp \
-                 gui/icons/display_fft_icon.cpp \
-                 gui/icons/add_file_icon.cpp \
-                 gui/icons/delete_file_icon.cpp \
-                 gui/icons/cisTEM_logo_800.cpp \
-                 gui/icons/show_text.cpp \
-                 gui/icons/tool_icon.cpp \
-                 gui/icons/window_plus_icon_16.cpp \
-                 gui/icons/abinitio_icon.cpp \
-                 gui/icons/manual_refine_icon.cpp \
-                 gui/icons/generate3d_icon.cpp \
-                 gui/icons/sharpen_map_icon.cpp \
-                 gui/icons/show_angles.cpp \
-                 gui/icons/small_save_icon.cpp \
-                 gui/icons/cisTEM_beta_logo_800.cpp \
-                 gui/icons/cisTEM_beta_logo_300.cpp \
-                 gui/icons/up_arrow.cpp \
-                 gui/icons/down_arrow.cpp \
-                 gui/icons/VSV_startup_800.cpp \
-                 gui/icons/vsv_sharpening.cpp \
-                 gui/icons/refine_ctf_icon.cpp \
-                 gui/icons/refine_template_icon.cpp \
-				 gui/workflows/Icons.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp \
-                 gui/icons/match_template_icon.cpp \
                  programs/refine3d/ProjectionComparisonObjects.h \
                  core/pdb.h \
-                 core/scattering_potential.h \
-                 gui/AtomicCoordinatesAssetPanel.h \
-                 gui/AtomicCoordinatesChooserDialog.h \
-                 gui/AtomicCoordinatesImportDialog.h \
-                 programs/cisTEM_display/display_gui.h
+                 core/scattering_potential.h
                  
 
                  
 
                  
 if EXPERIMENTAL_AM
-noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
-                    core/water.h \
+noinst_HEADERS += core/water.h \
                     programs/simulate/wave_function_propagator.h  \
                     programs/match_template/template_matching_data_sizer.h 
 
@@ -266,12 +111,10 @@ endif
 
 
 
-noinst_LIBRARIES = libcore.a libguicore.a
+noinst_LIBRARIES = libcore.a
 
-# Min needed for GUI
-bin_PROGRAMS =  cisTEM_job_control \
-                cisTEM \
-                cistem_job_controller \
+# The programs the cisTEM3 web server runs (through cistem_job_controller)
+bin_PROGRAMS =  cistem_job_controller \
                 unblur \
                 reconstruct3d \
                 merge3d \
@@ -293,13 +136,12 @@ bin_PROGRAMS =  cisTEM_job_control \
                 match_template \
                 refine_template \
                 make_template_result \
-                prepare_stack_matchtemplate \
-                cisTEM_display 
+                prepare_stack_matchtemplate
 
 
 
 # Programs for testing and automated testing
-bin_PROGRAMS += quick_test console_test unit_test_runner samples_functional_testing gui_test
+bin_PROGRAMS += quick_test console_test unit_test_runner samples_functional_testing
 
 ########################################################
 # Optional programs listed at the
@@ -655,152 +497,14 @@ endif
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
-libguicore_a_SOURCES  =  core/gui_job_controller.cpp
-
-libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
-libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
-
-
-cisTEM_SOURCES = programs/projectx/projectx.cpp \
-                programs/cisTEM_display/display_gui.cpp \
-                gui/gui_globals.cpp \
-				gui/workflows/Icons.cpp \
-                gui/MyFSCPanel.cpp \
-                gui/MyRefinementResultsPanel.cpp \
-                gui/PlotFSCPanel.cpp  \
-                gui/gui_functions.cpp \
-                gui/my_controls.cpp \
-                gui/MyRenameDialog.cpp \
-                gui/BitmapPanel.cpp \
-                gui/PickingBitmapPanel.cpp \
-                gui/job_panel.cpp \
-                gui/ProjectX_gui_abinitio.cpp \
-                gui/ProjectX_gui_assets.cpp \
-                gui/ProjectX_gui_autorefine.cpp \
-                gui/ProjectX_gui_controls.cpp \
-                gui/ProjectX_gui_ctffind.cpp \
-                gui/ProjectX_gui_main.cpp \
-                gui/ProjectX_gui_matchtemplate.cpp \
-                gui/ProjectX_gui_picking.cpp \
-                gui/ProjectX_gui_refine2d.cpp \
-                gui/ProjectX_gui_refine3d.cpp \
-                gui/ProjectX_gui_refinement_package.cpp \
-                gui/ProjectX_gui_settings.cpp \
-                gui/ProjectX_gui_unblur.cpp \
-                gui/ProjectX_gui_wizards.cpp \
-                gui/DatabaseUpdateDialog.cpp \
-                gui/ResultsDataViewListCtrl.cpp \
-                gui/MyMovieFilterDialog.cpp \
-                gui/MainFrame.cpp \
-                gui/MyAssetPanelParent.cpp \
-                gui/MyMovieAssetPanel.cpp \
-                gui/MyImageAssetPanel.cpp \
-                gui/MyParticlePositionAssetPanel.cpp \
-                gui/MyVolumeChooserDialog.cpp \
-                gui/MovieImportDialog.cpp \
-                gui/MyImageImportDialog.cpp \
-                gui/MyVolumeImportDialog.cpp \
-                gui/ErrorDialog.cpp \
-                gui/AlignMoviesPanel.cpp \
-                gui/MyRunProfilesPanel.cpp \
-                gui/mathplot.cpp \
-                gui/MyMovieAlignResultsPanel.cpp \
-                gui/MyFindCTFResultsPanel.cpp \
-                gui/PickingResultsPanel.cpp \
-                gui/MyAddRunCommandDialog.cpp \
-                gui/MyNewProjectWizard.cpp \
-                gui/MyNewRefinementPackageWizard.cpp \
-                gui/NewTemplateMatchesPackageWizard.cpp \
-                gui/UnblurResultsPanel.cpp \
-                gui/ShowCTFResultsPanel.cpp \
-                gui/PickingResultsDisplayPanel.cpp \
-                gui/CTF1DPanel.cpp \
-                gui/FindCTFPanel.cpp \
-                gui/FindParticlesPanel.cpp \
-                gui/MyVolumeAssetPanel.cpp \
-                gui/MyResultsPanel.cpp \
-                gui/MyAssetsPanel.cpp \
-                gui/ActionsPanelSpa.cpp \
-                gui/ActionsPanelTm.cpp \
-                gui/MySettingsPanel.cpp \
-                gui/MyParticlePositionExportDialog.cpp \
-                gui/MyPickingJobExportDialog.cpp \
-                gui/MyFrealignExportDialog.cpp \
-                gui/MyRelionExportDialog.cpp \
-                gui/MyRefinementPackageAssetPanel.cpp \
-                gui/TemplateMatchesPackageAssetPanel.cpp \
-                gui/MyRefine3DPanel.cpp \
-                gui/MyRefine2DPanel.cpp \
-                gui/ClassificationPlotPanel.cpp \
-                gui/AbInitioPlotPanel.cpp \
-                gui/Refine2DResultsPanel.cpp \
-                gui/AngularDistributionPlotPanel.cpp \
-                core/particle_finder.cpp \
-                gui/DisplayPanel.cpp \
-                gui/ClassumSelectionCopyFromDialog.cpp \
-                gui/MyOverviewPanel.cpp \
-                gui/AbInitio3DPanel.cpp \
-                gui/AssetPickerComboPanel.cpp \
-                gui/AutoRefine3dPanel.cpp \
-                gui/DisplayRefinementResultsPanel.cpp \
-                gui/ImportRefinementPackageWizard.cpp \
-                gui/PopupTextDialog.cpp \
-                gui/ExportRefinementPackageWizard.cpp \
-                gui/Generate3DPanel.cpp \
-                gui/LargeAngularPlotDialog.cpp \
-                gui/RefinementParametersDialog.cpp \
-                gui/Sharpen3DPanel.cpp \
-                gui/PlotCurvePanel.cpp \
-                gui/DistributionPlotDialog.cpp \
-                gui/RefineCTFPanel.cpp \
-                gui/ShowTemplateMatchResultsPanel.cpp \
-                gui/MatchTemplatePanel.cpp \
-                gui/MatchTemplateResultsPanel.cpp \
-                gui/RefineTemplatePanel.cpp \
-                gui/CombineRefinementPackagesWizard.cpp \
-                gui/AtomicCoordinatesAssetPanel.cpp \
-                gui/AtomicCoordinatesChooserDialog.cpp \
-                gui/AtomicCoordinatesImportDialog.cpp \
-                gui/ResampleDialog.cpp
-
-if EXPERIMENTAL_AM
-cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp 
-endif
-
-if ENABLE_WEBVIEW_AM
-cisTEM_SOURCES += gui/WebViewPanel.cpp
-endif
-
-cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
-cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
-cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
-cisTEM_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
-
-cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp programs/cisTEM_display/display_gui.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp programs/cisTEM_display/DisplayServer.cpp
-cisTEM_display_CXXFLAGS = $(WX_CPPFLAGS)
-cisTEM_display_CPPFLAGS = $(WX_CPPFLAGS)
-cisTEM_display_LDADD = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
-cisTEM_display_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
-
-gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
-gui_test_CXXFLAGS = $(WX_CPPFLAGS)
-gui_test_CPPFLAGS = $(WX_CPPFLAGS)
-gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)
-gui_test_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
-
-cisTEM_job_control_SOURCES  = programs/guix_job_control/guix_job_control.cpp 
-cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-cisTEM_job_control_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-cisTEM_job_control_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
-cisTEM_job_control_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
-
 # The per-job controller for the cisTEM3 web server: speaks Job Protocol v1
 # to the server and the legacy socket protocol to the workers (a fork of
 # guix_job_control.cpp with the GUI-facing half replaced).
 cistem_job_controller_SOURCES  = programs/cistem_job_controller/cistem_job_controller.cpp
 cistem_job_controller_CXXFLAGS = $(WX_CPPFLAGS_BASE) -DCISTEM_JOB_CONTROLLER_VERSION=CISTEM_VERSION_TEXT
 cistem_job_controller_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-cistem_job_controller_LDADD    = libcore.a $(WX_LIBS_BASE)
+cistem_job_controller_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+cistem_job_controller_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 # unlike other programs where we build program/ program_gpu to maintain
 # both codepaths with the most src code overlap as possible, for console tests

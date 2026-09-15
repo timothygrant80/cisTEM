@@ -1,4 +1,3 @@
-add_library(cisTEM_gui_core STATIC gui_job_controller.cpp)
 
 add_library(cisTEM_core STATIC 
 	functions.cpp
@@ -76,7 +75,6 @@ target_link_libraries(cisTEM_core ${FFTW_LIBRARIES})
 target_link_libraries(cisTEM_core ${wxWidgets_LIBRARIES})
 target_link_libraries(cisTEM_core ${TIFF_LIBRARIES})
 
-target_link_libraries(cisTEM_gui_core ${wxWidgets_LIBRARIES})
 
 if (BUILD_EXPERIMENTAL_FEATURES) 
 	add_dependencies(cisTEM_core cisTEM_core_experimental)

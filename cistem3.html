@@ -697,12 +697,19 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 
 /* ---------- Settings: run profiles (cisTEM's RunProfilesPanel) ----------
    Same bounded two-column idiom as .assets-layout: profile list + button
-   column on the left, the commands panel on the right, a fixed height with
-   the commands table scrolling inside. The commands table is 6 columns wide,
-   cisTEM's exactly, so it scrolls sideways in its box before the page does. */
+   column on the left, the commands panel on the right; the row is as tall
+   as the commands panel needs (the table scrolls past eight commands) and
+   the profiles list stretches to match. The commands table is 6 columns
+   wide, cisTEM's exactly, with wrapping headers so it fits the panel at the
+   home column's width and scrolls sideways in its box before the page does. */
 .settings-heading{font-size:16.5px;font-weight:700;margin:22px 0 4px;}
-.profiles-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:stretch;height:440px;}
+.profiles-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:stretch;}
 .profiles-layout > .groupbox{display:flex;flex-direction:column;min-height:0;min-width:0;}
+/* The row takes its height from the commands panel (the table shows up to
+   eight commands before scrolling); the profiles list stretches to match. */
+.profiles-layout .group-list{min-height:160px;}
+.rp-list-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;flex-shrink:0;}
+.rp-list-buttons button{width:100%;}
 .rp-io{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
 .rp-total{font-size:15.5px;color:var(--text-secondary);margin-bottom:10px;flex-shrink:0;}
 .rp-total strong{color:var(--text);font-family:var(--font-mono);font-weight:600;}
@@ -711,12 +718,14 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .rp-addresses{display:grid;grid-template-columns:auto minmax(60px,1fr) auto auto;gap:6px 10px;align-items:center;font-size:15.5px;margin:2px 0 10px;flex-shrink:0;}
 .rp-addr-label{font-weight:600;color:var(--text-secondary);text-align:right;cursor:help;}
 .rp-addr-value{font-family:var(--font-mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.profiles-layout .rp-table{flex:1;min-height:0;overflow:auto;background:var(--surface-sunken);margin:0;}
-.profiles-layout .rp-table thead th{position:sticky;top:0;z-index:1;}
+.profiles-layout .rp-table{flex:0 0 auto;min-height:150px;max-height:330px;overflow:auto;background:var(--surface-sunken);margin:0;}
+.profiles-layout .rp-table thead th{position:sticky;top:0;z-index:1;white-space:normal;vertical-align:bottom;line-height:1.25;}
 .profiles-layout .rp-table tbody td{background:var(--surface);}
 .profiles-layout .rp-table tbody tr:nth-child(even) td{background:var(--surface-sunken);}
-table.rp-commands-table{min-width:760px;}
-table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:normal;word-break:break-all;min-width:220px;}
+table.rp-commands-table{width:100%;min-width:600px;}
+table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:normal;word-break:break-all;min-width:200px;}
+table.rp-commands-table td:not(:first-child),table.rp-commands-table th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;}
+.rp-manager-note{margin:4px 0 0;}
 .rp-actions .rp-save{margin-left:auto;}
 .rp-commands-panel.disabled{opacity:.55;}
 .rp-cmd-modal{width:min(560px,92vw);}
@@ -727,8 +736,8 @@ table.rp-commands-table td:first-child{font-family:var(--font-mono);white-space:
 .rp-cmd-override input[type=number]:disabled{opacity:.45;cursor:not-allowed;}
 .rp-cmd-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;}
 @media (max-width:900px){
-  .profiles-layout{grid-template-columns:1fr;height:auto;}
-  .profiles-layout > .groupbox{height:320px;}
+  .profiles-layout{grid-template-columns:1fr;}
+  .profiles-layout .group-list{min-height:120px;max-height:220px;}
 }
 
 .settings-row{display:flex;gap:10px;align-items:flex-end;}
@@ -974,13 +983,13 @@ From branch : <span id="versionBranch">—</span></p>
           <div class="groupbox">
             <span class="groupbox-label">Profiles</span>
             <ul class="group-list" id="rpList"></ul>
-            <div class="asset-toolbar">
+            <div class="rp-list-buttons">
               <button class="small" id="rpAddBtn" title="Add cisTEM's default local profile: one copy of the program per core, plus one for the master.">Add</button>
               <button class="small" id="rpRenameBtn" disabled>Rename</button>
               <button class="small" id="rpRemoveBtn" disabled>Remove</button>
               <button class="small" id="rpDuplicateBtn" disabled>Duplicate</button>
             </div>
-            <div class="asset-toolbar rp-io">
+            <div class="rp-list-buttons rp-io">
               <button class="small" id="rpImportBtn" title="Add profiles from a JSON file written by Export.">Import</button>
               <button class="small" id="rpExportBtn" disabled title="Save every profile to a JSON file.">Export</button>
               <input type="file" id="rpImportFile" accept=".json,application/json" hidden>
@@ -991,10 +1000,11 @@ From branch : <span id="versionBranch">—</span></p>
             <span class="groupbox-label" id="rpCommandsLabel">Commands</span>
             <div class="rp-total">Total Number of Processes : <strong id="rpTotal">&mdash;</strong></div>
             <div class="field">
-              <label for="rpManager">Manager Command <span class="unit">&mdash; launches the job controller; must contain <code>$command</code>, which becomes <code>cistem_job_controller &lt;server address&gt; &lt;port&gt; &lt;token&gt;</code>. A controller that is not on the server's PATH is named by its directory: <code>/opt/cistem/bin/$command</code></span></label>
+              <label for="rpManager">Manager Command <span class="unit">&mdash; launches the job controller; must contain <code>$command</code></span></label>
               <input type="text" id="rpManager" placeholder="$command" />
               <span class="validation-note blocked rp-error" id="rpManagerError" hidden>Oops! - Command must contain "$command"</span>
               <span class="validation-note blocked rp-error" id="rpControllerNote" hidden></span>
+              <p class="form-note rp-manager-note"><code>$command</code> becomes <code>cistem_job_controller &lt;server address&gt; &lt;port&gt; &lt;token&gt;</code>. A controller that is not on the server's PATH is named by its directory: <code>/opt/cistem/bin/$command</code>.</p>
             </div>
             <div class="rp-addresses">
               <span class="rp-addr-label" title="The address the job controller dials to reach this server. Automatic sends every address this machine answers on. cisTEM calls this the GUI address.">Server Address :</span>

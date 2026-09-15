@@ -1,0 +1,686 @@
+<title>Grid Session</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#F6F8FA;
+  --surface:#FFFFFF;
+  --surface-alt:#EEF2F5;
+  --border:#DCE3E9;
+  --border-strong:#C3CDD6;
+  --text:#131A22;
+  --text-secondary:#5C6B78;
+  --text-tertiary:#8A97A3;
+  --accent:#1B6FA8;
+  --accent-strong:#134F79;
+  --accent-soft:#E4F0F7;
+  --success:#2E7D5B;
+  --success-soft:#E4F3EC;
+  --warning:#B8791A;
+  --warning-soft:#FBF0DE;
+  --critical:#C4432B;
+  --critical-soft:#FBE8E3;
+  --idle:#8A97A3;
+  --idle-soft:#EEF1F3;
+  --font-display:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'IBM Plex Mono','SF Mono',Consolas,monospace;
+  --shadow:0 1px 2px rgba(19,26,34,0.04),0 1px 1px rgba(19,26,34,0.03);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1417;
+    --surface:#171E23;
+    --surface-alt:#1C242A;
+    --border:#2A343B;
+    --border-strong:#374249;
+    --text:#E7EDF1;
+    --text-secondary:#A3B0BA;
+    --text-tertiary:#6E7A84;
+    --accent:#5FA8D3;
+    --accent-strong:#8AC2E3;
+    --accent-soft:#1B2C36;
+    --success:#5FBE8F;
+    --success-soft:#16281F;
+    --warning:#E0A94B;
+    --warning-soft:#2E2311;
+    --critical:#E1705A;
+    --critical-soft:#301710;
+    --idle:#6E7A84;
+    --idle-soft:#1E262C;
+    --shadow:0 1px 2px rgba(0,0,0,0.3),0 1px 1px rgba(0,0,0,0.2);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1417;
+  --surface:#171E23;
+  --surface-alt:#1C242A;
+  --border:#2A343B;
+  --border-strong:#374249;
+  --text:#E7EDF1;
+  --text-secondary:#A3B0BA;
+  --text-tertiary:#6E7A84;
+  --accent:#5FA8D3;
+  --accent-strong:#8AC2E3;
+  --accent-soft:#1B2C36;
+  --success:#5FBE8F;
+  --success-soft:#16281F;
+  --warning:#E0A94B;
+  --warning-soft:#2E2311;
+  --critical:#E1705A;
+  --critical-soft:#301710;
+  --idle:#6E7A84;
+  --idle-soft:#1E262C;
+  --shadow:0 1px 2px rgba(0,0,0,0.3),0 1px 1px rgba(0,0,0,0.2);
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-display);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:1280px;
+  margin:0 auto;
+  padding:28px 32px 64px;
+}
+
+/* ---------- header ---------- */
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:24px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:24px;
+  flex-wrap:wrap;
+}
+.eyebrow{
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.09em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin:0 0 6px;
+}
+h1{
+  font-size:23px;
+  font-weight:700;
+  letter-spacing:-0.01em;
+  margin:0 0 14px;
+  text-wrap:balance;
+}
+.meta-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:22px 32px;
+}
+.meta-item{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.meta-label{
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:0.07em;
+  text-transform:uppercase;
+  color:var(--text-tertiary);
+}
+.meta-value{
+  font-family:var(--font-mono);
+  font-size:13px;
+  color:var(--text-secondary);
+}
+.meta-value.placeholder{
+  color:var(--text-tertiary);
+}
+
+.status-block{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+  flex-shrink:0;
+}
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:6px 12px;
+  border-radius:100px;
+  background:var(--idle-soft);
+  border:1px solid var(--border);
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--text-secondary);
+  white-space:nowrap;
+}
+.status-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--idle);
+  flex-shrink:0;
+}
+.status-dot.pulse{
+  animation:pulse 2.2s ease-in-out infinite;
+}
+@keyframes pulse{
+  0%,100%{opacity:1;}
+  50%{opacity:0.35;}
+}
+@media (prefers-reduced-motion: reduce){
+  .status-dot.pulse{animation:none;}
+}
+.session-id{
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  color:var(--text-tertiary);
+}
+
+/* ---------- pipeline rail ---------- */
+.section-title{
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--text-tertiary);
+  margin:0 0 12px;
+}
+.rail{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:0;
+  margin-bottom:28px;
+  position:relative;
+}
+.rail::before{
+  content:"";
+  position:absolute;
+  top:29px;
+  left:calc(10% + 2px);
+  right:calc(10% + 2px);
+  height:1px;
+  background:var(--border-strong);
+  z-index:0;
+}
+.stage{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  padding:0 10px;
+  gap:10px;
+}
+.stage-icon{
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--text-tertiary);
+}
+.stage-icon svg{width:26px;height:26px;}
+.stage-name{
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--text);
+}
+.stage-pill{
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:0.03em;
+  padding:3px 9px;
+  border-radius:100px;
+  background:var(--idle-soft);
+  color:var(--text-secondary);
+  border:1px solid var(--border);
+}
+.stage-metric{
+  font-family:var(--font-mono);
+  font-size:12px;
+  color:var(--text-tertiary);
+}
+
+/* ---------- stat tiles ---------- */
+.tiles{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-bottom:28px;
+}
+.tile{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px 18px;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.tile-label{
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  color:var(--text-tertiary);
+}
+.tile-value{
+  font-family:var(--font-mono);
+  font-size:24px;
+  font-weight:600;
+  color:var(--text);
+  letter-spacing:-0.01em;
+  font-variant-numeric:tabular-nums;
+}
+.tile-value .unit{
+  font-size:13px;
+  font-weight:500;
+  color:var(--text-tertiary);
+  margin-left:3px;
+}
+.tile-sub{
+  font-size:11.5px;
+  color:var(--text-tertiary);
+}
+
+/* ---------- panels (charts) ---------- */
+.panels{
+  display:grid;
+  grid-template-columns:1.3fr 1fr 1fr;
+  gap:14px;
+  margin-bottom:28px;
+  align-items:stretch;
+}
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  padding:16px 18px 14px;
+  display:flex;
+  flex-direction:column;
+}
+.panel-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:10px;
+  gap:8px;
+}
+.panel-title{
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--text);
+}
+.panel-note{
+  font-size:10.5px;
+  color:var(--text-tertiary);
+  font-family:var(--font-mono);
+}
+.chart-empty-label{
+  font-size:11px;
+  fill:var(--text-tertiary);
+  font-family:var(--font-display);
+}
+.chart-axis{
+  stroke:var(--border-strong);
+  stroke-width:1;
+}
+.chart-grid{
+  stroke:var(--border);
+  stroke-width:1;
+}
+.chart-tick{
+  font-size:9.5px;
+  fill:var(--text-tertiary);
+  font-family:var(--font-mono);
+}
+.chart-threshold{
+  stroke:var(--critical);
+  stroke-width:1;
+  stroke-dasharray:3 3;
+  opacity:0.6;
+}
+
+/* ---------- table ---------- */
+.table-panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.table-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 18px 12px;
+}
+.table-scroll{
+  overflow-x:auto;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:760px;
+}
+thead th{
+  text-align:left;
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  color:var(--text-tertiary);
+  padding:8px 18px;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  background:var(--surface-alt);
+  white-space:nowrap;
+}
+thead th.num, tbody td.num{text-align:right;}
+tbody td{
+  padding:11px 18px;
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  color:var(--text-secondary);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none;}
+.empty-row td{
+  font-family:var(--font-display);
+  color:var(--text-tertiary);
+  text-align:center;
+  padding:34px 18px;
+  font-size:13px;
+}
+.empty-row .hint{
+  display:block;
+  font-size:11.5px;
+  margin-top:4px;
+  color:var(--text-tertiary);
+}
+
+.footnote{
+  margin-top:22px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+  font-size:11.5px;
+  color:var(--text-tertiary);
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.footnote code{
+  font-family:var(--font-mono);
+  background:var(--surface-alt);
+  padding:1px 5px;
+  border-radius:4px;
+  color:var(--text-secondary);
+}
+
+@media (max-width:980px){
+  .tiles{grid-template-columns:repeat(2,1fr);}
+  .panels{grid-template-columns:1fr;}
+  .rail{grid-template-columns:repeat(5,1fr);}
+  .rail::before{display:none;}
+}
+@media (max-width:640px){
+  .wrap{padding:20px 16px 48px;}
+  .tiles{grid-template-columns:1fr 1fr;}
+  .rail{grid-template-columns:repeat(3,1fr);row-gap:22px;}
+}
+</style>
+
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <p class="eyebrow">Session Monitor · Single Particle</p>
+      <h1>Untitled Session — Grid 1</h1>
+      <div class="meta-row">
+        <div class="meta-item">
+          <span class="meta-label">Microscope</span>
+          <span class="meta-value placeholder">— not set —</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Detector</span>
+          <span class="meta-value placeholder">— not set —</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Voltage</span>
+          <span class="meta-value placeholder">— kV</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Pixel Size</span>
+          <span class="meta-value placeholder">— Å/px</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Operator</span>
+          <span class="meta-value placeholder">— not set —</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Started</span>
+          <span class="meta-value placeholder">— not started —</span>
+        </div>
+      </div>
+    </div>
+    <div class="status-block">
+      <span class="status-pill"><span class="status-dot pulse"></span>Idle — awaiting pipeline data</span>
+      <span class="session-id">session_id: —</span>
+    </div>
+  </div>
+
+  <p class="section-title">Pipeline</p>
+  <div class="rail">
+    <div class="stage">
+      <div class="stage-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 6l2 13h14l2-13M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M9 11v6M12 11v6M15 11v6" opacity="0.5"/></svg>
+      </div>
+      <span class="stage-name">Motion Correction</span>
+      <span class="stage-pill">Idle</span>
+      <span class="stage-metric">0 mic/hr</span>
+    </div>
+    <div class="stage">
+      <div class="stage-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18M6.5 6.5c2 2 2 9 0 11M17.5 6.5c-2 2-2 9 0 11" opacity="0.55"/></svg>
+      </div>
+      <span class="stage-name">CTF Estimation</span>
+      <span class="stage-pill">Idle</span>
+      <span class="stage-metric">fit — Å</span>
+    </div>
+    <div class="stage">
+      <div class="stage-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="2.4"/><circle cx="16" cy="7" r="2.4"/><circle cx="12" cy="16" r="2.4"/><circle cx="18" cy="15" r="2.4" opacity="0.5"/></svg>
+      </div>
+      <span class="stage-name">Particle Picking</span>
+      <span class="stage-pill">Idle</span>
+      <span class="stage-metric">0 particles</span>
+    </div>
+    <div class="stage">
+      <div class="stage-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" opacity="0.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" opacity="0.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" opacity="0.35"/></svg>
+      </div>
+      <span class="stage-name">2D Classification</span>
+      <span class="stage-pill">Idle</span>
+      <span class="stage-metric">0 / 0 classes</span>
+    </div>
+    <div class="stage">
+      <div class="stage-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"/><path d="M12 2v18M4 6.5l8 4.5 8-4.5" opacity="0.5"/></svg>
+      </div>
+      <span class="stage-name">3D Refinement</span>
+      <span class="stage-pill">Idle</span>
+      <span class="stage-metric">— Å (FSC 0.143)</span>
+    </div>
+  </div>
+
+  <p class="section-title">Live Metrics</p>
+  <div class="tiles">
+    <div class="tile">
+      <span class="tile-label">Micrographs Collected</span>
+      <span class="tile-value">0</span>
+      <span class="tile-sub">0 in queue</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Avg. Beam-Induced Motion</span>
+      <span class="tile-value">—<span class="unit">px/frame</span></span>
+      <span class="tile-sub">no frames processed</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Avg. CTF Fit Resolution</span>
+      <span class="tile-value">—<span class="unit">Å</span></span>
+      <span class="tile-sub">no CTF estimates yet</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Avg. Astigmatism</span>
+      <span class="tile-value">—<span class="unit">nm</span></span>
+      <span class="tile-sub">no CTF estimates yet</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Particles Picked</span>
+      <span class="tile-value">0</span>
+      <span class="tile-sub">0 per micrograph avg.</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Particles After 2D Clean-up</span>
+      <span class="tile-value">0</span>
+      <span class="tile-sub">— % retained</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Current Map Resolution</span>
+      <span class="tile-value">—<span class="unit">Å</span></span>
+      <span class="tile-sub">no reconstruction yet</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Estimated B-factor</span>
+      <span class="tile-value">—<span class="unit">Å²</span></span>
+      <span class="tile-sub">no refinement yet</span>
+    </div>
+  </div>
+
+  <p class="section-title">Diagnostics</p>
+  <div class="panels">
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Session Throughput</span>
+        <span class="panel-note">micrographs / hr</span>
+      </div>
+      <svg viewBox="0 0 420 190" width="100%" height="190" role="img" aria-label="Throughput chart, no data collected yet">
+        <line class="chart-grid" x1="40" y1="20" x2="400" y2="20"/>
+        <line class="chart-grid" x1="40" y1="60" x2="400" y2="60"/>
+        <line class="chart-grid" x1="40" y1="100" x2="400" y2="100"/>
+        <line class="chart-axis" x1="40" y1="140" x2="400" y2="140"/>
+        <line class="chart-axis" x1="40" y1="20" x2="40" y2="140"/>
+        <text class="chart-tick" x="34" y="24" text-anchor="end">30</text>
+        <text class="chart-tick" x="34" y="64" text-anchor="end">15</text>
+        <text class="chart-tick" x="34" y="104" text-anchor="end">0</text>
+        <text class="chart-tick" x="40" y="156" text-anchor="middle">0h</text>
+        <text class="chart-tick" x="130" y="156" text-anchor="middle">2h</text>
+        <text class="chart-tick" x="220" y="156" text-anchor="middle">4h</text>
+        <text class="chart-tick" x="310" y="156" text-anchor="middle">6h</text>
+        <text class="chart-tick" x="400" y="156" text-anchor="middle">8h</text>
+        <line class="chart-axis" x1="40" y1="100" x2="400" y2="100" stroke-dasharray="2 4" opacity="0.7"/>
+        <text class="chart-empty-label" x="220" y="82" text-anchor="middle">No micrographs processed yet</text>
+      </svg>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Defocus Distribution</span>
+        <span class="panel-note">μm</span>
+      </div>
+      <svg viewBox="0 0 300 190" width="100%" height="190" role="img" aria-label="Defocus histogram, no data collected yet">
+        <line class="chart-grid" x1="30" y1="20" x2="280" y2="20"/>
+        <line class="chart-grid" x1="30" y1="60" x2="280" y2="60"/>
+        <line class="chart-grid" x1="30" y1="100" x2="280" y2="100"/>
+        <line class="chart-axis" x1="30" y1="140" x2="280" y2="140"/>
+        <line class="chart-axis" x1="30" y1="20" x2="30" y2="140"/>
+        <g opacity="0.35">
+          <rect class="chart-grid" x="40" y="138" width="22" height="2"/>
+          <rect class="chart-grid" x="75" y="138" width="22" height="2"/>
+          <rect class="chart-grid" x="110" y="138" width="22" height="2"/>
+          <rect class="chart-grid" x="145" y="138" width="22" height="2"/>
+          <rect class="chart-grid" x="180" y="138" width="22" height="2"/>
+          <rect class="chart-grid" x="215" y="138" width="22" height="2"/>
+          <rect class="chart-grid" x="250" y="138" width="22" height="2"/>
+        </g>
+        <text class="chart-tick" x="40" y="156" text-anchor="middle">0.5</text>
+        <text class="chart-tick" x="155" y="156" text-anchor="middle">2.0</text>
+        <text class="chart-tick" x="270" y="156" text-anchor="middle">3.5</text>
+        <text class="chart-empty-label" x="155" y="82" text-anchor="middle">Awaiting particle picks</text>
+      </svg>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Fourier Shell Correlation</span>
+        <span class="panel-note">FSC vs. Å</span>
+      </div>
+      <svg viewBox="0 0 300 190" width="100%" height="190" role="img" aria-label="FSC curve, no reconstruction yet">
+        <line class="chart-grid" x1="30" y1="20" x2="280" y2="20"/>
+        <line class="chart-grid" x1="30" y1="52" x2="280" y2="52"/>
+        <line class="chart-grid" x1="30" y1="86" x2="280" y2="86"/>
+        <line class="chart-axis" x1="30" y1="140" x2="280" y2="140"/>
+        <line class="chart-axis" x1="30" y1="20" x2="30" y2="140"/>
+        <line class="chart-threshold" x1="30" y1="106" x2="280" y2="106"/>
+        <text class="chart-tick" x="284" y="109" text-anchor="start">0.143</text>
+        <text class="chart-tick" x="30" y="24" text-anchor="end">1.0</text>
+        <text class="chart-tick" x="30" y="144" text-anchor="end">0</text>
+        <text class="chart-tick" x="30" y="156" text-anchor="middle">30</text>
+        <text class="chart-tick" x="155" y="156" text-anchor="middle">10</text>
+        <text class="chart-tick" x="270" y="156" text-anchor="middle">3</text>
+        <text class="chart-empty-label" x="155" y="70" text-anchor="middle">No 3D map yet</text>
+      </svg>
+    </div>
+
+  </div>
+
+  <p class="section-title">Micrograph Log</p>
+  <div class="table-panel">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Micrograph</th>
+            <th>Collected</th>
+            <th class="num">Defocus U/V (μm)</th>
+            <th class="num">Astigmatism (°)</th>
+            <th class="num">CTF Fit (Å)</th>
+            <th class="num">Particles</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="empty-row">
+            <td colspan="7">
+              No micrographs yet
+              <span class="hint">Point this session at your pipeline's output directory to begin logging frames as they land.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <span>Template state — all fields shown as collected. Wire up <code>micrographs</code>, <code>ctf</code>, and <code>refinement</code> feeds to populate.</span>
+    <span>Standard pipeline: Motion Correction → CTF Estimation → Particle Picking → 2D Classification → 3D Refinement</span>
+  </div>
+
+</div>

@@ -42,7 +42,27 @@ Your approach is anchored in systematic rule-following, transparent problem-solv
 
 ## Project Overview
 
-cisTEM is a scientific computing application for cryo-electron microscopy (cryo-EM) image processing and 3D reconstruction. It's written primarily in C++ with CUDA GPU acceleration support and includes both command-line programs and a wxWidgets-based GUI.
+cisTEM is a scientific computing application for cryo-electron microscopy (cryo-EM) image processing and 3D reconstruction. It's written primarily in C++ with CUDA GPU acceleration support. On other branches it includes a wxWidgets-based GUI; **this branch replaces that GUI with a web interface** — see the next section.
+
+## This branch: `cistem3`
+
+This checkout is the **`cistem3` branch**: cisTEM without its desktop GUI, plus **cisTEM3**, the web interface that replaces it. Nothing here should reintroduce the wxWidgets GUI.
+
+- **Removed:** `src/gui/` (so the `src/gui/CLAUDE.md` mentioned below does not exist here), the `cisTEM` (projectx), `cisTEM_display` and `gui_test` programs, the legacy `cisTEM_job_control` controller the GUI launched, and core's `gui_core_headers.h` / `gui_job_controller.*` (`libguicore`). `UpdateProgressTracker.h` moved into `src/core/` because `database.h` needs it. The build needs only wx's base, net and xml libraries. The GUI's source is still the reference for how every web panel should behave: read it with `git show master:src/gui/<file>` or from the main worktree (below), read-only.
+- **Added:** `src/programs/cistem_job_controller/` — the per-job controller the web server launches through a run profile's manager command. It speaks Job Protocol v1 (length-prefixed JSON, per-job token, reconnect and resend; spec `web/docs/job-protocol.md`) to the server and the legacy raw-struct socket protocol (`src/core/socket_communication_utils/`) to unmodified workers. A fork of the GUI's `guix_job_control.cpp`; workers and `MyApp` untouched. `web/tools/fake_controller.py` is its Python test double and the reference for every message it handles.
+- **Added: `web/`** — cisTEM3: the Flask server (`web/server/`), the single-file page (`web/cistem3.html`), the protocol spec (`web/docs/`) and tools. **Read `web/CLAUDE.md` before touching anything under `web/`** — it is the full design and API document for the web interface and its own working conventions (how each panel mirrors cisTEM's, the API contract, verifying against the user's real project data with a check server on port 8001, the test suite). Its paths are relative to `web/`; its tests run with `cd web/server && python3 -m unittest discover -s tests`. `make install` also installs `web/` under `$(pkgdatadir)/web`.
+- **Building this branch** (autotools; upstream `master` requires Intel MKL, installed under `/opt/intel/oneapi`; the upstream CMake build is stale on `master` itself and is not kept working):
+
+  ```bash
+  ./regenerate_project.b            # after any change to configure.ac or */Makefile.am
+  mkdir -p build/cpu && cd build/cpu
+  export MKLROOT=/opt/intel/oneapi/mkl/latest
+  ../../configure --enable-openmp --disable-FastFFT --disable-multiple-global-refinements CXX=g++ CC=gcc
+  make -j12                          # ~15 min from clean; binaries in build/cpu/src/
+  ```
+
+  The binaries link MKL dynamically: `source /opt/intel/oneapi/setvars.sh` before running them — in the web server's shell too, or the controller and workers it launches fail to find `libmkl_intel_ilp64.so`. The web server the user runs for real is started from `web/server/` on port 8000 in their own terminal and runs whatever programs are on that process's `PATH` (`~/Apps/cisTEM/bin`, older builds) or named by a run profile's manager-command prefix; a fresh `make` here replaces none of those until installed or copied.
+- **Git here.** This checkout is a **git worktree** of `~/Apps/cisTEM_git/cisTEM`, which stays on the user's own branch with uncommitted work — never run git commands in that directory. Commit here with `git -c user.name="Tim Grant" -c user.email=tgrant@morgridge.org commit ...` (the worktree has no identity of its own) and push with `git push origin cistem3` (SSH push URL, https fetch). `web/` was added with `git subtree add --prefix=web` from the standalone development repository `~/Downloads/cistem_web_app/cryoem-job-runner`, with its full history. Since 2026-09-15 **this branch is where the web interface is developed**; that repository is the secondary copy, updated when wanted with `git subtree push --prefix=web ~/Downloads/cistem_web_app/cryoem-job-runner master`. Keep commits that touch `web/` separate from commits that touch `src/`, so subtree splits stay clean.
 
 ## Build System
 
@@ -71,14 +91,14 @@ make -j16
 ### Core Components
 
 - **src/core/** - Core libraries and data structures (see `src/core/CLAUDE.md`)
-- **src/gui/** - wxWidgets-based graphical interface (see `src/gui/CLAUDE.md`)
+- **src/gui/** - removed on this branch; the web interface in **web/** replaces it (see `web/CLAUDE.md`)
 - **src/programs/** - Command-line executables (see `src/programs/CLAUDE.md`)
 - **scripts/** - Build and utility scripts (see `scripts/CLAUDE.md`)
 
 ### Key Dependencies
 
 - **Intel MKL** - Primary FFT library for optimized performance
-- **wxWidgets** - GUI framework (typically 3.0.5 stable)
+- **wxWidgets** - base, net and xml libraries only on this branch (strings, sockets, JSON); no GUI libraries
 - **SQLite** - Database backend
 - **CUDA** - GPU acceleration (optional)
 - **Intel C++ Compiler (icc/icpc)** - Primary compiler for performance builds

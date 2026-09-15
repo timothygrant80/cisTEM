@@ -2,17 +2,16 @@
 
 > **This branch (`cistem3`) is *cis*TEM without its desktop GUI.** It keeps the
 > command-line programs and `libcore`, adds `cistem_job_controller` (the per-job
-> controller in `src/programs/cistem_job_controller/`), and adds **cisTEM3** in
-> [`cistem3/`](cistem3/): a web server (`cistem3/server/`, Python/Flask) and a
-> single-page web UI (`cistem3/cistem3.html`) that drive those programs through
-> the controller — see [`cistem3/README.md`](cistem3/README.md) for setup and
-> [`cistem3/docs/job-protocol.md`](cistem3/docs/job-protocol.md) for the
-> server–controller protocol. The wxWidgets GUI (`src/gui/`, the `cisTEM`,
-> `cisTEM_display` and `gui_test` programs and the `cisTEM_job_control`
-> controller it launched) is removed, so the build needs only wx's base, net
-> and xml libraries. `cistem3/` is a `git subtree` of the standalone
-> development repository; changes flow either way with
-> `git subtree pull|push --prefix=cistem3`.
+> controller in `src/programs/cistem_job_controller/`), and adds the web interface
+> in [`web/`](web/): a server (`web/server/`, Python/Flask) and a single-page UI
+> (`web/cistem3.html`) that drive those programs through the controller — see
+> [`web/README.md`](web/README.md) for setup and
+> [`web/docs/job-protocol.md`](web/docs/job-protocol.md) for the server–controller
+> protocol. The wxWidgets GUI (`src/gui/`, the `cisTEM`, `cisTEM_display` and
+> `gui_test` programs and the `cisTEM_job_control` controller it launched) is
+> removed, so the build needs only wx's base, net and xml libraries. `web/` is a
+> `git subtree` of the standalone development repository; changes flow either way
+> with `git subtree pull|push --prefix=web`.
 
 [*cis*TEM](https://cistem.org) is user-friendly software to process cryo-EM images of macromolecular complexes and obtain high-resolution 3D reconstructions from them. It was originally developed by Tim Grant, Alexis Rohou and Nikolaus Grigorieff and comprises a number of tools to process image data including movies, micrographs and stacks of single-particle images, implementing a complete “pipeline” of processing steps to obtain high-resolution single-particle reconstructions. cisTEM is distributed under the [Janelia Research Campus Software License](http://license.janelia.org/license/) License and pre-compiled binaries can be downloaded from [cistem.org](https://cistem.org). For best performance, we recommend downloading and using the pre-compiled binaries, rather than compiling the source code. New users are encouraged to follow the [tutorial](https://cistem.org/documentation#tab-1-1), which provides a quick way to become familiar with the most important functions of cisTEM.
 

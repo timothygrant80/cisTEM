@@ -64,7 +64,7 @@ TCP. The controller connects to the server; the server never connects out.
 Exactly one connection per controller at a time; one controller per job.
 
 Plain TCP is the v1 carrier, chosen deliberately: the server and the compute
-live on the same network, wxSocket already gives the C++ side everything the
+live on the same network, a plain TCP socket gives the C++ side everything the
 framing below needs, and encryption when wanted is a tunnel around the
 connection (§9) rather than a library inside the controller. §3.1 defines how
 a second carrier can be added later without touching a message.

@@ -79,8 +79,8 @@ class RunJob {
     void     SetArguments(const char* format, va_list args);
     void     ManualSetArguments(const char* format, ...);
     long     ReturnEncodedByteTransferSize( );
-    bool     SendJob(wxSocketBase* socket);
-    bool     RecieveJob(wxSocketBase* socket);
+    bool     SendJob(TcpSocket* socket);
+    bool     RecieveJob(TcpSocket* socket);
     void     PrintAllArguments( );
     wxString PrintAllArgumentsTowxString( );
 
@@ -103,8 +103,8 @@ class JobPackage {
 
     void Reset(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs);
     void AddJob(const char* format, ...);
-    bool SendJobPackage(wxSocketBase* socket);
-    bool ReceiveJobPackage(wxSocketBase* socket);
+    bool SendJobPackage(TcpSocket* socket);
+    bool ReceiveJobPackage(TcpSocket* socket);
 
     long ReturnEncodedByteTransferSize( );
     int  ReturnNumberOfJobsRemaining( );
@@ -113,7 +113,7 @@ class JobPackage {
     JobPackage& operator=(const JobPackage* other_package);
 };
 
-WX_DECLARE_OBJARRAY(JobPackage, ArrayofJobPackages);
+typedef std::vector<JobPackage> ArrayofJobPackages;
 
 class JobResult {
 
@@ -132,11 +132,11 @@ class JobResult {
     JobResult& operator=(const JobResult* other_result);
 
     void SetResult(int wanted_result_size, float* wanted_result_data);
-    bool SendToSocket(wxSocketBase* wanted_socket);
-    bool ReceiveFromSocket(wxSocketBase* wanted_socket);
+    bool SendToSocket(TcpSocket* wanted_socket);
+    bool ReceiveFromSocket(TcpSocket* wanted_socket);
 };
 
-WX_DECLARE_OBJARRAY(JobResult, ArrayofJobResults);
+typedef std::vector<JobResult> ArrayofJobResults;
 
-bool ReceiveResultQueueFromSocket(wxSocketBase* socket, ArrayofJobResults& my_array);
-bool SendResultQueueToSocket(wxSocketBase* socket, ArrayofJobResults& my_array);
+bool ReceiveResultQueueFromSocket(TcpSocket* socket, ArrayofJobResults& my_array);
+bool SendResultQueueToSocket(TcpSocket* socket, ArrayofJobResults& my_array);

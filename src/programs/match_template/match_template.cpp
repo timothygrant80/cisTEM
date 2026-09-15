@@ -208,15 +208,15 @@ void MatchTemplateApp::ProgramSpecificInit( ) {
 void MatchTemplateApp::AddCommandLineOptions( ) {
     command_line_parser.AddLongSwitch("disable-gpu-prj", "Disable projection using the gpu. Default false");
     command_line_parser.AddLongSwitch("disable-flat-fielding", "Disable flat fielding. Default false");
-    command_line_parser.AddOption("", "n-expected-false-positives", "average number of false positives per image, (defaults to 1)", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "n-expected-false-positives", "average number of false positives per image, (defaults to 1)", CMD_LINE_VAL_DOUBLE);
     command_line_parser.AddLongSwitch("ignore-defocus-for-threshold", "assume the defocus planes are not independent locs for threshold calc, (defaults false)");
     command_line_parser.AddLongSwitch("apply-result-rescaling", "Rescale the results their original size, (defaults false)");
 
 #ifdef TEST_LOCAL_NORMALIZATION
-    command_line_parser.AddOption("", "healpix-file", "Healpix file for the input images", wxCMD_LINE_VAL_STRING);
-    command_line_parser.AddOption("", "min-stats-counter", "Minimum number of pixels to calculate the threshold (defaults to 10.f)", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "threshold-val", "n_stddev to threshold value for the trimmed local variance (defaults to 3.0f)", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "L2-peristance-fraction", "min L2 cache available for persisting as fraction of input image size in fp16 bytes (defaults to 0 [off])", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "healpix-file", "Healpix file for the input images", CMD_LINE_VAL_STRING);
+    command_line_parser.AddOption("", "min-stats-counter", "Minimum number of pixels to calculate the threshold (defaults to 10.f)", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "threshold-val", "n_stddev to threshold value for the trimmed local variance (defaults to 3.0f)", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "L2-peristance-fraction", "min L2 cache available for persisting as fraction of input image size in fp16 bytes (defaults to 0 [off])", CMD_LINE_VAL_DOUBLE);
 #endif
 }
 
@@ -464,7 +464,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     float threshold_val{3.0f};
 
 #ifdef TEST_LOCAL_NORMALIZATION
-    wxString healpix_file;
+    std::string healpix_file;
     if ( command_line_parser.Found("healpix-file", &healpix_file) ) {
         SendInfo("Using healpix file: " + healpix_file + "\n");
         healpix_file             = healpix_file;

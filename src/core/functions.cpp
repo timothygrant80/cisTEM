@@ -141,23 +141,24 @@ bool GetMRCDetails(const char* filename, int& x_size, int& y_size, int& number_o
 // Assumption is that turning off of events etc has been done, and that
 // all other considerations have done.
 
-bool SendwxStringToSocket(wxString* string_to_send, wxSocketBase* socket) {
-    wxCharBuffer   buffer           = string_to_send->mb_str( );
-    int            length_of_string = buffer.length( );
-    unsigned char* char_pointer;
+bool SendStringToSocket(const std::string& string_to_send, TcpSocket* socket) {
+    int length_of_string = int(string_to_send.size( ));
 
     // send the length of the string, followed by the string
 
-    char_pointer = (unsigned char*)&length_of_string;
-    if ( WriteToSocket(socket, char_pointer, 4, true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( WriteToSocket(socket, &length_of_string, sizeof(int), true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_WXSTRING) == false )
         return false;
-    if ( WriteToSocket(socket, buffer.data( ), length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( length_of_string > 0 && WriteToSocket(socket, string_to_send.data( ), length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false )
         return false;
 
     return true;
 }
 
-bool SendTemplateMatchingResultToSocket(wxSocketBase* socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+bool SendwxStringToSocket(wxString* string_to_send, TcpSocket* socket) {
+    return SendStringToSocket(string_to_send->ToStdString( ), socket);
+}
+
+bool SendTemplateMatchingResultToSocket(TcpSocket* socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // send the image number and all the peak details...
 
     int number_of_peaks   = peak_infos.GetCount( );
@@ -234,7 +235,7 @@ bool SendTemplateMatchingResultToSocket(wxSocketBase* socket, int& image_number,
     return true;
 }
 
-bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase* socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+bool ReceiveTemplateMatchingResultFromSocket(TcpSocket* socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     int number_of_bytes;
     int number_of_peaks;
     int number_of_changes;
@@ -364,43 +365,30 @@ int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor) {
     return myroundint(float(original_box_size) / bin_factor);
 }
 
-wxString ReceivewxStringFromSocket(wxSocketBase* socket, bool& receive_worked) {
+std::string ReceiveStringFromSocket(TcpSocket* socket, bool& receive_worked) {
     receive_worked = true;
 
-    int            length_of_string;
-    unsigned char* char_pointer;
+    int length_of_string;
 
     // receive the length of the string, followed by the string
 
-    char_pointer = (unsigned char*)&length_of_string;
-    if ( ReadFromSocket(socket, char_pointer, 4, true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( ReadFromSocket(socket, &length_of_string, sizeof(int), true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_WXSTRING) == false || length_of_string < 0 ) {
         receive_worked = false;
         return "";
     }
 
-    // setup a temp array to receive the string into.
+    std::string received_string(size_t(length_of_string), '\0');
 
-    unsigned char* transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
-
-    if ( ReadFromSocket(socket, transfer_buffer, length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( length_of_string > 0 && ReadFromSocket(socket, &received_string[0], length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
         receive_worked = false;
-        delete[] transfer_buffer;
         return "";
     }
 
-    // add the null
+    return received_string;
+}
 
-    transfer_buffer[length_of_string] = 0;
-
-    // make a wxstring from this buffer..
-
-    wxString temp_string(transfer_buffer);
-
-    // delete the buffer
-
-    delete[] transfer_buffer;
-
-    return temp_string;
+wxString ReceivewxStringFromSocket(TcpSocket* socket, bool& receive_worked) {
+    return wxString(ReceiveStringFromSocket(socket, receive_worked));
 }
 
 wxArrayString ReturnIPAddress( ) {
@@ -456,22 +444,8 @@ wxArrayString ReturnIPAddress( ) {
     return all_ip_addresses;
 }
 
-wxString ReturnIPAddressFromSocket(wxSocketBase* socket) {
-    wxString      ip_address;
-    wxIPV4address my_address;
-
-    socket->GetLocal(my_address);
-    ip_address = my_address.IPAddress( );
-
-    // is this 127.0.0.1 - in which case it may cause trouble..
-    /*
-	if (ip_address == "127.0.0.1")
-	{
-		ip_address = "";
-		//ip_address = ReturnIPAddress(); // last chance to get a non loopback address
-	}*/
-
-    return ip_address;
+wxString ReturnIPAddressFromSocket(TcpSocket* socket) {
+    return wxString(socket->ReturnLocalIPAddress( ));
 }
 
 // Test whether the filename's extension matches; case insensitive
@@ -763,106 +737,18 @@ long ReturnFileSizeInBytes(wxString filename) {
     return size;
 }
 
-void CheckSocketForError(wxSocketBase* socket_to_check) {
+void CheckSocketForError(TcpSocket* socket_to_check) {
     if ( socket_to_check->Error( ) == true ) {
-        wxPrintf("Socket Error : ");
-
-        switch ( socket_to_check->LastError( ) ) {
-            case wxSOCKET_NOERROR:
-                wxPrintf("No Error!\n");
-                break;
-
-            case wxSOCKET_INVOP:
-                wxPrintf("Invalid Operation.\n");
-                break;
-
-            case wxSOCKET_IOERR:
-                wxPrintf("Input/Output error.\n");
-                break;
-
-            case wxSOCKET_INVADDR:
-                wxPrintf("Invalid address passed to wxSocket.\n");
-                break;
-
-            case wxSOCKET_INVSOCK:
-                wxPrintf("Invalid socket (uninitialized).\n");
-                break;
-
-            case wxSOCKET_NOHOST:
-                wxPrintf("No corresponding host.\n");
-                break;
-
-            case wxSOCKET_INVPORT:
-                wxPrintf("Invalid port.\n");
-                break;
-
-            case wxSOCKET_WOULDBLOCK:
-                wxPrintf("The socket is non-blocking and the operation would block.\n");
-                break;
-
-            case wxSOCKET_TIMEDOUT:
-                wxPrintf("The timeout for this operation expired.\n");
-                break;
-
-            case wxSOCKET_MEMERR:
-                wxPrintf("Memory exhausted.\n");
-                break;
-            // you can have any number of case statements.
-            default:
-                wxPrintf("unknown.\n");
-        }
+        wxPrintf("Socket Error : %s\n", ReturnSocketErrorText(socket_to_check));
     }
 }
 
-wxString ReturnSocketErrorText(wxSocketBase* socket_to_check) {
-    if ( socket_to_check->Error( ) == true ) {
-        switch ( socket_to_check->LastError( ) ) {
-            case wxSOCKET_NOERROR:
-                return "No Error!";
-                break;
-
-            case wxSOCKET_INVOP:
-                return "Invalid Operation.";
-                break;
-
-            case wxSOCKET_IOERR:
-                return "Input/Output error";
-                break;
-
-            case wxSOCKET_INVADDR:
-                return "Invalid address passed to wxSocket.";
-                break;
-
-            case wxSOCKET_INVSOCK:
-                return "Invalid socket (uninitialized).";
-                break;
-
-            case wxSOCKET_NOHOST:
-                return "No corresponding host.";
-                break;
-
-            case wxSOCKET_INVPORT:
-                return "Invalid port.";
-                break;
-
-            case wxSOCKET_WOULDBLOCK:
-                return ("The socket is non-blocking and the operation would block");
-                break;
-
-            case wxSOCKET_TIMEDOUT:
-                return "The timeout for this operation expired.";
-                break;
-
-            case wxSOCKET_MEMERR:
-                return "Memory exhausted.";
-                break;
-            // you can have any number of case statements.
-            default:
-                return ("Unknown error.");
-        }
-    }
-    else
-        return "Error, not set.";
+std::string ReturnSocketErrorText(TcpSocket* socket_to_check) {
+    if ( socket_to_check == NULL )
+        return "Null socket.";
+    if ( socket_to_check->Error( ) == true )
+        return socket_to_check->LastErrorText( );
+    return "Error, not set.";
 }
 
 float ReturnSumOfLogP(float logp1, float logp2, float log_range = 20.0) {

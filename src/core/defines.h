@@ -14,9 +14,6 @@
 #define PISQ 9.869604401089
 #define PISQf 9.869604401089f
 
-#define SOCKET_FLAGS wxSOCKET_WAITALL | wxSOCKET_BLOCK
-//#define SOCKET_FLAGS wxSOCKET_WAITALL
-
 // Types of noise distributions
 namespace cistem {
 

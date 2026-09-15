@@ -1,8 +1,18 @@
-WX_DEFINE_ARRAY_PTR(wxSocketBase*, ArrayOfSocketBasePointers);
-WX_DECLARE_HASH_MAP(wxSocketBase*, RunJob*, wxPointerHash, wxPointerEqual, SocketJobPointerHash);
+#ifndef _SRC_CORE_MYAPP_H_
+#define _SRC_CORE_MYAPP_H_
 
-class ReturnProgramDefinedResultEvent;
-wxDECLARE_EVENT(RETURN_PROGRAM_DEFINED_RESULT_EVT, ReturnProgramDefinedResultEvent);
+/*
+ * MyApp is the base class of every cisTEM program. Run interactively (no arguments) it asks its
+ * questions and calls DoCalculation() on the main thread. Launched by a job controller
+ * (controller_address port job_code threads) it connects to the controller, becomes the master
+ * or a worker, and runs DoCalculation() for each job it is handed on a CalculateThread while the
+ * main thread runs the EventLoop that services sockets and timers.
+ *
+ * IMPLEMENT_APP(MyProgramApp) defines main() for a program.
+ */
+
+typedef std::vector<TcpSocket*>                  ArrayOfSocketBasePointers;
+typedef std::unordered_map<TcpSocket*, RunJob*> SocketJobPointerHash;
 
 #define PrintIfLocal(...)                \
     {                                    \
@@ -10,58 +20,26 @@ wxDECLARE_EVENT(RETURN_PROGRAM_DEFINED_RESULT_EVT, ReturnProgramDefinedResultEve
             wxPrintf(__VA_ARGS__);       \
     }
 
-class ReturnProgramDefinedResultEvent : public wxThreadEvent {
-  public:
-    ReturnProgramDefinedResultEvent(wxEventType commandType = RETURN_PROGRAM_DEFINED_RESULT_EVT, int id = 0)
-        : wxThreadEvent(commandType, id) {}
-
-    // You *must* copy here the data to be transported
-    ReturnProgramDefinedResultEvent(const ReturnProgramDefinedResultEvent& event)
-        : wxThreadEvent(event) {
-        this->SetResultData(event.GetResultData( ));
-        this->SetSizeOfResultData(event.GetSizeOfResultData( ));
-        this->SetResultNumber(event.GetResultNumber( ));
-        this->SetNumberOfExpectedResults(event.GetNumberOfExpectedResults( ));
-    }
-
-    // Required for sending with wxPostEvent()
-    wxEvent* Clone( ) const { return new ReturnProgramDefinedResultEvent(*this); }
-
-    float* GetResultData( ) const { return m_pointer_to_result_data; }
-
-    long GetSizeOfResultData( ) const { return m_size_of_result_data; }
-
-    int GetResultNumber( ) const { return m_result_number; }
-
-    int GetNumberOfExpectedResults( ) const { return m_number_of_expected_results; }
-
-    void SetResultData(float* result) { m_pointer_to_result_data = result; }
-
-    void SetSizeOfResultData(long size) { m_size_of_result_data = size; }
-
-    void SetResultNumber(int result_number) { m_result_number = result_number; }
-
-    void SetNumberOfExpectedResults(int number_of_expected_results) { m_number_of_expected_results = number_of_expected_results; }
-
-  private:
-    float* m_pointer_to_result_data;
-    long   m_size_of_result_data;
-    int    m_result_number;
-    int    m_number_of_expected_results;
-};
-
 class MyApp; // So CalculateThread class knows about it
 
 // The workhorse / calculation thread
 
-class CalculateThread : public wxThread {
+class CalculateThread {
   public:
-    CalculateThread(MyApp* handler, float wanted_job_wait_time) : wxThread(wxTHREAD_DETACHED) {
-        main_thread_pointer = handler;
-        job_wait_time       = wanted_job_wait_time;
-    }
-
+    CalculateThread(MyApp* handler, float wanted_job_wait_time);
     ~CalculateThread( );
+
+    CalculateThread(const CalculateThread&) = delete;
+    CalculateThread& operator=(const CalculateThread&) = delete;
+
+    /// Start the thread; false if it could not be created.
+    bool Run( );
+
+    /// True once Entry() has returned.
+    bool HasFinished( ) const { return has_finished; }
+
+    /// Wait for the thread to finish (detaches instead when called from the thread itself).
+    void Join( );
 
     MyApp* main_thread_pointer;
     float  job_wait_time;
@@ -72,70 +50,78 @@ class CalculateThread : public wxThread {
     void   SendProgramDefinedResultToMaster(float* result_to_send, long size_of_result, int result_number, int number_of_expected_results);
 
   protected:
-    virtual ExitCode Entry( );
-    long             time_sleeping;
+    void Entry( );
+
+    std::thread       thread;
+    std::atomic<bool> has_finished;
 };
 
 // The console APP class.. should just deal with events..
 
-#ifdef __WXOSX__
-class
-        MyApp : public wxApp,
-                public SocketCommunicator
-#else
-class
-        MyApp : public wxAppConsole,
-                public SocketCommunicator
-#endif
-{
-    wxTimer* zombie_timer;
-    bool     i_am_a_zombie;
-    int      number_of_failed_connections;
+class MyApp : public EventLoop,
+              public SocketCommunicator {
+    int  zombie_timer;
+    bool zombie_timer_set;
+    bool i_am_a_zombie;
+    int  number_of_failed_connections;
 
-    wxTimer* queue_timer;
-    bool     queue_timer_set;
+    int  queue_timer;
+    bool queue_timer_set;
 
-    wxTimer* master_queue_timer;
-    bool     master_queue_timer_set;
+    int  master_queue_timer;
+    bool master_queue_timer_set;
 
-    void OnQueueTimer(wxTimerEvent& event);
-    void OnMasterQueueTimer(wxTimerEvent& event);
-    void OnZombieTimer(wxTimerEvent& event);
+    void OnQueueTimer( );
+    void OnMasterQueueTimer( );
+    void OnZombieTimer( );
+
+    void StartZombieTimer( );
+    void StopZombieTimer( );
 
     virtual float GetMaxJobWaitTimeInSeconds( ) { return 30.0f; }
 
-    wxStopWatch stopwatch;
-    long        total_milliseconds_spent_on_threads;
+    ElapsedTimer stopwatch;
+    long         total_milliseconds_spent_on_threads;
+
+    // Ask the calculation thread to stop and give it a moment to do so.
+    void StopWorkThread( );
 
   public:
+    MyApp( );
+    virtual ~MyApp( );
+
+    int    argc;
+    char** argv;
+
+    /// The program's main(): OnInit, OnEventLoopEnter, the event loop, OnExit. Used by IMPLEMENT_APP.
+    int Main(int argc, char** argv);
+
     bool         OnInit( );
     int          OnExit( );
     virtual void ProgramSpecificInit( ){ };
     virtual void ProgramSpecificCleanUp( ){ };
     virtual void MyInteractiveProgramCleanup( ){ };
-    void         OnEventLoopEnter(wxEventLoopBase* loop);
+    void         OnEventLoopEnter( );
 
     // Socket overides
 
-    void HandleNewSocketConnection(wxSocketBase* new_connection, unsigned char* identification_code);
-    //void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package);
-    void HandleSocketYouAreTheMaster(wxSocketBase* connected_socket, JobPackage* received_package);
-    void HandleSocketYouAreAWorker(wxSocketBase* connected_socket, wxString master_ip_address, wxString master_port_string);
-    void HandleSocketTimeToDie(wxSocketBase* connected_socket);
-    void HandleSocketJobResult(wxSocketBase* connected_socket, JobResult* received_result);
-    void HandleSocketIHaveAnError(wxSocketBase* connected_socket, wxString error_message);
-    void HandleSocketIHaveInfo(wxSocketBase* connected_socket, wxString info_message);
-    void HandleSocketSendNextJob(wxSocketBase* connected_socket, JobResult* received_result);
-    void HandleSocketJobResultQueue(wxSocketBase* connected_socket, ArrayofJobResults* received_queue);
-    //void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack);
-    void HandleSocketResultWithImageToWrite(wxSocketBase* connected_socket, wxString filename_to_write_to, int position_in_stack);
-    void HandleSocketProgramDefinedResult(wxSocketBase* connected_socket, float* data_array, int size_of_data_array, int result_number, int number_of_expected_results);
-    void HandleSocketSendThreadTiming(wxSocketBase* connected_socket, long received_timing_in_milliseconds);
-    void HandleSocketYouAreConnected(wxSocketBase* connected_socket);
-    void HandleSocketReadyToSendSingleJob(wxSocketBase* connected_socket, RunJob* received_job);
-    void HandleSocketDisconnect(wxSocketBase* connected_socket);
+    void HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* identification_code) override;
+    void HandleSocketYouAreTheMaster(TcpSocket* connected_socket, JobPackage* received_package) override;
+    void HandleSocketYouAreAWorker(TcpSocket* connected_socket, wxString master_ip_address, wxString master_port_string) override;
+    void HandleSocketTimeToDie(TcpSocket* connected_socket) override;
+    void HandleSocketJobResult(TcpSocket* connected_socket, JobResult* received_result) override;
+    void HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message) override;
+    void HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message) override;
+    void HandleSocketSendNextJob(TcpSocket* connected_socket, JobResult* received_result) override;
+    void HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue) override;
+    void HandleSocketResultWithImageToWrite(TcpSocket* connected_socket, wxString filename_to_write_to, int position_in_stack) override;
+    void HandleSocketProgramDefinedResult(TcpSocket* connected_socket, float* data_array, int size_of_data_array, int result_number, int number_of_expected_results) override;
+    void HandleSocketSendThreadTiming(TcpSocket* connected_socket, long received_timing_in_milliseconds) override;
+    void HandleSocketYouAreConnected(TcpSocket* connected_socket) override;
+    void HandleSocketReadyToSendSingleJob(TcpSocket* connected_socket, RunJob* received_job) override;
+    void HandleSocketDisconnect(TcpSocket* connected_socket) override;
 
-    void IfSocketIsAKeySocketSetItToNull(wxSocketBase* socket_to_check);
+    void IfSocketIsAKeySocketSetItToNull(TcpSocket* socket_to_check);
 
     // array for sending back the results - this may be better off being made into an object..
 
@@ -145,21 +131,21 @@ class
 
     // socket stuff
 
-    wxSocketClient* controller_socket;
-    wxSocketClient* master_socket;
+    TcpSocket* controller_socket;
+    TcpSocket* master_socket;
 
-    bool          is_connected;
-    bool          connected_to_the_master;
-    bool          currently_running_a_job;
-    wxIPV4address active_controller_address;
-    long          controller_port;
+    bool        is_connected;
+    bool        connected_to_the_master;
+    bool        currently_running_a_job;
+    std::string active_controller_address; // host name or IP the sockets (re)connect to
+    long        controller_port;
 
     // This message queue is currently used for SendProcessedImageResult, the calculation thread will wait until there is a message on this queue before sending the next image.
     // This is done, so that the process does not swarm ahead and fill the memory with processed images.
 
-    // currently any message will allow sending, one message is pre posted in MyApps constructor so that the first SendProcessedImageResult will go ahead.
+    // currently any message will allow sending, one message is pre posted in MyApp::OnInit so that the first SendProcessedImageResult will go ahead.
 
-    wxMessageQueue<char> inter_thread_message_queue;
+    MessageQueue<char> inter_thread_message_queue;
 
     short int my_port;
     wxString  my_ip_address;
@@ -185,13 +171,12 @@ class
     long number_of_dispatched_jobs;
     long number_of_finished_jobs;
 
-    //wxSocketBase **worker_sockets;  // POINTER TO POINTER..
     ArrayOfSocketBasePointers worker_socket_pointers;
 
     // HashMap to keep track of which socket is currently working on which job
     SocketJobPointerHash socket_to_worker_job_pointer_hash;
 
-    wxCmdLineParser command_line_parser;
+    CommandLineParser command_line_parser;
 
     virtual bool DoCalculation( ) = 0;
 
@@ -208,7 +193,7 @@ class
     void SendIntermediateResultQueue(ArrayofJobResults& queue_to_send);
 
     CalculateThread* work_thread;
-    wxMutex          job_lock;
+    std::mutex       job_lock;
     int              thread_next_action;
 
     long time_of_last_queue_send;
@@ -219,6 +204,15 @@ class
     void       SendAllResultsFromResultQueue( );
     void       SendProcessedImageResult(Image* image_to_send, int position_in_stack, wxString filename_to_save);
     void       SendProgramDefinedResultToMaster(float* result_to_send, long size_of_result, int result_number, int number_of_expected_results); // can override MasterHandleSpecialResult to do something with this
+
+    // Called on the main thread by the calculation thread (through CallAfter)
+    void OnThreadComplete(bool success);
+    void OnThreadEnding( );
+    void OnThreadSendError(wxString error_message);
+    void OnThreadSendInfo(wxString info_message);
+    void OnThreadIntermediateResultAvailable( );
+    void OnThreadSendImageResult(std::shared_ptr<Image> image_to_send, int position_in_stack, wxString filename_to_write);
+    void OnThreadSendProgramDefinedResult(float* array_to_send, long size_of_array, int result_number, int number_of_expected_results);
 
   private:
     void SendJobFinished(int job_number);
@@ -232,13 +226,21 @@ class
     void SocketSendError(wxString error_message);
     void SocketSendInfo(wxString info_message);
 
-    void SendNextJobTo(wxSocketBase* socket);
+    void SendNextJobTo(TcpSocket* socket);
 
-    void OnThreadComplete(wxThreadEvent& my_event);
-    void OnThreadEnding(wxThreadEvent& my_event);
-    void OnThreadSendError(wxThreadEvent& my_event);
-    void OnThreadSendInfo(wxThreadEvent& my_event);
-    void OnThreadIntermediateResultAvailable(wxThreadEvent& my_event);
-    void OnThreadSendImageResult(wxThreadEvent& my_event);
-    void OnThreadSendProgramDefinedResult(ReturnProgramDefinedResultEvent& my_event);
+    bool ConnectSocketToController(TcpSocket* socket);
 };
+
+// Defines main() for a program whose application class derives from MyApp.
+#ifdef IMPLEMENT_APP
+#undef IMPLEMENT_APP
+#endif
+#define IMPLEMENT_APP(AppClass)                 \
+    int main(int argc, char** argv) {           \
+        AppClass* the_app = new AppClass( );    \
+        int       code    = the_app->Main(argc, argv); \
+        delete the_app;                         \
+        return code;                            \
+    }
+
+#endif // _SRC_CORE_MYAPP_H_

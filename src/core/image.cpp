@@ -4,7 +4,7 @@
 
 using namespace cistem;
 
-wxMutex Image::s_mutexProtectingFFTW;
+std::mutex Image::s_mutexProtectingFFTW;
 double  BeamTiltScoreFunctionForSimplex(void* pt2Object, double values[]);
 
 void Image::SetupInitialValues( ) {
@@ -4480,7 +4480,7 @@ void Image::Deallocate( ) {
     }
 
     if ( planned == true ) {
-        wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+        std::lock_guard<std::mutex> lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
         MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
         fftwf_destroy_plan(plan_fwd);
         fftwf_destroy_plan(plan_bwd);
@@ -4552,7 +4552,7 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 
     if ( planned == false && do_fft_planning == true ) // skip fft planning at your peril!
     {
-        wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+        std::lock_guard<std::mutex> lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
         MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
         if ( logical_z_dimension > 1 ) {
             plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
@@ -4645,7 +4645,7 @@ void Image::AllocateAsPointingToSliceIn3D(Image* wanted3d, long wanted_slice) {
     // Prepare the plans for FFTW
 
     if ( planned == false ) {
-        wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+        std::lock_guard<std::mutex> lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
         MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
 
         if ( logical_z_dimension > 1 ) {

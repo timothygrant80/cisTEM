@@ -663,7 +663,7 @@ void CtffindApp::AddCommandLineOptions( ) {
     command_line_parser.AddLongSwitch("amplitude-spectrum-input", "The input image is an amplitude spectrum, not a real-space image");
     command_line_parser.AddLongSwitch("filtered-amplitude-spectrum-input", "The input image is filtered (background-subtracted) amplitude spectrum");
     command_line_parser.AddLongSwitch("fast", "Skip computation of fit statistics as well as spectrum contrast enhancement");
-    command_line_parser.AddOption("j", "", "Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS", wxCMD_LINE_VAL_NUMBER);
+    command_line_parser.AddOption("j", "", "Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS", CMD_LINE_VAL_NUMBER);
     command_line_parser.AddLongSwitch("debug", "Write debug information to disk");
 }
 

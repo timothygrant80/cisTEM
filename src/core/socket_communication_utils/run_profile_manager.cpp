@@ -57,8 +57,8 @@ void RunProfileManager::AddDefaultLocalProfile( ) {
     run_profiles[number_of_run_profiles].gui_address            = "";
     run_profiles[number_of_run_profiles].controller_address     = "";
 
-    int number_of_cores = wxThread::GetCPUCount( );
-    if ( number_of_cores == -1 )
+    int number_of_cores = int(std::thread::hardware_concurrency( ));
+    if ( number_of_cores < 1 )
         number_of_cores = 1;
     number_of_cores++;
 
@@ -75,8 +75,8 @@ void RunProfileManager::AddDefaultLocalProfile( ) {
         run_profiles[number_of_run_profiles].gui_address            = "";
         run_profiles[number_of_run_profiles].controller_address     = "";
 
-        int number_of_cores = wxThread::GetCPUCount( );
-        if ( number_of_cores == -1 )
+        int number_of_cores = int(std::thread::hardware_concurrency( ));
+        if ( number_of_cores < 1 )
             number_of_cores = 1;
         number_of_cores++;
 

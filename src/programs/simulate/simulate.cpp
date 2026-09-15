@@ -312,25 +312,25 @@ void SimulateApp::AddCommandLineOptions( ) {
     // Option to skip centering by mass
     command_line_parser.AddLongSwitch("skip-centering-by-mass", "Skip centering by mass");
     // Allow hydrogens if they are found in the atomic model
-    command_line_parser.AddOption("", "use-hydrogens", "Allow hydrogens if they are found in the atomic model with weight = default 0 ", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "use-hydrogens", "Allow hydrogens if they are found in the atomic model with weight = default 0 ", CMD_LINE_VAL_DOUBLE);
     command_line_parser.AddLongSwitch("use-hetatm", "Allow hetatm if they are found in the atomic model");
 
     // Options for computation (TODO add gpu flag here)
-    command_line_parser.AddOption("j", "", "Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS", wxCMD_LINE_VAL_NUMBER);
+    command_line_parser.AddOption("j", "", "Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS", CMD_LINE_VAL_NUMBER);
 
     // Options related to calibration
-    command_line_parser.AddOption("", "surface-phase-error", "Surface phase error (radian) From Wanner & Tesche, default is 0.497", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "bond-phase-error", "Bond phase error (radian) Calibrated from experiment, may need to be updated, default is 0.09", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "surface-phase-error", "Surface phase error (radian) From Wanner & Tesche, default is 0.497", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "bond-phase-error", "Bond phase error (radian) Calibrated from experiment, may need to be updated, default is 0.09", CMD_LINE_VAL_DOUBLE);
     // Note that the first two errors here are just used in matching amorphous carbon for validation. The third is used in simulations.
     // The surface phase error (Wanner & Tesche 2005) quantified by holography accounts for a bias due to surface effects not included in the simple model here
     // The bond phase error is used to account for the remaining phase shift that is missing, due to all remaining scattering. The assumption is that amorphous water has >= the scattering due to delocalized electrons
     // To account for the bond phase error in practice, a small scaling factor is applied to the atomic potentials
-    command_line_parser.AddOption("", "bond-scaling", "Compensate for bond phase error by scaling the interaction potential. Calibrated from experiment, may need to be updated. default is 1.065", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "carbon-mip", "Amorphous carbon MIP From Wanner & Tesche for 1.75 g/cm^3 carbon. default is 9.09", wxCMD_LINE_VAL_DOUBLE); // for 1.75 g/cm^3 amorphous carbon as in Wanner & Tesche
+    command_line_parser.AddOption("", "bond-scaling", "Compensate for bond phase error by scaling the interaction potential. Calibrated from experiment, may need to be updated. default is 1.065", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "carbon-mip", "Amorphous carbon MIP From Wanner & Tesche for 1.75 g/cm^3 carbon. default is 9.09", CMD_LINE_VAL_DOUBLE); // for 1.75 g/cm^3 amorphous carbon as in Wanner & Tesche
     command_line_parser.AddLongSwitch("do-phase-plate", "do a phase plate simulation? default is no");
-    command_line_parser.AddOption("", "non-water-inelastic-scaling", "Scale the apparent atomic number for water from its default of 7.35", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "non-water-inelastic-scaling", "Scale the apparent atomic number for water from its default of 7.35", CMD_LINE_VAL_DOUBLE);
 
-    command_line_parser.AddOption("", "wanted-symmetry", "Desired symmetry.", wxCMD_LINE_VAL_STRING);
+    command_line_parser.AddOption("", "wanted-symmetry", "Desired symmetry.", CMD_LINE_VAL_STRING);
     // CONTROL FOR DEBUGGING AND VALIDATION
     command_line_parser.AddLongSwitch("add-constant-background", "Add a constant potential for the mean water? default is no"); // For comparing to published results - only applies to a 3d potential
     command_line_parser.AddLongSwitch("do-sinc-blur", "Intra-frame sinc blur on protein? Currently this does nothing, default is no"); // TODO add me back in. This is to blur the image due to intra-frame motion. Apply to projected specimen not waters
@@ -341,14 +341,14 @@ void SimulateApp::AddCommandLineOptions( ) {
     //    command_line_parser.AddLongSwitch("save-detector-wavefunction", "Save the detector wave function directly? Skip Poisson draw, default is no"); // Skip the poisson draw - must be true (this is gets over-ridden) if DO_PHASE_PLATE is true
     command_line_parser.AddLongSwitch("skip-random-angles", "Skip randomizing angles in a particle stack? default is no"); //
     //    command_line_parser.AddLongSwitch("only-modify-signal-3d", "When applying the cummulative exposure filter to the 3d reference, only modify the signal (reduce exposure filter by 1 - (1-x)/(1+x)");
-    command_line_parser.AddOption("", "only-modify-signal-3d", "When applying the cummulative exposure filter to the 3d reference, only modify the signal (reduce exposure filter by 1 - (1-x)/(1+x)", wxCMD_LINE_VAL_NUMBER);
+    command_line_parser.AddOption("", "only-modify-signal-3d", "When applying the cummulative exposure filter to the 3d reference, only modify the signal (reduce exposure filter by 1 - (1-x)/(1+x)", CMD_LINE_VAL_NUMBER);
 
     command_line_parser.AddLongSwitch("skip-coherence-envelope", "Apply spatial coherence envelope? default is no"); // These do nothing~! FIXME
-    command_line_parser.AddOption("", "max_number_of_noise_particles", "Maximum number of neighboring noise particles when simulating an image stack. Default is 0", wxCMD_LINE_VAL_NUMBER);
-    command_line_parser.AddOption("", "noise_particle_radius_as_mutliple_of_particle_radius", "default is 1.8", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius", "default is -0.05", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius", "default is  0.10", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "emulate_tilt_angle", "default is 0.0 degrees around Y axis", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "max_number_of_noise_particles", "Maximum number of neighboring noise particles when simulating an image stack. Default is 0", CMD_LINE_VAL_NUMBER);
+    command_line_parser.AddOption("", "noise_particle_radius_as_mutliple_of_particle_radius", "default is 1.8", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius", "default is -0.05", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius", "default is  0.10", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "emulate_tilt_angle", "default is 0.0 degrees around Y axis", CMD_LINE_VAL_DOUBLE);
 
     command_line_parser.AddLongSwitch("whiten-output", "Whiten the image? default is no"); // if SAVE_REF then it will also be whitened when this option is enabled TODO checkme
     command_line_parser.AddLongSwitch("do-perfect-reference", "Save a perfect reference image with no noise in addition to the image. default is no");
@@ -361,16 +361,16 @@ void SimulateApp::AddCommandLineOptions( ) {
     command_line_parser.AddLongSwitch("skip-tilted-propagation", "Apply the phase shift due to beam tilt, but don't actually do the inclined wave propagation. default no");
     command_line_parser.AddLongSwitch("save-frames", "The default is to save the integrated frames. This option overrides this behavior.");
 
-    command_line_parser.AddOption("", "wgt", "Maximum number of neighboring noise particles when simulating an image stack. Default is 0", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "bf", "Maximum number of neighboring noise particles when simulating an image stack. Default is 0", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "wgt", "Maximum number of neighboring noise particles when simulating an image stack. Default is 0", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "bf", "Maximum number of neighboring noise particles when simulating an image stack. Default is 0", CMD_LINE_VAL_DOUBLE);
     command_line_parser.AddLongSwitch("disable-water-shell-only", "normally when adding constant background to a 3d, taper off 4 Ang into the water");
     command_line_parser.AddLongSwitch("is-alpha-fold-prediction", "Is this a alpha-fold prediction? If so, convert the confidence score stored in the bfactor column to a bfactor. default is no");
 
-    command_line_parser.AddOption("", "extra-rot-x", "rotate around x", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "extra-rot-y", "rotate around y", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "extra-rot-z", "rotate around z", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "extra-rot-x", "rotate around x", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "extra-rot-y", "rotate around y", CMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "extra-rot-z", "rotate around z", CMD_LINE_VAL_DOUBLE);
 
-    //    command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
+    //    command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",CMD_LINE_VAL_NUMBER);
 }
 
 IMPLEMENT_APP(SimulateApp);

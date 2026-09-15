@@ -11,7 +11,7 @@ using namespace cistem;
 namespace cistem {
 template <typename T>
 inline bool is_pointer_in_memory_and_registered(T ptr) {
-    wxMutexLocker lock(Image::s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+    std::lock_guard<std::mutex> lock(Image::s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
     MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
 
     cudaPointerAttributes attr;

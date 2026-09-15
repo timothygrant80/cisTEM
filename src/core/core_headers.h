@@ -58,12 +58,14 @@ typedef struct CurvePoint {
 #endif
 #include <math.h>
 #include <chrono>
+#include <mutex>
+#include <thread>
+#include <atomic>
+#include <memory>
 #include "sqlite/sqlite3.h"
 #include <wx/wx.h>
 #include <wx/txtstrm.h>
 #include <wx/defs.h>
-#include <wx/socket.h>
-#include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
 #include <wx/dir.h>
@@ -74,7 +76,6 @@ typedef struct CurvePoint {
 #include <wx/regex.h>
 #include <wx/stackwalk.h>
 #include <wx/xml/xml.h>
-#include <wx/msgqueue.h>
 #ifdef ENABLE_WEBVIEW
 #include <wx/webview.h>
 #endif
@@ -121,6 +122,12 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 };
 
 #include "defines.h"
+#include "string_functions.h"
+#include "date_time.h"
+#include "filesystem_functions.h"
+#include "command_line_parser.h"
+#include "event_loop.h"
+#include "socket_communication_utils/tcp_socket.h"
 #include "stopwatch.h"
 #include "cistem_parameters.h"
 #include "cistem_star_file_reader.h"

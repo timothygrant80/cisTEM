@@ -40,7 +40,7 @@
  * server has acknowledged job_done, or the reconnect window runs out, or the
  * server rejects it.
  *
- * Threads: the main thread runs the wx event loop and owns nothing but
+ * Threads: the main thread runs the EventLoop and owns nothing but
  * shutdown. SocketCommunicator's monitor thread delivers worker-side events
  * (the HandleSocket* overrides run on it, as in the legacy controller). The
  * ServerLinkThread reads frames from the server. All protocol state shared
@@ -52,13 +52,6 @@
  * tools/fake_controller.py there is the Python reference this follows.
  */
 
-#include <wx/wx.h>
-#include <wx/app.h>
-#include <wx/cmdline.h>
-#include <wx/evtloop.h>
-#include <wx/socket.h>
-#include <wx/tokenzr.h>
-#include <wx/utils.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -67,6 +60,10 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <chrono>
+#include <mutex>
+#include <thread>
+#include <unistd.h>
 
 #include <nlohmann/json.hpp>
 
@@ -173,10 +170,10 @@ static const long   kPingAfterIdleSeconds  = 15;
 static const long   kDeadAfterSilenceSeconds = 60;
 static const long   kJobDoneAckWaitSeconds = 30;
 static const double kMaxReconnectBackoff   = 30.0;
-static const wxUint32 kMaxPayload          = 64u * 1024u * 1024u;
+static const uint32_t kMaxPayload          = 64u * 1024u * 1024u;
 
-static const wxUint8 kKindJson   = 0x01;
-static const wxUint8 kKindBinary = 0x02;
+static const uint8_t kKindJson   = 0x01;
+static const uint8_t kKindBinary = 0x02;
 
 #ifndef CISTEM_JOB_CONTROLLER_VERSION
 #define CISTEM_JOB_CONTROLLER_VERSION "phase1"
@@ -188,36 +185,33 @@ static const wxUint8 kKindBinary = 0x02;
 
 enum ReadStatus { READ_OK, READ_IDLE, READ_CLOSED, READ_ERROR, READ_OVERSIZE };
 
-// Read exactly `n` bytes. With wxSOCKET_WAITALL|wxSOCKET_BLOCK a Read either
-// completes or times out; on a timeout that delivered nothing we report
-// READ_IDLE so the caller can send a ping, otherwise we keep going -- a
-// partial header must never be dropped.
-static ReadStatus ReadExact(wxSocketBase* sock, unsigned char* buffer, wxUint32 n) {
-    wxUint32 got = 0;
+// Read exactly `n` bytes. The socket is polled in kPingAfterIdleSeconds slices so
+// that a quiet link reports READ_IDLE (the caller then sends a ping) while a
+// partial header is never dropped: once something has arrived we keep waiting.
+static ReadStatus ReadExact(TcpSocket* sock, unsigned char* buffer, uint32_t n) {
+    uint32_t got = 0;
     while ( got < n ) {
-        sock->Read(buffer + got, n - got);
-        wxUint32 count = sock->LastReadCount( );
-        got += count;
-        if ( sock->Error( ) ) {
-            if ( sock->LastError( ) == wxSOCKET_TIMEDOUT ) {
-                if ( got == 0 )
-                    return READ_IDLE;
-                continue;
-            }
-            return READ_ERROR;
+        if ( ! sock->WaitForRead(kPingAfterIdleSeconds * 1000) ) {
+            if ( got == 0 )
+                return READ_IDLE;
+            continue;
         }
+        long count = sock->ReadSome(buffer + got, n - got);
         if ( count == 0 )
             return READ_CLOSED;
+        if ( count < 0 )
+            return READ_ERROR;
+        got += uint32_t(count);
     }
     return READ_OK;
 }
 
-static ReadStatus ReadFrame(wxSocketBase* sock, wxUint8& kind, std::vector<unsigned char>& payload) {
+static ReadStatus ReadFrame(TcpSocket* sock, uint8_t& kind, std::vector<unsigned char>& payload) {
     unsigned char header[5];
     ReadStatus    status = ReadExact(sock, header, 5);
     if ( status != READ_OK )
         return status;
-    wxUint32 length = (wxUint32(header[0]) << 24) | (wxUint32(header[1]) << 16) | (wxUint32(header[2]) << 8) | wxUint32(header[3]);
+    uint32_t length = (uint32_t(header[0]) << 24) | (uint32_t(header[1]) << 16) | (uint32_t(header[2]) << 8) | uint32_t(header[3]);
     kind            = header[4];
     if ( length > kMaxPayload )
         return READ_OVERSIZE;
@@ -225,39 +219,36 @@ static ReadStatus ReadFrame(wxSocketBase* sock, wxUint8& kind, std::vector<unsig
     if ( length == 0 )
         return READ_OK;
     // The payload follows immediately; a timeout here is a stall, not idleness.
-    wxUint32 got = 0;
+    uint32_t got = 0;
     while ( got < length ) {
-        sock->Read(&payload[got], length - got);
-        wxUint32 count = sock->LastReadCount( );
-        got += count;
-        if ( sock->Error( ) && sock->LastError( ) != wxSOCKET_TIMEDOUT )
-            return READ_ERROR;
-        if ( count == 0 && ! sock->Error( ) )
+        if ( ! sock->WaitForRead(kPingAfterIdleSeconds * 1000) )
+            continue;
+        long count = sock->ReadSome(&payload[got], length - got);
+        if ( count == 0 )
             return READ_CLOSED;
+        if ( count < 0 )
+            return READ_ERROR;
+        got += uint32_t(count);
     }
     return READ_OK;
 }
 
-static bool WriteFrame(wxSocketBase* sock, wxUint8 kind, const std::string& payload) {
+static bool WriteFrame(TcpSocket* sock, uint8_t kind, const std::string& payload) {
     if ( sock == NULL || ! sock->IsConnected( ) )
         return false;
     if ( payload.size( ) > kMaxPayload )
         return false;
     unsigned char header[5];
-    wxUint32      length = wxUint32(payload.size( ));
+    uint32_t      length = uint32_t(payload.size( ));
     header[0]            = (length >> 24) & 0xff;
     header[1]            = (length >> 16) & 0xff;
     header[2]            = (length >> 8) & 0xff;
     header[3]            = length & 0xff;
     header[4]            = kind;
-    sock->Write(header, 5);
-    if ( sock->Error( ) )
+    if ( ! sock->Write(header, 5) )
         return false;
-    if ( length > 0 ) {
-        sock->Write(payload.data( ), length);
-        if ( sock->Error( ) )
-            return false;
-    }
+    if ( length > 0 && ! sock->Write(payload.data( ), length) )
+        return false;
     return true;
 }
 
@@ -274,7 +265,7 @@ static bool ParseJson(const std::vector<unsigned char>& payload, json& out) {
 }
 
 static long NowMs( ) {
-    return wxGetUTCTimeMillis( ).GetValue( );
+    return long(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now( ).time_since_epoch( )).count( ));
 }
 
 // ---------------------------------------------------------------------------
@@ -283,12 +274,12 @@ static long NowMs( ) {
 
 class ServerLinkThread;
 
-class JobControllerApp : public wxAppConsole, public SocketCommunicator {
+class JobControllerApp : public EventLoop, public SocketCommunicator {
   public:
     // ---- command line ----
-    wxArrayString server_hosts;
-    long          server_port;
-    wxString      token;
+    std::vector<std::string> server_hosts;
+    long                     server_port;
+    wxString                 token;
     double        reconnect_window_seconds;
     double        worker_timeout_seconds;
     // 0 = not waiting; otherwise the NowMs() by which the first worker must
@@ -296,8 +287,8 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     std::atomic<long> worker_connect_deadline_ms;
 
     // ---- link to the server (guarded by link_mutex) ----
-    wxMutex            link_mutex;
-    wxSocketClient*    server_socket;
+    std::mutex         link_mutex;
+    TcpSocket*         server_socket;
     long               our_seq;                 // our envelope counter, never reset
     long               last_server_seq;         // highest seq seen from the server
     long               last_tx_ms;
@@ -318,7 +309,7 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
 
     // ---- worker side (as in guix_job_control) ----
     bool          have_assigned_master;
-    wxSocketBase* master_socket;
+    TcpSocket*    master_socket;
     wxString      master_ip_address;
     wxString      master_port;
     long          number_of_workers_already_connected;
@@ -330,8 +321,9 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
 
     JobControllerApp( );
 
-    virtual bool OnInit( );
-    void         OnEventLoopEnter(wxEventLoopBase* loop);
+    /// main(): parse the command line, start the link thread, run the event loop.
+    int  Main(int argc, char** argv);
+    void Start(int argc, char** argv);
 
     // ---- v1: sending ----
     long SendToServer(const wxString& type, json fields, bool buffer_for_resend = true);
@@ -344,7 +336,7 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
 
     // ---- v1: receiving. The link thread handles ack/ping/pong itself and
     // hands everything else to the main thread as JSON text -- worker-side
-    // state (and wx sockets) live there, exactly as SocketCommunicator
+    // state (and the worker sockets) live there, exactly as SocketCommunicator
     // CallAfter()s every legacy handler onto it. ----
     void HandleServerMessageText(std::string payload);
     void HandleServerMessage(json message);
@@ -355,15 +347,15 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     void ProtocolFailure(const wxString& reason);
 
     // ---- worker side: legacy SocketCommunicator overrides ----
-    void HandleNewSocketConnection(wxSocketBase* new_connection, unsigned char* identification_code);
-    void HandleSocketIHaveAnError(wxSocketBase* connected_socket, wxString error_message);
-    void HandleSocketIHaveInfo(wxSocketBase* connected_socket, wxString info_message);
-    void HandleSocketJobResult(wxSocketBase* connected_socket, JobResult* received_result);
-    void HandleSocketJobResultQueue(wxSocketBase* connected_socket, ArrayofJobResults* received_queue);
-    void HandleSocketJobFinished(wxSocketBase* connected_socket, int finished_job_number);
-    void HandleSocketAllJobsFinished(wxSocketBase* connected_socket, long received_timing_in_milliseconds);
-    void HandleSocketDisconnect(wxSocketBase* connected_socket);
-    void HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes);
+    void HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* identification_code);
+    void HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message);
+    void HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message);
+    void HandleSocketJobResult(TcpSocket* connected_socket, JobResult* received_result);
+    void HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue);
+    void HandleSocketJobFinished(TcpSocket* connected_socket, int finished_job_number);
+    void HandleSocketAllJobsFinished(TcpSocket* connected_socket, long received_timing_in_milliseconds);
+    void HandleSocketDisconnect(TcpSocket* connected_socket) override;
+    void HandleSocketTemplateMatchResultReady(TcpSocket* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) override;
 
     void LaunchWorkers( );
     void CheckWorkerTimeout( );   // link thread: poll the deadline
@@ -374,17 +366,15 @@ class JobControllerApp : public wxAppConsole, public SocketCommunicator {
     void DoShutdown(int exit_code, bool kill_workers);
 };
 
-wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDINFO, wxThreadEvent);
-
 // ---------------------------------------------------------------------------
 // Worker launch thread -- unchanged in substance from guix_job_control.cpp:
 // substitutes $command / $program_name in each run command and executes it
 // N times with the profile's delay.
 // ---------------------------------------------------------------------------
 
-class LaunchJobThread : public wxThread {
+class LaunchJobThread {
   public:
-    LaunchJobThread(JobControllerApp* handler, RunProfile wanted_run_profile, wxString wanted_ip_address, wxString wanted_port, const unsigned char* wanted_job_code, long wanted_actual_number_of_jobs) : wxThread(wxTHREAD_DETACHED) {
+    LaunchJobThread(JobControllerApp* handler, RunProfile wanted_run_profile, wxString wanted_ip_address, wxString wanted_port, const unsigned char* wanted_job_code, long wanted_actual_number_of_jobs) {
         main_thread_pointer   = handler;
         current_run_profile   = wanted_run_profile;
         ip_address            = wanted_ip_address;
@@ -392,6 +382,20 @@ class LaunchJobThread : public wxThread {
         actual_number_of_jobs = wanted_actual_number_of_jobs;
         for ( int counter = 0; counter < SOCKET_CODE_SIZE; counter++ )
             job_code[counter] = wanted_job_code[counter];
+    }
+
+    /// Run Entry() on a detached thread that owns this object and deletes it when done.
+    bool Run( ) {
+        try {
+            std::thread([this]( ) {
+                Entry( );
+                delete this;
+            }).detach( );
+        }
+        catch ( const std::system_error& ) {
+            return false;
+        }
+        return true;
     }
 
   protected:
@@ -402,7 +406,7 @@ class LaunchJobThread : public wxThread {
     long              actual_number_of_jobs;
     unsigned char     job_code[SOCKET_CODE_SIZE];
 
-    virtual ExitCode Entry( ) {
+    void Entry( ) {
         wxString executable;
         if ( current_run_profile.controller_address == "" )
             executable = current_run_profile.executable_name + " " + ip_address + " " + port_number + " ";
@@ -411,14 +415,14 @@ class LaunchJobThread : public wxThread {
         for ( int counter = 0; counter < SOCKET_CODE_SIZE; counter++ )
             executable += job_code[counter];
 
-        wxMilliSleep(2000);
+        SleepForMilliseconds(2000);
 
-        long number_of_commands_to_run = wxMin(actual_number_of_jobs, current_run_profile.ReturnTotalJobs( ));
+        long number_of_commands_to_run = std::min(actual_number_of_jobs, current_run_profile.ReturnTotalJobs( ));
         long number_of_commands_run    = 0;
 
         for ( long command_counter = 0; command_counter < current_run_profile.number_of_run_commands; command_counter++ ) {
-            long number_to_run_for_this_command = wxMin(long(current_run_profile.run_commands[command_counter].number_of_copies),
-                                                        number_of_commands_to_run - number_of_commands_run);
+            long number_to_run_for_this_command = std::min(long(current_run_profile.run_commands[command_counter].number_of_copies),
+                                                           number_of_commands_to_run - number_of_commands_run);
             wxString execution_command       = current_run_profile.run_commands[command_counter].command_to_run;
             wxString executable_with_threads = executable + wxString::Format(" %i", current_run_profile.run_commands[command_counter].number_of_threads_per_copy);
             execution_command.Replace("$command", executable_with_threads);
@@ -426,7 +430,7 @@ class LaunchJobThread : public wxThread {
             execution_command += "&";
 
             for ( long process_counter = 0; process_counter < number_to_run_for_this_command; process_counter++ ) {
-                wxMilliSleep(current_run_profile.run_commands[command_counter].delay_time_in_ms);
+                SleepForMilliseconds(current_run_profile.run_commands[command_counter].delay_time_in_ms);
                 if ( process_counter == 0 ) {
                     // Blank the job code before it reaches any log.
                     wxString shown = execution_command;
@@ -437,7 +441,6 @@ class LaunchJobThread : public wxThread {
                 number_of_commands_run++;
             }
         }
-        return (wxThread::ExitCode)0;
     }
 };
 
@@ -446,53 +449,52 @@ class LaunchJobThread : public wxThread {
 // blocking reads on the server socket.
 // ---------------------------------------------------------------------------
 
-class ServerLinkThread : public wxThread {
+class ServerLinkThread {
   public:
-    ServerLinkThread(JobControllerApp* app) : wxThread(wxTHREAD_DETACHED), app(app) {}
+    ServerLinkThread(JobControllerApp* app) : app(app) {}
+
+    /// Start Entry() on a detached thread; the object lives as long as the process.
+    bool Run( ) {
+        try {
+            std::thread([this]( ) { Entry( ); }).detach( );
+        }
+        catch ( const std::system_error& ) {
+            return false;
+        }
+        return true;
+    }
 
   protected:
     JobControllerApp* app;
 
-    wxSocketClient* ConnectOnce( ) {
-        for ( size_t counter = 0; counter < app->server_hosts.GetCount( ); counter++ ) {
-            wxIPV4address address;
-            if ( ! address.Hostname(app->server_hosts.Item(counter)) )
-                continue;
-            address.Service(app->server_port);
-            wxSocketClient* sock = new wxSocketClient(SOCKET_FLAGS);
-            sock->Notify(false);
-            sock->SetTimeout(kConnectTimeoutSeconds);
-            sock->Connect(address, false);
-            sock->WaitOnConnect(kConnectTimeoutSeconds);
-            if ( sock->IsConnected( ) ) {
-                sock->SetFlags(SOCKET_FLAGS);
-                sock->SetTimeout(kPingAfterIdleSeconds);
+    TcpSocket* ConnectOnce( ) {
+        for ( size_t counter = 0; counter < app->server_hosts.size( ); counter++ ) {
+            TcpSocket* sock = new TcpSocket( );
+            if ( sock->Connect(app->server_hosts[counter], int(app->server_port), int(kConnectTimeoutSeconds)) )
                 return sock;
-            }
-            sock->Close( );
-            sock->Destroy( );
+            delete sock;
         }
         return NULL;
     }
 
     // Returns the connected socket or NULL when the window ran out.
-    wxSocketClient* ConnectWithBackoff( ) {
+    TcpSocket* ConnectWithBackoff( ) {
         long   deadline_ms = NowMs( ) + long(app->reconnect_window_seconds * 1000.0);
         double delay       = 1.0;
         while ( NowMs( ) < deadline_ms ) {
-            wxSocketClient* sock = ConnectOnce( );
+            TcpSocket* sock = ConnectOnce( );
             if ( sock != NULL )
                 return sock;
             long remaining = deadline_ms - NowMs( );
             if ( remaining <= 0 )
                 break;
-            wxMilliSleep(long(wxMin(delay * 1000.0, double(remaining))));
-            delay = wxMin(delay * 2.0, kMaxReconnectBackoff);
+            SleepForMilliseconds(long(std::min(delay * 1000.0, double(remaining))));
+            delay = std::min(delay * 2.0, kMaxReconnectBackoff);
         }
         return NULL;
     }
 
-    bool SendHello(wxSocketClient* sock, bool resume) {
+    bool SendHello(TcpSocket* sock, bool resume) {
         json hello;
         hello["type"] = "hello";
         json versions = json::array( );
@@ -502,11 +504,11 @@ class ServerLinkThread : public wxThread {
         json controller;
         controller["name"]    = "cistem_job_controller";
         controller["version"] = CISTEM_JOB_CONTROLLER_VERSION;
-        controller["host"]    = ToUtf8(wxGetHostName( ));
-        controller["pid"]     = (long)wxGetProcessId( );
+        controller["host"]    = ReturnLocalHostName( );
+        controller["pid"]     = (long)getpid( );
         hello["controller"]   = controller;
         {
-            wxMutexLocker lock(app->link_mutex);
+            std::lock_guard<std::mutex> lock(app->link_mutex);
             app->our_seq++;
             hello["seq"] = app->our_seq;
             hello["t"]   = NowMs( );
@@ -517,17 +519,17 @@ class ServerLinkThread : public wxThread {
         return WriteFrame(sock, kKindJson, JsonToString(hello));
     }
 
-    virtual ExitCode Entry( ) {
+    void Entry( ) {
         bool resume = false;
         while ( true ) {
-            wxSocketClient* sock = ConnectWithBackoff( );
+            TcpSocket* sock = ConnectWithBackoff( );
             if ( sock == NULL ) {
                 fprintf(stderr, "cistem_job_controller: could not (re)connect to the server within %.0f s\n", app->reconnect_window_seconds);
                 app->Shutdown(EXIT_RECONNECT_EXPIRED, true);
-                return (wxThread::ExitCode)0;
+                return;
             }
             if ( ! SendHello(sock, resume) ) {
-                sock->Destroy( );
+                delete sock;
                 continue;
             }
 
@@ -537,7 +539,7 @@ class ServerLinkThread : public wxThread {
 
             while ( ! lost ) {
                 app->CheckWorkerTimeout( );
-                wxUint8                    kind = 0;
+                uint8_t                    kind = 0;
                 std::vector<unsigned char> payload;
                 ReadStatus                 status = ReadFrame(sock, kind, payload);
 
@@ -548,11 +550,11 @@ class ServerLinkThread : public wxThread {
                         break;
                     }
                     {
-                        wxMutexLocker lock(app->link_mutex);
+                        std::lock_guard<std::mutex> lock(app->link_mutex);
                         if ( app->job_done_seq >= 0 && now - app->job_done_sent_ms > kJobDoneAckWaitSeconds * 1000 ) {
                             fprintf(stderr, "cistem_job_controller: no ack for job_done within %ld s\n", kJobDoneAckWaitSeconds);
                             app->Shutdown(EXIT_OTHER);
-                            return (wxThread::ExitCode)0;
+                            return;
                         }
                         if ( now - app->last_tx_ms > kPingAfterIdleSeconds * 1000 ) {
                             json ping;
@@ -572,19 +574,19 @@ class ServerLinkThread : public wxThread {
                 }
                 if ( status == READ_OVERSIZE ) {
                     app->ProtocolFailure("frame from server exceeds the 64 MiB limit");
-                    return (wxThread::ExitCode)0;
+                    return;
                 }
                 last_rx_ms = NowMs( );
                 if ( kind == kKindBinary )
                     continue; // no v1 message uses one; skip (spec section 3)
                 if ( kind != kKindJson ) {
                     app->ProtocolFailure(wxString::Format("unknown frame kind 0x%02x", kind));
-                    return (wxThread::ExitCode)0;
+                    return;
                 }
                 json message;
                 if ( ! ParseJson(payload, message) ) {
                     app->ProtocolFailure("frame from server is not a JSON object");
-                    return (wxThread::ExitCode)0;
+                    return;
                 }
                 wxString type = JsonToWxString(JsonMember(message, "type"));
 
@@ -595,22 +597,21 @@ class ServerLinkThread : public wxThread {
                                 JsonToStdString(JsonMember(message, "reason")).c_str( ));
                         if ( code == "already_connected" ) {
                             // Our previous connection hasn't been declared dead yet; wait and retry.
-                            sock->Destroy( );
-                            wxSleep(2);
+                            SleepForSeconds(2);
                             lost = true;
                             break;
                         }
                         app->Shutdown(EXIT_REJECTED, true);
-                        return (wxThread::ExitCode)0;
+                        return;
                     }
                     if ( type != "welcome" ) {
                         wxString detail = message.contains("reason") ? " (" + JsonToWxString(message["reason"]) + ")" : wxString( );
                         app->ProtocolFailure("expected welcome from server, got " + type + detail);
-                        return (wxThread::ExitCode)0;
+                        return;
                     }
                     welcomed = true;
                     {
-                        wxMutexLocker lock(app->link_mutex);
+                        std::lock_guard<std::mutex> lock(app->link_mutex);
                         app->server_socket = sock;
                         app->ever_welcomed = true;
                         if ( JsonToBool(JsonMember(message, "resume")) ) {
@@ -633,7 +634,7 @@ class ServerLinkThread : public wxThread {
 
                 if ( type == "ack" ) {
                     long upto = JsonToLong(JsonMember(message, "upto"));
-                    wxMutexLocker lock(app->link_mutex);
+                    std::lock_guard<std::mutex> lock(app->link_mutex);
                     while ( ! app->unacked.empty( ) && app->unacked.front( ).first <= upto )
                         app->unacked.pop_front( );
                 }
@@ -647,7 +648,7 @@ class ServerLinkThread : public wxThread {
                                              std::string(reinterpret_cast<const char*>(payload.data( )), payload.size( ))));
                 }
                 if ( app->job_done_seq >= 0 ) {
-                    wxMutexLocker lock(app->link_mutex);
+                    std::lock_guard<std::mutex> lock(app->link_mutex);
                     bool acked = true;
                     for ( std::deque<std::pair<long, std::string>>::iterator it = app->unacked.begin( ); it != app->unacked.end( ); ++it )
                         if ( it->first == app->job_done_seq )
@@ -656,18 +657,18 @@ class ServerLinkThread : public wxThread {
                         sock->Close( );
                         app->server_socket = NULL;
                         app->Shutdown(EXIT_JOB_OK);
-                        return (wxThread::ExitCode)0;
+                        return;
                     }
                 }
             }
 
             // Connection lost: forget the socket, keep everything else, and go round again.
             {
-                wxMutexLocker lock(app->link_mutex);
+                std::lock_guard<std::mutex> lock(app->link_mutex);
                 if ( app->server_socket == sock )
                     app->server_socket = NULL;
             }
-            sock->Destroy( );
+            delete sock;
             fprintf(stderr, "cistem_job_controller: connection to the server lost; reconnecting\n");
         }
     }
@@ -677,7 +678,10 @@ class ServerLinkThread : public wxThread {
 // JobControllerApp
 // ---------------------------------------------------------------------------
 
-IMPLEMENT_APP(JobControllerApp)
+int main(int argc, char** argv) {
+    JobControllerApp* app = new JobControllerApp( );
+    return app->Main(argc, argv);
+}
 
 JobControllerApp::JobControllerApp( ) {
     server_port                         = 0;
@@ -707,42 +711,40 @@ JobControllerApp::JobControllerApp( ) {
     tasks_failed                        = 0;
 }
 
-bool JobControllerApp::OnInit( ) {
-    wxSocketBase::Initialize( );
-    return true;
+int JobControllerApp::Main(int argc, char** argv) {
+    Start(argc, argv);
+    return Run( ); // every exit path calls exit() from DoShutdown; this returns only if the loop is asked to stop
 }
 
-void JobControllerApp::OnEventLoopEnter(wxEventLoopBase* loop) {
-    if ( ! loop->IsMain( ) )
-        return;
+void JobControllerApp::Start(int argc, char** argv) {
+    brother_event_handler = this; // required by SocketCommunicator
 
-    brother_event_handler = this; // required by SocketCommunicator, see gui_job_controller.cpp
+    CommandLineParser command_line_parser(argc, argv);
+    command_line_parser.AddParam("hosts", CMD_LINE_VAL_STRING);
+    command_line_parser.AddParam("port", CMD_LINE_VAL_NUMBER);
+    command_line_parser.AddParam("token", CMD_LINE_VAL_STRING);
+    command_line_parser.AddLongOption("reconnect-window", "seconds to keep trying to reach the server", CMD_LINE_VAL_NUMBER);
+    command_line_parser.AddLongOption("worker-timeout", "seconds to wait for the first worker to connect (0 = forever)", CMD_LINE_VAL_NUMBER);
+    command_line_parser.AddLongSwitch("verbose", "print protocol traffic to stderr");
 
-    static const wxCmdLineEntryDesc command_line_descriptor[] = {
-            {wxCMD_LINE_PARAM, NULL, NULL, "hosts", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY},
-            {wxCMD_LINE_PARAM, NULL, NULL, "port", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_OPTION_MANDATORY},
-            {wxCMD_LINE_PARAM, NULL, NULL, "token", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY},
-            {wxCMD_LINE_OPTION, NULL, "reconnect-window", "seconds to keep trying to reach the server", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_PARAM_OPTIONAL},
-            {wxCMD_LINE_OPTION, NULL, "worker-timeout", "seconds to wait for the first worker to connect (0 = forever)", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_PARAM_OPTIONAL},
-            {wxCMD_LINE_SWITCH, NULL, "verbose", "print protocol traffic to stderr", wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL},
-            {wxCMD_LINE_NONE}};
-
-    wxCmdLineParser command_line_parser(command_line_descriptor, argc, argv);
     if ( command_line_parser.Parse(true) != 0 ) {
         exit(EXIT_OTHER);
     }
 
-    wxStringTokenizer host_tokens(command_line_parser.GetParam(0), ",");
-    while ( host_tokens.HasMoreTokens( ) ) {
-        wxString host = host_tokens.GetNextToken( ).Trim( ).Trim(false);
-        if ( ! host.IsEmpty( ) )
-            server_hosts.Add(host);
+    for ( const std::string& host : SplitString(command_line_parser.GetParam(0), ",") ) {
+        std::string trimmed = Trimmed(host);
+        if ( ! trimmed.empty( ) )
+            server_hosts.push_back(trimmed);
     }
-    if ( server_hosts.IsEmpty( ) || ! command_line_parser.GetParam(1).ToLong(&server_port) ) {
+    if ( server_hosts.empty( ) || ! StringToLong(command_line_parser.GetParam(1), server_port) ) {
         fprintf(stderr, "cistem_job_controller: bad hosts or port\n");
         exit(EXIT_OTHER);
     }
     token = command_line_parser.GetParam(2);
+    if ( token.IsEmpty( ) ) {
+        fprintf(stderr, "cistem_job_controller: empty token\n");
+        exit(EXIT_OTHER);
+    }
     long window;
     if ( command_line_parser.Found("reconnect-window", &window) )
         reconnect_window_seconds = double(window);
@@ -758,7 +760,7 @@ void JobControllerApp::OnEventLoopEnter(wxEventLoopBase* loop) {
         current_job_code[counter] = (unsigned char)token.GetChar(counter % token.Length( ));
 
     link_thread = new ServerLinkThread(this);
-    if ( link_thread->Run( ) != wxTHREAD_NO_ERROR ) {
+    if ( link_thread->Run( ) == false ) {
         fprintf(stderr, "cistem_job_controller: can't start the server link thread\n");
         exit(EXIT_OTHER);
     }
@@ -769,7 +771,7 @@ void JobControllerApp::OnEventLoopEnter(wxEventLoopBase* loop) {
 // ---------------------------------------------------------------------------
 
 long JobControllerApp::SendToServer(const wxString& type, json fields, bool buffer_for_resend) {
-    wxMutexLocker lock(link_mutex);
+    std::lock_guard<std::mutex> lock(link_mutex);
     our_seq++;
     fields["type"] = ToUtf8(type);
     fields["seq"]  = our_seq;
@@ -793,7 +795,7 @@ void JobControllerApp::SendLog(const wxString& level, const wxString& text) {
 
 int JobControllerApp::ExpectedWorkers( ) {
     long total = current_job_package.my_profile.ReturnTotalJobs( );
-    return int(wxMin(total, long(current_job_package.number_of_jobs)));
+    return int(std::min(total, long(current_job_package.number_of_jobs)));
 }
 
 void JobControllerApp::SendWorkers( ) {
@@ -864,7 +866,7 @@ void JobControllerApp::SendJobDone(const wxString& status, long cpu_ms, const wx
     if ( ! error.IsEmpty( ) )
         fields["error"] = ToUtf8(error);
     long seq = SendToServer("job_done", fields);
-    wxMutexLocker lock(link_mutex);
+    std::lock_guard<std::mutex> lock(link_mutex);
     job_done_seq     = seq;
     job_done_sent_ms = NowMs( );
 }
@@ -887,11 +889,11 @@ void JobControllerApp::HandleServerMessage(json message) {
     wxString type = JsonToWxString(JsonMember(message, "type"));
     long     seq  = JsonToLong(JsonMember(message, "seq"));
     if ( seq > 0 )
-        last_server_seq = wxMax(last_server_seq, seq);
+        last_server_seq = std::max(last_server_seq, seq);
 
     if ( type == "ack" ) {
         long upto = JsonToLong(JsonMember(message, "upto"));
-        wxMutexLocker lock(link_mutex);
+        std::lock_guard<std::mutex> lock(link_mutex);
         while ( ! unacked.empty( ) && unacked.front( ).first <= upto )
             unacked.pop_front( );
     }
@@ -1066,7 +1068,7 @@ void JobControllerApp::LaunchWorkers( ) {
     wxString      current_address_according_to_server;
     wxArrayString my_possible_ip_addresses;
     {
-        wxMutexLocker lock(link_mutex);
+        std::lock_guard<std::mutex> lock(link_mutex);
         if ( server_socket != NULL )
             current_address_according_to_server = ReturnIPAddressFromSocket(server_socket);
     }
@@ -1090,7 +1092,7 @@ void JobControllerApp::LaunchWorkers( ) {
         worker_connect_deadline_ms = NowMs( ) + long(worker_timeout_seconds * 1000.0);
 
     LaunchJobThread* launch_thread = new LaunchJobThread(this, current_job_package.my_profile, ip_address_string, my_port_string, current_job_code, current_job_package.number_of_jobs);
-    if ( launch_thread->Run( ) != wxTHREAD_NO_ERROR ) {
+    if ( launch_thread->Run( ) == false ) {
         delete launch_thread;
         SendLog("error", "could not start the worker launch thread");
         SendJobDone("failed", 0, "could not start the worker launch thread");
@@ -1138,13 +1140,13 @@ void JobControllerApp::DoShutdown(int exit_code, bool kill_workers) {
     exit(exit_code);
 }
 
-void JobControllerApp::HandleNewSocketConnection(wxSocketBase* new_connection, unsigned char* identification_code) {
+void JobControllerApp::HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* identification_code) {
     if ( new_connection == NULL )
         return;
 
     if ( memcmp(identification_code, current_job_code, SOCKET_CODE_SIZE) != 0 ) {
         SendLog("error", "a process with an unknown job code connected (leftover from a previous job?) - closing it");
-        new_connection->Destroy( );
+        delete new_connection;
     }
     else if ( ! have_assigned_master ) {
         worker_connect_deadline_ms = 0; // somebody made it; the rest may still be queued
@@ -1176,30 +1178,30 @@ void JobControllerApp::HandleNewSocketConnection(wxSocketBase* new_connection, u
     delete[] identification_code;
 }
 
-void JobControllerApp::HandleSocketIHaveAnError(wxSocketBase* connected_socket, wxString error_message) {
+void JobControllerApp::HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message) {
     SendLog("error", error_message);
 }
 
-void JobControllerApp::HandleSocketIHaveInfo(wxSocketBase* connected_socket, wxString info_message) {
+void JobControllerApp::HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message) {
     SendLog("info", info_message);
 }
 
-void JobControllerApp::HandleSocketJobResult(wxSocketBase* connected_socket, JobResult* received_result) {
+void JobControllerApp::HandleSocketJobResult(TcpSocket* connected_socket, JobResult* received_result) {
     SendTaskDone(received_result->job_number, received_result);
     delete received_result;
 }
 
-void JobControllerApp::HandleSocketJobResultQueue(wxSocketBase* connected_socket, ArrayofJobResults* received_queue) {
-    for ( size_t counter = 0; counter < received_queue->GetCount( ); counter++ )
-        SendTaskProgress(received_queue->Item(counter));
+void JobControllerApp::HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue) {
+    for ( size_t counter = 0; counter < received_queue->size( ); counter++ )
+        SendTaskProgress((*received_queue)[counter]);
     delete received_queue;
 }
 
-void JobControllerApp::HandleSocketJobFinished(wxSocketBase* connected_socket, int finished_job_number) {
+void JobControllerApp::HandleSocketJobFinished(TcpSocket* connected_socket, int finished_job_number) {
     SendTaskDone(finished_job_number, NULL);
 }
 
-void JobControllerApp::HandleSocketAllJobsFinished(wxSocketBase* connected_socket, long received_timing_in_milliseconds) {
+void JobControllerApp::HandleSocketAllJobsFinished(TcpSocket* connected_socket, long received_timing_in_milliseconds) {
     all_jobs_are_finished = true;
     // Anything the master never reported on is a failure as far as the
     // server's bookkeeping goes; say so explicitly so every task has a row.
@@ -1221,12 +1223,12 @@ void JobControllerApp::HandleSocketAllJobsFinished(wxSocketBase* connected_socke
     // Don't exit yet: the link thread does, once the server acks job_done.
 }
 
-void JobControllerApp::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+void JobControllerApp::HandleSocketTemplateMatchResultReady(TcpSocket* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // Phase 2 material: becomes a result.kind. Note it rather than lose it silently.
     SendLog("info", wxString::Format("template match result for image %i (%zu peaks) received; not relayed in protocol v1 phase 1", image_number, size_t(peak_infos.GetCount( ))));
 }
 
-void JobControllerApp::HandleSocketDisconnect(wxSocketBase* connected_socket) {
+void JobControllerApp::HandleSocketDisconnect(TcpSocket* connected_socket) {
     if ( connected_socket == master_socket ) {
         if ( ! all_jobs_are_finished && ! cancel_in_progress ) {
             SendLog("error", "the master process disconnected before the job was finished");

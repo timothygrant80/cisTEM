@@ -123,7 +123,7 @@ class Image {
     bool       planned; // !< Whether the plan has been setup by/for FFTW
     bool       image_memory_should_not_be_deallocated; // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
 
-    static wxMutex s_mutexProtectingFFTW;
+    static std::mutex s_mutexProtectingFFTW;
 
     // Methods
 

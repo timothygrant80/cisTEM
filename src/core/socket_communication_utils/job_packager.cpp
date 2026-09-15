@@ -3,7 +3,7 @@
 /**
  * @brief Encodes and sends a complete job package with run profile over a socket
  *
- * @param socket wxSocketBase connection to transmit the encoded package
+ * @param socket TcpSocket connection to transmit the encoded package
  * @return true on successful transmission, false on socket write failure
  *
  * @warning No protocol version checking - mixed-version clusters corrupt data silently (C-2)
@@ -49,7 +49,7 @@
  * @see ReceiveJobPackage() for decoder counterpart
  * @see ReturnEncodedByteTransferSize() for buffer size calculation
  */
-bool JobPackage::SendJobPackage(wxSocketBase* socket) // package the whole object into a single char stream which can be decoded at the other end..
+bool JobPackage::SendJobPackage(TcpSocket* socket) // package the whole object into a single char stream which can be decoded at the other end..
 {
     using c_ft = cistem::fundamental_type::Enum;
     static_assert(sizeof(c_ft) == sizeof(uint8_t), "fundamental_type::Enum must match uint8_t size for safe casting in wire protocol");
@@ -407,12 +407,12 @@ bool JobPackage::SendJobPackage(wxSocketBase* socket) // package the whole objec
 /**
  * @brief Receives and decodes a complete job package from a socket
  *
- * @param socket wxSocketBase connection to receive the encoded package
+ * @param socket TcpSocket connection to receive the encoded package
  * @return true on successful reception and decoding, false on socket read failure
  *
  * @see SendJobPackage() for encoding order and security warnings
  */
-bool JobPackage::ReceiveJobPackage(wxSocketBase* socket) {
+bool JobPackage::ReceiveJobPackage(TcpSocket* socket) {
     using c_ft = cistem::fundamental_type::Enum;
     static_assert(sizeof(c_ft) == sizeof(uint8_t), "fundamental_type::Enum must match uint8_t size for safe casting in wire protocol");
 
@@ -933,7 +933,7 @@ RunJob::~RunJob( ) {
 /**
  * @brief Encodes and sends a single job with typed arguments over a socket
  *
- * @param socket wxSocketBase connection to transmit the encoded job
+ * @param socket TcpSocket connection to transmit the encoded job
  * @return true on successful transmission, false on socket write failure
  *
  * @warning No protocol version checking - mixed-version clusters corrupt data silently (C-2)
@@ -959,7 +959,7 @@ RunJob::~RunJob( ) {
  * @see RecieveJob() for decoder counterpart
  * @see ReturnEncodedByteTransferSize() for buffer size calculation
  */
-bool RunJob::SendJob(wxSocketBase* socket) {
+bool RunJob::SendJob(TcpSocket* socket) {
     using c_ft = cistem::fundamental_type::Enum;
     static_assert(sizeof(c_ft) == sizeof(uint8_t), "fundamental_type::Enum must match uint8_t size for safe casting in wire protocol");
 
@@ -1137,12 +1137,12 @@ bool RunJob::SendJob(wxSocketBase* socket) {
 /**
  * @brief Receives and decodes a single job from a socket
  *
- * @param socket wxSocketBase connection to receive the encoded job
+ * @param socket TcpSocket connection to receive the encoded job
  * @return true on successful reception and decoding, false on socket read failure
  *
  * @see SendJob() for encoding order and security warnings
  */
-bool RunJob::RecieveJob(wxSocketBase* socket) {
+bool RunJob::RecieveJob(TcpSocket* socket) {
     using c_ft = cistem::fundamental_type::Enum;
     static_assert(sizeof(c_ft) == sizeof(uint8_t), "fundamental_type::Enum must match uint8_t size for safe casting in wire protocol");
 
@@ -1550,9 +1550,6 @@ void RunArgument::SetBoolArgument(bool wanted_argument) {
     is_allocated     = true;
 }
 
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayofJobResults);
-WX_DEFINE_OBJARRAY(ArrayofJobPackages);
 
 JobResult::JobResult( ) {
     job_number  = -1;
@@ -1617,7 +1614,7 @@ void JobResult::SetResult(int wanted_result_size, float* wanted_result_data) {
 /**
  * @brief Encodes and sends a job result with float array over a socket
  *
- * @param wanted_socket wxSocketBase connection to transmit the encoded result
+ * @param wanted_socket TcpSocket connection to transmit the encoded result
  * @return true on successful transmission, false on socket write failure
  *
  * @warning No buffer overflow protection - decoder may crash on malformed data (C-5)
@@ -1636,7 +1633,7 @@ void JobResult::SetResult(int wanted_result_size, float* wanted_result_data) {
  *
  * @see ReceiveFromSocket() for decoder counterpart
  */
-bool JobResult::SendToSocket(wxSocketBase* wanted_socket) {
+bool JobResult::SendToSocket(TcpSocket* wanted_socket) {
     char           job_number_and_result_size[8];
     unsigned char* byte_pointer;
 
@@ -1668,12 +1665,12 @@ bool JobResult::SendToSocket(wxSocketBase* wanted_socket) {
 /**
  * @brief Receives and decodes a job result from a socket
  *
- * @param wanted_socket wxSocketBase connection to receive the encoded result
+ * @param wanted_socket TcpSocket connection to receive the encoded result
  * @return true on successful reception and decoding, false on socket read failure
  *
  * @see SendToSocket() for encoding order and security warnings
  */
-bool JobResult::ReceiveFromSocket(wxSocketBase* wanted_socket) {
+bool JobResult::ReceiveFromSocket(TcpSocket* wanted_socket) {
 
     char           job_number_and_result_size[8];
     int            new_result_size;
@@ -1720,13 +1717,13 @@ bool JobResult::ReceiveFromSocket(wxSocketBase* wanted_socket) {
 /**
  * @brief Receives and decodes an array of job results from a socket
  *
- * @param socket wxSocketBase connection to receive the encoded result queue
+ * @param socket TcpSocket connection to receive the encoded result queue
  * @param my_array ArrayofJobResults to populate with received results (cleared first)
  * @return true on successful reception and decoding, false on socket read failure
  *
  * @see SendResultQueueToSocket() for encoding order and security warnings
  */
-bool ReceiveResultQueueFromSocket(wxSocketBase* socket, ArrayofJobResults& my_array) {
+bool ReceiveResultQueueFromSocket(TcpSocket* socket, ArrayofJobResults& my_array) {
     int            total_number_of_bytes;
     int            number_of_jobs;
     int            job_counter;
@@ -1738,7 +1735,7 @@ bool ReceiveResultQueueFromSocket(wxSocketBase* socket, ArrayofJobResults& my_ar
     JobResult      temp_result;
 
     // clear the array
-    my_array.Clear( );
+    my_array.clear( );
 
     // recieve the total number of bytes..
 
@@ -1819,7 +1816,7 @@ bool ReceiveResultQueueFromSocket(wxSocketBase* socket, ArrayofJobResults& my_ar
 
         // add it to the array.
 
-        my_array.Add(temp_result);
+        my_array.push_back(temp_result);
     }
 
     delete[] buffer_array;
@@ -1830,7 +1827,7 @@ bool ReceiveResultQueueFromSocket(wxSocketBase* socket, ArrayofJobResults& my_ar
 /**
  * @brief Encodes and sends an array of job results as a batch over a socket
  *
- * @param socket wxSocketBase connection to transmit the encoded result queue
+ * @param socket TcpSocket connection to transmit the encoded result queue
  * @param my_array ArrayofJobResults containing all results to transmit
  * @return true on successful transmission, false on socket write failure
  *
@@ -1856,10 +1853,10 @@ bool ReceiveResultQueueFromSocket(wxSocketBase* socket, ArrayofJobResults& my_ar
  *
  * @see ReceiveResultQueueFromSocket() for decoder counterpart
  */
-bool SendResultQueueToSocket(wxSocketBase* socket, ArrayofJobResults& my_array) {
+bool SendResultQueueToSocket(TcpSocket* socket, ArrayofJobResults& my_array) {
     int total_number_of_bytes = 4; // number of results
 
-    int number_of_jobs = my_array.GetCount( );
+    int number_of_jobs = my_array.size( );
 
     unsigned char* byte_pointer;
     int            byte_counter = 0;
@@ -1870,8 +1867,8 @@ bool SendResultQueueToSocket(wxSocketBase* socket, ArrayofJobResults& my_array) 
 
     for ( job_counter = 0; job_counter < number_of_jobs; job_counter++ ) {
         total_number_of_bytes += 8; // job_number, result_size
-        total_number_of_bytes += my_array.Item(job_counter).result_size * 4; // actual result
-        //	wxPrintf("result size for job %i = %i\n", job_counter, my_array.Item(job_counter).result_size);
+        total_number_of_bytes += my_array[job_counter].result_size * 4; // actual result
+        //	wxPrintf("result size for job %i = %i\n", job_counter, my_array[job_counter].result_size);
     }
 
     //wxPrintf("(Write) Total Size is %i bytes\n", total_number_of_bytes);
@@ -1888,7 +1885,7 @@ bool SendResultQueueToSocket(wxSocketBase* socket, ArrayofJobResults& my_array) 
     byte_counter = 4;
 
     for ( job_counter = 0; job_counter < number_of_jobs; job_counter++ ) {
-        byte_pointer               = (unsigned char*)&my_array.Item(job_counter).job_number;
+        byte_pointer               = (unsigned char*)&my_array[job_counter].job_number;
         buffer_array[byte_counter] = byte_pointer[0];
         byte_counter++;
         buffer_array[byte_counter] = byte_pointer[1];
@@ -1898,7 +1895,7 @@ bool SendResultQueueToSocket(wxSocketBase* socket, ArrayofJobResults& my_array) 
         buffer_array[byte_counter] = byte_pointer[3];
         byte_counter++;
 
-        byte_pointer               = (unsigned char*)&my_array.Item(job_counter).result_size;
+        byte_pointer               = (unsigned char*)&my_array[job_counter].result_size;
         buffer_array[byte_counter] = byte_pointer[0];
         byte_counter++;
         buffer_array[byte_counter] = byte_pointer[1];
@@ -1908,8 +1905,8 @@ bool SendResultQueueToSocket(wxSocketBase* socket, ArrayofJobResults& my_array) 
         buffer_array[byte_counter] = byte_pointer[3];
         byte_counter++;
 
-        for ( result_byte_counter = 0; result_byte_counter < my_array.Item(job_counter).result_size; result_byte_counter++ ) {
-            byte_pointer = (unsigned char*)&my_array.Item(job_counter).result_data[result_byte_counter];
+        for ( result_byte_counter = 0; result_byte_counter < my_array[job_counter].result_size; result_byte_counter++ ) {
+            byte_pointer = (unsigned char*)&my_array[job_counter].result_data[result_byte_counter];
             //	wxPrintf("byte_counter = %i\n", byte_counter);
             buffer_array[byte_counter] = byte_pointer[0];
             byte_counter++;

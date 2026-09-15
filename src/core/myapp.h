@@ -232,9 +232,6 @@ class MyApp : public EventLoop,
 };
 
 // Defines main() for a program whose application class derives from MyApp.
-#ifdef IMPLEMENT_APP
-#undef IMPLEMENT_APP
-#endif
 #define IMPLEMENT_APP(AppClass)                 \
     int main(int argc, char** argv) {           \
         AppClass* the_app = new AppClass( );    \

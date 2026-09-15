@@ -27,7 +27,6 @@ cd build/intel-debug-static
 # Configure with common options
 CC=icc CXX=icpc ../../configure \
     --enable-debugmode \
-    --with-wx-config=/opt/WX/icc-static/bin/wx-config \
     --enable-staticmode \
     --enable-openmp
 
@@ -42,7 +41,6 @@ make -j16
 - `--enable-experimental` - Include experimental features
 - `--enable-openmp` - OpenMP parallelization
 - `--with-cuda=/usr/local/cuda` - CUDA installation path
-- `--with-wx-config=/path/to/wx-config` - wxWidgets configuration
 
 ## VS Code Integration
 
@@ -149,7 +147,6 @@ scripts/profile/check_memory.sh program_name
 
 ### Dependency Issues
 - MKL not found: Check `MKLROOT` environment variable
-- wxWidgets issues: Verify `wx-config` path
 - CUDA problems: Ensure CUDA toolkit is installed
 
 ### Build Failures

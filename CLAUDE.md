@@ -46,12 +46,12 @@ cisTEM is a scientific computing application for cryo-electron microscopy (cryo-
 
 ## This branch: `cistem3`
 
-This checkout is the **`cistem3` branch**: cisTEM without its desktop GUI, plus **cisTEM3**, the web interface that replaces it. Nothing here should reintroduce the wxWidgets GUI.
+This checkout is the **`cistem3` branch**: cisTEM without its desktop GUI, plus **cisTEM3**, the web interface that replaces it. Nothing here should reintroduce the wxWidgets GUI - and since the `no-wx` work (September 2026) the tree does not depend on wxWidgets at all: do not add `wx*` types or `#include <wx/...>` anywhere.
 
-- **Removed:** `src/gui/` (so the `src/gui/CLAUDE.md` mentioned below does not exist here), the `cisTEM` (projectx), `cisTEM_display` and `gui_test` programs, the legacy `cisTEM_job_control` controller the GUI launched, and core's `gui_core_headers.h` / `gui_job_controller.*` (`libguicore`). `UpdateProgressTracker.h` moved into `src/core/` because `database.h` needs it. The build needs only wx's base, net and xml libraries. The GUI's source is still the reference for how every web panel should behave: read it with `git show master:src/gui/<file>` or from the main worktree (below), read-only.
+- **Removed:** `src/gui/` (so the `src/gui/CLAUDE.md` mentioned below does not exist here), the `cisTEM` (projectx), `cisTEM_display` and `gui_test` programs, the legacy `cisTEM_job_control` controller the GUI launched, and core's `gui_core_headers.h` / `gui_job_controller.*` (`libguicore`). `UpdateProgressTracker.h` moved into `src/core/` because `database.h` needs it. wxWidgets is not needed at all: the pieces cisTEM used (wxString, wxPrintf, wxFileName, wxDateTime, wxSocket, wxThread, the wxAppConsole event loop, wxCmdLineParser, wxJSON, wxXml) were replaced by `src/core/string_functions.h`, `filesystem_functions.h`, `date_time.h`, `command_line_parser.h`, `event_loop.h`, `socket_communication_utils/tcp_socket.h`, nlohmann::json and pugixml (`include/`). The GUI's source is still the reference for how every web panel should behave: read it with `git show master:src/gui/<file>` or from the main worktree (below), read-only.
 - **Added:** `src/programs/cistem_job_controller/` — the per-job controller the web server launches through a run profile's manager command. It speaks Job Protocol v1 (length-prefixed JSON, per-job token, reconnect and resend; spec `web/docs/job-protocol.md`) to the server and the legacy raw-struct socket protocol (`src/core/socket_communication_utils/`) to unmodified workers. A fork of the GUI's `guix_job_control.cpp`; workers and `MyApp` untouched. `web/tools/fake_controller.py` is its Python test double and the reference for every message it handles.
 - **Added: `web/`** — cisTEM3: the Flask server (`web/server/`), the single-file page (`web/cistem3.html`), the protocol spec (`web/docs/`) and tools. **Read `web/CLAUDE.md` before touching anything under `web/`** — it is the full design and API document for the web interface and its own working conventions (how each panel mirrors cisTEM's, the API contract, verifying against the user's real project data with a check server on port 8001, the test suite). Its paths are relative to `web/`; its tests run with `cd web/server && python3 -m unittest discover -s tests`. `make install` also installs `web/` under `$(pkgdatadir)/web`.
-- **Building this branch** (autotools; upstream `master` requires Intel MKL, installed under `/opt/intel/oneapi`; the upstream CMake build is stale on `master` itself and is not kept working):
+- **Building this branch** (autotools; requires Intel MKL, installed under `/opt/intel/oneapi`, and nothing else beyond a C++17 compiler and the bundled headers; the upstream CMake build is stale on `master` itself and is not kept working):
 
   ```bash
   ./regenerate_project.b            # after any change to configure.ac or */Makefile.am
@@ -98,7 +98,7 @@ make -j16
 ### Key Dependencies
 
 - **Intel MKL** - Primary FFT library for optimized performance
-- **wxWidgets** - base, net and xml libraries only on this branch (strings, sockets, JSON); no GUI libraries
+- **No wxWidgets** on this branch. Strings are `std::string`, printing goes through `Printf()`/`Format()` (`src/core/string_functions.h`), paths through `std::filesystem` (`filesystem_functions.h`), dates through `DateTime`/`TimeSpan` (`date_time.h`), sockets through `TcpSocket` (`socket_communication_utils/tcp_socket.h`), the program event loop through `EventLoop` (`event_loop.h`), JSON through the header-only nlohmann::json and XML through pugixml (both under `include/`)
 - **SQLite** - Database backend
 - **CUDA** - GPU acceleration (optional)
 - **Intel C++ Compiler (icc/icpc)** - Primary compiler for performance builds
@@ -124,9 +124,7 @@ Refer to `.github/workflows/` for CI test configurations.
 
 - **Formatting:** Project uses `.clang-format` in the root directory for consistent code formatting
 - **Type Casting:** Always use modern C++ functional cast style (`int(variable)`, `long(variable)`, `float(variable)`) instead of C-style casts (`(int)variable`, `(long)variable`, `(float)variable`)
-- **wxWidgets Printf Formatting:**
-  - Always match format specifiers exactly to variable types (e.g., `%ld` for `long`, `%d` for `int`, `%f` for `float`) - mismatches cause segfaults in wxFormatConverterBase
-  - Never use Unicode characters (Å, °, etc.) in format strings as they cause segmentation faults - use ASCII equivalents instead (A, deg, etc.)
+- **Printf Formatting:** `Printf()` and `Format()` are printf-compatible (a `std::string` or `std::filesystem::path` may be passed to `%s` directly). Always match format specifiers exactly to variable types (e.g., `%ld` for `long`, `%d` for `int`, `%f` for `float`) - mismatches are undefined behaviour. Use ASCII in format strings (A, deg) rather than Unicode characters.
 - **Temporary Debugging Changes:** All temporary debugging code (debug prints, commented-out code, test modifications) must be marked with `// revert - <description of change and reason>` to ensure cleanup before commits. Search for "revert" to find all temporary changes.
 - **Philosophy:** Incremental modernization - update and unify style as code is modified rather than wholesale changes
 - **Legacy Compatibility:** Many legacy features exist; maintain compatibility while gradually improving
@@ -160,13 +158,13 @@ Refer to `.github/workflows/` for CI test configurations.
 
 ### Container Usage
 
-**Use STL containers for new code.** wxWidgets legacy containers (wxArray, wxList) exist only for compatibility.
+**Use STL containers.** The former wxWidgets containers are gone: every `ArrayOf...` type is a `typedef std::vector<T>`.
 
-| Use Case | Recommended | Avoid |
-|----------|-------------|-------|
-| Dynamic arrays | `std::vector<T>` | wxArray, wxVector |
-| Lists | `std::list<T>`, `std::deque<T>` | wxList |
-| String lists | `std::vector<wxString>` | wxArrayString |
+| Use Case | Recommended |
+|----------|-------------|
+| Dynamic arrays | `std::vector<T>` |
+| Lists | `std::list<T>`, `std::deque<T>` |
+| String lists | `std::vector<std::string>` |
 
 ### Memory Management
 

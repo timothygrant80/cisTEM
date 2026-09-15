@@ -19,7 +19,7 @@
         {
             "label": "Configure cisTEM build",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM",
@@ -41,7 +41,7 @@
         {
             "label": "Configure cisTEM DEBUG build",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG",
@@ -63,7 +63,7 @@
         {
             "label": "Configure cisTEM DEBUG build TMPVALUE",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-tmpvalue && cd ${build_dir}/intel-gpu-debug-static-tmpvalue && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} --enable-build-calculate-template-pvalue"
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-tmpvalue && cd ${build_dir}/intel-gpu-debug-static-tmpvalue && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} --enable-build-calculate-template-pvalue"
         },
         {
             "label": "BUILD cisTEM DEBUG TMPVALUE",
@@ -85,7 +85,7 @@
         {
             "label": "Configure cisTEM DEBUG build, CPU only",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG, CPU only",
@@ -107,7 +107,7 @@
         {
             "label": "Configure cisTEM DEBUG build with LibTorch",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-libtorch && cd ${build_dir}/intel-gpu-debug-static-libtorch && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-libtorch ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-libtorch && cd ${build_dir}/intel-gpu-debug-static-libtorch && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-libtorch ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG with LibTorch",
@@ -129,7 +129,7 @@
         {
             "label": "CONFIG GNU, gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  ${input:additional_compiler_flags} --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-staticmode  --with-wx-config=/opt/WX/gcc-static/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  ${input:additional_compiler_flags} --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-staticmode  ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU, gpu",
@@ -139,7 +139,7 @@
         {
             "label": "CONFIG clang, gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/clang-gpu && cd ${build_dir}/clang-gpu && CC=clang CXX=clang++ ../../configure  ${input:additional_compiler_flags} --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-staticmode  --with-wx-config=/opt/WX/clang-static/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/clang-gpu && cd ${build_dir}/clang-gpu && CC=clang CXX=clang++ ../../configure  ${input:additional_compiler_flags} --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-staticmode  ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD clang, gpu",

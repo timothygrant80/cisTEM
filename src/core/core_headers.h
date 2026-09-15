@@ -32,6 +32,8 @@ typedef struct CurvePoint {
 
 #include "../constants/constants.h"
 #include <string>
+#include <cstdint>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
@@ -63,21 +65,6 @@ typedef struct CurvePoint {
 #include <atomic>
 #include <memory>
 #include "sqlite/sqlite3.h"
-#include <wx/wx.h>
-#include <wx/txtstrm.h>
-#include <wx/defs.h>
-#include <wx/stdpaths.h>
-#include <wx/filename.h>
-#include <wx/dir.h>
-#include <wx/wfstream.h>
-#include <wx/tokenzr.h>
-#include <wx/textfile.h>
-#include <wx/log.h>
-#include <wx/regex.h>
-#include <wx/xml/xml.h>
-#ifdef ENABLE_WEBVIEW
-#include <wx/webview.h>
-#endif
 
 #include <execinfo.h>
 

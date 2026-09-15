@@ -98,7 +98,7 @@
             //--disable-staticmode
             "label": "CONFIG GNU ,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure    --with-cuda=${cuda_dir}  --with-wx-config=/opt/WX/gcc-dynamic/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure    --with-cuda=${cuda_dir}  ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU,gpu",
@@ -108,7 +108,7 @@
         {
             "label": "CONFIG GNU,gpu, debug",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu-debug && cd ${build_dir}/GNU-gpu-debug && CC=gcc CXX=g++ ../../configure   --enable-gpu-debug --enable-debugmode --with-cuda=/usr/local/cuda --disable-staticmode --with-wx-config=/opt/WX/intel-dynamic/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu-debug && cd ${build_dir}/GNU-gpu-debug && CC=gcc CXX=g++ ../../configure   --enable-gpu-debug --enable-debugmode --with-cuda=/usr/local/cuda --disable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU,gpu, debug",

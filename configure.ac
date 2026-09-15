@@ -45,7 +45,6 @@ static_link="false"
 AC_ARG_ENABLE(staticmode, AS_HELP_STRING([--enable-staticmode],[Link statically [default=no]]),[
   if test "$enableval" = yes; then
   static_link="true"
-  WXCONFIGFLAGS="--static=yes"
   fi
 ])
 
@@ -195,22 +194,6 @@ AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]), [
 # Check for LibTorch support for ML-based tools (e.g., blush regularization)
 AX_LIBTORCH
 
-# wx-config 
-
-WXCONFIG=wx-config
-AC_ARG_WITH(wx-config,
-AS_HELP_STRING([--with-wx-config=FILE],[Use the given path to wx-config when determining
-                          wxWidgets configuration; defaults to "wx-config"]),
-[
-    if test "$withval" != "yes" -a "$withval" != ""; then
-        WXCONFIG=$withval
-    fi
-])
-
-
-
-
-
 # debugmode
 
 AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug mode [default=no]]),
@@ -343,17 +326,6 @@ AC_ARG_ENABLE(fp16-tm-outputs, AS_HELP_STRING([--disable-fp16-tm-outputs],[Disab
 
   
 
-want_webview="no"
-AC_ARG_ENABLE(wx-webview, AS_HELP_STRING([--enable-wx-webview],[Compile with experimental webview panel]),[
-  if test "$enableval" = yes; then
-    AC_DEFINE([ENABLE_WEBVIEW], [], [Define the webview flag])
-  	want_webview="true"
-  	AC_MSG_NOTICE([Compiling with webview enabled])	
-  fi
- ]) 
-AM_CONDITIONAL([ENABLE_WEBVIEW_AM], [test x$want_webview = xtrue])
-
-
 # experimental
 compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[
@@ -399,68 +371,6 @@ AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp],[Compile with OpenMP thre
 #        LDFLAGS="$LDFLAGS -L$withval/lib"
 #    fi
 #])
-
-wxversion=0
-
-AC_DEFUN([WXTEST],
-[
-        AC_REQUIRE([AC_PROG_AWK])
-        AC_MSG_CHECKING([wxWidgets version])
-        if wxversion=`$WXCONFIG --version`; then
-                AC_MSG_RESULT([$wxversion])
-                AC_DEFINE_UNQUOTED([wx_is_available], 1, [Define to 1 if wx is available])
-        else
-                AC_MSG_RESULT([not found])
-                AC_DEFINE_UNQUOTED([wx_is_available], 0, [Define to 0 if wx is unavailable])
-        fi])
-
-# Call WXTEST func
-WXTEST
-
-# Verify minimus requires
-vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1  1000 + $2)  1000 + $3;}'`
-if test -n "$vers" && test "$vers" -ge 310001004; then
-
-    # TODO: Get all define symbols from WX into cistem_config.h
-    # wx_cxx_defines="`$($WXCONFIG $WXCONFIGFLAGS --cxxflags) | $AWK 'BEGIN{output_string=""}{ for (i = 1; i <= NF; i++) if($i ~ /^-D/) output_string=output_string" "$i}END{print output_string}'`"   
-
-        WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
-        WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
-        WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui`"
-
-        if test "$build_mac" =  "yes"; then
-          WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
-          WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
-          WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui,xml`"
-        else
-          WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags base`"
-          WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
-          WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net,xml`"
-        fi
-        AC_MSG_NOTICE([wxWidgets libsbase $WX_LIBS])       
-        AC_MSG_NOTICE([wxWidgets libsbase $WX_LIBS_BASE])
-        wx_is_available=1
-
-    # Record whether we are on the stable (3.0.4/5) or development (3.1.5) branch
-    if test -n "$vers" && test "$vers" -gt 310001005; then
-        AC_DEFINE([WXWIDGETS_3_DEV], [], [Define to 1 if wxWidgets version is 3.1.5 or greater])
-    else
-        AC_DEFINE([WXWIDGETS_3_0_5], [], [Define to 1 if wxWidgets version is 3.0.4 or greater])
-    fi
-
-    # Record which gtk version we are using
-    GTK_CONFIG=`$WXCONFIG --selected-config | $AWK 'BEGIN{FS="-"}{if($1=="gtk2") print 2; else print 3}'`
-    # if test -n "$GTK_CONFIG" -ne 2 -a -n "$GTK_CONFIG" -ne 3; then
-    #     AC_MSG_ERROR("Can't determine GTK version")
-    # fi
-    AC_DEFINE_UNQUOTED([GTK_VERSION], $GTK_CONFIG, [Define to 2 if gtk2, 3 if gtk3])
-
-else
-        AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
-        wx_is_available=0
-fi
-
-
 
 # Link the MKL with a variety of threading options
 
@@ -596,34 +506,9 @@ if test "x$static_link" = "xtrue"; then
  fi
 fi
 
-# tiff (if we're not using wx's builtin tiff support)
-#
-# Using AC_CHECK_LIB fails when we have a static build of wx in a non-canonical place. I think the following should be fine.
-# AC_CHECK_LIB([wxtiff-3.0],[TIFFOpen],[WX_LIBS_BASE="-lwxtiff-3.0 $WX_LIBS_BASE"],[wxtiff=0],`$WXCONFIG --libs base`)
-wxtiff=`$WXCONFIG --libs base | grep -c lwxtiff-3.0`
-AC_MSG_NOTICE([wxtiff = $wxtiff])
-if test "x$wxtiff" = "x0"; then
-  AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)])
-else 
-  WX_LIBS_BASE="-lwxtiff-3.0 $WX_LIBS_BASE"
-fi
+# tiff
+AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)])
 
-# make it so we can turn off gui
-
-#AC_ARG_ENABLE(textonly, [  --enable-textonly       Do not compile wxWidgets applications [[default=no]]],[
-#  if test "$enableval" = yes; then
-#  wx_is_available=0
-#  fi  
-#  ])
-
-
-#if test "$wx_is_available" = 0; then
-
-#echo
-#echo "**    WxWidgets not available, GUI program will not be compiled **"
-#echo
-
-#fi
 
 
 # What SVN revision are we using? Inner if clause will not work if svnversion is not callable
@@ -694,23 +579,18 @@ if test "x$set_git_versioning_defaults" = "xyes" ; then
 fi
 
 
-CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR"
+CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR -pthread"
 CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR"
-WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR"
-WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR"
+LIBS="$LIBS -pthread"
 
 # Make sure the host compiler gets all flags when called from nvcc
-CUDA_TO_CPP="`echo $CPPFLAGS $WX_CPPFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"
-CUDA_TO_CXX="`echo $CXXFLAGS $WX_CXXFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"
+CUDA_TO_CPP="`echo $CPPFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"
+CUDA_TO_CXX="`echo $CXXFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"
 CUDA_CPPFLAGS="$CUDA_CPPFLAGS $CUDA_TO_CPP "
 CUDA_CXXFLAGS="$CUDA_CXXFLAGS $CUDA_TO_CXX "
 
 
 
-AC_SUBST(WX_LIBS)
-AC_SUBST(WX_CPPFLAGS)
-AC_SUBST(WX_LIBS_BASE)
-AC_SUBST(WX_CPPFLAGS_BASE)
 AC_SUBST(CUDA_CXXFLAGS)
 AC_SUBST(CUDA_CPPFLAGS)
 AC_SUBST(CUDA_LIBS)
@@ -723,8 +603,6 @@ AC_SUBST(LIBTOOL_FLAGS)
 
 
   AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
-  AC_MSG_NOTICE([WX_LIBS_BASE=$WX_LIBS_BASE])
-  AC_MSG_NOTICE([WX_LIBS=$WX_LIBS])
   AC_MSG_NOTICE([LIBS=$LIBS])
   AC_MSG_NOTICE([MKL_LIBS=$MKL_LIBS])
   AC_MSG_NOTICE([LIBTORCH_LIBS=$LIBTORCH_LIBS])

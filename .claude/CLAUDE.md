@@ -49,7 +49,7 @@ Agents are specialized AI assistants designed for specific development workflows
 ### Testing
 
 #### **unit-test-architect** (`agents/unit-test-architect.md`)
-**Purpose**: Create comprehensive unit tests for C++17/wxWidgets/CUDA code.
+**Purpose**: Create comprehensive unit tests for C++17/CUDA code.
 
 **When to use**:
 - After implementing new functionality

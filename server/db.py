@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS MOVIE_ALIGNMENT_LIST(
 
 CREATE TABLE IF NOT EXISTS RUN_PROFILES(
   RUN_PROFILE_ID INTEGER PRIMARY KEY, PROFILE_NAME TEXT, MANAGER_RUN_COMMAND TEXT,
-  GUI_ADDRESS TEXT, CONTROLLER_ADDRESS TEXT, COMMANDS_ID INTEGER, CONTROLLER_COMMAND TEXT
+  GUI_ADDRESS TEXT, CONTROLLER_ADDRESS TEXT, COMMANDS_ID INTEGER
 );
 
 -- Phase-2 tables: schema created now for stability, not written to until
@@ -470,8 +470,8 @@ def load_run_profiles(conn):
     the API needs. `total_jobs` is cisTEM's RunProfile::ReturnTotalJobs()."""
     profiles = []
     for row in conn.execute(
-        "SELECT RUN_PROFILE_ID, PROFILE_NAME, MANAGER_RUN_COMMAND, GUI_ADDRESS, CONTROLLER_ADDRESS, "
-        "CONTROLLER_COMMAND FROM RUN_PROFILES ORDER BY RUN_PROFILE_ID"
+        "SELECT RUN_PROFILE_ID, PROFILE_NAME, MANAGER_RUN_COMMAND, GUI_ADDRESS, CONTROLLER_ADDRESS "
+        "FROM RUN_PROFILES ORDER BY RUN_PROFILE_ID"
     ).fetchall():
         pid = row["RUN_PROFILE_ID"]
         conn.execute(_RUN_PROFILE_COMMANDS_SQL.format(pid))
@@ -497,11 +497,6 @@ def load_run_profiles(conn):
             "manager_command": row["MANAGER_RUN_COMMAND"] or "$command",
             "gui_address": row["GUI_ADDRESS"] or "",
             "controller_address": row["CONTROLLER_ADDRESS"] or "",
-            # The controller executable this profile launches, expanded into
-            # the manager command's $command / $program_name; "" means the
-            # server's default (CISTEM_JOB_CONTROLLER). Ours -- cisTEM has one
-            # controller for the whole GUI and no such field.
-            "controller_command": row["CONTROLLER_COMMAND"] or "",
             "run_commands": commands,
             "total_jobs": total_jobs,
         })
@@ -620,10 +615,9 @@ def create_run_profile(conn, spec):
     with conn:
         name = _unique_profile_name(conn, name)
         cur = conn.execute(
-            "INSERT INTO RUN_PROFILES(PROFILE_NAME, MANAGER_RUN_COMMAND, GUI_ADDRESS, CONTROLLER_ADDRESS, "
-            "CONTROLLER_COMMAND) VALUES (?, ?, ?, ?, ?)",
-            (name, manager, (spec.get("gui_address") or "").strip(), (spec.get("controller_address") or "").strip(),
-             (spec.get("controller_command") or "").strip()),
+            "INSERT INTO RUN_PROFILES(PROFILE_NAME, MANAGER_RUN_COMMAND, GUI_ADDRESS, CONTROLLER_ADDRESS) "
+            "VALUES (?, ?, ?, ?)",
+            (name, manager, (spec.get("gui_address") or "").strip(), (spec.get("controller_address") or "").strip()),
         )
         pid = cur.lastrowid
         conn.execute("UPDATE RUN_PROFILES SET COMMANDS_ID = RUN_PROFILE_ID WHERE RUN_PROFILE_ID = ?", (pid,))
@@ -633,7 +627,7 @@ def create_run_profile(conn, spec):
 
 def update_run_profile(conn, run_profile_id, fields):
     """Change any of name / manager_command / gui_address /
-    controller_address / controller_command / run_commands. Raises RunProfileError for an invalid
+    controller_address / run_commands. Raises RunProfileError for an invalid
     value, KeyError for an unknown profile."""
     row = conn.execute("SELECT RUN_PROFILE_ID FROM RUN_PROFILES WHERE RUN_PROFILE_ID=?", (run_profile_id,)).fetchone()
     if row is None:
@@ -652,8 +646,6 @@ def update_run_profile(conn, run_profile_id, fields):
         sets.append("GUI_ADDRESS=?"); values.append((fields["gui_address"] or "").strip())
     if "controller_address" in fields:
         sets.append("CONTROLLER_ADDRESS=?"); values.append((fields["controller_address"] or "").strip())
-    if "controller_command" in fields:
-        sets.append("CONTROLLER_COMMAND=?"); values.append((fields["controller_command"] or "").strip())
     commands = _validate_run_commands(fields["run_commands"]) if "run_commands" in fields else None
     with conn:
         if sets:
@@ -701,7 +693,7 @@ def create_project(name, owner_user_id, owner_username):
 _SYSTEM_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS RUN_PROFILES(
   RUN_PROFILE_ID INTEGER PRIMARY KEY, PROFILE_NAME TEXT, MANAGER_RUN_COMMAND TEXT,
-  GUI_ADDRESS TEXT, CONTROLLER_ADDRESS TEXT, COMMANDS_ID INTEGER, CONTROLLER_COMMAND TEXT
+  GUI_ADDRESS TEXT, CONTROLLER_ADDRESS TEXT, COMMANDS_ID INTEGER
 );
 """
 
@@ -719,9 +711,6 @@ def get_system_conn():
     conn.execute("PRAGMA busy_timeout = 5000")
     conn.executescript(_SYSTEM_SCHEMA_SQL)
     with conn:
-        # A store made before profiles could name their controller.
-        if "CONTROLLER_COMMAND" not in [c[1] for c in conn.execute("PRAGMA table_info(RUN_PROFILES)")]:
-            conn.execute("ALTER TABLE RUN_PROFILES ADD COLUMN CONTROLLER_COMMAND TEXT")
         if conn.execute("SELECT COUNT(*) FROM RUN_PROFILES").fetchone()[0] == 0:
             # MANAGER_RUN_COMMAND is left NULL on purpose: that is the marker
             # _seed_run_profile_commands() uses to know a profile has never

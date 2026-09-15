@@ -158,26 +158,6 @@ class FailureTests(unittest.TestCase):
         finally:
             runner.stop()
 
-    def test_profile_controller_command_overrides_the_default(self):
-        # The runner's default controller does not exist; the profile names
-        # the fake one, and that is what $command expands to.
-        sink = RecordingSink()
-        runner = jr.JobRunner(sink, bind_host="127.0.0.1", port=0, advertise_hosts=["127.0.0.1"],
-                              controller_executable="definitely_not_a_real_binary_xyz",
-                              reconnect_window=20.0, launch_timeout=15.0)
-        runner.start()
-        try:
-            profile = dict(PROFILE, controller_command="{} {}".format(sys.executable, FAKE))
-            runner.submit(jr.JobSpec("j", {"id": "j"}, {"name": "unblur", "executable": "unblur"}, profile,
-                                     make_tasks(2), "$command"))
-            sink.terminal.wait(30)
-            self.assertEqual(sink.terminal_status, jr.COMPLETED)
-            launch = [e[2] for e in sink.of("log") if e[2].startswith("launching controller:")][0]
-            self.assertIn(FAKE, launch)
-            self.assertNotIn("definitely_not_a_real_binary_xyz", launch)
-        finally:
-            runner.stop()
-
     def test_missing_controller_binary_fails_with_its_output(self):
         sink = RecordingSink()
         runner = jr.JobRunner(sink, bind_host="127.0.0.1", port=0, advertise_hosts=["127.0.0.1"],

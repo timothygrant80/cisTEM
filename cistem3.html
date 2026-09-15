@@ -995,11 +995,6 @@ From branch : <span id="versionBranch">—</span></p>
               <input type="text" id="rpManager" placeholder="$command" />
               <span class="validation-note blocked rp-error" id="rpManagerError" hidden>Oops! - Command must contain "$command"</span>
             </div>
-            <div class="field">
-              <label for="rpController">Controller Command <span class="unit">&mdash; the <code>cistem_job_controller</code> that <code>$command</code> expands to (with the server's address, port and job token after it); blank uses the server's default</span></label>
-              <input type="text" id="rpController" placeholder="server default (CISTEM_JOB_CONTROLLER, or cistem_job_controller on the server's PATH)" />
-              <span class="validation-note blocked rp-error" id="rpControllerError" hidden></span>
-            </div>
             <div class="rp-addresses">
               <span class="rp-addr-label" title="The address the job controller dials to reach this server. Automatic sends every address this machine answers on. cisTEM calls this the GUI address.">Server Address :</span>
               <span class="rp-addr-value" id="rpGuiAddress">Automatic</span>
@@ -1024,7 +1019,7 @@ From branch : <span id="versionBranch">—</span></p>
               <button class="small" id="rpCmdRemoveBtn" disabled>Remove</button>
               <button class="primary small rp-save" id="rpSaveBtn" disabled>Save</button>
             </div>
-            <p class="form-note" id="rpNote">Changes to the manager and controller commands, addresses and run commands are kept here until you click Save.</p>
+            <p class="form-note" id="rpNote">Changes to the manager command, addresses and run commands are kept here until you click Save.</p>
           </div>
         </div>
       </div>
@@ -2902,7 +2897,7 @@ From branch : <span id="versionBranch">—</span></p>
    "livePanel","liveLabel","liveMeta","liveLogBtn","liveJobActions","liveTerminateBtn","liveCloseBtn","liveEmpty","liveBody",
    "stageInventoryBody","runProfile","submitNote",
    "rpList","rpAddBtn","rpRenameBtn","rpRemoveBtn","rpDuplicateBtn","rpImportBtn","rpExportBtn","rpImportFile",
-   "rpCommandsPanel","rpCommandsLabel","rpTotal","rpManager","rpManagerError","rpController","rpControllerError",
+   "rpCommandsPanel","rpCommandsLabel","rpTotal","rpManager","rpManagerError",
    "rpGuiAddress","rpGuiAutoBtn","rpGuiSpecifyBtn","rpControllerAddress","rpControllerAutoBtn","rpControllerSpecifyBtn",
    "rpCommandsBody","rpCmdAddBtn","rpCmdEditBtn","rpCmdRemoveBtn","rpSaveBtn",
    "rpCmdScrim","rpCmdModal","rpCmdModalClose","rpCmdCommand","rpCmdCopies","rpCmdThreads","rpCmdDelay",
@@ -5346,21 +5341,6 @@ From branch : <span id="versionBranch">—</span></p>
     els.rpManager.disabled = !b;
     var managerOk = !b || rpHasCommandToken(els.rpManager.value);
     els.rpManagerError.hidden = managerOk;
-    if (document.activeElement !== els.rpController) els.rpController.value = b ? (b.controller_run_command || "") : "";
-    els.rpController.disabled = !b;
-    // The server checks each profile's saved controller command against
-    // its PATH (`controller_found`); say so here rather than let jobs on
-    // the profile quietly fall back to simulation. Only for the saved
-    // value -- what is being typed hasn't been checked yet.
-    var saved = b ? rp.profiles.filter(function(p){ return p.run_profile_id === b.run_profile_id; })[0] : null;
-    var controllerMissing = !!(saved && saved.controller_found === false
-                               && els.rpController.value === (saved.controller_run_command || ""));
-    els.rpControllerError.hidden = !controllerMissing;
-    if (controllerMissing){
-      els.rpControllerError.textContent = saved.controller_run_command
-        ? "\u201c" + saved.controller_run_command + "\u201d was not found on the server\u2019s PATH \u2014 jobs on this profile will run in simulation."
-        : "The server\u2019s default controller was not found on its PATH \u2014 jobs on this profile will run in simulation.";
-    }
 
     els.rpGuiAddress.textContent = b && b.gui_address ? b.gui_address : "Automatic";
     els.rpGuiAutoBtn.disabled = !(b && b.gui_address);
@@ -5446,8 +5426,7 @@ From branch : <span id="versionBranch">—</span></p>
   els.rpExportBtn.addEventListener("click", function(){
     var payload = rp.profiles.map(function(p){
       return {profile_name: p.profile_name, manager_run_command: p.manager_run_command, gui_address: p.gui_address,
-              controller_address: p.controller_address, controller_run_command: p.controller_run_command || "",
-              run_commands: p.run_commands};
+              controller_address: p.controller_address, run_commands: p.run_commands};
     });
     var blob = new Blob([JSON.stringify({run_profiles: payload}, null, 2)], {type: "application/json"});
     var a = document.createElement("a");
@@ -5479,11 +5458,6 @@ From branch : <span id="versionBranch">—</span></p>
   els.rpManager.addEventListener("input", function(){
     if (!rp.buffer) return;
     rp.buffer.manager_run_command = els.rpManager.value;
-    rpMarkDirty();
-  });
-  els.rpController.addEventListener("input", function(){
-    if (!rp.buffer) return;
-    rp.buffer.controller_run_command = els.rpController.value;
     rpMarkDirty();
   });
 
@@ -5575,8 +5549,7 @@ From branch : <span id="versionBranch">—</span></p>
     rpFetch("/run-profiles/" + b.run_profile_id, {
       method: "PATCH", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({manager_run_command: b.manager_run_command, gui_address: b.gui_address,
-                            controller_address: b.controller_address, controller_run_command: b.controller_run_command || "",
-                            run_commands: b.run_commands})
+                            controller_address: b.controller_address, run_commands: b.run_commands})
     }).then(function(){
       rp.dirty = false;
       rpReload(b.run_profile_id);

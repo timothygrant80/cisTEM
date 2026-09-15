@@ -507,7 +507,18 @@ if test "x$static_link" = "xtrue"; then
 fi
 
 # tiff
-AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)])
+#
+# A static libtiff needs its codec libraries on the link line as well; ask pkg-config for them
+# (falling back to the usual set) so the probe and the final link both succeed with -static.
+TIFF_EXTRA_LIBS=""
+if test "$static_link" = "true"; then
+  TIFF_EXTRA_LIBS="`pkg-config --static --libs-only-l libtiff-4 2>/dev/null | sed -e 's/-ltiff//g'`"
+  if test "x$TIFF_EXTRA_LIBS" = "x"; then
+    TIFF_EXTRA_LIBS="-ljpeg -lz -llzma -lzstd -lwebp -lsharpyuv -ljbig -ldeflate -lLerc -lm"
+  fi
+  AC_MSG_NOTICE([static libtiff dependencies: $TIFF_EXTRA_LIBS])
+fi
+AC_SEARCH_LIBS([TIFFOpen],[tiff],[LIBS="$LIBS $TIFF_EXTRA_LIBS"],[AC_MSG_ERROR(Could not find your installation of the TIFF library)],[$TIFF_EXTRA_LIBS])
 
 
 
@@ -607,6 +618,14 @@ AC_SUBST(LIBTOOL_FLAGS)
   AC_MSG_NOTICE([MKL_LIBS=$MKL_LIBS])
   AC_MSG_NOTICE([LIBTORCH_LIBS=$LIBTORCH_LIBS])
   AC_MSG_NOTICE([libFastFFT_OBJECTS=$libFastFFT_OBJECTS])
+
+# The programs are linked through libtool, which swallows a plain -static (it takes it to mean
+# "link libtool libraries statically" and passes nothing on to the compiler); -all-static is what
+# produces a statically linked executable. It is a libtool-only flag, so it replaces -static only
+# now that configure's own link tests (which call the compiler directly) are done.
+if test "x$static_link" = "xtrue" -a "x$CXX" != "xicpc"; then
+  LDFLAGS="`echo $LDFLAGS | sed -e 's/-static/-all-static/'`"
+fi
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_CONFIG_HEADERS([cistem_config.h:cistem_config.in])

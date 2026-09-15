@@ -1,5 +1,5 @@
 #include "../constants/constants.h"
-#include "../gui/UpdateProgressTracker.h"
+#include "UpdateProgressTracker.h"
 
 class Database {
 

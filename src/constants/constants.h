@@ -2,6 +2,7 @@
 #define _src_constants_constants_h_
 
 #include <array>
+#include <cstdint>
 #include <string_view>
 
 constexpr long OPEN_TO_READ   = 0;

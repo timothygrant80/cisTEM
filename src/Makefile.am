@@ -75,6 +75,12 @@ noinst_HEADERS = core/stopwatch.h \
                  core/cistem_parameters.h \
                  core/cistem_star_file_reader.h \
                  core/socket_communication_utils/socket_communicator.h \
+                 core/socket_communication_utils/tcp_socket.h \
+                 core/string_functions.h \
+                 core/date_time.h \
+                 core/filesystem_functions.h \
+                 core/command_line_parser.h \
+                 core/event_loop.h \
                  core/template_matching.h \
                  core/json/json_defs.h \
                  core/json/jsonval.h \
@@ -479,6 +485,9 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/cistem_parameters.cpp \
                        core/cistem_star_file_reader.cpp \
                        core/socket_communication_utils/socket_communicator.cpp \
+                       core/socket_communication_utils/tcp_socket.cpp \
+                       core/command_line_parser.cpp \
+                       core/event_loop.cpp \
                        core/json/jsonval.cpp \
                        core/json/jsonreader.cpp \
                        core/json/jsonwriter.cpp \

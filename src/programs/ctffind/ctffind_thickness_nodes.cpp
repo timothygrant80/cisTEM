@@ -295,7 +295,7 @@ void ComputeFRCBetween1DSpectrumAndFitNodes(int number_of_bins, double average[]
                 fit_mean += fit[i];
             }
             number_of_bins_in_window = float(2 * half_window_width[bin_counter] + 1);
-            //wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f , spectrum_sum = %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window,spectrum_mean);
+            //Printf("bin %03i, number of extrema: %f, number of bins in window: %f , spectrum_sum = %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window,spectrum_mean);
             spectrum_mean /= number_of_bins_in_window;
             fit_mean /= number_of_bins_in_window;
             // Second pass
@@ -314,7 +314,7 @@ void ComputeFRCBetween1DSpectrumAndFitNodes(int number_of_bins, double average[]
             }
             frc_sigma[bin_counter] = 2.0 / sqrtf(number_of_bins_in_window);
         }
-        //wxPrintf("First fit bin: %i\n", first_fit_bin);
+        //Printf("First fit bin: %i\n", first_fit_bin);
         MyDebugAssertTrue(frc[bin_counter] > -1.01 && frc[bin_counter] < 1.01, "Bad FRC value: %f", frc[bin_counter]);
     }
 }
@@ -339,7 +339,7 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
     }
     ComputeFRCBetween1DSpectrumAndFitNodes(input->number_of_bins_in_1d_spectra, rotational_average_astig_renormalized, input->rotational_average_astig_fit, number_of_extrema_profile, input->fit_frc, input->fit_frc_sigma, first_fit_bin);
     MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < input->number_of_bins_in_1d_spectra, "Bad first bin to check\n");
-    //wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
+    //Printf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
     last_bin_with_good_fit = -1;
     // Set FRC to 1.0 in the nodes where there is not modulation
     double prev_value;
@@ -388,7 +388,7 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
     }
 
     for ( counter = first_bin_to_check; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
-        //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
+        //Printf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
         at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (input->fit_frc[counter] < low_threshold)) ||
                                     ((number_of_bins_above_high_threshold > 3) && (input->fit_frc[counter] < frc_significance_threshold));
         if ( at_last_bin_with_good_fit ) {
@@ -403,7 +403,7 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
         if ( input->fit_frc[counter] > high_threshold )
             number_of_bins_above_high_threshold++;
     }
-    //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
+    //Printf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
     if ( number_of_bins_above_significance_threshold == input->number_of_bins_in_1d_spectra - first_bin_to_check )
         last_bin_with_good_fit = input->number_of_bins_in_1d_spectra - 1;
     if ( number_of_bins_above_significance_threshold == 0 )
@@ -417,7 +417,7 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     json debug_json_output;
 
     float first_thickness_estimate = input->current_ctf->ThicknessWhereIntegrateDefocusModulationIsZero(powf(input->spatial_frequency[input->last_bin_with_good_fit], 2.0));
-    wxPrintf("Estimating sample thickness. Initial estimate is %.0f A based on goodness of fit\n", first_thickness_estimate * input->pixel_size_for_fitting);
+    Printf("Estimating sample thickness. Initial estimate is %.0f A based on goodness of fit\n", first_thickness_estimate * input->pixel_size_for_fitting);
     if ( input->debug ) {
         debug_json_output["thickness_estimates"]            = json::object( );
         debug_json_output["thickness_estimates"]["initial"] = first_thickness_estimate * input->pixel_size_for_fitting;
@@ -462,11 +462,11 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     input->current_ctf->SetHighestFrequencyForFitting(1.0 / input->high_resolution_limit * input->pixel_size_for_fitting);
     if ( input->bruteforce_1D ) {
         do_1D_bruteforce(input, debug_json_output);
-        wxPrintf("Performed brute force search for thickness on 1D spectrum. The thickness estimate is %.0f A\n", input->current_ctf->GetSampleThickness( ) * input->pixel_size_for_fitting);
+        Printf("Performed brute force search for thickness on 1D spectrum. The thickness estimate is %.0f A\n", input->current_ctf->GetSampleThickness( ) * input->pixel_size_for_fitting);
     }
     if ( input->refine_2D ) {
         do_2D_refinement(input, debug_json_output);
-        wxPrintf("Performed 2D refinement for thickness on 2D spectrum. The thickness estimate is %.0f A\n", input->current_ctf->GetSampleThickness( ) * input->pixel_size_for_fitting);
+        Printf("Performed 2D refinement for thickness on 2D spectrum. The thickness estimate is %.0f A\n", input->current_ctf->GetSampleThickness( ) * input->pixel_size_for_fitting);
     }
     double* rotational_average_astig_renormalized = new double[input->number_of_bins_in_1d_spectra];
     float*  number_of_extrema_profile             = new float[input->number_of_bins_in_1d_spectra];
@@ -494,11 +494,10 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     if ( input->debug ) {
         // Write out the json debug file
         MyDebugPrint("Printing thickness debug files to %s\n", input->debug_filename + "thickness.json");
-        wxString json_string = wxString::FromUTF8(debug_json_output.dump(4));
-        wxFile   debug_file;
-        debug_file.Open(input->debug_filename + "thickness.json", wxFile::write);
-        debug_file.Write(json_string);
-        debug_file.Close( );
+        std::string   json_string = debug_json_output.dump(4);
+        std::ofstream debug_file(input->debug_filename + "thickness.json");
+        debug_file << json_string;
+        debug_file.close( );
     }
     CTFNodeFitOuput output = {last_bin_with_good_fit};
     delete[] rotational_average_astig_renormalized;

@@ -18,10 +18,10 @@ void SharpenMap::DoInteractiveUserInput( ) {
 
     UserInput* my_input = new UserInput("SharpenMap", 1.0);
 
-    wxString input_volume      = my_input->GetFilenameFromUser("Input volume file name", "Name of input image file", "input.mrc", true);
-    wxString output_volume     = my_input->GetFilenameFromUser("Output sharpened volume file name", "Name of sharpened output volume", "output.mrc", false);
-    wxString input_mask        = my_input->GetFilenameFromUser("Input mask file name", "Name of input image file", "mask.mrc", false);
-    wxString res_statistics    = my_input->GetFilenameFromUser("Input reconstruction statistics", "The table listing FSC, Part_FSC, Part_SSNR and Rec_SSNR", "my_statistics.txt", false);
+    std::string input_volume      = my_input->GetFilenameFromUser("Input volume file name", "Name of input image file", "input.mrc", true);
+    std::string output_volume     = my_input->GetFilenameFromUser("Output sharpened volume file name", "Name of sharpened output volume", "output.mrc", false);
+    std::string input_mask        = my_input->GetFilenameFromUser("Input mask file name", "Name of input image file", "mask.mrc", false);
+    std::string res_statistics    = my_input->GetFilenameFromUser("Input reconstruction statistics", "The table listing FSC, Part_FSC, Part_SSNR and Rec_SSNR", "my_statistics.txt", false);
     bool     use_statistics    = my_input->GetYesNoFromUser("Use statistics", "Answer No if no statistics are available?", "Yes");
     float    pixel_size        = my_input->GetFloatFromUser("Pixel size (A)", "Pixel size of the map in Angstroms", "1.0", 0.000001);
     float    inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Inner radius of mask to be applied to the input map, in Angstroms", "0.0", 0.0);
@@ -40,7 +40,7 @@ void SharpenMap::DoInteractiveUserInput( ) {
     delete my_input;
 
     //	my_current_job.Reset(16);
-    my_current_job.ManualSetArguments("ttttbfffffffffbb", input_volume.ToUTF8( ).data( ), output_volume.ToUTF8( ).data( ), input_mask.ToUTF8( ).data( ), res_statistics.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttttbfffffffffbb", input_volume.c_str(), output_volume.c_str(), input_mask.c_str(), res_statistics.c_str(),
                                       use_statistics, pixel_size, inner_mask_radius, outer_mask_radius, bfactor_low, bfactor_high, bfactor_res_limit, resolution_limit, filter_edge, fudge_SSNR, use_mask, invert_hand);
 }
 
@@ -48,10 +48,10 @@ void SharpenMap::DoInteractiveUserInput( ) {
 
 bool SharpenMap::DoCalculation( ) {
 
-    wxString input_volume      = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_volume     = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_mask        = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString res_statistics    = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string input_volume      = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_volume     = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_mask        = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string res_statistics    = my_current_job.arguments[3].ReturnStringArgument( );
     bool     use_statistics    = my_current_job.arguments[4].ReturnBoolArgument( );
     float    pixel_size        = my_current_job.arguments[5].ReturnFloatArgument( );
     float    inner_mask_radius = my_current_job.arguments[6].ReturnFloatArgument( );
@@ -69,8 +69,8 @@ bool SharpenMap::DoCalculation( ) {
     Image  input_map;
     Image* mask_volume = NULL;
 
-    MRCFile input_file(input_volume.ToStdString( ), false);
-    MRCFile output_file(output_volume.ToStdString( ), true);
+    MRCFile input_file(input_volume, false);
+    MRCFile output_file(output_volume, true);
 
     MRCFile*              input_mask_file  = NULL;
     ResolutionStatistics* input_statistics = NULL;
@@ -82,9 +82,9 @@ bool SharpenMap::DoCalculation( ) {
 
     if ( use_mask ) {
         mask_volume     = new Image;
-        input_mask_file = new MRCFile(input_mask.ToStdString( ), false);
+        input_mask_file = new MRCFile(input_mask, false);
         if ( input_file.ReturnXSize( ) != input_mask_file->ReturnXSize( ) || input_file.ReturnYSize( ) != input_mask_file->ReturnYSize( ) || input_file.ReturnZSize( ) != input_mask_file->ReturnZSize( ) ) {
-            wxPrintf("\nVolume and mask file have different dimensions\n");
+            Printf("\nVolume and mask file have different dimensions\n");
             DEBUG_ABORT;
         }
         else
@@ -108,7 +108,7 @@ bool SharpenMap::DoCalculation( ) {
     input_map.is_in_real_space = true;
     input_map.WriteSlices(&output_file, 1, input_file.ReturnZSize( ));
 
-    //	wxPrintf("Done with 3D B-factor application.\n");
+    //	Printf("Done with 3D B-factor application.\n");
 
     output_file.SetPixelSize(pixel_size);
     output_file.WriteHeader( );

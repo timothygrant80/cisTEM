@@ -155,12 +155,12 @@ class TensorManager {
             extent_of_each_mode[mode] = wanted_extent;
         }
         else {
-            wxPrintf("Found the following modes: ");
+            Printf("Found the following modes: ");
             for ( auto m : extent_of_each_mode ) {
-                wxPrintf("%c, %d ", char(m.first), int(m.second));
+                Printf("%c, %d ", char(m.first), int(m.second));
             }
-            wxPrintf("\n");
-            wxPrintf("mode requested %c for extent %i\n", mode, int(wanted_extent));
+            Printf("\n");
+            Printf("mode requested %c for extent %i\n", mode, int(wanted_extent));
             MyAssertTrue(false, "Could not find mode in wanted_extent");
         }
     };
@@ -171,7 +171,7 @@ class TensorManager {
             return extent_of_each_mode[mode];
         }
         else {
-            wxPrintf("mode requested %c\n", mode);
+            Printf("mode requested %c\n", mode);
 
             MyAssertTrue(false, "Could not find mode in wanted_extent");
         }
@@ -179,7 +179,7 @@ class TensorManager {
 
     template <char Mode>
     void SetModes(TensorID tid) {
-        // wxPrintf("Setting mode %c, for tensor %i\n", Mode, int(tid));
+        // Printf("Setting mode %c, for tensor %i\n", Mode, int(tid));
         modes[tid].push_back(Mode);
         n_modes[tid]        = modes[tid].size( );
         is_set_modes[tid]   = true;
@@ -191,7 +191,7 @@ class TensorManager {
 
     template <char Mode, char... OtherModes>
     void SetModes(TensorID tid) {
-        // wxPrintf("Setting mode %c, for tensor %i\n", Mode, int(tid));
+        // Printf("Setting mode %c, for tensor %i\n", Mode, int(tid));
 
         modes[tid].push_back(Mode);
         extent_of_each_mode.try_emplace(Mode, 0); // This will be checked later for proper setting, but don't overwrite if it already exists
@@ -242,7 +242,7 @@ class TensorManager {
         MyDebugAssertTrue(is_tensor_active[tid], "Tensor ID not active.");
         unary_operator[tid]        = wanted_unary_op;
         is_set_unary_operator[tid] = true;
-        // wxPrintf("Set unary operator for tensor %i\n", int(tid));
+        // Printf("Set unary operator for tensor %i\n", int(tid));
     };
 
     void PrintActiveTensorNames( ) {

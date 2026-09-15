@@ -27,7 +27,7 @@ class Coords {
 
     inline void CheckVectorIsSet(bool input) {
         if ( ! input ) {
-            wxPrintf("Trying to use a coord vector that is not yet set\n");
+            Printf("Trying to use a coord vector that is not yet set\n");
             exit(-1);
         }
     };

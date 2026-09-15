@@ -59,7 +59,7 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
     // intial parameters
     float pixel_size;
     // ctf parameters
-    wxString input_star_filename;
+    std::string input_star_filename;
     float    acceleration_voltage;
     float    spherical_aberration;
     float    amplitude_contrast;
@@ -69,8 +69,8 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
     float    additional_phase_shift = 0.0;
     bool     input_ctf_values_from_star_file;
     bool     phase_flip_only;
-    wxString output_average_per_bin_filename;
-    wxString output_azimuthal_average_volume_filename;
+    std::string output_average_per_bin_filename;
+    std::string output_azimuthal_average_volume_filename;
 
     // tube searching parameters
     float min_tube_diameter = 0.0;
@@ -87,7 +87,7 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
     // RASTR mask parameters
     bool     RASTR      = false;
     bool     input_mask = false;
-    wxString input_mask_filename;
+    std::string input_mask_filename;
     int      x_mask_center      = 1;
     int      y_mask_center      = 1;
     int      z_mask_center      = 1;
@@ -96,13 +96,13 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
     bool     mask_upweighted    = false; // don't mask for now
     bool     align_upweighted   = false; // we want the tubes to be aligned vertically
     bool     center_upweighted  = false; // center the upweighted region in the middle so full image is aligned and centered
-    wxString RASTR_output_filename;
-    wxString RASTR_output_star_filename;
+    std::string RASTR_output_filename;
+    std::string RASTR_output_star_filename;
 
     // SPOT RASTR
     bool     SPOT_RASTR = false;
-    wxString SPOT_RASTR_output_filename;
-    wxString SPOT_RASTR_output_star_filename;
+    std::string SPOT_RASTR_output_filename;
+    std::string SPOT_RASTR_output_star_filename;
 
     // expert options
     // If user chose No in set expert options the below values will be used by default
@@ -115,8 +115,8 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
     float padding_factor       = 2; //(sqrt of 2)
     // bool     find_positive_peaks       = true;
     // bool     find_negative_peaks       = true;
-    wxString output_peaks_filename     = "peaks_output.txt";
-    wxString output_diameters_filename = "diameters_output.txt";
+    std::string output_peaks_filename     = "peaks_output.txt";
+    std::string output_diameters_filename = "diameters_output.txt";
     float    cosine_edge               = 10.0;
     float    outside_weight            = 0.0;
     float    filter_radius             = 0.0;
@@ -127,7 +127,7 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
 
     UserInput* my_input = new UserInput("AzimuthalAverageNew", 1.0);
 
-    wxString input_filename = my_input->GetFilenameFromUser("Input image file name", "Filename of input stack", "input_stack.mrc", true);
+    std::string input_filename = my_input->GetFilenameFromUser("Input image file name", "Filename of input stack", "input_stack.mrc", true);
     // get CTF from user
     pixel_size           = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
     acceleration_voltage = my_input->GetFloatFromUser("Acceleration voltage (keV)", "Acceleration voltage, in keV", "300.0", 0.0, 500.0);
@@ -231,13 +231,13 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(54);
-    my_current_job.ManualSetArguments("tffffbtffffbffiibfbbttbbtiiiiibbbttbttbfffffttffffbbi", input_filename.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tffffbtffffbffiibfbbttbbtiiiiibbbttbttbfffffttffffbbi", input_filename.c_str(),
                                       pixel_size,
                                       acceleration_voltage,
                                       spherical_aberration,
                                       amplitude_contrast,
                                       input_ctf_values_from_star_file,
-                                      input_star_filename.ToUTF8( ).data( ),
+                                      input_star_filename.c_str(),
                                       defocus_1,
                                       defocus_2,
                                       astigmatism_angle,
@@ -251,11 +251,11 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
                                       low_pass_resolution,
                                       use_auto_corr,
                                       use_ft,
-                                      output_average_per_bin_filename.ToUTF8( ).data( ),
-                                      output_azimuthal_average_volume_filename.ToUTF8( ).data( ),
+                                      output_average_per_bin_filename.c_str(),
+                                      output_azimuthal_average_volume_filename.c_str(),
                                       RASTR,
                                       input_mask,
-                                      input_mask_filename.ToUTF8( ).data( ),
+                                      input_mask_filename.c_str(),
                                       x_mask_center,
                                       y_mask_center,
                                       z_mask_center,
@@ -264,11 +264,11 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
                                       mask_upweighted,
                                       align_upweighted,
                                       center_upweighted,
-                                      RASTR_output_filename.ToUTF8( ).data( ),
-                                      RASTR_output_star_filename.ToUTF8( ).data( ),
+                                      RASTR_output_filename.c_str(),
+                                      RASTR_output_star_filename.c_str(),
                                       SPOT_RASTR,
-                                      SPOT_RASTR_output_filename.ToUTF8( ).data( ),
-                                      SPOT_RASTR_output_star_filename.ToUTF8( ).data( ),
+                                      SPOT_RASTR_output_filename.c_str(),
+                                      SPOT_RASTR_output_star_filename.c_str(),
                                       set_expert_options,
                                       psi_min,
                                       psi_max,
@@ -277,8 +277,8 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
                                       padding_factor,
                                       //   find_positive_peaks,
                                       //   find_negative_peaks,
-                                      output_peaks_filename.ToUTF8( ).data( ),
-                                      output_diameters_filename.ToUTF8( ).data( ),
+                                      output_peaks_filename.c_str(),
+                                      output_diameters_filename.c_str(),
                                       cosine_edge,
                                       outside_weight,
                                       filter_radius,
@@ -292,13 +292,13 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
 
 bool AzimuthalAverageNew::DoCalculation( ) {
     // get the arguments for this job..
-    wxString input_filename                           = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_filename                           = my_current_job.arguments[0].ReturnStringArgument( );
     float    pixel_size                               = my_current_job.arguments[1].ReturnFloatArgument( );
     float    acceleration_voltage                     = my_current_job.arguments[2].ReturnFloatArgument( );
     float    spherical_aberration                     = my_current_job.arguments[3].ReturnFloatArgument( );
     float    amplitude_contrast                       = my_current_job.arguments[4].ReturnFloatArgument( );
     bool     input_ctf_values_from_star_file          = my_current_job.arguments[5].ReturnBoolArgument( );
-    wxString input_star_filename                      = my_current_job.arguments[6].ReturnStringArgument( );
+    std::string input_star_filename                      = my_current_job.arguments[6].ReturnStringArgument( );
     float    defocus_1                                = my_current_job.arguments[7].ReturnFloatArgument( );
     float    defocus_2                                = my_current_job.arguments[8].ReturnFloatArgument( );
     float    astigmatism_angle                        = my_current_job.arguments[9].ReturnFloatArgument( );
@@ -312,11 +312,11 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     float    low_pass_resolution                      = my_current_job.arguments[17].ReturnFloatArgument( );
     bool     use_auto_corr                            = my_current_job.arguments[18].ReturnBoolArgument( );
     bool     use_ft                                   = my_current_job.arguments[19].ReturnBoolArgument( );
-    wxString output_average_per_bin_filename          = my_current_job.arguments[20].ReturnStringArgument( );
-    wxString output_azimuthal_average_volume_filename = my_current_job.arguments[21].ReturnStringArgument( );
+    std::string output_average_per_bin_filename          = my_current_job.arguments[20].ReturnStringArgument( );
+    std::string output_azimuthal_average_volume_filename = my_current_job.arguments[21].ReturnStringArgument( );
     bool     RASTR                                    = my_current_job.arguments[22].ReturnBoolArgument( );
     bool     input_mask                               = my_current_job.arguments[23].ReturnBoolArgument( );
-    wxString input_mask_filename                      = my_current_job.arguments[24].ReturnStringArgument( );
+    std::string input_mask_filename                      = my_current_job.arguments[24].ReturnStringArgument( );
     int      x_mask_center                            = my_current_job.arguments[25].ReturnIntegerArgument( );
     int      y_mask_center                            = my_current_job.arguments[26].ReturnIntegerArgument( );
     int      z_mask_center                            = my_current_job.arguments[27].ReturnIntegerArgument( );
@@ -325,19 +325,19 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     bool     mask_upweighted                          = my_current_job.arguments[30].ReturnBoolArgument( );
     bool     align_upweighted                         = my_current_job.arguments[31].ReturnBoolArgument( );
     bool     center_upweighted                        = my_current_job.arguments[32].ReturnBoolArgument( );
-    wxString RASTR_output_filename                    = my_current_job.arguments[33].ReturnStringArgument( );
-    wxString RASTR_output_star_filename               = my_current_job.arguments[34].ReturnStringArgument( );
+    std::string RASTR_output_filename                    = my_current_job.arguments[33].ReturnStringArgument( );
+    std::string RASTR_output_star_filename               = my_current_job.arguments[34].ReturnStringArgument( );
     bool     SPOT_RASTR                               = my_current_job.arguments[35].ReturnBoolArgument( );
-    wxString SPOT_RASTR_output_filename               = my_current_job.arguments[36].ReturnStringArgument( );
-    wxString SPOT_RASTR_output_star_filename          = my_current_job.arguments[37].ReturnStringArgument( );
+    std::string SPOT_RASTR_output_filename               = my_current_job.arguments[36].ReturnStringArgument( );
+    std::string SPOT_RASTR_output_star_filename          = my_current_job.arguments[37].ReturnStringArgument( );
     bool     set_expert_options                       = my_current_job.arguments[38].ReturnBoolArgument( );
     float    psi_min                                  = my_current_job.arguments[39].ReturnFloatArgument( );
     float    psi_max                                  = my_current_job.arguments[40].ReturnFloatArgument( );
     float    psi_step                                 = my_current_job.arguments[41].ReturnFloatArgument( );
     float    fine_tuning_psi_step                     = my_current_job.arguments[42].ReturnFloatArgument( );
     float    padding_factor                           = my_current_job.arguments[43].ReturnFloatArgument( );
-    wxString output_peaks_filename                    = my_current_job.arguments[44].ReturnStringArgument( );
-    wxString output_diameters_filename                = my_current_job.arguments[45].ReturnStringArgument( );
+    std::string output_peaks_filename                    = my_current_job.arguments[44].ReturnStringArgument( );
+    std::string output_diameters_filename                = my_current_job.arguments[45].ReturnStringArgument( );
     float    cosine_edge                              = my_current_job.arguments[46].ReturnFloatArgument( );
     float    outside_weight                           = my_current_job.arguments[47].ReturnFloatArgument( );
     float    filter_radius                            = my_current_job.arguments[48].ReturnFloatArgument( );
@@ -347,8 +347,8 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     int      max_threads                              = my_current_job.arguments[52].ReturnIntegerArgument( );
 
     // initiate I/O variables
-    MRCFile  my_input_file(input_filename.ToStdString( ), false); // check all the functions and things done with the MRCFile and also check the wxPrintF statement
-    MRCFile  my_output_sum_image_filename(output_average_per_bin_filename.ToStdString( ), true);
+    MRCFile  my_input_file(input_filename, false); // check all the functions and things done with the MRCFile and also check the Printf statement
+    MRCFile  my_output_sum_image_filename(output_average_per_bin_filename, true);
     MRCFile* my_output_SPOT_RASTR_filename;
 
     long number_of_input_images = my_input_file.ReturnNumberOfSlices( );
@@ -370,7 +370,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
         image_stack_filtered_masked = nullptr;
 
     if ( use_memory ) {
-        wxPrintf("\nLoading images to memory...\n\n");
+        Printf("\nLoading images to memory...\n\n");
         ProgressBar* loading_progress = new ProgressBar(number_of_input_images);
 #pragma omp parallel for num_threads(max_threads) schedule(static) shared(loading_progress, my_input_file, image_stack, image_stack_filtered_masked, x_dim, y_dim, outer_mask_radius, low_pass, low_pass_resolution, pixel_size)
 
@@ -424,14 +424,14 @@ bool AzimuthalAverageNew::DoCalculation( ) {
         cisTEMParameters input_star_file;
         //Relion Star
         //BasicStarFileReader input_star_file;
-        //wxString            star_error_text;
-        if ( (is_running_locally && ! DoesFileExist(input_star_filename.ToStdString( ))) ) {
-            SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
+        //std::string            star_error_text;
+        if ( (is_running_locally && ! DoesFileExist(input_star_filename)) ) {
+            SendErrorAndCrash(Format("Error: Input star file %s not found\n", input_star_filename));
         }
         //CisTEM star
-        input_star_file.ReadFromcisTEMStarFile(input_star_filename.ToStdString( ));
+        input_star_file.ReadFromcisTEMStarFile(input_star_filename);
         //RELION star
-        //input_star_file.ReadFile(input_star_filename.ToStdString( ));
+        //input_star_file.ReadFile(input_star_filename);
         for ( long image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
             ctf_parameters_stack[image_counter].acceleration_voltage          = acceleration_voltage;
             ctf_parameters_stack[image_counter].spherical_aberration          = spherical_aberration;
@@ -444,7 +444,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
             ctf_parameters_stack[image_counter].astigmatism_tolerance         = 0.0;
             ctf_parameters_stack[image_counter].pixel_size                    = pixel_size;
             ctf_parameters_stack[image_counter].additional_phase_shift        = input_star_file.ReturnPhaseShift(image_counter);
-            //wxPrintf("The current image is %li and its defocus is %f\n", image_counter+1, input_star_file.ReturnDefocus1(image_counter) );
+            //Printf("The current image is %li and its defocus is %f\n", image_counter+1, input_star_file.ReturnDefocus1(image_counter) );
         }
     }
 
@@ -489,7 +489,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
 
     // saving all the diameters and peaks in a text file
     // Open the diameter file in write mode
-    std::ofstream diameters_file(output_diameters_filename.ToStdString( ));
+    std::ofstream diameters_file(output_diameters_filename);
     if ( ! diameters_file.is_open( ) ) {
         std::cerr << "Error: Could not open diameters_output.txt\n";
     }
@@ -497,7 +497,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     diameters_file << std::fixed << std::setprecision(2); // Optional: set float precision
     diameters_file << "image_index, diameter\n";
 
-    std::ofstream peak_file(output_peaks_filename.ToStdString( )); // Open file once
+    std::ofstream peak_file(output_peaks_filename); // Open file once
 
     if ( ! peak_file.is_open( ) ) {
         std::cerr << "Error: Could not open peaks_output.txt\n";
@@ -514,12 +514,12 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     Image*   mask;
     //RASTR == true & input_mask == true
     if ( RASTR && input_mask ) {
-        if ( ! DoesFileExist(input_mask_filename.ToStdString( )) ) {
-            SendError(wxString::Format("Error: Mask %s not found\n", input_mask_filename.ToStdString( )));
+        if ( ! DoesFileExist(input_mask_filename) ) {
+            SendError(Format("Error: Mask %s not found\n", input_mask_filename));
             exit(-1);
         }
 
-        my_mask_file = new MRCFile(input_mask_filename.ToStdString( ), false);
+        my_mask_file = new MRCFile(input_mask_filename, false);
 
         //Curve hist;
         mask = new Image;
@@ -528,7 +528,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
         //mask.ComputeHistogramOfRealValuesCurve(&hist);
         //hist.PrintToStandardOut( );
         if ( mask->ReturnMaximumValue( ) != 1 & mask->ReturnMinimumValue( ) != 0 ) {
-            SendError(wxString::Format("Error: The minimum value in the mask is %f not 0 and the maximum value in the mask is %f not 1", mask->ReturnMinimumValue( ), mask->ReturnMaximumValue( )));
+            SendError(Format("Error: The minimum value in the mask is %f not 0 and the maximum value in the mask is %f not 1", mask->ReturnMinimumValue( ), mask->ReturnMaximumValue( )));
             exit(-1);
         }
         delete mask;
@@ -553,7 +553,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     // initiate other needed variables
     Image final_image;
 
-    wxPrintf("\nFinding Initial Tube Rotation...\n\n");
+    Printf("\nFinding Initial Tube Rotation...\n\n");
     ProgressBar* my_progress = new ProgressBar(number_of_input_images);
 
 #pragma omp parallel for schedule(dynamic, 1) num_threads(max_threads) default(none) shared(my_input_file, best_sum_column, tube_rotation, all_columns_sum, number_of_input_images, max_threads, use_auto_corr, use_ft, low_pass_resolution, x_dim, y_dim, image_stack_filtered_masked, \
@@ -703,7 +703,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                 local_best_psi           = psi;
                 local_best_sum           = column_sum;
                 local_columns_sum_vector = column_sum_vector;
-                //wxPrintf("The best psi angle with the highest sum is %f with sum %f \n\n", local_best_psi, local_best_sum);
+                //Printf("The best psi angle with the highest sum is %f with sum %f \n\n", local_best_psi, local_best_sum);
             }
             power_image.Deallocate( );
         }
@@ -803,7 +803,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                 local_best_psi           = tuning_psi;
                 local_best_sum           = tuning_column_sum;
                 local_columns_sum_vector = tuning_column_sum_vector;
-                //wxPrintf("Tuning best psi angle with the highest sum is %f with sum %f \n\n", local_best_psi, local_best_sum);
+                //Printf("Tuning best psi angle with the highest sum is %f with sum %f \n\n", local_best_psi, local_best_sum);
             }
             tuning_power_image.Deallocate( ); // should this be here or outside the tuning psi loop?? and reset the image to zero inside the loop?
         }
@@ -881,7 +881,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     delete my_progress;
 
     Image added_image; // This is the sum image based on the initial rotation angle calculated from auto-correlation
-    wxPrintf("\nCreating Initial Sum Images...\n\n");
+    Printf("\nCreating Initial Sum Images...\n\n");
     ProgressBar* sum_progress = new ProgressBar(number_of_input_images);
 
     for ( long image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
@@ -1002,7 +1002,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     float tuned_step_size      = fine_tuning_psi_step;
     Image fine_tuning_average_image;
 
-    wxPrintf("\nFinding Tube Rotation Using Cross-Correlation...\n\n");
+    Printf("\nFinding Tube Rotation Using Cross-Correlation...\n\n");
     ProgressBar* my_aln_progress = new ProgressBar(number_of_input_images);
 
 #pragma omp parallel for schedule(dynamic, 1) num_threads(max_threads) default(none) shared(number_of_input_images, my_input_file, inner_radius_for_peak_search, outer_radius_for_peak_search, low_pass_resolution, x_dim, y_dim, use_memory, average_images,                     \
@@ -1212,7 +1212,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     Image added_image_after_aln;
     Image sum_images_after_aln[bins_count];
 
-    wxPrintf("\nCreating Final Sum Images...\n\n");
+    Printf("\nCreating Final Sum Images...\n\n");
     ProgressBar* update_sum_progress = new ProgressBar(number_of_input_images);
 
     for ( int bin_index = 0; bin_index < bins_count; bin_index++ ) {
@@ -1367,9 +1367,9 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     long     model_dimension = x_dim;
     MRCFile* output_model_filename;
     if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-        my_output_sum_image_filename.OpenFile(output_average_per_bin_filename.ToStdString( ), true);
+        my_output_sum_image_filename.OpenFile(output_average_per_bin_filename, true);
         if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-            wxPrintf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.ToStdString( ).c_str( ));
+            Printf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.c_str( ));
             DEBUG_ABORT;
         }
     }
@@ -1383,7 +1383,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     my_output_sum_image_filename.WriteHeader( );
     my_output_sum_image_filename.rewrite_header_on_close = true;
 
-    wxPrintf("\nPreparing Azimuthal Average model for projection...\n\n");
+    Printf("\nPreparing Azimuthal Average model for projection...\n\n");
     ProgressBar* prepare_projections_progress = new ProgressBar(bins_count);
     // save the azimuthal average if the RASTR and SPOT RASTR are not true in the correct contrast
     if ( RASTR == false && SPOT_RASTR == false ) {
@@ -1449,9 +1449,9 @@ bool AzimuthalAverageNew::DoCalculation( ) {
             padded_projection_volume_image.object_is_centred_in_box = true;
             padded_projection_volume_image.ClipInto(&projection_volume_image);
             if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-                my_output_sum_image_filename.OpenFile(output_average_per_bin_filename.ToStdString( ), true);
+                my_output_sum_image_filename.OpenFile(output_average_per_bin_filename, true);
                 if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-                    wxPrintf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.ToStdString( ).c_str( ));
+                    Printf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.c_str( ));
                     DEBUG_ABORT;
                 }
             }
@@ -1582,9 +1582,9 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                 padded_projection_volume_image.object_is_centred_in_box = true;
                 padded_projection_volume_image.ClipInto(&projection_volume_image);
                 if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-                    my_output_sum_image_filename.OpenFile(output_average_per_bin_filename.ToStdString( ), true);
+                    my_output_sum_image_filename.OpenFile(output_average_per_bin_filename, true);
                     if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-                        wxPrintf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.ToStdString( ).c_str( ));
+                        Printf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.c_str( ));
                         DEBUG_ABORT;
                     }
                 }
@@ -1617,10 +1617,10 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                 float filter_edge = 40.0;
                 float mask_volume_in_voxels;
 
-                //wxPrintf("\nMasking Volume...\n");
+                //Printf("\nMasking Volume...\n");
 
                 if ( ! model_volume[bin_index].HasSameDimensionsAs(&my_mask) ) {
-                    wxPrintf("\nVolume and mask file have different dimensions\n");
+                    Printf("\nVolume and mask file have different dimensions\n");
                     DEBUG_ABORT;
                 }
                 if ( filter_radius == 0.0 )
@@ -1656,9 +1656,9 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                     masked_padded_projection_volume_image.object_is_centred_in_box = true;
                     masked_padded_projection_volume_image.ClipInto(&masked_projection_volume_image);
                     if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-                        my_output_sum_image_filename.OpenFile(output_average_per_bin_filename.ToStdString( ), true);
+                        my_output_sum_image_filename.OpenFile(output_average_per_bin_filename, true);
                         if ( ! my_output_sum_image_filename.IsOpen( ) ) {
-                            wxPrintf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.ToStdString( ).c_str( ));
+                            Printf("ERROR: Could not open '%s' for writing\n", output_average_per_bin_filename.c_str( ));
                             DEBUG_ABORT;
                         }
                     }
@@ -1699,10 +1699,10 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     float*          adjusted_y_shifts = nullptr;
 
     if ( SPOT_RASTR == true ) {
-        wxPrintf("\nSubtracting Azimuthal Average Projections...\n\n");
+        Printf("\nSubtracting Azimuthal Average Projections...\n\n");
 
         ProgressBar* subtract_progress = new ProgressBar(number_of_input_images);
-        MRCFile      my_output_SPOT_RASTR_filename(SPOT_RASTR_output_filename.ToStdString( ), true);
+        MRCFile      my_output_SPOT_RASTR_filename(SPOT_RASTR_output_filename, true);
         my_output_SPOT_RASTR_filename.my_header.SetNumberOfImages(number_of_input_images);
         my_output_SPOT_RASTR_filename.my_header.SetDimensionsImage(x_dim, y_dim);
         my_output_SPOT_RASTR_filename.SetPixelSize(pixel_size);
@@ -1714,7 +1714,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
         if ( ! SPOT_RASTR_projections_output.IsOpen( ) ) {
             SPOT_RASTR_projections_output.OpenFile("SPOT_RASTR_projection_image_to_be_subtracted.mrc", true);
             if ( ! SPOT_RASTR_projections_output.IsOpen( ) ) {
-                wxPrintf("ERROR: Could not open '%s' for writing\n", "SPOT_RASTR_projection_image_to_be_subtracted.mrc");
+                Printf("ERROR: Could not open '%s' for writing\n", "SPOT_RASTR_projection_image_to_be_subtracted.mrc");
                 DEBUG_ABORT;
             }
         }
@@ -1813,7 +1813,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
             }
 
             float scale_factor = sum_of_pixelwise_product / sum_of_squares;
-            //wxPrintf("The scale factor of image %li is %f \n", subtraction_image_counter+1, scale_factor);
+            //Printf("The scale factor of image %li is %f \n", subtraction_image_counter+1, scale_factor);
 
             // multiply by the scaling factor calculated
             projection_image.MultiplyByConstant((scale_factor));
@@ -1874,7 +1874,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
             SPOT_RASTR_output_params.all_parameters[image_counter].image_shift_y                      = 0.0f;
         }
 
-        SPOT_RASTR_output_params.WriteTocisTEMStarFile(SPOT_RASTR_output_star_filename.ToStdString( ));
+        SPOT_RASTR_output_params.WriteTocisTEMStarFile(SPOT_RASTR_output_star_filename);
     }
 
     //////////// Continue with RASTR processing
@@ -1894,10 +1894,10 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     float           phi;
 
     if ( RASTR == true ) { // if RASTR is true then we will use the masked model for subtraction
-        wxPrintf("\nSubtracting Masked Azimuthal Average Projections...\n\n");
+        Printf("\nSubtracting Masked Azimuthal Average Projections...\n\n");
 
         ProgressBar* mask_subtract_progress = new ProgressBar(number_of_input_images * number_of_models);
-        MRCFile      my_output_RASTR_filename(RASTR_output_filename.ToStdString( ), true);
+        MRCFile      my_output_RASTR_filename(RASTR_output_filename, true);
         //Added new as OMP was causing problems when writing images to a file that is not opened and have set dimensions and header information
         my_output_RASTR_filename.my_header.SetNumberOfImages(number_of_input_images * number_of_models);
         my_output_RASTR_filename.my_header.SetDimensionsImage(x_dim, y_dim);
@@ -1909,7 +1909,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
         if ( ! RASTR_projections_output.IsOpen( ) ) {
             RASTR_projections_output.OpenFile("RASTR_projection_image_to_be_subtracted.mrc", true);
             if ( ! RASTR_projections_output.IsOpen( ) ) {
-                wxPrintf("ERROR: Could not open '%s' for writing\n", "RASTR_projection_image_to_be_subtracted.mrc");
+                Printf("ERROR: Could not open '%s' for writing\n", "RASTR_projection_image_to_be_subtracted.mrc");
                 DEBUG_ABORT;
             }
         }
@@ -1923,7 +1923,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
         // if ( ! unmasked_projections_output.IsOpen( ) ) {
         //     unmasked_projections_output.OpenFile("unmasked_projection_image_to_be_subtracted.mrc", true);
         //     if ( ! unmasked_projections_output.IsOpen( ) ) {
-        //         wxPrintf("ERROR: Could not open '%s' for writing\n", "unmasked_projection_image_to_be_subtracted.mrc");
+        //         Printf("ERROR: Could not open '%s' for writing\n", "unmasked_projection_image_to_be_subtracted.mrc");
         //         DEBUG_ABORT;
         //     }
         // }
@@ -2074,7 +2074,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                 // calculate the scaling factor based on comparing the unmasked projection of azimuthal average with original image
                 // the masked projection mess up the scaling factor calculations
                 float scale_factor = sum_of_pixelwise_product / sum_of_squares;
-                //wxPrintf("The scale factor of image %li is %f \n", subtraction_image_counter+1, scale_factor);
+                //Printf("The scale factor of image %li is %f \n", subtraction_image_counter+1, scale_factor);
 
                 // multiply by the scaling factor calculated
                 projection_image.MultiplyByConstant((scale_factor));
@@ -2103,7 +2103,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                     // center the masked upweighted regions to the center
                     RASTR_adjusted_x_shifts[current_counter] = -RASTR_rotated_x; //negative as this is the shift to return the images back to the center
                     RASTR_adjusted_y_shifts[current_counter] = -RASTR_rotated_y;
-                    // wxPrintf("original mask location in x, y, z at phi %f and psi %f are %i, %i, %i and adjusted RASTR location are %f, %f, %f \n", -phi, -(90.0 - best_psi_value[subtraction_image_counter]), (x_mask_center - current_image.physical_address_of_box_center_x), (y_mask_center - current_image.physical_address_of_box_center_y), (z_mask_center - current_image.physical_address_of_box_center_x), -RASTR_rotated_x, -RASTR_rotated_y, -RASTR_rotated_z);
+                    // Printf("original mask location in x, y, z at phi %f and psi %f are %i, %i, %i and adjusted RASTR location are %f, %f, %f \n", -phi, -(90.0 - best_psi_value[subtraction_image_counter]), (x_mask_center - current_image.physical_address_of_box_center_x), (y_mask_center - current_image.physical_address_of_box_center_y), (z_mask_center - current_image.physical_address_of_box_center_x), -RASTR_rotated_x, -RASTR_rotated_y, -RASTR_rotated_z);
                     float average = subtracted_RASTR_image.ReturnAverageOfRealValues( );
                     mask_parameters.Init(phi, 90.0, 90.0 - best_psi_value[subtraction_image_counter], 0.0, 0.0);
 
@@ -2168,9 +2168,9 @@ bool AzimuthalAverageNew::DoCalculation( ) {
                     subtracted_RASTR_image.PhaseShift(adjusted_x_shifts[subtraction_image_counter], 0);
 
                     if ( ! my_output_RASTR_filename.IsOpen( ) ) {
-                        my_output_RASTR_filename.OpenFile(RASTR_output_filename.ToStdString( ), true);
+                        my_output_RASTR_filename.OpenFile(RASTR_output_filename, true);
                         if ( ! my_output_RASTR_filename.IsOpen( ) ) {
-                            wxPrintf("ERROR: Could not open '%s' for writing\n", RASTR_output_filename.ToStdString( ));
+                            Printf("ERROR: Could not open '%s' for writing\n", RASTR_output_filename);
                             DEBUG_ABORT;
                         }
                     }
@@ -2254,7 +2254,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
             }
         }
 
-        RASTR_output_params.WriteTocisTEMStarFile(RASTR_output_star_filename.ToStdString( ));
+        RASTR_output_params.WriteTocisTEMStarFile(RASTR_output_star_filename);
     }
     if ( adjusted_y_shifts != nullptr )
         delete[] adjusted_y_shifts;

@@ -238,7 +238,7 @@ TEST_CASE("JobPackage basic functionality", "[job_packager][JobPackage]") {
 
 /**
  * @note Socket round-trip testing (Send/Receive methods) would require either:
- * 1. Mock wxSocketBase infrastructure
+ * 1. Mock TcpSocket infrastructure
  * 2. Real socket server/client setup
  * 3. Refactoring to separate encoding from socket I/O
  *

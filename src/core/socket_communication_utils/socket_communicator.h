@@ -47,61 +47,61 @@ class SocketCommunicator {
     void ShutDownSocketMonitor( );
 
     short int     ReturnServerPort( );
-    wxString      ReturnServerPortString( );
-    wxArrayString ReturnServerAllIpAddresses( );
+    std::string      ReturnServerPortString( );
+    std::vector<std::string> ReturnServerAllIpAddresses( );
 
     void MonitorSocket(TcpSocket* socket_to_monitor);
     void StopMonitoringSocket(TcpSocket* socket_to_monitor);
     void StopMonitoringAndDestroySocket(TcpSocket* socket_to_monitor);
     void SetJobCode(unsigned char* code_to_set);
 
-    virtual wxString ReturnName( ) { return "GenericCommunicator"; }
+    virtual std::string ReturnName( ) { return "GenericCommunicator"; }
 
     // the following should be overidden in the inherited classes
     // It is VERY IMPORTANT that data is never read on the passed socket, it should only be written to the socket.
     // All reading should be handled completely in the monitor thread loop.
 
-    virtual void HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* identification_code) { wxPrintf("Warning:: Unhandled Socket Message (HandleNewSocketConnection)\n"); }
+    virtual void HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* identification_code) { Printf("Warning:: Unhandled Socket Message (HandleNewSocketConnection)\n"); }
 
-    virtual void HandleSocketYouAreConnected(TcpSocket* connected_socket) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreConnected)\n"); }
+    virtual void HandleSocketYouAreConnected(TcpSocket* connected_socket) { Printf("Warning:: Unhandled Socket Message (HandleSocketYouAreConnected)\n"); }
 
-    virtual void HandleSocketSendJobDetails(TcpSocket* connected_socket) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketSendJobDetails)\n"); }
+    virtual void HandleSocketSendJobDetails(TcpSocket* connected_socket) { Printf("Warning:: Unhandled Socket Message (HandleSocketSendJobDetails)\n"); }
 
-    virtual void HandleSocketJobPackage(TcpSocket* connected_socket, JobPackage* received_package) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobPackage)\n"); }
+    virtual void HandleSocketJobPackage(TcpSocket* connected_socket, JobPackage* received_package) { Printf("Warning:: Unhandled Socket Message(HandleSocketJobPackage)\n"); }
 
-    virtual void HandleSocketYouAreTheMaster(TcpSocket* connected_socket, JobPackage* received_package) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreTheMaster)\n"); }
+    virtual void HandleSocketYouAreTheMaster(TcpSocket* connected_socket, JobPackage* received_package) { Printf("Warning:: Unhandled Socket Message (HandleSocketYouAreTheMaster)\n"); }
 
-    virtual void HandleSocketYouAreAWorker(TcpSocket* connected_socket, wxString master_ip_address, wxString master_port_string) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketYouAreTheWorker)\n"); }
+    virtual void HandleSocketYouAreAWorker(TcpSocket* connected_socket, std::string master_ip_address, std::string master_port_string) { Printf("Warning:: Unhandled Socket Message(HandleSocketYouAreTheWorker)\n"); }
 
-    virtual void HandleSocketSendNextJob(TcpSocket* connected_socket, JobResult* received_result) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendNextJob)\n"); }
+    virtual void HandleSocketSendNextJob(TcpSocket* connected_socket, JobResult* received_result) { Printf("Warning:: Unhandled Socket Message(HandleSocketSendNextJob)\n"); }
 
-    virtual void HandleSocketTimeToDie(TcpSocket* connected_socket) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketTimeToDie)\n"); }
+    virtual void HandleSocketTimeToDie(TcpSocket* connected_socket) { Printf("Warning:: Unhandled Socket Message(HandleSocketTimeToDie)\n"); }
 
-    virtual void HandleSocketReadyToSendSingleJob(TcpSocket* connected_socket, RunJob* received_job) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketReadyToSendSingleJob)\n"); }
+    virtual void HandleSocketReadyToSendSingleJob(TcpSocket* connected_socket, RunJob* received_job) { Printf("Warning:: Unhandled Socket Message(HandleSocketReadyToSendSingleJob)\n"); }
 
-    virtual void HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketIHaveAnError)\n"); }
+    virtual void HandleSocketIHaveAnError(TcpSocket* connected_socket, std::string error_message) { Printf("Warning:: Unhandled Socket Message(HandleSocketIHaveAnError)\n"); }
 
-    virtual void HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketIHaveInfo)\n"); }
+    virtual void HandleSocketIHaveInfo(TcpSocket* connected_socket, std::string info_message) { Printf("Warning:: Unhandled Socket Message(HandleSocketIHaveInfo)\n"); }
 
-    virtual void HandleSocketJobResult(TcpSocket* connected_socket, JobResult* received_result) { wxPrintf("Warning:: Unhandled Socket Message(HAndleSocketJobResult)\n"); }
+    virtual void HandleSocketJobResult(TcpSocket* connected_socket, JobResult* received_result) { Printf("Warning:: Unhandled Socket Message(HAndleSocketJobResult)\n"); }
 
-    virtual void HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobResultQueue)\n"); }
+    virtual void HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue) { Printf("Warning:: Unhandled Socket Message(HandleSocketJobResultQueue)\n"); }
 
-    virtual void HandleSocketJobFinished(TcpSocket* connected_socket, int finished_job_number) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobFinished)\n"); }
+    virtual void HandleSocketJobFinished(TcpSocket* connected_socket, int finished_job_number) { Printf("Warning:: Unhandled Socket Message(HandleSocketJobFinished)\n"); }
 
-    virtual void HandleSocketAllJobsFinished(TcpSocket* connected_socket, long received_timing_in_milliseconds) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketAllJobsFinished)\n"); }
+    virtual void HandleSocketAllJobsFinished(TcpSocket* connected_socket, long received_timing_in_milliseconds) { Printf("Warning:: Unhandled Socket Message(HandleSocketAllJobsFinished)\n"); }
 
-    virtual void HandleSocketNumberOfConnections(TcpSocket* connected_socket, int received_number_of_connections) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketNumberOfConnections)\n"); }
+    virtual void HandleSocketNumberOfConnections(TcpSocket* connected_socket, int received_number_of_connections) { Printf("Warning:: Unhandled Socket Message(HandleSocketNumberOfConnections)\n"); }
 
-    virtual void HandleSocketResultWithImageToWrite(TcpSocket* connected_socket, wxString filename_to_write_to, int position_in_stack) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n"); } // The image itself is written by the monitor thread, see socket_communicator.cpp
+    virtual void HandleSocketResultWithImageToWrite(TcpSocket* connected_socket, std::string filename_to_write_to, int position_in_stack) { Printf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n"); } // The image itself is written by the monitor thread, see socket_communicator.cpp
 
-    virtual void HandleSocketProgramDefinedResult(TcpSocket* connected_socket, float* data_array, int size_of_data_array, int result_number, int number_of_expected_results) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketProgramDefinedResult)\n"); }
+    virtual void HandleSocketProgramDefinedResult(TcpSocket* connected_socket, float* data_array, int size_of_data_array, int result_number, int number_of_expected_results) { Printf("Warning:: Unhandled Socket Message (HandleSocketProgramDefinedResult)\n"); }
 
-    virtual void HandleSocketSendThreadTiming(TcpSocket* connected_socket, long received_timing_in_milliseconds) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendThreadTiming\n"); }
+    virtual void HandleSocketSendThreadTiming(TcpSocket* connected_socket, long received_timing_in_milliseconds) { Printf("Warning:: Unhandled Socket Message(HandleSocketSendThreadTiming\n"); }
 
-    virtual void HandleSocketDisconnect(TcpSocket* connected_socket) { wxPrintf("Warning:: Unhandled Socket Disconnect(HandleSocketDisconnect)\n"); }
+    virtual void HandleSocketDisconnect(TcpSocket* connected_socket) { Printf("Warning:: Unhandled Socket Disconnect(HandleSocketDisconnect)\n"); }
 
-    virtual void HandleSocketTemplateMatchResultReady(TcpSocket* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketTemplateMatchResultReady)\n"); }
+    virtual void HandleSocketTemplateMatchResultReady(TcpSocket* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) { Printf("Warning:: Unhandled Socket Message (HandleSocketTemplateMatchResultReady)\n"); }
 };
 
 /**
@@ -142,8 +142,8 @@ class SocketServerThread : public SocketCommunicatorThread {
 
     ~SocketServerThread( );
 
-    wxArrayString all_my_ip_addresses;
-    wxString      my_port_string;
+    std::vector<std::string> all_my_ip_addresses;
+    std::string      my_port_string;
     short int     my_port;
 
     TcpServer socket_server;

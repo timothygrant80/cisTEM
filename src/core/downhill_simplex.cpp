@@ -269,7 +269,7 @@ double DownhillSimplex::amotry(double** p, double y[], double psum[], long ndim,
 }
 
 void DownhillSimplex::MinimizeFunction(double function_to_min(double[])) {
-    time_start            = wxDateTime::Now( );
+    time_start            = DateTime::Now( );
     long    nfunk         = 0; // hold the number of evaluations
     double* scaled_values = new double[number_of_dimensions + 1];
 
@@ -308,12 +308,12 @@ void DownhillSimplex::MinimizeFunction(double function_to_min(double[])) {
     for ( int i = 1; i < number_of_dimensions; i++ ) {
         minimised_values[i] = p[1][i];
     }
-    time_end = wxDateTime::Now( );
+    time_end = DateTime::Now( );
     delete[] scaled_values;
 }
 
 void DownhillSimplex::MinimizeFunction(void* pt2Object, double (*callback)(void* pt2Object, double[])) {
-    time_start            = wxDateTime::Now( );
+    time_start            = DateTime::Now( );
     long    nfunk         = 0; // hold the number of evaluations
     double* scaled_values = new double[number_of_dimensions + 1];
 
@@ -354,7 +354,7 @@ void DownhillSimplex::MinimizeFunction(void* pt2Object, double (*callback)(void*
         minimised_values[i] = p[1][i];
     }
 
-    time_end = wxDateTime::Now( );
+    time_end = DateTime::Now( );
     delete[] scaled_values;
 }
 

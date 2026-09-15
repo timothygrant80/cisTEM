@@ -10,11 +10,11 @@
 #include "../../../core/scattering_potential.h"
 #include "simple_3d.h"
 
-void Simple3dSimulationRunner(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+void Simple3dSimulationRunner(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting a test to be a runner", false);
 
-    wxString cistem_ref_dir = CheckForReferenceImages( );
+    std::string cistem_ref_dir = CheckForReferenceImages( );
 
     TEST(MyTest(cistem_ref_dir, temp_directory));
 
@@ -23,14 +23,14 @@ void Simple3dSimulationRunner(const wxString& hiv_image_80x80x1_filename, wxStri
     return;
 }
 
-bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
+bool MyTest(const std::string& cistem_ref_dir, std::string& temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;
 
     float acceptable_ccc = 0.99;
 
-    wxString atomic_coordinates = cistem_ref_dir + "/6pch_updated.cif";
+    std::string atomic_coordinates = cistem_ref_dir + "/6pch_updated.cif";
 
     // For a simple 3d conversion from atomic coordinates, via pdb mmcif or similar, we make a cubic volume
     // where the size is defined by the image volume we pass in to the methd.
@@ -67,7 +67,7 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
     int wanted_number_of_threads = 1;
     sp.calc_scattering_potential(test_sim, molecular_orientation, wanted_number_of_threads);
 
-    test_sim.QuickAndDirtyWriteSlices(temp_directory.ToStdString( ) + "/test_sim.mrc", 1, image_size, true, pixel_size);
+    test_sim.QuickAndDirtyWriteSlices(temp_directory + "/test_sim.mrc", 1, image_size, true, pixel_size);
     // we'll keep a clean copy of the original, unrotated image for re-use later.
     clean_copy.CopyFrom(&test_sim);
 
@@ -108,8 +108,8 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
     xformed_sim_projection.SwapRealSpaceQuadrants( );
     xformed_sim_projection.BackwardFFT( );
     // Now let's compare the resulting projections
-    // xformed_projection.QuickAndDirtyWriteSlice(temp_directory.ToStdString( ) + "/xformed_projection1.mrc", 1, false, pixel_size);
-    // xformed_sim_projection.QuickAndDirtyWriteSlice(temp_directory.ToStdString( ) + "/xformed_sim_projection1.mrc", 1, false, pixel_size);
+    // xformed_projection.QuickAndDirtyWriteSlice(temp_directory + "/xformed_projection1.mrc", 1, false, pixel_size);
+    // xformed_sim_projection.QuickAndDirtyWriteSlice(temp_directory + "/xformed_sim_projection1.mrc", 1, false, pixel_size);
 
     passed = CompareRealValues(xformed_projection, xformed_sim_projection, acceptable_ccc);
 
@@ -140,8 +140,8 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
     xformed_sim_projection.SwapRealSpaceQuadrants( );
     xformed_sim_projection.BackwardFFT( );
     // Now let's compare the resulting projections
-    xformed_projection.QuickAndDirtyWriteSlice(temp_directory.ToStdString( ) + "/xformed_projection2.mrc", 1, false, pixel_size);
-    xformed_sim_projection.QuickAndDirtyWriteSlice(temp_directory.ToStdString( ) + "/xformed_sim_projection2.mrc", 1, false, pixel_size);
+    xformed_projection.QuickAndDirtyWriteSlice(temp_directory + "/xformed_projection2.mrc", 1, false, pixel_size);
+    xformed_sim_projection.QuickAndDirtyWriteSlice(temp_directory + "/xformed_sim_projection2.mrc", 1, false, pixel_size);
 
     passed = CompareRealValues(xformed_projection, xformed_sim_projection, acceptable_ccc);
 
@@ -191,7 +191,7 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
         // avg_shift += current_shift;
         // counter++;
 
-        // wxPrintf("\nFound peak %f at %f, %f for angle %i, %f", found_peak.value, found_peak.x, found_peak.y, rot_y, found_peak.x / sinf(deg_2_rad(rot_y)));
+        // Printf("\nFound peak %f at %f, %f for angle %i, %f", found_peak.value, found_peak.x, found_peak.y, rot_y, found_peak.x / sinf(deg_2_rad(rot_y)));
 
         // The image methods blur around the edges so we drop the CCC requirment a bit
         passed = CompareRealValues(xformed_projection, xformed_sim_projection, acceptable_ccc);
@@ -199,8 +199,8 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
         all_passed = passed ? all_passed : false;
     }
 
-    // wxPrintf("Best shift is %f at %f, %f, %f", min_shifts, bestx, besty, bestz);
-    // wxPrintf("\n");
+    // Printf("Best shift is %f at %f, %f, %f", min_shifts, bestx, besty, bestz);
+    // Printf("\n");
     // exit(1);
 
     SamplesTestResult(passed);

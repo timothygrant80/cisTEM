@@ -1,9 +1,4 @@
 #include "core_headers.h"
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayofRefinementResults);
-WX_DEFINE_OBJARRAY(ArrayofClassRefinementResults);
-WX_DEFINE_OBJARRAY(ArrayofRefinements);
-WX_DEFINE_OBJARRAY(ArrayofShortRefinementInfos);
 
 RefinementResult::RefinementResult( ) {
     position_in_stack                  = -1;
@@ -80,7 +75,7 @@ ShortRefinementInfo::ShortRefinementInfo( ) {
 
     refinement_id               = -1;
     refinement_package_asset_id = -1;
-    name                        = wxEmptyString;
+    name                        = std::string();
     number_of_particles         = 0;
     number_of_classes           = 0;
 }
@@ -97,17 +92,17 @@ ShortRefinementInfo& ShortRefinementInfo::operator=(const Refinement* other_refi
     number_of_particles         = other_refinement->number_of_particles;
     number_of_classes           = other_refinement->number_of_classes;
 
-    average_occupancy.Clear( );
-    reconstructed_volume_asset_ids.Clear( );
-    estimated_resolution.Clear( );
+    average_occupancy.clear( );
+    reconstructed_volume_asset_ids.clear( );
+    estimated_resolution.clear( );
 
     for ( int counter = 0; counter < number_of_classes; counter++ ) {
-        average_occupancy.Add(other_refinement->class_refinement_results[counter].average_occupancy);
-        reconstructed_volume_asset_ids.Add(other_refinement->class_refinement_results[counter].reconstructed_volume_asset_id);
+        average_occupancy.push_back(other_refinement->class_refinement_results[counter].average_occupancy);
+        reconstructed_volume_asset_ids.push_back(other_refinement->class_refinement_results[counter].reconstructed_volume_asset_id);
         if ( other_refinement->resolution_statistics_are_generated == true )
-            estimated_resolution.Add(0.0f);
+            estimated_resolution.push_back(0.0f);
         else
-            estimated_resolution.Add(other_refinement->class_refinement_results[counter].class_resolution_statistics.ReturnEstimatedResolution( ));
+            estimated_resolution.push_back(other_refinement->class_refinement_results[counter].class_resolution_statistics.ReturnEstimatedResolution( ));
     }
 
     return *this;
@@ -118,7 +113,7 @@ Refinement::Refinement( ) {
     refinement_package_asset_id         = -1;
     name                                = "";
     resolution_statistics_are_generated = true;
-    datetime_of_run                     = wxDateTime::Now( );
+    datetime_of_run                     = DateTime::Now( );
     starting_refinement_id              = -1;
     number_of_particles                 = 0;
     number_of_classes                   = 0;
@@ -143,7 +138,7 @@ long Refinement::ReturnNumberOfActiveParticlesInFirstClass( ) {
     return number_active;
 }
 
-void Refinement::FillAngularDistributionHistogram(wxString wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram& histogram_to_fill) {
+void Refinement::FillAngularDistributionHistogram(std::string wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram& histogram_to_fill) {
     long particle_counter;
     int  symmetry_counter;
     // for symmetry;
@@ -199,11 +194,11 @@ void Refinement::FillAngularDistributionHistogram(wxString wanted_symmetry, int 
     }
 }
 
-ArrayofAngularDistributionHistograms Refinement::ReturnAngularDistributions(wxString desired_symmetry) {
+ArrayofAngularDistributionHistograms Refinement::ReturnAngularDistributions(std::string desired_symmetry) {
     ArrayofAngularDistributionHistograms all_histograms;
     AngularDistributionHistogram         blank;
 
-    all_histograms.Add(blank, number_of_classes);
+    all_histograms.insert(all_histograms.end( ), number_of_classes, blank);
 
     for ( int class_counter = 0; class_counter < number_of_classes; class_counter++ ) {
         FillAngularDistributionHistogram(desired_symmetry, class_counter, 18, 72, all_histograms[class_counter]);
@@ -246,7 +241,7 @@ int Refinement::ReturnClassWithHighestOccupanyForGivenParticle(long wanted_parti
     return best_class;
 }
 
-void Refinement::WriteSingleClassFrealignParameterFile(wxString filename, int wanted_class, float percent_used_overide, float sigma_override) {
+void Refinement::WriteSingleClassFrealignParameterFile(std::string filename, int wanted_class, float percent_used_overide, float sigma_override) {
     float output_parameters[17];
     float parameter_average[17];
     float temp_float;
@@ -307,12 +302,12 @@ void Refinement::WriteSingleClassFrealignParameterFile(wxString filename, int wa
     }
 
     my_output_par_file->WriteLine(parameter_average, true);
-    my_output_par_file->WriteCommentLine("C  Total particles included, overall score, average occupancy " + wxString::Format("%11li %10.6f %10.6f", number_of_particles, parameter_average[15], parameter_average[12]));
+    my_output_par_file->WriteCommentLine("C  Total particles included, overall score, average occupancy " + Format("%11li %10.6f %10.6f", number_of_particles, parameter_average[15], parameter_average[12]));
 
     delete my_output_par_file;
 }
 
-void Refinement::WriteSingleClasscisTEMStarFile(wxString filename, int wanted_class, float percent_used_overide, float sigma_override, bool write_binary_file) {
+void Refinement::WriteSingleClasscisTEMStarFile(std::string filename, int wanted_class, float percent_used_overide, float sigma_override, bool write_binary_file) {
     long  particle_counter;
     float temp_float;
 
@@ -387,52 +382,52 @@ void Refinement::WriteSingleClasscisTEMStarFile(wxString filename, int wanted_cl
         output_params.WriteTocisTEMBinaryFile(filename);
 }
 
-wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide, float sigma_override) {
+std::vector<std::string> Refinement::WriteFrealignParameterFiles(std::string base_filename, float percent_used_overide, float sigma_override) {
     MyDebugAssertTrue(number_of_classes > 0, "Number of classes is not greater than 0!")
-            wxArrayString output_filenames;
-    wxString              current_filename;
+            std::vector<std::string> output_filenames;
+    std::string              current_filename;
 
     int class_counter;
 
     for ( class_counter = 0; class_counter < number_of_classes; class_counter++ ) {
-        current_filename = base_filename + wxString::Format("_%li_%i.par", refinement_id, class_counter + 1);
-        output_filenames.Add(current_filename);
+        current_filename = base_filename + Format("_%li_%i.par", refinement_id, class_counter + 1);
+        output_filenames.push_back(current_filename);
         WriteSingleClassFrealignParameterFile(current_filename, class_counter, percent_used_overide, sigma_override);
     }
 
     return output_filenames;
 }
 
-wxArrayString Refinement::WritecisTEMStarFiles(wxString base_filename, float percent_used_overide, float sigma_override, bool write_binary_files) {
+std::vector<std::string> Refinement::WritecisTEMStarFiles(std::string base_filename, float percent_used_overide, float sigma_override, bool write_binary_files) {
     MyDebugAssertTrue(number_of_classes > 0, "Number of classes is not greater than 0!")
-            wxArrayString output_filenames;
-    wxString              current_filename;
+            std::vector<std::string> output_filenames;
+    std::string              current_filename;
 
     int class_counter;
 
     for ( class_counter = 0; class_counter < number_of_classes; class_counter++ ) {
         if ( write_binary_files == false )
-            current_filename = base_filename + wxString::Format("_%li_%i.star", refinement_id, class_counter + 1);
+            current_filename = base_filename + Format("_%li_%i.star", refinement_id, class_counter + 1);
         else
-            current_filename = base_filename + wxString::Format("_%li_%i.cistem", refinement_id, class_counter + 1);
+            current_filename = base_filename + Format("_%li_%i.cistem", refinement_id, class_counter + 1);
 
-        output_filenames.Add(current_filename);
+        output_filenames.push_back(current_filename);
         WriteSingleClasscisTEMStarFile(current_filename, class_counter, percent_used_overide, sigma_override, write_binary_files);
     }
 
     return output_filenames;
 }
 
-wxArrayString Refinement::WriteResolutionStatistics(wxString base_filename, float pssnr_division_factor) {
+std::vector<std::string> Refinement::WriteResolutionStatistics(std::string base_filename, float pssnr_division_factor) {
     NumericTextFile* current_plot;
     int              class_counter;
 
-    wxString      current_filename;
-    wxArrayString output_filenames;
+    std::string      current_filename;
+    std::vector<std::string> output_filenames;
 
     for ( class_counter = 0; class_counter < number_of_classes; class_counter++ ) {
-        current_filename = base_filename + wxString::Format("_%li_%i.txt", refinement_id, class_counter + 1);
-        output_filenames.Add(current_filename);
+        current_filename = base_filename + Format("_%li_%i.txt", refinement_id, class_counter + 1);
+        output_filenames.push_back(current_filename);
 
         current_plot = new NumericTextFile(current_filename, OPEN_TO_WRITE, 7);
         class_refinement_results[class_counter].class_resolution_statistics.WriteStatisticsToFile(*current_plot, pssnr_division_factor);
@@ -446,19 +441,19 @@ void Refinement::SizeAndFillWithEmpty(long wanted_number_of_particles, int wante
     ClassRefinementResults junk_class_results;
     RefinementResult       junk_result;
 
-    //wxPrintf("Allocating for %i classes and %li particles\n", wanted_number_of_classes, wanted_number_of_particles);
+    //Printf("Allocating for %i classes and %li particles\n", wanted_number_of_classes, wanted_number_of_particles);
     number_of_classes   = wanted_number_of_classes;
     number_of_particles = wanted_number_of_particles;
 
-    reference_volume_ids.Clear( );
-    reference_volume_ids.Add(-1, number_of_classes);
+    reference_volume_ids.clear( );
+    reference_volume_ids.insert(reference_volume_ids.end( ), number_of_classes, -1);
 
-    //class_refinement_results.Alloc(number_of_classes);
-    class_refinement_results.Add(junk_class_results, number_of_classes);
+    //class_refinement_results.reserve(number_of_classes);
+    class_refinement_results.insert(class_refinement_results.end( ), number_of_classes, junk_class_results);
 
     for ( int class_counter = 0; class_counter < number_of_classes; class_counter++ ) {
-        //class_refinement_results[class_counter].particle_refinement_results.Alloc(number_of_particles);
-        class_refinement_results[class_counter].particle_refinement_results.Add(junk_result, number_of_particles);
+        //class_refinement_results[class_counter].particle_refinement_results.reserve(number_of_particles);
+        class_refinement_results[class_counter].particle_refinement_results.insert(class_refinement_results[class_counter].particle_refinement_results.end( ), number_of_particles, junk_result);
     }
 }
 
@@ -474,11 +469,11 @@ float Refinement::ReturnChangeInAverageOccupancy(Refinement& other_refinement) {
     return change_in_average_occupancy; // / float(number_of_classes);
 }
 
-wxArrayFloat Refinement::UpdatePSSNR( ) {
-    wxArrayFloat average_occupancies;
+std::vector<float> Refinement::UpdatePSSNR( ) {
+    std::vector<float> average_occupancies;
 
     if ( this->number_of_classes > 1 ) {
-        average_occupancies.Add(0.0, this->number_of_classes);
+        average_occupancies.insert(average_occupancies.end( ), this->number_of_classes, 0.0);
 
         long  number_of_active_images = 0;
         float sum_ave_occ             = 0.0f;
@@ -517,7 +512,7 @@ wxArrayFloat Refinement::UpdatePSSNR( ) {
         }
     }
     else
-        average_occupancies.Add(100.00);
+        average_occupancies.push_back(100.00);
 
     return average_occupancies;
 }

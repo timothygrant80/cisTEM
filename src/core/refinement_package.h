@@ -20,7 +20,7 @@ class RefinementPackageParticleInfo {
     int   assigned_subset;
 };
 
-WX_DECLARE_OBJARRAY(RefinementPackageParticleInfo, ArrayOfRefinmentPackageParticleInfos);
+typedef std::vector<RefinementPackageParticleInfo> ArrayOfRefinmentPackageParticleInfos;
 
 class RefinementPackage {
 
@@ -29,14 +29,14 @@ class RefinementPackage {
     ~RefinementPackage( );
 
     long     asset_id;
-    wxString stack_filename;
-    wxString name;
+    std::string stack_filename;
+    std::string name;
     int      stack_box_size;
     float    output_pixel_size;
 
     int number_of_classes;
 
-    wxString symmetry;
+    std::string symmetry;
     double   estimated_particle_size_in_angstroms;
     double   estimated_particle_weight_in_kda;
     double   lowest_resolution_of_intial_parameter_generated_3ds;
@@ -46,9 +46,9 @@ class RefinementPackage {
     int  number_of_run_refinments;
     long last_refinment_id;
 
-    wxArrayLong references_for_next_refinement;
-    wxArrayLong refinement_ids;
-    wxArrayLong classification_ids;
+    std::vector<long> references_for_next_refinement;
+    std::vector<long> refinement_ids;
+    std::vector<long> classification_ids;
 
     ArrayOfRefinmentPackageParticleInfos contained_particles;
 
@@ -57,4 +57,4 @@ class RefinementPackage {
     long ReturnLastRefinementID( );
 };
 
-WX_DECLARE_OBJARRAY(RefinementPackage, ArrayOfRefinementPackages);
+typedef std::vector<RefinementPackage> ArrayOfRefinementPackages;

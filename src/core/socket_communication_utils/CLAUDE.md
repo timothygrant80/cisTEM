@@ -136,8 +136,8 @@ Core data structures and serialization methods:
 ### socket_communicator.h / socket_communicator.cpp
 Socket management and monitoring:
 - `SocketCommunicator` - Base class for socket-based communication
-- `SocketServerThread` - Accepts incoming connections
-- `SocketClientMonitorThread` - Monitors active connections
+- `SocketServerThread` - Accepts incoming connections (a std::thread over `TcpServer`)
+- `SocketClientMonitorThread` - Monitors active connections (a std::thread polling `TcpSocket`s and posting results to the owner's `EventLoop` with `CallAfter`)
 - Virtual handlers for all socket events (must be overridden)
 
 ### socket_codes.h
@@ -164,14 +164,14 @@ Management of multiple run profiles:
 ### Current Implementation (Legacy)
 Manual byte-by-byte encoding:
 ```cpp
-// Example: Encoding wxString
-for (counter = 0; counter < str.Length(); counter++) {
-    transfer_buffer[byte_counter] = str.GetChar(counter);
+// Example: Encoding a std::string
+for (counter = 0; counter < str.length(); counter++) {
+    transfer_buffer[byte_counter] = str[counter];
     byte_counter++;
 }
 ```
 
-**Character Encoding:** wxString uses `GetChar(i)` for character-by-character access, NOT UTF-8 conversion.
+**Character Encoding:** strings are copied byte by byte (`std::string`), no re-encoding.
 
 **Type Descriptors:** Each encoded value includes type information from `cistem::fundamental_type::Enum`.
 
@@ -214,11 +214,11 @@ The send method contains the complete encoding specification:
  * @return true on success, false on failure
  *
  * @note Encoding order:
- * 1. my_profile.executable_name (wxString → text_t)
- * 2. my_profile.gui_address (wxString → text_t)
+ * 1. my_profile.executable_name (std::string → text_t)
+ * 2. my_profile.gui_address (std::string → text_t)
  * 3. my_profile.number_of_run_commands (long → long_t)
  * 4. For each run_command [i=0..number_of_run_commands-1]:
- *    a. run_commands[i].command_to_run (wxString → text_t)
+ *    a. run_commands[i].command_to_run (std::string → text_t)
  *    b. run_commands[i].number_of_copies (int → integer_t)
  * 5. For each job [j=0..number_of_jobs-1]:
  *    - See RunJob::SendJob() for nested encoding
@@ -226,7 +226,7 @@ The send method contains the complete encoding specification:
  * @see ReceiveJobPackage() for decoder counterpart
  * @see RunJob::SendJob() for nested job encoding specification
  */
-bool JobPackage::SendJobPackage(wxSocketBase* socket);
+bool JobPackage::SendJobPackage(TcpSocket* socket);
 ```
 
 #### Pattern: Receive Method (Reference Only)
@@ -240,7 +240,7 @@ The receive method simply references the send method:
  *
  * @see SendJobPackage() for encoding order specification
  */
-bool JobPackage::ReceiveJobPackage(wxSocketBase* socket);
+bool JobPackage::ReceiveJobPackage(TcpSocket* socket);
 ```
 
 ### Documentation Principles
@@ -280,8 +280,8 @@ bool JobPackage::ReceiveJobPackage(wxSocketBase* socket);
 - **Validate job codes** - prevent cross-job contamination
 
 ### Error Handling
-- Use `SendError(wxString)` to propagate errors to GUI
-- Use `SendInfo(wxString)` for status updates
+- Use `SendError(std::string)` to propagate errors to the controller
+- Use `SendInfo(std::string)` for status updates
 - Clean up sockets on disconnection
 - Shut down gracefully on fatal errors
 

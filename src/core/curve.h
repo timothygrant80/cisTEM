@@ -75,8 +75,8 @@ class Curve {
     void AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add);
 
     void  PrintToStandardOut( );
-    void  WriteToFile(wxString output_filename);
-    void  WriteToFile(wxString output_filename, wxString header_line);
+    void  WriteToFile(std::string output_filename);
+    void  WriteToFile(std::string output_filename, std::string header_line);
     void  CopyFrom(Curve* other_curve);
     void  CopyDataFromArrays(double* x_series, double* y_series, const int wanted_number_of_points);
     void  CopyYValuesFromArray(double* y_series, const int wanted_number_of_points);
@@ -126,4 +126,4 @@ class Curve {
     void SetYToConstant(float wanted_constant);
 };
 
-WX_DECLARE_OBJARRAY(Curve, ArrayofCurves);
+typedef std::vector<Curve> ArrayofCurves;

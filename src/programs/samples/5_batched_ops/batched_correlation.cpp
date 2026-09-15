@@ -15,7 +15,7 @@
 
 // #define DO_EXPLICIT_BROADCAST
 
-void BatchedCorrelationRunner(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+void BatchedCorrelationRunner(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting batched_ops tests:", false);
 
@@ -26,12 +26,12 @@ void BatchedCorrelationRunner(const wxString& hiv_image_80x80x1_filename, wxStri
     return;
 }
 
-bool DoBatchedCorrelationTest(const wxString& hiv_images_80x80x10_filename, wxString& temp_directory) {
+bool DoBatchedCorrelationTest(const std::string& hiv_images_80x80x10_filename, std::string& temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;
 
-    MRCFile input_file(hiv_images_80x80x10_filename.ToStdString( ), false);
+    MRCFile input_file(hiv_images_80x80x10_filename, false);
 
     const bool test_mirror = false;
 
@@ -82,7 +82,7 @@ bool DoBatchedCorrelationTest(const wxString& hiv_images_80x80x10_filename, wxSt
     RunBatchedCorrelation(d_ref_img, d_seq_rotation_cache, n_search_images, 1, test_mirror, correlation_results_ground_truth.data( ), is_for_ground_truth);
 
     for ( auto cc : correlation_results_ground_truth ) {
-        wxPrintf("%f\n", cc);
+        Printf("%f\n", cc);
     }
 
     is_for_ground_truth = false;
@@ -99,9 +99,9 @@ bool DoBatchedCorrelationTest(const wxString& hiv_images_80x80x10_filename, wxSt
 
         // Because we added less and less noise, the cc max will be at the largest index in each batch
         int counter = 0;
-        wxPrintf("\n");
+        Printf("\n");
         for ( int cc = wanted_batch_size - 1; cc < correlation_results.size( ); cc += wanted_batch_size ) {
-            wxPrintf("%i %i %f\n", wanted_batch_size, cc, correlation_results_ground_truth[cc] - correlation_results[counter]);
+            Printf("%i %i %f\n", wanted_batch_size, cc, correlation_results_ground_truth[cc] - correlation_results[counter]);
             passed = passed && (RelativeErrorIsLessThanEpsilon(correlation_results_ground_truth[cc], correlation_results[counter]));
             counter++;
         }

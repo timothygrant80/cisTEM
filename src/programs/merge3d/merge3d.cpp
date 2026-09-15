@@ -14,15 +14,15 @@ IMPLEMENT_APP(Merge3DApp)
 // override the DoInteractiveUserInput
 
 void Merge3DApp::DoInteractiveUserInput( ) {
-    wxString output_reconstruction_1;
-    wxString output_reconstruction_2;
-    wxString output_reconstruction_filtered;
-    wxString output_resolution_statistics;
+    std::string output_reconstruction_1;
+    std::string output_reconstruction_2;
+    std::string output_reconstruction_filtered;
+    std::string output_resolution_statistics;
     float    molecular_mass_kDa = 1000.0;
     float    inner_mask_radius  = 0.0;
     float    outer_mask_radius  = 100.0;
-    wxString dump_file_seed_1;
-    wxString dump_file_seed_2;
+    std::string dump_file_seed_1;
+    std::string dump_file_seed_2;
     int      number_of_dump_files;
 
     UserInput* my_input = new UserInput("Merge3D", 1.01);
@@ -42,22 +42,22 @@ void Merge3DApp::DoInteractiveUserInput( ) {
 
     int      class_number_for_gui        = 1;
     bool     save_orthogonal_views_image = false;
-    wxString orthogonal_views_filename   = "";
+    std::string orthogonal_views_filename   = "";
     float    weiner_nominator            = 1.0f;
     float    alignment_res               = 5.0f;
     //	my_current_job.Reset(14);
-    my_current_job.ManualSetArguments("ttttfffttibtiff", output_reconstruction_1.ToUTF8( ).data( ),
-                                      output_reconstruction_2.ToUTF8( ).data( ),
-                                      output_reconstruction_filtered.ToUTF8( ).data( ),
-                                      output_resolution_statistics.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttttfffttibtiff", output_reconstruction_1.c_str(),
+                                      output_reconstruction_2.c_str(),
+                                      output_reconstruction_filtered.c_str(),
+                                      output_resolution_statistics.c_str(),
                                       molecular_mass_kDa,
                                       inner_mask_radius,
                                       outer_mask_radius,
-                                      dump_file_seed_1.ToUTF8( ).data( ),
-                                      dump_file_seed_2.ToUTF8( ).data( ),
+                                      dump_file_seed_1.c_str(),
+                                      dump_file_seed_2.c_str(),
                                       class_number_for_gui,
                                       save_orthogonal_views_image,
-                                      orthogonal_views_filename.ToUTF8( ).data( ),
+                                      orthogonal_views_filename.c_str(),
                                       number_of_dump_files,
                                       weiner_nominator,
                                       alignment_res);
@@ -66,18 +66,18 @@ void Merge3DApp::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool Merge3DApp::DoCalculation( ) {
-    wxString output_reconstruction_1        = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_reconstruction_2        = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString output_reconstruction_filtered = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString output_resolution_statistics   = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string output_reconstruction_1        = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_reconstruction_2        = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string output_reconstruction_filtered = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string output_resolution_statistics   = my_current_job.arguments[3].ReturnStringArgument( );
     float    molecular_mass_kDa             = my_current_job.arguments[4].ReturnFloatArgument( );
     float    inner_mask_radius              = my_current_job.arguments[5].ReturnFloatArgument( );
     float    outer_mask_radius              = my_current_job.arguments[6].ReturnFloatArgument( );
-    wxString dump_file_seed_1               = my_current_job.arguments[7].ReturnStringArgument( );
-    wxString dump_file_seed_2               = my_current_job.arguments[8].ReturnStringArgument( );
+    std::string dump_file_seed_1               = my_current_job.arguments[7].ReturnStringArgument( );
+    std::string dump_file_seed_2               = my_current_job.arguments[8].ReturnStringArgument( );
     int      class_number_for_gui           = my_current_job.arguments[9].ReturnIntegerArgument( );
     bool     save_orthogonal_views_image    = my_current_job.arguments[10].ReturnBoolArgument( );
-    wxString orthogonal_views_filename      = my_current_job.arguments[11].ReturnStringArgument( );
+    std::string orthogonal_views_filename      = my_current_job.arguments[11].ReturnStringArgument( );
     int      number_of_dump_files           = my_current_job.arguments[12].ReturnIntegerArgument( );
     float    weiner_nominator               = my_current_job.arguments[13].ReturnFloatArgument( );
     // FOR LOCRES HACK..
@@ -110,38 +110,38 @@ bool Merge3DApp::DoCalculation( ) {
     float      particle_area_in_pixels;
     float      scale;
     float      binning_factor;
-    wxString   my_symmetry;
-    wxDateTime my_time_in;
-    wxFileName dump_file_name = wxFileName::FileName(dump_file_seed_1);
-    wxString   extension      = dump_file_name.GetExt( );
-    wxString   dump_file;
+    std::string   my_symmetry;
+    DateTime my_time_in;
+    std::filesystem::path dump_file_name = std::filesystem::path(dump_file_seed_1);
+    std::string   extension      = ReturnFileExtension(dump_file_name.string());
+    std::string   dump_file;
     bool       insert_even;
     bool       center_mass;
     bool       crop_images;
 
     NumericTextFile output_statistics_file(output_resolution_statistics, OPEN_TO_WRITE, 7);
 
-    my_time_in = wxDateTime::Now( );
-    output_statistics_file.WriteCommentLine("C Merge3D run date and time:               " + my_time_in.FormatISOCombined(' '));
-    output_statistics_file.WriteCommentLine("C Output reconstruction 1:                 " + output_reconstruction_1);
-    output_statistics_file.WriteCommentLine("C Output reconstruction 2:                 " + output_reconstruction_2);
-    output_statistics_file.WriteCommentLine("C Output filtered reconstruction:          " + output_reconstruction_filtered);
-    output_statistics_file.WriteCommentLine("C Output resolution statistics:            " + output_resolution_statistics);
-    output_statistics_file.WriteCommentLine("C Molecular mass of particle (kDa):        " + wxString::Format("%f", molecular_mass_kDa));
-    output_statistics_file.WriteCommentLine("C Inner mask radius (A):                   " + wxString::Format("%f", inner_mask_radius));
-    output_statistics_file.WriteCommentLine("C Outer mask radius (A):                   " + wxString::Format("%f", outer_mask_radius));
-    output_statistics_file.WriteCommentLine("C Seed for dump files for odd particles:   " + dump_file_seed_1);
-    output_statistics_file.WriteCommentLine("C Seed for dump files for even particles:  " + dump_file_seed_2);
+    my_time_in = DateTime::Now( );
+    output_statistics_file.WriteCommentLine(("C Merge3D run date and time:               " + my_time_in.FormatISOCombined(' ')).c_str());
+    output_statistics_file.WriteCommentLine(("C Output reconstruction 1:                 " + output_reconstruction_1).c_str());
+    output_statistics_file.WriteCommentLine(("C Output reconstruction 2:                 " + output_reconstruction_2).c_str());
+    output_statistics_file.WriteCommentLine(("C Output filtered reconstruction:          " + output_reconstruction_filtered).c_str());
+    output_statistics_file.WriteCommentLine(("C Output resolution statistics:            " + output_resolution_statistics).c_str());
+    output_statistics_file.WriteCommentLine(("C Molecular mass of particle (kDa):        " + Format("%f", molecular_mass_kDa)).c_str());
+    output_statistics_file.WriteCommentLine(("C Inner mask radius (A):                   " + Format("%f", inner_mask_radius)).c_str());
+    output_statistics_file.WriteCommentLine(("C Outer mask radius (A):                   " + Format("%f", outer_mask_radius)).c_str());
+    output_statistics_file.WriteCommentLine(("C Seed for dump files for odd particles:   " + dump_file_seed_1).c_str());
+    output_statistics_file.WriteCommentLine(("C Seed for dump files for even particles:  " + dump_file_seed_2).c_str());
     output_statistics_file.WriteCommentLine("C");
 
-    dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", 1) + "." + extension;
+    dump_file = StripExtension(dump_file_seed_1) + Format("%i", 1) + "." + extension;
 
     if ( (is_running_locally && DoesFileExist(dump_file)) || (! is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
     {
         //
     }
     else {
-        SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+        SendError(Format("Error: Dump file %s not found\n", dump_file));
         exit(-1);
     }
 
@@ -149,42 +149,42 @@ bool Merge3DApp::DoCalculation( ) {
     temp_reconstruction.ReadArrayHeader(dump_file, logical_x_dimension, logical_y_dimension, logical_z_dimension,
                                         original_x_dimension, original_y_dimension, original_z_dimension, images_processed, pixel_size, original_pixel_size,
                                         average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry, insert_even, center_mass);
-    wxPrintf("\nReconstruction dimensions = %i, %i, %i, pixel size = %f, symmetry = %s\n", logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, my_symmetry);
+    Printf("\nReconstruction dimensions = %i, %i, %i, pixel size = %f, symmetry = %s\n", logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, my_symmetry);
     temp_reconstruction.Init(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion);
     Reconstruct3D my_reconstruction_1(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry);
     Reconstruct3D my_reconstruction_2(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry);
 
-    wxPrintf("\nReading reconstruction arrays...\n\n");
+    Printf("\nReading reconstruction arrays...\n\n");
 
     for ( count = 1; count <= number_of_dump_files; count++ ) {
-        dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", count) + "." + extension;
-        wxPrintf("%s\n", dump_file);
+        dump_file = StripExtension(dump_file_seed_1) + Format("%i", count) + "." + extension;
+        Printf("%s\n", dump_file);
         if ( (is_running_locally && DoesFileExist(dump_file)) || (! is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
         {
             temp_reconstruction.ReadArrays(dump_file);
             my_reconstruction_1 += temp_reconstruction;
         }
         else {
-            SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+            SendError(Format("Error: Dump file %s not found\n", dump_file));
             exit(-1);
         }
     }
 
     for ( count = 1; count <= number_of_dump_files; count++ ) {
-        dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
-        wxPrintf("%s\n", dump_file);
+        dump_file = StripExtension(dump_file_seed_2) + Format("%i", count) + "." + extension;
+        Printf("%s\n", dump_file);
         if ( (is_running_locally && DoesFileExist(dump_file)) || (! is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
         {
             temp_reconstruction.ReadArrays(dump_file);
             my_reconstruction_2 += temp_reconstruction;
         }
         else {
-            SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+            SendError(Format("Error: Dump file %s not found\n", dump_file));
             exit(-1);
         }
     }
 
-    wxPrintf("\nFinished reading arrays\n");
+    Printf("\nFinished reading arrays\n");
 
     output_3d1.FinalizeSimple(my_reconstruction_1, original_x_dimension, original_pixel_size, pixel_size,
                               inner_mask_radius, outer_mask_radius, mask_falloff, output_reconstruction_1);
@@ -200,7 +200,7 @@ bool Merge3DApp::DoCalculation( ) {
                               center_mass, output_reconstruction_filtered, output_statistics_file, resolution_statistics, weiner_nominator);
 
     //float orientation_distribution_efficiency = output_3d.ComputeOrientationDistributionEfficiency(my_reconstruction_1);
-    //SendInfo(wxString::Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));
+    //SendInfo(Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));
 
     // LOCAL RESOLUTION HACK - REMOVE!!
 
@@ -276,7 +276,7 @@ bool Merge3DApp::DoCalculation( ) {
             box_size = 18.0f / original_pixel_size;
             //if (box_size < 15) box_size = 15;
 
-            wxPrintf("Will estimate local resolution using a box size of %i\n", box_size);
+            Printf("Will estimate local resolution using a box size of %i\n", box_size);
             const float threshold_snr        = 1;
             const float threshold_confidence = 2.0;
             float       fixed_fsc_threshold  = .9;
@@ -380,7 +380,7 @@ bool Merge3DApp::DoCalculation( ) {
                     }
                 } // end omp
 
-                local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/local_res_%i", int(current_res)).ToStdString( ), 1, local_resolution_volume.logical_z_dimension);
+                local_resolution_volume.QuickAndDirtyWriteSlices(Format("/tmp/local_res_%i", int(current_res)), 1, local_resolution_volume.logical_z_dimension);
 
                 // fill in gaps..
 
@@ -438,7 +438,7 @@ bool Merge3DApp::DoCalculation( ) {
             }
 
             average_resolution /= voxels_in_the_mask;
-            wxPrintf("Local high / Measured Average / Local Average = %.2f / %.2f / %.2f\n", highest_resolution, measured_resolution, average_resolution);
+            Printf("Local high / Measured Average / Local Average = %.2f / %.2f / %.2f\n", highest_resolution, measured_resolution, average_resolution);
 
             if ( highest_resolution != 8.0f && measured_resolution != 8.0f ) {
                 float scaler = (8.0f - measured_resolution) / (8.0f - highest_resolution);
@@ -525,7 +525,7 @@ bool Merge3DApp::DoCalculation( ) {
             output_3d.density_map->CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
         }
 
-        output_3d.density_map->WriteSlicesAndFillHeader(output_reconstruction_filtered.ToStdString( ), original_pixel_size);
+        output_3d.density_map->WriteSlicesAndFillHeader(output_reconstruction_filtered, original_pixel_size);
     }
     /////////////////////// END HACK..
 
@@ -533,13 +533,13 @@ bool Merge3DApp::DoCalculation( ) {
         Image orth_image;
         orth_image.Allocate(output_3d.density_map->logical_x_dimension * 3, output_3d.density_map->logical_y_dimension * 2, 1, true);
         output_3d.density_map->CreateOrthogonalProjectionsImage(&orth_image);
-        orth_image.QuickAndDirtyWriteSlice(orthogonal_views_filename.ToStdString( ), 1);
+        orth_image.QuickAndDirtyWriteSlice(orthogonal_views_filename, 1);
     }
 
     if ( is_running_locally == false ) {
         int number_of_points = resolution_statistics->FSC.NumberOfPoints( );
         int array_size       = (number_of_points * 5) + 2;
-        wxPrintf("number of points = %i, class is %i, array size = %i\n", number_of_points, class_number_for_gui, array_size);
+        Printf("number of points = %i, class is %i, array size = %i\n", number_of_points, class_number_for_gui, array_size);
 
         float* statistics = new float[array_size];
         resolution_statistics->WriteStatisticsToFloatArray(statistics, class_number_for_gui);
@@ -547,7 +547,7 @@ bool Merge3DApp::DoCalculation( ) {
         delete[] statistics;
     }
 
-    wxPrintf("\nMerge3D: Normal termination\n\n");
+    Printf("\nMerge3D: Normal termination\n\n");
 
     delete resolution_statistics;
     return true;

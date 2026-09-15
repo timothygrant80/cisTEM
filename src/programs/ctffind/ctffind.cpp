@@ -174,8 +174,8 @@ void CtffindApp::DoInteractiveUserInput( ) {
     bool        resample_if_pixel_too_small        = false;
     bool        movie_is_gain_corrected            = false;
     bool        movie_is_dark_corrected;
-    wxString    dark_filename;
-    wxString    gain_filename                      = "/dev/null";
+    std::string    dark_filename;
+    std::string    gain_filename                      = "/dev/null";
     bool        correct_movie_mag_distortion       = false;
     float       movie_mag_distortion_angle         = 0.0;
     float       movie_mag_distortion_major_scale   = 1.0;
@@ -218,7 +218,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
         dark_filename               = "";
 
         char     buf[4096];
-        wxString my_string;
+        std::string my_string;
 
         // Line 1
         std::cin.getline(buf, 4096);
@@ -231,15 +231,15 @@ void CtffindApp::DoInteractiveUserInput( ) {
         // Line 3
         std::cin.getline(buf, 4096);
         my_string = buf;
-        wxStringTokenizer tokenizer(my_string, ",");
-        if ( tokenizer.CountTokens( ) != 5 ) {
-            SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 3 of input\n", tokenizer.CountTokens( ), 5));
+        std::vector<std::string> tokens = SplitString(my_string, ",", false);
+        if ( int(tokens.size( )) != 5 ) {
+            SendError(Format("Bad number of arguments (%i, expected %i) in line 3 of input\n", int(tokens.size( )), 5));
             exit(-1);
         }
         token_counter = -1;
-        while ( tokenizer.HasMoreTokens( ) ) {
+        for ( size_t token_index = 0; token_index < tokens.size( ); token_index++ ) {
             token_counter++;
-            tokenizer.GetNextToken( ).ToDouble(&temp_double);
+            StringToDouble(tokens[token_index], temp_double);
             switch ( token_counter ) {
                 case 0:
                     spherical_aberration = float(temp_double);
@@ -257,7 +257,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
                     dstep = float(temp_double);
                     break;
                 default:
-                    wxPrintf("Ooops - bad token number: %li\n", tokenizer.GetPosition( ));
+                    Printf("Ooops - bad token number: %li\n", long(token_index));
                     MyDebugAssertTrue(false, "oops\n");
             }
         }
@@ -266,41 +266,41 @@ void CtffindApp::DoInteractiveUserInput( ) {
         // Line 4
         std::cin.getline(buf, 4096);
         my_string = buf;
-        tokenizer.SetString(my_string, ",");
-        if ( tokenizer.CountTokens( ) != 7 ) {
-            SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 4 of input\n", tokenizer.CountTokens( ), 7));
+        tokens = SplitString(my_string, ",", false);
+        if ( int(tokens.size( )) != 7 ) {
+            SendError(Format("Bad number of arguments (%i, expected %i) in line 4 of input\n", int(tokens.size( )), 7));
             exit(-1);
         }
         token_counter = -1;
-        while ( tokenizer.HasMoreTokens( ) ) {
+        for ( size_t token_index = 0; token_index < tokens.size( ); token_index++ ) {
             token_counter++;
             switch ( token_counter ) {
                 case 0:
-                    tokenizer.GetNextToken( ).ToLong(&temp_long);
+                    StringToLong(tokens[token_index], temp_long);
                     box_size = int(temp_long);
                     break;
                 case 1:
-                    tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                    StringToDouble(tokens[token_index], temp_double);
                     minimum_resolution = float(temp_double);
                     break;
                 case 2:
-                    tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                    StringToDouble(tokens[token_index], temp_double);
                     maximum_resolution = float(temp_double);
                     break;
                 case 3:
-                    tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                    StringToDouble(tokens[token_index], temp_double);
                     minimum_defocus = float(temp_double);
                     break;
                 case 4:
-                    tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                    StringToDouble(tokens[token_index], temp_double);
                     maximum_defocus = float(temp_double);
                     break;
                 case 5:
-                    tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                    StringToDouble(tokens[token_index], temp_double);
                     defocus_search_step = float(temp_double);
                     break;
                 case 6:
-                    tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                    StringToDouble(tokens[token_index], temp_double);
                     astigmatism_tolerance = float(temp_double);
                     break;
             }
@@ -312,8 +312,8 @@ void CtffindApp::DoInteractiveUserInput( ) {
 
         // Output for old-school users
         if ( is_running_locally ) {
-            wxPrintf("\n CS[mm], HT[kV], AmpCnst, XMAG, DStep[um]\n");
-            wxPrintf("%5.1f%9.1f%8.2f%10.1f%9.3f\n\n", spherical_aberration, acceleration_voltage, amplitude_contrast, xmag, dstep);
+            Printf("\n CS[mm], HT[kV], AmpCnst, XMAG, DStep[um]\n");
+            Printf("%5.1f%9.1f%8.2f%10.1f%9.3f\n\n", spherical_aberration, acceleration_voltage, amplitude_contrast, xmag, dstep);
         }
 
         // Extra lines of input
@@ -321,15 +321,17 @@ void CtffindApp::DoInteractiveUserInput( ) {
             // Line 5
             std::cin.getline(buf, 4096);
             my_string = buf;
-            tokenizer.SetString(my_string, ",");
-            if ( tokenizer.CountTokens( ) != 2 ) {
-                SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 5 of input\n", tokenizer.CountTokens( ), 2));
+            tokens = SplitString(my_string, ",", false);
+            if ( int(tokens.size( )) != 2 ) {
+                SendError(Format("Bad number of arguments (%i, expected %i) in line 5 of input\n", int(tokens.size( )), 2));
                 exit(-1);
             }
-            while ( tokenizer.HasMoreTokens( ) ) {
-                switch ( tokenizer.GetPosition( ) ) {
+            // The string splitter this replaces was asked for its position in the string rather than the
+            // index of the token, so cases 1 and above could never be reached; switch on the token index.
+            for ( size_t token_index = 0; token_index < tokens.size( ); token_index++ ) {
+                switch ( token_index ) {
                     case 0:
-                        tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                        StringToDouble(tokens[token_index], temp_double);
                         if ( int(temp_double) != 0 ) {
                             input_is_a_movie = true;
                         }
@@ -338,7 +340,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
                         }
                         break;
                     case 1:
-                        tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                        StringToDouble(tokens[token_index], temp_double);
                         number_of_frames_to_average = 1;
                         if ( input_is_a_movie ) {
                             number_of_frames_to_average = int(temp_double);
@@ -350,15 +352,16 @@ void CtffindApp::DoInteractiveUserInput( ) {
             // Line 6
             std::cin.getline(buf, 4096);
             my_string = buf;
-            tokenizer.SetString(my_string, ",");
-            if ( tokenizer.CountTokens( ) != 4 ) {
-                SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 6 of input\n", tokenizer.CountTokens( ), 4));
+            tokens = SplitString(my_string, ",", false);
+            if ( int(tokens.size( )) != 4 ) {
+                SendError(Format("Bad number of arguments (%i, expected %i) in line 6 of input\n", int(tokens.size( )), 4));
                 exit(-1);
             }
-            while ( tokenizer.HasMoreTokens( ) ) {
-                switch ( tokenizer.GetPosition( ) ) {
+            // As above: the token index, not the position in the string, selects the field.
+            for ( size_t token_index = 0; token_index < tokens.size( ); token_index++ ) {
+                switch ( token_index ) {
                     case 0:
-                        tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                        StringToDouble(tokens[token_index], temp_double);
                         if ( int(temp_double) != 0 ) {
                             find_additional_phase_shift = true;
                         }
@@ -367,21 +370,21 @@ void CtffindApp::DoInteractiveUserInput( ) {
                         }
                         break;
                     case 1:
-                        tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                        StringToDouble(tokens[token_index], temp_double);
                         minimum_additional_phase_shift = 0.0;
                         if ( find_additional_phase_shift ) {
                             minimum_additional_phase_shift = float(temp_double);
                         }
                         break;
                     case 2:
-                        tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                        StringToDouble(tokens[token_index], temp_double);
                         maximum_additional_phase_shift = 0.0;
                         if ( find_additional_phase_shift ) {
                             maximum_additional_phase_shift = float(temp_double);
                         }
                         break;
                     case 3:
-                        tokenizer.GetNextToken( ).ToDouble(&temp_double);
+                        StringToDouble(tokens[token_index], temp_double);
                         additional_phase_shift_search_step = 0.0;
                         if ( find_additional_phase_shift ) {
                             additional_phase_shift_search_step = float(temp_double);
@@ -403,7 +406,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
         MRCFile input_file(input_filename, false);
         if ( input_is_a_movie ) {
             if ( input_file.ReturnZSize( ) < number_of_frames_to_average ) {
-                SendError(wxString::Format("Input stack has %i images, so you cannot average %i frames together\n", input_file.ReturnZSize( ), number_of_frames_to_average));
+                SendError(Format("Input stack has %i images, so you cannot average %i frames together\n", input_file.ReturnZSize( ), number_of_frames_to_average));
                 ExitMainLoop( );
             }
         }
@@ -417,7 +420,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
 
         if ( find_additional_phase_shift ) {
             if ( minimum_additional_phase_shift > maximum_additional_phase_shift ) {
-                SendError(wxString::Format("Minimum phase shift (%f) cannot be greater than maximum phase shift (%f)\n", minimum_additional_phase_shift, maximum_additional_phase_shift));
+                SendError(Format("Minimum phase shift (%f) cannot be greater than maximum phase shift (%f)\n", minimum_additional_phase_shift, maximum_additional_phase_shift));
                 ExitMainLoop( );
             }
         }
@@ -630,9 +633,9 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       known_astigmatism_angle,
                                       resample_if_pixel_too_small,
                                       movie_is_gain_corrected,
-                                      gain_filename.ToStdString( ).c_str( ),
+                                      gain_filename.c_str( ),
                                       movie_is_dark_corrected,
-                                      dark_filename.ToStdString( ).c_str( ),
+                                      dark_filename.c_str( ),
                                       correct_movie_mag_distortion,
                                       movie_mag_distortion_angle, //30
                                       movie_mag_distortion_major_scale,
@@ -701,9 +704,9 @@ bool CtffindApp::DoCalculation( ) {
     const float       known_astigmatism_angle            = my_current_job.arguments[22].ReturnFloatArgument( );
     const bool        resample_if_pixel_too_small        = my_current_job.arguments[23].ReturnBoolArgument( );
     const bool        movie_is_gain_corrected            = my_current_job.arguments[24].ReturnBoolArgument( );
-    const wxString    gain_filename                      = my_current_job.arguments[25].ReturnStringArgument( );
+    const std::string    gain_filename                      = my_current_job.arguments[25].ReturnStringArgument( );
     const bool        movie_is_dark_corrected            = my_current_job.arguments[26].ReturnBoolArgument( );
-    const wxString    dark_filename                      = my_current_job.arguments[27].ReturnStringArgument( );
+    const std::string    dark_filename                      = my_current_job.arguments[27].ReturnStringArgument( );
     const bool        correct_movie_mag_distortion       = my_current_job.arguments[28].ReturnBoolArgument( );
     const float       movie_mag_distortion_angle         = my_current_job.arguments[29].ReturnFloatArgument( );
     const float       movie_mag_distortion_major_scale   = my_current_job.arguments[30].ReturnFloatArgument( );
@@ -778,7 +781,7 @@ bool CtffindApp::DoCalculation( ) {
     ImageFile        input_file;
     SpectrumImage*   average_spectrum        = new SpectrumImage( );
     SpectrumImage*   average_spectrum_masked = new SpectrumImage( ); // This will contain a high-pass filtered version to recuce the effect of the high contrast at low frequencies
-    wxString         output_text_fn;
+    std::string         output_text_fn;
     ProgressBar*     my_progress_bar;
     NumericTextFile* output_text;
     NumericTextFile* output_text_avrot;
@@ -841,27 +844,27 @@ bool CtffindApp::DoCalculation( ) {
     // Open the input file
     bool input_file_is_valid = input_file.OpenFile(input_filename, false, false, false, eer_super_res_factor, eer_frames_per_image);
     if ( ! input_file_is_valid ) {
-        SendInfo(wxString::Format("Input movie %s seems to be corrupt. Ctffind results may not be meaningful.\n", input_filename));
+        SendInfo(Format("Input movie %s seems to be corrupt. Ctffind results may not be meaningful.\n", input_filename));
     }
     else {
-        wxPrintf("Input file looks OK, proceeding\n");
+        Printf("Input file looks OK, proceeding\n");
     }
 
     // Some argument checking
     if ( determine_tilt && find_additional_phase_shift ) {
-        SendError(wxString::Format("Error: Finding additional phase shift and determining sample tilt cannot be active at the same time. Terminating."));
+        SendError(Format("Error: Finding additional phase shift and determining sample tilt cannot be active at the same time. Terminating."));
         ExitMainLoop( );
     }
     if ( determine_tilt && (amplitude_spectrum_input || filtered_amplitude_spectrum_input) ) {
-        SendError(wxString::Format("Error: Determining sample tilt cannot be run with either amplitude-spectrum-input or filtered-amplitude-spectrum-input. Terminating."));
+        SendError(Format("Error: Determining sample tilt cannot be run with either amplitude-spectrum-input or filtered-amplitude-spectrum-input. Terminating."));
         DEBUG_ABORT; // THis applies to CLI not GUI
     }
     if ( minimum_resolution < maximum_resolution ) {
-        SendError(wxString::Format("Error: Minimum resolution (%f) higher than maximum resolution (%f). Terminating.", minimum_resolution, maximum_resolution));
+        SendError(Format("Error: Minimum resolution (%f) higher than maximum resolution (%f). Terminating.", minimum_resolution, maximum_resolution));
         ExitMainLoop( );
     }
     if ( minimum_defocus > maximum_defocus ) {
-        SendError(wxString::Format("Minimum defocus must be less than maximum defocus. Terminating."));
+        SendError(Format("Minimum defocus must be less than maximum defocus. Terminating."));
         ExitMainLoop( );
     }
 
@@ -888,7 +891,7 @@ bool CtffindApp::DoCalculation( ) {
         output_text = new NumericTextFile(output_text_fn, OPEN_TO_WRITE, 10);
 
         // Print header to the output text file
-        output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n", ctffind_version.c_str( ), wxDateTime::Now( ).FormatISOCombined(' ').ToStdString( ).c_str( ));
+        output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n", ctffind_version.c_str( ), DateTime::Now( ).FormatISOCombined(' ').c_str( ));
         output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n", input_filename.c_str( ), number_of_micrographs);
         output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.2f mm ; amplitude contrast: %0.2f\n", pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast);
         output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n", box_size, minimum_resolution, maximum_resolution, minimum_defocus, maximum_defocus);
@@ -896,12 +899,12 @@ bool CtffindApp::DoCalculation( ) {
     }
 
     // Prepare a text file with 1D rotational average spectra
-    output_text_fn = FilenameAddSuffix(output_text_fn.ToStdString( ), "_avrot");
+    output_text_fn = FilenameAddSuffix(output_text_fn, "_avrot");
 
     if ( ! old_school_input && number_of_micrographs > 1 && is_running_locally ) {
-        wxPrintf("Will estimate the CTF parameters for %i micrographs.\n", number_of_micrographs);
-        wxPrintf("Results will be written to this file: %s\n", output_text->ReturnFilename( ));
-        wxPrintf("\nEstimating CTF parameters...\n\n");
+        Printf("Will estimate the CTF parameters for %i micrographs.\n", number_of_micrographs);
+        Printf("Results will be written to this file: %s\n", output_text->ReturnFilename( ));
+        Printf("\nEstimating CTF parameters...\n\n");
         my_progress_bar = new ProgressBar(number_of_micrographs);
     }
 
@@ -911,14 +914,14 @@ bool CtffindApp::DoCalculation( ) {
     // Prepare the dark/gain_reference
     if ( input_is_a_movie && ! movie_is_gain_corrected ) {
         profile_timing.start("Read gain reference");
-        gain_file.OpenFile(gain_filename.ToStdString( ), false);
+        gain_file.OpenFile(gain_filename, false);
         gain->ReadSlice(&gain_file, 1);
         profile_timing.lap("Read gain reference");
     }
 
     if ( input_is_a_movie && ! movie_is_dark_corrected ) {
         profile_timing.start("Read dark reference");
-        dark_file.OpenFile(dark_filename.ToStdString( ), false);
+        dark_file.OpenFile(dark_filename, false);
         dark->ReadSlice(&dark_file, 1);
         profile_timing.lap("Read dark reference");
     }
@@ -929,7 +932,7 @@ bool CtffindApp::DoCalculation( ) {
     // Loop over micrographs
     for ( current_micrograph_number = 1; current_micrograph_number <= number_of_micrographs; current_micrograph_number++ ) {
         if ( is_running_locally && (old_school_input || number_of_micrographs == 1) )
-            wxPrintf("Working on micrograph %i of %i\n", current_micrograph_number, number_of_micrographs);
+            Printf("Working on micrograph %i of %i\n", current_micrograph_number, number_of_micrographs);
 
         number_of_tiles_used = 0;
         average_spectrum->SetToConstant(0.0);
@@ -960,7 +963,7 @@ bool CtffindApp::DoCalculation( ) {
 
                         if ( is_running_locally == false ) {
                             // don't crash, as this will lead to the gui job never finishing, instead send a blank result..
-                            SendError(wxString::Format("Error: location %i of input file %s is blank, defocus parameters will be set to 0", current_input_location, input_filename));
+                            SendError(Format("Error: location %i of input file %s is blank, defocus parameters will be set to 0", current_input_location, input_filename));
 
                             float results_array[10];
                             results_array[0] = 0.0; // Defocus 1 (Angstroms)
@@ -993,7 +996,7 @@ bool CtffindApp::DoCalculation( ) {
                             return true;
                         }
                         else {
-                            SendError(wxString::Format("Error: location %i of input file %s is blank", current_input_location, input_filename));
+                            SendError(Format("Error: location %i of input file %s is blank", current_input_location, input_filename));
                             ExitMainLoop( );
                         }
                     }
@@ -1003,7 +1006,7 @@ bool CtffindApp::DoCalculation( ) {
                     if ( input_is_a_movie && ! movie_is_dark_corrected ) {
                         profile_timing.start("Apply dark");
                         if ( ! current_input_image->HasSameDimensionsAs(dark) ) {
-                            SendError(wxString::Format("Error: location %i of input file %s does not have same dimensions as the dark image", current_input_location, input_filename));
+                            SendError(Format("Error: location %i of input file %s does not have same dimensions as the dark image", current_input_location, input_filename));
                             ExitMainLoop( );
                         }
 
@@ -1015,7 +1018,7 @@ bool CtffindApp::DoCalculation( ) {
                     if ( input_is_a_movie && ! movie_is_gain_corrected ) {
                         profile_timing.start("Apply gain");
                         if ( ! current_input_image->HasSameDimensionsAs(gain) ) {
-                            SendError(wxString::Format("Error: location %i of input file %s does not have same dimensions as the gain image", current_input_location, input_filename));
+                            SendError(Format("Error: location %i of input file %s does not have same dimensions as the gain image", current_input_location, input_filename));
                             ExitMainLoop( );
                         }
                         current_input_image->MultiplyPixelWise(*gain);
@@ -1056,7 +1059,7 @@ bool CtffindApp::DoCalculation( ) {
 
                 number_of_tiles_used++;
                 if ( determine_tilt ) {
-                    //					wxPrintf("Read frame = %i\n", number_of_tiles_used);
+                    //					Printf("Read frame = %i\n", number_of_tiles_used);
                     tilt_scorer.UpdateInputImage(current_input_image);
                     if ( current_first_frame_within_average + number_of_frames_to_average > number_of_movie_frames )
                         tilt_scorer.CalculatePowerSpectra(true);
@@ -1088,19 +1091,19 @@ bool CtffindApp::DoCalculation( ) {
                 profile_timing.start("Tilt estimation");
                 // Find rough defocus
                 tilt_scorer.FindRoughDefocus( );
-                //	wxPrintf("\nFindRoughDefocus values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //	Printf("\nFindRoughDefocus values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 // Find astigmatism
                 tilt_scorer.FindDefocusAstigmatism( );
-                //	wxPrintf("\nFindDefocusAstigmatism values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //	Printf("\nFindDefocusAstigmatism values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 // Search tilt axis and angle
                 tilt_scorer.SearchTiltAxisAndAngle( );
-                //	wxPrintf("\nSearchTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //	Printf("\nSearchTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 // Refine tilt axis and angle
                 tilt_scorer.RefineTiltAxisAndAngle( );
-                //	wxPrintf("\nRefineTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //	Printf("\nRefineTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 tilt_axis  = tilt_scorer.best_tilt_axis;
                 tilt_angle = tilt_scorer.best_tilt_angle;
@@ -1158,7 +1161,7 @@ bool CtffindApp::DoCalculation( ) {
         }
 
 #ifdef threshold_spectrum
-        wxPrintf("DEBUG: thresholding spectrum\n");
+        Printf("DEBUG: thresholding spectrum\n");
         for ( counter = 0; counter < average_spectrum->real_memory_allocated; counter++ ) {
             average_spectrum->real_values[counter] = std::max(average_spectrum->real_values[counter], -0.0f);
             average_spectrum->real_values[counter] = std::min(average_spectrum->real_values[counter], 1.0f);
@@ -1191,7 +1194,7 @@ bool CtffindApp::DoCalculation( ) {
         else {
 
             if ( is_running_locally && old_school_input ) {
-                wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
+                Printf("\nSEARCHING CTF PARAMETERS...\n");
             }
 
             // Let's look for the astigmatism angle first
@@ -1258,10 +1261,10 @@ bool CtffindApp::DoCalculation( ) {
                 brute_force_search->Run( );
 
                 /*
-				wxPrintf("After 1D brute\n");
-				wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0),brute_force_search->GetBestValue(0),0.0,brute_force_search->GetBestScore());
-				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0)*pixel_size_for_fitting,brute_force_search->GetBestValue(0)*pixel_size_for_fitting,0.0,brute_force_search->GetBestScore());
+				Printf("After 1D brute\n");
+				Printf("      DFMID1      DFMID2      ANGAST          CC\n");
+				Printf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0),brute_force_search->GetBestValue(0),0.0,brute_force_search->GetBestScore());
+				Printf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0)*pixel_size_for_fitting,brute_force_search->GetBestValue(0)*pixel_size_for_fitting,0.0,brute_force_search->GetBestScore());
 				*/
 
                 /*
@@ -1460,14 +1463,14 @@ bool CtffindApp::DoCalculation( ) {
             // Print out the results of brute force search
             //if (is_running_locally && old_school_input)
             {
-                wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-                wxPrintf("%12.2f%12.2f%12.2f%12.5f\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf, best_score_after_initial_phase);
+                Printf("      DFMID1      DFMID2      ANGAST          CC\n");
+                Printf("%12.2f%12.2f%12.2f%12.5f\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf, best_score_after_initial_phase);
             }
 
             // Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
             if ( is_running_locally && old_school_input ) {
-                wxPrintf("\nREFINING CTF PARAMETERS...\n");
-                wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
+                Printf("\nREFINING CTF PARAMETERS...\n");
+                Printf("      DFMID1      DFMID2      ANGAST          CC\n");
             }
 
             profile_timing.start("Setup 2D search optimization");
@@ -1552,9 +1555,9 @@ bool CtffindApp::DoCalculation( ) {
 
             // Print results to the terminal
             if ( is_running_locally && old_school_input ) {
-                wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf, -conjugate_gradient_minimizer->GetBestScore( ));
+                Printf("%12.2f%12.2f%12.2f%12.5f   Final Values\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf, -conjugate_gradient_minimizer->GetBestScore( ));
                 if ( find_additional_phase_shift ) {
-                    wxPrintf("Final phase shift = %0.3f radians\n", current_ctf->GetAdditionalPhaseShift( ));
+                    Printf("Final phase shift = %0.3f radians\n", current_ctf->GetAdditionalPhaseShift( ));
                 }
             }
 
@@ -1688,7 +1691,7 @@ bool CtffindApp::DoCalculation( ) {
                 }
             }
             if ( is_running_locally && old_school_input && last_bin_without_aliasing != 0 ) {
-                wxPrintf("CTF aliasing apparent from %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
+                Printf("CTF aliasing apparent from %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
             }
             profile_timing.lap("Detect antialiasing");
         }
@@ -1708,7 +1711,7 @@ bool CtffindApp::DoCalculation( ) {
             int          number_of_bins_above_high_threshold         = 0;
             int          first_bin_to_check                          = 0.1 * number_of_bins_in_1d_spectra;
             MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < number_of_bins_in_1d_spectra, "Bad first bin to check\n");
-            //wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
+            //Printf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
             last_bin_with_good_fit = -1;
             // DNM: skip explicitly if there are no bins
             if ( first_bin_to_check >= number_of_bins_in_1d_spectra ) {
@@ -1716,7 +1719,7 @@ bool CtffindApp::DoCalculation( ) {
             }
             else {
                 for ( counter = first_bin_to_check; counter < number_of_bins_in_1d_spectra; counter++ ) {
-                    //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
+                    //Printf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
                     at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold)) ||
                                                 ((number_of_bins_above_high_threshold > 3) && (fit_frc[counter] < frc_significance_threshold));
                     if ( at_last_bin_with_good_fit ) {
@@ -1731,7 +1734,7 @@ bool CtffindApp::DoCalculation( ) {
                     if ( fit_frc[counter] > high_threshold )
                         number_of_bins_above_high_threshold++;
                 }
-                //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
+                //Printf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
                 if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra - first_bin_to_check )
                     last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
                 if ( number_of_bins_above_significance_threshold == 0 )
@@ -1746,7 +1749,7 @@ bool CtffindApp::DoCalculation( ) {
 #ifdef DEBUG
         //MyDebugAssertTrue(last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra,"Did not find last bin with good fit: %i", last_bin_with_good_fit);
         if ( ! (last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra) ) {
-            wxPrintf("WARNING: Did not find last bin with good fit: %i\n", last_bin_with_good_fit);
+            Printf("WARNING: Did not find last bin with good fit: %i\n", last_bin_with_good_fit);
         }
 #else
         if ( last_bin_with_good_fit < 1 && last_bin_with_good_fit >= number_of_bins_in_1d_spectra ) {
@@ -1819,23 +1822,23 @@ bool CtffindApp::DoCalculation( ) {
         // Print more detailed results to terminal
         if ( is_running_locally && number_of_micrographs == 1 ) {
 
-            wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) / PIf * 180.0);
+            Printf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) / PIf * 180.0);
             if ( find_additional_phase_shift ) {
-                wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f PIf)\n", current_ctf->GetAdditionalPhaseShift( ) / PIf * 180.0, current_ctf->GetAdditionalPhaseShift( ), current_ctf->GetAdditionalPhaseShift( ) / PIf);
+                Printf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f PIf)\n", current_ctf->GetAdditionalPhaseShift( ) / PIf * 180.0, current_ctf->GetAdditionalPhaseShift( ), current_ctf->GetAdditionalPhaseShift( ) / PIf);
             }
             if ( determine_tilt )
-                wxPrintf("Tilt_axis, tilt angle           : %0.2f , %0.2f degrees\n", tilt_axis, tilt_angle);
+                Printf("Tilt_axis, tilt angle           : %0.2f , %0.2f degrees\n", tilt_axis, tilt_angle);
             if ( fit_nodes )
-                wxPrintf("Estimated sample thickness      : %0.2f Angstroms\n", current_ctf->GetSampleThickness( ) * pixel_size_for_fitting);
-            wxPrintf("Score                           : %0.5f\n", final_score);
-            wxPrintf("Pixel size for fitting          : %0.3f Angstroms\n", pixel_size_for_fitting);
+                Printf("Estimated sample thickness      : %0.2f Angstroms\n", current_ctf->GetSampleThickness( ) * pixel_size_for_fitting);
+            Printf("Score                           : %0.5f\n", final_score);
+            Printf("Pixel size for fitting          : %0.3f Angstroms\n", pixel_size_for_fitting);
             if ( compute_extra_stats ) {
-                wxPrintf("Thon rings with good fit up to  : %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_with_good_fit]);
+                Printf("Thon rings with good fit up to  : %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_with_good_fit]);
                 if ( last_bin_without_aliasing != 0 ) {
-                    wxPrintf("CTF aliasing apparent from      : %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
+                    Printf("CTF aliasing apparent from      : %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
                 }
                 else {
-                    wxPrintf("Did not detect CTF aliasing\n");
+                    Printf("Did not detect CTF aliasing\n");
                 }
             }
         }
@@ -1845,7 +1848,7 @@ bool CtffindApp::DoCalculation( ) {
                 MyPrintfRed("Warning: CTF aliasing occurred within your CTF fitting range. Consider computing a larger spectrum (current size = %i).\n", box_size);
             }
             else {
-                //SendInfo(wxString::Format("Warning: for image %s (location %i of %i), CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,current_micrograph_number, number_of_micrographs,box_size));
+                //SendInfo(Format("Warning: for image %s (location %i of %i), CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,current_micrograph_number, number_of_micrographs,box_size));
             }
         }
         if ( is_running_locally ) {
@@ -1886,7 +1889,7 @@ bool CtffindApp::DoCalculation( ) {
         if ( compute_extra_stats ) {
             if ( current_micrograph_number == 1 ) {
                 output_text_avrot = new NumericTextFile(output_text_fn, OPEN_TO_WRITE, number_of_bins_in_1d_spectra);
-                output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n", ctffind_version.c_str( ), wxDateTime::Now( ).FormatISOCombined(' ').ToUTF8( ).data( ));
+                output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n", ctffind_version.c_str( ), DateTime::Now( ).FormatISOCombined(' ').c_str());
                 output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n", input_filename.c_str( ), number_of_micrographs);
                 output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.2f mm ; amplitude contrast: %0.2f\n", pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast);
                 output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um; num. frames averaged: %i\n", box_size, minimum_resolution, maximum_resolution, minimum_defocus, maximum_defocus, number_of_frames_to_average);
@@ -1908,20 +1911,20 @@ bool CtffindApp::DoCalculation( ) {
     } // End of loop over micrographs
     if ( is_running_locally && (! old_school_input) && number_of_micrographs > 1 ) {
         delete my_progress_bar;
-        wxPrintf("\n");
+        Printf("\n");
     }
 
     // Tell the user where the outputs are
     if ( is_running_locally ) {
 
-        wxPrintf("\n\nSummary of results                          : %s\n", output_text->ReturnFilename( ));
-        wxPrintf("Diagnostic images                           : %s\n", output_diagnostic_filename);
+        Printf("\n\nSummary of results                          : %s\n", output_text->ReturnFilename( ));
+        Printf("Diagnostic images                           : %s\n", output_diagnostic_filename);
         if ( compute_extra_stats ) {
-            wxPrintf("Detailed results, including 1D fit profiles : %s\n", output_text_avrot->ReturnFilename( ));
-            wxPrintf("Use this command to plot 1D fit profiles    : ctffind_plot_results.sh %s\n", output_text_avrot->ReturnFilename( ));
+            Printf("Detailed results, including 1D fit profiles : %s\n", output_text_avrot->ReturnFilename( ));
+            Printf("Use this command to plot 1D fit profiles    : ctffind_plot_results.sh %s\n", output_text_avrot->ReturnFilename( ));
         }
 
-        wxPrintf("\n\n");
+        Printf("\n\n");
     }
 
     // Send results back

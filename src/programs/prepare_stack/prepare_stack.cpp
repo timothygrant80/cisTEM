@@ -16,9 +16,9 @@ IMPLEMENT_APP(PrepareStackApp)
 // override the DoInteractiveUserInput
 
 void PrepareStackApp::DoInteractiveUserInput( ) {
-    wxString input_particle_images;
-    wxString output_particle_images;
-    wxString input_star_file;
+    std::string input_particle_images;
+    std::string output_particle_images;
+    std::string input_star_file;
 
     int wanted_output_box_size;
 
@@ -45,9 +45,9 @@ void PrepareStackApp::DoInteractiveUserInput( ) {
 
     delete my_input;
 
-    my_current_job.ManualSetArguments("tttffbibii", input_particle_images.ToUTF8( ).data( ),
-                                      input_star_file.ToUTF8( ).data( ),
-                                      output_particle_images.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tttffbibii", input_particle_images.c_str(),
+                                      input_star_file.c_str(),
+                                      output_particle_images.c_str(),
                                       pixel_size,
                                       mask_radius,
                                       resample_box,
@@ -61,9 +61,9 @@ void PrepareStackApp::DoInteractiveUserInput( ) {
 
 bool PrepareStackApp::DoCalculation( ) {
 
-    wxString input_particle_images  = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_star_filename    = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString output_particle_images = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string input_particle_images  = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_star_filename    = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string output_particle_images = my_current_job.arguments[2].ReturnStringArgument( );
     float    output_pixel_size      = my_current_job.arguments[3].ReturnFloatArgument( );
     float    mask_radius            = my_current_job.arguments[4].ReturnFloatArgument( );
     bool     resample_box           = my_current_job.arguments[5].ReturnBoolArgument( );
@@ -86,11 +86,11 @@ bool PrepareStackApp::DoCalculation( ) {
         my_result.SetResult(1, &result);
     }
 
-    ImageFile input_file(input_particle_images.ToStdString( ));
+    ImageFile input_file(input_particle_images);
     MRCFile*  output_file;
 
     if ( is_running_locally == true )
-        output_file = new MRCFile(output_particle_images.ToStdString( ), true);
+        output_file = new MRCFile(output_particle_images, true);
 
     Image input_image;
     Image sum_power;
@@ -106,8 +106,8 @@ bool PrepareStackApp::DoCalculation( ) {
 
     cisTEMParameters input_star_file;
 
-    wxFileName star_filename(input_star_filename);
-    if ( star_filename.GetExt( ) == "cistem" )
+    std::filesystem::path star_filename(input_star_filename);
+    if ( ReturnFileExtension(star_filename.string()) == "cistem" )
         input_star_file.ReadFromcisTEMBinaryFile(input_star_filename);
     else
         input_star_file.ReadFromcisTEMStarFile(input_star_filename);
@@ -118,7 +118,7 @@ bool PrepareStackApp::DoCalculation( ) {
     }
 
     if ( is_running_locally == true )
-        wxPrintf("\nCalculating noise power spectrum...\n\n");
+        Printf("\nCalculating noise power spectrum...\n\n");
 
     float percentage = float(max_samples) / float(images_to_process);
     sum_power.SetToConstant(0.0);
@@ -164,7 +164,7 @@ bool PrepareStackApp::DoCalculation( ) {
         delete my_progress;
 
     if ( is_running_locally == true )
-        wxPrintf("Preparing Stack...\n\n");
+        Printf("Preparing Stack...\n\n");
     if ( is_running_locally == true )
         my_progress = new ProgressBar(input_file.ReturnNumberOfSlices( ));
 
@@ -201,8 +201,8 @@ bool PrepareStackApp::DoCalculation( ) {
         delete my_progress;
 
     if ( is_running_locally == true )
-        wxPrintf("\nPrepareStack: Normal termination\n\n");
-    //else wxSleep(10); // to make sure we don't die before the image data has been sent over completely (not sure if necessary)
+        Printf("\nPrepareStack: Normal termination\n\n");
+    //else SleepForSeconds(10); // to make sure we don't die before the image data has been sent over completely (not sure if necessary)
 
     return true;
 }

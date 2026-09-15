@@ -13,16 +13,19 @@ inline void TEST(bool result) {
     }
 }
 
-inline wxString CheckForReferenceImages( ) {
-    wxString cistem_ref_dir = "";
+inline std::string CheckForReferenceImages( ) {
+    std::string cistem_ref_dir = "";
     // If we are in the dev container the CISTEM_REF_IMAGES variable should be defined, pointing to images we need.
-    bool was_found = wxGetEnv(wxString("CISTEM_REF_IMAGES"), &cistem_ref_dir);
+    const char* environment_value = getenv("CISTEM_REF_IMAGES");
+    bool        was_found         = environment_value != nullptr;
+    if ( was_found )
+        cistem_ref_dir = environment_value;
     if ( ! was_found ) {
         // If we are not in the dev container, we can't do the tests.
         TEST(false);
 
-        wxPrintf("Failed to resolve the (CISTEM_REF_IMAGES) environment variable.\n", cistem_ref_dir);
-        wxPrintf("We can't run the test without images!\n\n");
+        Printf("Failed to resolve the (CISTEM_REF_IMAGES) environment variable.\n", cistem_ref_dir);
+        Printf("We can't run the test without images!\n\n");
         exit(0);
     }
 

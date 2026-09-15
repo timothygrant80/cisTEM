@@ -12,7 +12,7 @@ cisTEMStarFileReader::cisTEMStarFileReader( ) {
     Reset( );
 }
 
-cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool exclude_negative_film_numbers) {
+cisTEMStarFileReader::cisTEMStarFileReader(std::string wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool exclude_negative_film_numbers) {
     Reset( );
 
     if ( alternate_cached_parameters_pointer == NULL ) {
@@ -29,7 +29,8 @@ cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisT
 
 void cisTEMStarFileReader::Reset( ) {
     filename                = "";
-    input_text_file         = NULL;
+    input_file_is_opened    = false;
+    current_line_number     = -1;
     binary_file_read_buffer = NULL;
     binary_file_size        = 0;
 
@@ -86,7 +87,7 @@ cisTEMStarFileReader::~cisTEMStarFileReader( ) {
     Close( );
 }
 
-void cisTEMStarFileReader::Open(wxString wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool read_as_binary) {
+void cisTEMStarFileReader::Open(std::string wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool read_as_binary) {
     Close( );
 
     if ( cached_parameters != NULL && using_external_array == false ) {
@@ -98,18 +99,28 @@ void cisTEMStarFileReader::Open(wxString wanted_filename, ArrayOfcisTEMParameter
 
     if ( read_as_binary == false ) // read it as a text based star file
     {
-        input_text_file = new wxTextFile(wanted_filename);
-        input_text_file->Open( );
+        std::ifstream input_stream(wanted_filename);
 
-        //if (input_text_file_stream->IsOk() == false)
-        if ( input_text_file->IsOpened( ) == false ) {
+        if ( input_stream.is_open( ) == true ) {
+            std::string current_file_line;
+
+            while ( std::getline(input_stream, current_file_line) ) {
+                if ( ! current_file_line.empty( ) && current_file_line.back( ) == '\r' )
+                    current_file_line.pop_back( );
+                input_file_lines.push_back(current_file_line);
+            }
+
+            input_file_is_opened = true;
+        }
+
+        if ( input_file_is_opened == false ) {
             MyPrintWithDetails("Error: Cannot open star file (%s) for read\n", wanted_filename);
             DEBUG_ABORT;
         }
     }
     else // binary input - read the whole file into memory..
     {
-        FILE* binary_file = fopen(filename.ToStdString( ).c_str( ), "rb");
+        FILE* binary_file = fopen(filename.c_str( ), "rb");
         fseek(binary_file, 0, SEEK_END);
         binary_file_size = ftell(binary_file);
         fseek(binary_file, 0, SEEK_SET);
@@ -137,10 +148,9 @@ void cisTEMStarFileReader::Close( ) {
         cached_parameters = NULL;
     }
 
-    if ( input_text_file != NULL ) {
-        delete input_text_file;
-        input_text_file = NULL;
-    }
+    input_file_lines.clear( );
+    input_file_is_opened = false;
+    current_line_number  = -1;
 
     if ( binary_file_read_buffer != NULL ) {
         delete[] binary_file_read_buffer;
@@ -151,7 +161,7 @@ void cisTEMStarFileReader::Close( ) {
     binary_file_size = 0;
 }
 
-bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxString* error_string, bool exclude_negative_film_numbers) {
+bool cisTEMStarFileReader::ExtractParametersFromLine(std::string& wanted_line, std::string* error_string, bool exclude_negative_film_numbers) {
     /*! \brief Parse a line read from a star file with checks on numeric convertibility.
 	 *
 	 * 	Detailed:
@@ -161,20 +171,14 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     // extract info.
 
-    wxArrayString       all_tokens;
-    wxStringTokenizer   tokens(wanted_line);
-    cisTEMParameterLine temp_parameters;
+    std::vector<std::string> all_tokens = SplitString(wanted_line);
+    cisTEMParameterLine      temp_parameters;
 
     double temp_double;
     long   temp_long;
 
-    wxString current_token;
-    wxString string_buffer;
-
-    while ( tokens.HasMoreTokens( ) == true ) {
-        current_token = tokens.GetNextToken( );
-        all_tokens.Add(current_token);
-    }
+    std::string current_token;
+    std::string string_buffer;
 
     // start with image is active, because sometimes we can just stop..
 
@@ -183,10 +187,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( image_is_active_column == -1 )
         temp_parameters.image_is_active = 1.0;
     else {
-        if ( all_tokens[image_is_active_column].ToLong(&temp_long) == false ) {
+        if ( StringToLong(all_tokens[image_is_active_column], temp_long) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[image_is_active_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[image_is_active_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[image_is_active_column]);
             return false;
         }
 
@@ -200,10 +204,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     if ( position_in_stack_column == -1 )
         temp_double = -1;
-    else if ( all_tokens[position_in_stack_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[position_in_stack_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[position_in_stack_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[position_in_stack_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[position_in_stack_column]);
         return false;
     }
 
@@ -213,10 +217,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     if ( phi_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[phi_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[phi_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[phi_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[phi_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[phi_column]);
         return false;
     }
 
@@ -226,10 +230,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     if ( theta_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[theta_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[theta_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[theta_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[theta_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[theta_column]);
         return false;
     }
 
@@ -239,10 +243,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     if ( psi_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[psi_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[psi_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[psi_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[psi_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[psi_column]);
         return false;
     }
 
@@ -252,10 +256,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     if ( x_shift_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[x_shift_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[x_shift_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[x_shift_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[x_shift_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[x_shift_column]);
         return false;
     }
 
@@ -265,10 +269,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     if ( y_shift_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[y_shift_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[y_shift_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[y_shift_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[y_shift_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[y_shift_column]);
         return false;
     }
 
@@ -276,10 +280,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     // defocus1
 
-    if ( all_tokens[defocus_1_column].ToDouble(&temp_double) == false ) {
+    if ( StringToDouble(all_tokens[defocus_1_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[defocus_1_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[defocus_1_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[defocus_1_column]);
         return false;
     }
 
@@ -287,10 +291,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     // defocus2
 
-    if ( all_tokens[defocus_2_column].ToDouble(&temp_double) == false ) {
+    if ( StringToDouble(all_tokens[defocus_2_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[defocus_2_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[defocus_2_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[defocus_2_column]);
         return false;
     }
 
@@ -298,10 +302,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
 
     // defocus_angle
 
-    if ( all_tokens[defocus_angle_column].ToDouble(&temp_double) == false ) {
+    if ( StringToDouble(all_tokens[defocus_angle_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[defocus_angle_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[defocus_angle_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[defocus_angle_column]);
         return false;
     }
 
@@ -312,10 +316,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( phase_shift_column == -1 )
         temp_parameters.phase_shift = 0.0;
     else {
-        if ( all_tokens[phase_shift_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[phase_shift_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[phase_shift_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[phase_shift_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[phase_shift_column]);
             return false;
         }
 
@@ -327,10 +331,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( occupancy_column == -1 )
         temp_parameters.occupancy = 100.0f;
     else {
-        if ( all_tokens[occupancy_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[occupancy_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[occupancy_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[occupancy_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[occupancy_column]);
             return false;
         }
 
@@ -342,10 +346,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( logp_column == -1 )
         temp_parameters.logp = 100.0f;
     else {
-        if ( all_tokens[logp_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[logp_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[logp_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[logp_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[logp_column]);
             return false;
         }
 
@@ -357,10 +361,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( sigma_column == -1 )
         temp_parameters.sigma = 10.0f;
     else {
-        if ( all_tokens[sigma_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[sigma_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[sigma_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[sigma_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[sigma_column]);
             return false;
         }
 
@@ -372,15 +376,15 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( score_column == -1 )
         temp_parameters.score = 0.0f;
     else {
-        if ( all_tokens[score_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[score_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[score_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[score_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[score_column]);
             return false;
         }
 
         temp_parameters.score = float(temp_double);
-        //wxPrintf("Score = %f, image_is_active = %i, exclude negative = %s\n", temp_parameters.score, temp_parameters.image_is_active, BoolToYesNo(exclude_negative_film_numbers));
+        //Printf("Score = %f, image_is_active = %i, exclude negative = %s\n", temp_parameters.score, temp_parameters.image_is_active, BoolToYesNo(exclude_negative_film_numbers));
     }
 
     // score_change
@@ -388,10 +392,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( score_change_column == -1 )
         temp_parameters.score_change = 0.0f;
     else {
-        if ( all_tokens[score_change_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[score_change_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[score_change_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[score_change_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[score_change_column]);
             return false;
         }
 
@@ -403,10 +407,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( pixel_size_column == -1 )
         temp_parameters.pixel_size = 0.0f;
     else {
-        if ( all_tokens[pixel_size_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[pixel_size_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[pixel_size_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[pixel_size_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[pixel_size_column]);
             return false;
         }
 
@@ -418,10 +422,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( microscope_voltage_kv_column == -1 )
         temp_parameters.microscope_voltage_kv = 0.0f;
     else {
-        if ( all_tokens[microscope_voltage_kv_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[microscope_voltage_kv_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[microscope_voltage_kv_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[microscope_voltage_kv_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[microscope_voltage_kv_column]);
             return false;
         }
 
@@ -433,10 +437,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( microscope_spherical_aberration_mm_column == -1 )
         temp_parameters.microscope_spherical_aberration_mm = 2.7f;
     else {
-        if ( all_tokens[microscope_spherical_aberration_mm_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[microscope_spherical_aberration_mm_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[microscope_spherical_aberration_mm_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[microscope_spherical_aberration_mm_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[microscope_spherical_aberration_mm_column]);
             return false;
         }
 
@@ -448,10 +452,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( amplitude_contrast_column == -1 )
         temp_parameters.amplitude_contrast = 0.07f;
     else {
-        if ( all_tokens[amplitude_contrast_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[amplitude_contrast_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[amplitude_contrast_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[amplitude_contrast_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[amplitude_contrast_column]);
             return false;
         }
 
@@ -463,10 +467,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( beam_tilt_x_column == -1 )
         temp_parameters.beam_tilt_x = 0.0f;
     else {
-        if ( all_tokens[beam_tilt_x_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[beam_tilt_x_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_x_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_x_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_x_column]);
             return false;
         }
 
@@ -478,10 +482,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( beam_tilt_y_column == -1 )
         temp_parameters.beam_tilt_y = 0.0f;
     else {
-        if ( all_tokens[beam_tilt_y_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[beam_tilt_y_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_y_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_y_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_y_column]);
             return false;
         }
 
@@ -493,10 +497,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( image_shift_x_column == -1 )
         temp_parameters.image_shift_x = 0.0f;
     else {
-        if ( all_tokens[image_shift_x_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[image_shift_x_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[image_shift_x_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[image_shift_x_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[image_shift_x_column]);
             return false;
         }
 
@@ -508,10 +512,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( image_shift_y_column == -1 )
         temp_parameters.image_shift_y = 0.0f;
     else {
-        if ( all_tokens[image_shift_y_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[image_shift_y_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[image_shift_y_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[image_shift_y_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[image_shift_y_column]);
             return false;
         }
 
@@ -523,10 +527,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( best_2d_class_column == -1 )
         temp_parameters.best_2d_class = 0;
     else {
-        if ( all_tokens[best_2d_class_column].ToLong(&temp_long) == false ) {
+        if ( StringToLong(all_tokens[best_2d_class_column], temp_long) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[best_2d_class_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[best_2d_class_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[best_2d_class_column]);
             return false;
         }
 
@@ -538,10 +542,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( beam_tilt_group_column == -1 )
         temp_parameters.beam_tilt_group = 0;
     else {
-        if ( all_tokens[beam_tilt_group_column].ToLong(&temp_long) == false ) {
+        if ( StringToLong(all_tokens[beam_tilt_group_column], temp_long) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_group_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_group_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_group_column]);
             return false;
         }
 
@@ -553,10 +557,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( particle_group_column == -1 )
         temp_parameters.particle_group = 0;
     else {
-        if ( all_tokens[particle_group_column].ToLong(&temp_long) == false ) {
+        if ( StringToLong(all_tokens[particle_group_column], temp_long) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[particle_group_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[particle_group_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[particle_group_column]);
             return false;
         }
 
@@ -568,10 +572,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( assigned_subset_column == -1 )
         temp_parameters.assigned_subset = 0;
     else {
-        if ( all_tokens[assigned_subset_column].ToLong(&temp_long) == false ) {
+        if ( StringToLong(all_tokens[assigned_subset_column], temp_long) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[assigned_subset_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[assigned_subset_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[assigned_subset_column]);
             return false;
         }
 
@@ -583,10 +587,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( pre_exposure_column == -1 )
         temp_parameters.pre_exposure = 0.0f;
     else {
-        if ( all_tokens[pre_exposure_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[pre_exposure_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[pre_exposure_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[pre_exposure_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[pre_exposure_column]);
             return false;
         }
 
@@ -598,10 +602,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( total_exposure_column == -1 )
         temp_parameters.total_exposure = 0.0f;
     else {
-        if ( all_tokens[total_exposure_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[total_exposure_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[total_exposure_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[total_exposure_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[total_exposure_column]);
             return false;
         }
 
@@ -613,10 +617,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( original_x_position_column == -1 )
         temp_parameters.original_x_position = 0.0f;
     else {
-        if ( all_tokens[original_x_position_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[original_x_position_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[original_x_position_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[original_x_position_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[original_x_position_column]);
             return false;
         }
 
@@ -628,10 +632,10 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( original_y_position_column == -1 )
         temp_parameters.original_y_position = 0.0f;
     else {
-        if ( all_tokens[original_y_position_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[original_y_position_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[original_y_position_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[original_y_position_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[original_y_position_column]);
             return false;
         }
 
@@ -643,7 +647,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( stack_filename_column == -1 )
         temp_parameters.stack_filename = "";
     else {
-        temp_parameters.stack_filename = all_tokens[stack_filename_column].Trim(true).Trim(false);
+        temp_parameters.stack_filename = Trim(all_tokens[stack_filename_column]);
         if ( StripEnclosingSingleQuotesFromString(temp_parameters.stack_filename) == false ) {
             MyPrintfRed("Error: stack file name read as %s is not enclosed in single quotes ('), replacing with blank string\n", temp_parameters.stack_filename);
             temp_parameters.stack_filename = "";
@@ -655,7 +659,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( original_image_filename_column == -1 )
         temp_parameters.original_image_filename = "";
     else {
-        temp_parameters.original_image_filename = all_tokens[original_image_filename_column].Trim(true).Trim(false);
+        temp_parameters.original_image_filename = Trim(all_tokens[original_image_filename_column]);
 
         if ( StripEnclosingSingleQuotesFromString(temp_parameters.original_image_filename) == false ) {
             MyPrintfRed("Error: original image file name read as %s is not enclosed in single quotes ('), replacing with blank string\n", temp_parameters.original_image_filename);
@@ -668,7 +672,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
     if ( reference_3d_filename_column == -1 )
         temp_parameters.reference_3d_filename = "";
     else {
-        temp_parameters.reference_3d_filename = all_tokens[reference_3d_filename_column].Trim(true).Trim(false);
+        temp_parameters.reference_3d_filename = Trim(all_tokens[reference_3d_filename_column]);
 
         if ( StripEnclosingSingleQuotesFromString(temp_parameters.reference_3d_filename) == false ) {
             MyPrintfRed("Error: reference 3d file name read as %s is not enclosed in single quotes ('), replacing with blank string\n", temp_parameters.reference_3d_filename);
@@ -676,31 +680,28 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
         }
     }
 
-    cached_parameters->Add(temp_parameters);
+    cached_parameters->push_back(temp_parameters);
 
     return true;
 }
 
-bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* error_string, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool exclude_negative_film_numbers) {
+bool cisTEMStarFileReader::ReadTextFile(std::string wanted_filename, std::string* error_string, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool exclude_negative_film_numbers) {
     Open(wanted_filename, alternate_cached_parameters_pointer);
-    wxString current_line;
+    std::string current_line;
 
-    //MyDebugAssertTrue(input_text_file_stream != NULL, "FileStream is NULL!");
-    MyDebugAssertTrue(input_text_file->IsOpened( ), "File not open");
+    MyDebugAssertTrue(input_file_is_opened, "File not open");
 
     bool found_valid_data_block = false;
     bool found_valid_loop_block = false;
 
-    input_text_file->GoToLine(-1); // this triggers warning: integer conversion resulted in a change of sign
+    current_line_number = -1;
     // find a data block
 
-    //while (input_text_file_stream->Eof() == false)
-    while ( input_text_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_text_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
-        if ( current_line.Find("data_") != wxNOT_FOUND ) {
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
+        if ( current_line.find("data_") != std::string::npos ) {
             found_valid_data_block = true;
             break;
         }
@@ -710,20 +711,18 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
         MyPrintWithDetails("Error: Couldn't find a valid data block in star file (%s)\n", wanted_filename);
 
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Couldn't find a valid data block in star file (%s)\n", wanted_filename);
+            *error_string = Format("Error: Couldn't find a valid data block in star file (%s)\n", wanted_filename);
         return false;
     }
 
     // find a loop block
 
-    //while (input_text_file_stream->Eof() == false)
-    while ( input_text_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_text_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
 
-        if ( current_line.Find("loop_") != wxNOT_FOUND ) {
+        if ( current_line.find("loop_") != std::string::npos ) {
             found_valid_loop_block = true;
             break;
         }
@@ -732,7 +731,7 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
     if ( found_valid_loop_block == false ) {
         MyPrintWithDetails("Error: Couldn't find a valid loop block in star file (%s)\n", wanted_filename);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Couldn't find a valid loop block in star file (%s)\n", wanted_filename);
+            *error_string = Format("Error: Couldn't find a valid loop block in star file (%s)\n", wanted_filename);
         return false;
     }
 
@@ -740,12 +739,10 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
 
     ResetColumnPositions( );
 
-    //while (input_text_file_stream->Eof() == false)
-    while ( input_text_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_text_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
 
         if ( current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';' )
             continue;
@@ -754,213 +751,213 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
 
         // otherwise it is a label, is it a label we want though?
 
-        if ( current_line.StartsWith("_cisTEMPositionInStack ") == true ) {
+        if ( StartsWith(current_line, "_cisTEMPositionInStack ") == true ) {
             if ( position_in_stack_column != -1 )
-                wxPrintf("Warning :: _cisTEMPositionInStack occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPositionInStack occurs more than once. I will take the last occurrence\n");
             position_in_stack_column                    = current_column;
             parameters_that_were_read.position_in_stack = true;
         }
-        else if ( current_line.StartsWith("_cisTEMAnglePsi ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMAnglePsi ") == true ) {
             if ( psi_column != -1 )
-                wxPrintf("Warning :: _cisTEMAnglePsi occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAnglePsi occurs more than once. I will take the last occurrence\n");
             psi_column                    = current_column;
             parameters_that_were_read.psi = true;
         }
-        else if ( current_line.StartsWith("_cisTEMAngleTheta ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMAngleTheta ") == true ) {
             if ( theta_column != -1 )
-                wxPrintf("Warning :: _cisTEMAngleTheta occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAngleTheta occurs more than once. I will take the last occurrence\n");
             theta_column                    = current_column;
             parameters_that_were_read.theta = true;
         }
-        else if ( current_line.StartsWith("_cisTEMAnglePhi ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMAnglePhi ") == true ) {
             if ( phi_column != -1 )
-                wxPrintf("Warning :: _cisTEMAnglePhi occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAnglePhi occurs more than once. I will take the last occurrence\n");
             phi_column                    = current_column;
             parameters_that_were_read.phi = true;
         }
-        else if ( current_line.StartsWith("_cisTEMXShift ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMXShift ") == true ) {
             if ( x_shift_column != -1 )
-                wxPrintf("Warning :: _cisTEMXShift occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMXShift occurs more than once. I will take the last occurrence\n");
             x_shift_column                    = current_column;
             parameters_that_were_read.x_shift = true;
         }
-        else if ( current_line.StartsWith("_cisTEMYShift ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMYShift ") == true ) {
             if ( y_shift_column != -1 )
-                wxPrintf("Warning :: _cisTEMYShift occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMYShift occurs more than once. I will take the last occurrence\n");
             y_shift_column                    = current_column;
             parameters_that_were_read.y_shift = true;
         }
-        else if ( current_line.StartsWith("_cisTEMDefocus1 ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMDefocus1 ") == true ) {
             if ( defocus_1_column != -1 )
-                wxPrintf("Warning :: _cisTEMDefocus1 occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMDefocus1 occurs more than once. I will take the last occurrence\n");
             defocus_1_column                    = current_column;
             parameters_that_were_read.defocus_1 = true;
         }
-        else if ( current_line.StartsWith("_cisTEMDefocus2 ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMDefocus2 ") == true ) {
             if ( defocus_2_column != -1 )
-                wxPrintf("Warning :: _cisTEMDefocus2 occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMDefocus2 occurs more than once. I will take the last occurrence\n");
             defocus_2_column                    = current_column;
             parameters_that_were_read.defocus_2 = true;
         }
-        else if ( current_line.StartsWith("_cisTEMDefocusAngle ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMDefocusAngle ") == true ) {
             if ( defocus_angle_column != -1 )
-                wxPrintf("Warning :: _cisTEMDefocusAngle occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMDefocusAngle occurs more than once. I will take the last occurrence\n");
             defocus_angle_column                    = current_column;
             parameters_that_were_read.defocus_angle = true;
         }
-        else if ( current_line.StartsWith("_cisTEMPhaseShift ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMPhaseShift ") == true ) {
             if ( phase_shift_column != -1 )
-                wxPrintf("Warning :: _cisTEMPhaseShift occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPhaseShift occurs more than once. I will take the last occurrence\n");
             phase_shift_column                    = current_column;
             parameters_that_were_read.phase_shift = true;
         }
-        else if ( current_line.StartsWith("_cisTEMImageActivity ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMImageActivity ") == true ) {
             if ( image_is_active_column != -1 )
-                wxPrintf("Warning :: _cisTEMImageActivity occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMImageActivity occurs more than once. I will take the last occurrence\n");
             image_is_active_column                    = current_column;
             parameters_that_were_read.image_is_active = true;
         }
-        else if ( current_line.StartsWith("_cisTEMOccupancy ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMOccupancy ") == true ) {
             if ( occupancy_column != -1 )
-                wxPrintf("Warning :: _cisTEMOccupancy occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOccupancy occurs more than once. I will take the last occurrence\n");
             occupancy_column                    = current_column;
             parameters_that_were_read.occupancy = true;
         }
-        else if ( current_line.StartsWith("_cisTEMLogP ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMLogP ") == true ) {
             if ( logp_column != -1 )
-                wxPrintf("Warning :: _cisTEMLogP occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMLogP occurs more than once. I will take the last occurrence\n");
             logp_column                    = current_column;
             parameters_that_were_read.logp = true;
         }
-        else if ( current_line.StartsWith("_cisTEMSigma ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMSigma ") == true ) {
             if ( sigma_column != -1 )
-                wxPrintf("Warning :: _cisTEMSigma occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMSigma occurs more than once. I will take the last occurrence\n");
             sigma_column                    = current_column;
             parameters_that_were_read.sigma = true;
         }
-        else if ( current_line.StartsWith("_cisTEMScore ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMScore ") == true ) {
             if ( score_column != -1 )
-                wxPrintf("Warning :: _cisTEMScore occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMScore occurs more than once. I will take the last occurrence\n");
             score_column                    = current_column;
             parameters_that_were_read.score = true;
         }
-        else if ( current_line.StartsWith("_cisTEMScoreChange ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMScoreChange ") == true ) {
             if ( score_change_column != -1 )
-                wxPrintf("Warning :: _cisTEMScoreChange occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMScoreChange occurs more than once. I will take the last occurrence\n");
             score_change_column                    = current_column;
             parameters_that_were_read.score_change = true;
         }
-        else if ( current_line.StartsWith("_cisTEMPixelSize ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMPixelSize ") == true ) {
             if ( pixel_size_column != -1 )
-                wxPrintf("Warning :: _cisTEMPixelSize occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPixelSize occurs more than once. I will take the last occurrence\n");
             pixel_size_column                    = current_column;
             parameters_that_were_read.pixel_size = true;
         }
-        else if ( current_line.StartsWith("_cisTEMMicroscopeVoltagekV ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMMicroscopeVoltagekV ") == true ) {
             if ( microscope_voltage_kv_column != -1 )
-                wxPrintf("Warning :: _cisTEMMicroscopeVoltagekV occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMMicroscopeVoltagekV occurs more than once. I will take the last occurrence\n");
             microscope_voltage_kv_column                    = current_column;
             parameters_that_were_read.microscope_voltage_kv = true;
         }
-        else if ( current_line.StartsWith("_cisTEMMicroscopeCsMM ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMMicroscopeCsMM ") == true ) {
             if ( microscope_spherical_aberration_mm_column != -1 )
-                wxPrintf("Warning :: _cisTEMMicroscopeCsMM occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMMicroscopeCsMM occurs more than once. I will take the last occurrence\n");
             microscope_spherical_aberration_mm_column                    = current_column;
             parameters_that_were_read.microscope_spherical_aberration_mm = true;
         }
-        else if ( current_line.StartsWith("_cisTEMAmplitudeContrast ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMAmplitudeContrast ") == true ) {
             if ( amplitude_contrast_column != -1 )
-                wxPrintf("Warning :: _cisTEMAmplitudeContrast occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAmplitudeContrast occurs more than once. I will take the last occurrence\n");
             amplitude_contrast_column                    = current_column;
             parameters_that_were_read.amplitude_contrast = true;
         }
-        else if ( current_line.StartsWith("_cisTEMBeamTiltX ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMBeamTiltX ") == true ) {
             if ( beam_tilt_x_column != -1 )
-                wxPrintf("Warning :: _cisTEMBeamTiltX occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBeamTiltX occurs more than once. I will take the last occurrence\n");
             beam_tilt_x_column                    = current_column;
             parameters_that_were_read.beam_tilt_x = true;
         }
-        else if ( current_line.StartsWith("_cisTEMBeamTiltY ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMBeamTiltY ") == true ) {
             if ( beam_tilt_y_column != -1 )
-                wxPrintf("Warning :: _cisTEMBeamTiltY occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBeamTiltY occurs more than once. I will take the last occurrence\n");
             beam_tilt_y_column                    = current_column;
             parameters_that_were_read.beam_tilt_y = true;
         }
-        else if ( current_line.StartsWith("_cisTEMImageShiftX ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMImageShiftX ") == true ) {
             if ( image_shift_x_column != -1 )
-                wxPrintf("Warning :: _cisTEMImageShiftX occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMImageShiftX occurs more than once. I will take the last occurrence\n");
             image_shift_x_column                    = current_column;
             parameters_that_were_read.image_shift_x = true;
         }
-        else if ( current_line.StartsWith("_cisTEMImageShiftY ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMImageShiftY ") == true ) {
             if ( image_shift_y_column != -1 )
-                wxPrintf("Warning :: _cisTEMImageShiftY occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMImageShiftY occurs more than once. I will take the last occurrence\n");
             image_shift_y_column                    = current_column;
             parameters_that_were_read.image_shift_y = true;
         }
-        else if ( current_line.StartsWith("_cisTEMBest2DClass ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMBest2DClass ") == true ) {
             if ( best_2d_class_column != -1 )
-                wxPrintf("Warning :: _cisTEMBest2DClass occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBest2DClass occurs more than once. I will take the last occurrence\n");
             best_2d_class_column                    = current_column;
             parameters_that_were_read.best_2d_class = true;
         }
-        else if ( current_line.StartsWith("_cisTEMBeamTiltGroup ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMBeamTiltGroup ") == true ) {
             if ( beam_tilt_group_column != -1 )
-                wxPrintf("Warning :: _cisTEMBeamTiltGroup occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBeamTiltGroup occurs more than once. I will take the last occurrence\n");
             beam_tilt_group_column                    = current_column;
             parameters_that_were_read.beam_tilt_group = true;
         }
-        else if ( current_line.StartsWith("_cisTEMParticleGroup ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMParticleGroup ") == true ) {
             if ( particle_group_column != -1 )
-                wxPrintf("Warning :: _cisTEMParticleGroup occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMParticleGroup occurs more than once. I will take the last occurrence\n");
             particle_group_column                    = current_column;
             parameters_that_were_read.particle_group = true;
         }
-        else if ( current_line.StartsWith("_cisTEMAssignedSubset ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMAssignedSubset ") == true ) {
             if ( assigned_subset_column != -1 )
-                wxPrintf("Warning :: _cisTEMAssignedSubset occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAssignedSubset occurs more than once. I will take the last occurrence\n");
             assigned_subset_column                    = current_column;
             parameters_that_were_read.assigned_subset = true;
         }
-        else if ( current_line.StartsWith("_cisTEMPreExposure ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMPreExposure ") == true ) {
             if ( pre_exposure_column != -1 )
-                wxPrintf("Warning :: _cisTEMPreExposure occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPreExposure occurs more than once. I will take the last occurrence\n");
             pre_exposure_column                    = current_column;
             parameters_that_were_read.pre_exposure = true;
         }
-        else if ( current_line.StartsWith("_cisTEMTotalExposure ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMTotalExposure ") == true ) {
             if ( total_exposure_column != -1 )
-                wxPrintf("Warning :: _cisTEMTotalExposure occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMTotalExposure occurs more than once. I will take the last occurrence\n");
             total_exposure_column                    = current_column;
             parameters_that_were_read.total_exposure = true;
         }
-        else if ( current_line.StartsWith("_cisTEMOriginalXPosition") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMOriginalXPosition") == true ) {
             if ( original_x_position_column != -1 )
-                wxPrintf("Warning :: _cisTEMOriginalXPosition occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOriginalXPosition occurs more than once. I will take the last occurrence\n");
             original_x_position_column                    = current_column;
             parameters_that_were_read.original_x_position = true;
         }
-        else if ( current_line.StartsWith("_cisTEMOriginalYPosition") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMOriginalYPosition") == true ) {
             if ( original_y_position_column != -1 )
-                wxPrintf("Warning :: _cisTEMOriginalYPosition occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOriginalYPosition occurs more than once. I will take the last occurrence\n");
             original_y_position_column                    = current_column;
             parameters_that_were_read.original_y_position = true;
         }
-        else if ( current_line.StartsWith("_cisTEMReference3DFilename ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMReference3DFilename ") == true ) {
             if ( reference_3d_filename_column != -1 )
-                wxPrintf("Warning :: _cisTEMReference3DFilename occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMReference3DFilename occurs more than once. I will take the last occurrence\n");
             reference_3d_filename_column                    = current_column;
             parameters_that_were_read.reference_3d_filename = true;
         }
-        else if ( current_line.StartsWith("_cisTEMOriginalImageFilename ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMOriginalImageFilename ") == true ) {
             if ( original_image_filename_column != -1 )
-                wxPrintf("Warning :: _cisTEMOriginalImageFilename occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOriginalImageFilename occurs more than once. I will take the last occurrence\n");
             original_image_filename_column                    = current_column;
             parameters_that_were_read.original_image_filename = true;
         }
-        else if ( current_line.StartsWith("_cisTEMStackFilename ") == true ) {
+        else if ( StartsWith(current_line, "_cisTEMStackFilename ") == true ) {
             if ( stack_filename_column != -1 )
-                wxPrintf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
             stack_filename_column                    = current_column;
             parameters_that_were_read.stack_filename = true;
         }
@@ -973,56 +970,56 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
 	if (phi_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (theta_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (psi_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (xshift_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (yshift_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (defocus1_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (defocus2_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (defocus_angle_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
@@ -1040,14 +1037,12 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
 
     // loop over the data lines and fill in..
 
-    //while (input_text_file_stream->Eof() == false)
-    while ( input_text_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_text_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
 
-        if ( current_line.IsEmpty( ) == true )
+        if ( current_line.empty() == true )
             break;
         if ( current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';' )
             continue;
@@ -1059,7 +1054,7 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
     return true;
 }
 
-bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool exclude_negative_film_numbers) {
+bool cisTEMStarFileReader::ReadBinaryFile(std::string wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer, bool exclude_negative_film_numbers) {
     Open(wanted_filename, alternate_cached_parameters_pointer, true);
     MyDebugAssertTrue(binary_file_size > 2, "Input binary file is too small")
 
@@ -1084,7 +1079,7 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
 
     // Preallocate the memory for speed
 
-    cached_parameters->Alloc(number_of_lines);
+    cached_parameters->reserve(number_of_lines);
 
     // get the order of columns..
 
@@ -1101,211 +1096,211 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
 
         if ( column_order_buffer[current_column] == POSITION_IN_STACK ) {
             if ( position_in_stack_column != -1 )
-                wxPrintf("Warning :: _cisTEMPositionInStack occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPositionInStack occurs more than once. I will take the last occurrence\n");
             position_in_stack_column                    = current_column;
             parameters_that_were_read.position_in_stack = true;
         }
         else if ( column_order_buffer[current_column] == PSI ) {
             if ( psi_column != -1 )
-                wxPrintf("Warning :: _cisTEMAnglePsi occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAnglePsi occurs more than once. I will take the last occurrence\n");
             psi_column                    = current_column;
             parameters_that_were_read.psi = true;
         }
         else if ( column_order_buffer[current_column] == THETA ) {
             if ( theta_column != -1 )
-                wxPrintf("Warning :: _cisTEMAngleTheta occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAngleTheta occurs more than once. I will take the last occurrence\n");
             theta_column                    = current_column;
             parameters_that_were_read.theta = true;
         }
         else if ( column_order_buffer[current_column] == PHI ) {
             if ( phi_column != -1 )
-                wxPrintf("Warning :: _cisTEMAnglePhi occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAnglePhi occurs more than once. I will take the last occurrence\n");
             phi_column                    = current_column;
             parameters_that_were_read.phi = true;
         }
         else if ( column_order_buffer[current_column] == X_SHIFT ) {
             if ( x_shift_column != -1 )
-                wxPrintf("Warning :: _cisTEMXShift occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMXShift occurs more than once. I will take the last occurrence\n");
             x_shift_column                    = current_column;
             parameters_that_were_read.x_shift = true;
         }
         else if ( column_order_buffer[current_column] == Y_SHIFT ) {
             if ( y_shift_column != -1 )
-                wxPrintf("Warning :: _cisTEMYShift occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMYShift occurs more than once. I will take the last occurrence\n");
             y_shift_column                    = current_column;
             parameters_that_were_read.y_shift = true;
         }
         else if ( column_order_buffer[current_column] == DEFOCUS_1 ) {
             if ( defocus_1_column != -1 )
-                wxPrintf("Warning :: _cisTEMDefocus1 occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMDefocus1 occurs more than once. I will take the last occurrence\n");
             defocus_1_column                    = current_column;
             parameters_that_were_read.defocus_1 = true;
         }
         else if ( column_order_buffer[current_column] == DEFOCUS_2 ) {
             if ( defocus_2_column != -1 )
-                wxPrintf("Warning :: _cisTEMDefocus2 occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMDefocus2 occurs more than once. I will take the last occurrence\n");
             defocus_2_column                    = current_column;
             parameters_that_were_read.defocus_2 = true;
         }
         else if ( column_order_buffer[current_column] == DEFOCUS_ANGLE ) {
             if ( defocus_angle_column != -1 )
-                wxPrintf("Warning :: _cisTEMDefocusAngle occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMDefocusAngle occurs more than once. I will take the last occurrence\n");
             defocus_angle_column                    = current_column;
             parameters_that_were_read.defocus_angle = true;
         }
         else if ( column_order_buffer[current_column] == PHASE_SHIFT ) {
             if ( phase_shift_column != -1 )
-                wxPrintf("Warning :: _cisTEMPhaseShift occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPhaseShift occurs more than once. I will take the last occurrence\n");
             phase_shift_column                    = current_column;
             parameters_that_were_read.phase_shift = true;
         }
         else if ( column_order_buffer[current_column] == IMAGE_IS_ACTIVE ) {
             if ( image_is_active_column != -1 )
-                wxPrintf("Warning :: _cisTEMImageActivity occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMImageActivity occurs more than once. I will take the last occurrence\n");
             image_is_active_column                    = current_column;
             parameters_that_were_read.image_is_active = true;
         }
         else if ( column_order_buffer[current_column] == OCCUPANCY ) {
             if ( occupancy_column != -1 )
-                wxPrintf("Warning :: _cisTEMOccupancy occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOccupancy occurs more than once. I will take the last occurrence\n");
             occupancy_column                    = current_column;
             parameters_that_were_read.occupancy = true;
         }
         else if ( column_order_buffer[current_column] == LOGP ) {
             if ( logp_column != -1 )
-                wxPrintf("Warning :: _cisTEMLogP occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMLogP occurs more than once. I will take the last occurrence\n");
             logp_column                    = current_column;
             parameters_that_were_read.logp = true;
         }
         else if ( column_order_buffer[current_column] == SIGMA ) {
             if ( sigma_column != -1 )
-                wxPrintf("Warning :: _cisTEMSigma occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMSigma occurs more than once. I will take the last occurrence\n");
             sigma_column                    = current_column;
             parameters_that_were_read.sigma = true;
         }
         else if ( column_order_buffer[current_column] == SCORE ) {
             if ( score_column != -1 )
-                wxPrintf("Warning :: _cisTEMScore occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMScore occurs more than once. I will take the last occurrence\n");
             score_column                    = current_column;
             parameters_that_were_read.score = true;
         }
         else if ( column_order_buffer[current_column] == SCORE_CHANGE ) {
             if ( score_change_column != -1 )
-                wxPrintf("Warning :: _cisTEMScoreChange occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMScoreChange occurs more than once. I will take the last occurrence\n");
             score_change_column                    = current_column;
             parameters_that_were_read.score_change = true;
         }
         else if ( column_order_buffer[current_column] == PIXEL_SIZE ) {
             if ( pixel_size_column != -1 )
-                wxPrintf("Warning :: _cisTEMPixelSize occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPixelSize occurs more than once. I will take the last occurrence\n");
             pixel_size_column                    = current_column;
             parameters_that_were_read.pixel_size = true;
         }
         else if ( column_order_buffer[current_column] == MICROSCOPE_VOLTAGE ) {
             if ( microscope_voltage_kv_column != -1 )
-                wxPrintf("Warning :: _cisTEMMicroscopeVoltagekV occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMMicroscopeVoltagekV occurs more than once. I will take the last occurrence\n");
             microscope_voltage_kv_column                    = current_column;
             parameters_that_were_read.microscope_voltage_kv = true;
         }
         else if ( column_order_buffer[current_column] == MICROSCOPE_CS ) {
             if ( microscope_spherical_aberration_mm_column != -1 )
-                wxPrintf("Warning :: _cisTEMMicroscopeCsMM occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMMicroscopeCsMM occurs more than once. I will take the last occurrence\n");
             microscope_spherical_aberration_mm_column                    = current_column;
             parameters_that_were_read.microscope_spherical_aberration_mm = true;
         }
         else if ( column_order_buffer[current_column] == AMPLITUDE_CONTRAST ) {
             if ( amplitude_contrast_column != -1 )
-                wxPrintf("Warning :: _cisTEMAmplitudeContrast occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAmplitudeContrast occurs more than once. I will take the last occurrence\n");
             amplitude_contrast_column                    = current_column;
             parameters_that_were_read.amplitude_contrast = true;
         }
         else if ( column_order_buffer[current_column] == BEAM_TILT_X ) {
             if ( beam_tilt_x_column != -1 )
-                wxPrintf("Warning :: _cisTEMBeamTiltX occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBeamTiltX occurs more than once. I will take the last occurrence\n");
             beam_tilt_x_column                    = current_column;
             parameters_that_were_read.beam_tilt_x = true;
         }
         else if ( column_order_buffer[current_column] == BEAM_TILT_Y ) {
             if ( beam_tilt_y_column != -1 )
-                wxPrintf("Warning :: _cisTEMBeamTiltY occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBeamTiltY occurs more than once. I will take the last occurrence\n");
             beam_tilt_y_column                    = current_column;
             parameters_that_were_read.beam_tilt_y = true;
         }
         else if ( column_order_buffer[current_column] == IMAGE_SHIFT_X ) {
             if ( image_shift_x_column != -1 )
-                wxPrintf("Warning :: _cisTEMImageShiftX occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMImageShiftX occurs more than once. I will take the last occurrence\n");
             image_shift_x_column                    = current_column;
             parameters_that_were_read.image_shift_x = true;
         }
         else if ( column_order_buffer[current_column] == IMAGE_SHIFT_Y ) {
             if ( image_shift_y_column != -1 )
-                wxPrintf("Warning :: _cisTEMImageShiftY occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMImageShiftY occurs more than once. I will take the last occurrence\n");
             image_shift_y_column                    = current_column;
             parameters_that_were_read.image_shift_y = true;
         }
         else if ( column_order_buffer[current_column] == BEST_2D_CLASS ) {
             if ( best_2d_class_column != -1 )
-                wxPrintf("Warning :: _cisTEMBest2DClass occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBest2DClass occurs more than once. I will take the last occurrence\n");
             best_2d_class_column                    = current_column;
             parameters_that_were_read.best_2d_class = true;
         }
         else if ( column_order_buffer[current_column] == BEAM_TILT_GROUP ) {
             if ( beam_tilt_group_column != -1 )
-                wxPrintf("Warning :: _cisTEMBeamTiltGroup occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMBeamTiltGroup occurs more than once. I will take the last occurrence\n");
             beam_tilt_group_column                    = current_column;
             parameters_that_were_read.beam_tilt_group = true;
         }
         else if ( column_order_buffer[current_column] == PARTICLE_GROUP ) {
             if ( particle_group_column != -1 )
-                wxPrintf("Warning :: _cisTEMParticleGroup occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMParticleGroup occurs more than once. I will take the last occurrence\n");
             particle_group_column                    = current_column;
             parameters_that_were_read.particle_group = true;
         }
         else if ( column_order_buffer[current_column] == ASSIGNED_SUBSET ) {
             if ( assigned_subset_column != -1 )
-                wxPrintf("Warning :: _cisTEMAssignedSubset occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMAssignedSubset occurs more than once. I will take the last occurrence\n");
             assigned_subset_column                    = current_column;
             parameters_that_were_read.assigned_subset = true;
         }
         else if ( column_order_buffer[current_column] == PRE_EXPOSURE ) {
             if ( pre_exposure_column != -1 )
-                wxPrintf("Warning :: _cisTEMPreExposure occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMPreExposure occurs more than once. I will take the last occurrence\n");
             pre_exposure_column                    = current_column;
             parameters_that_were_read.pre_exposure = true;
         }
         else if ( column_order_buffer[current_column] == TOTAL_EXPOSURE ) {
             if ( total_exposure_column != -1 )
-                wxPrintf("Warning :: _cisTEMTotalExposure occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMTotalExposure occurs more than once. I will take the last occurrence\n");
             total_exposure_column                    = current_column;
             parameters_that_were_read.total_exposure = true;
         }
         else if ( column_order_buffer[current_column] == ORIGINAL_X_POSITION ) {
             if ( original_x_position_column != -1 )
-                wxPrintf("Warning :: _cisTEMOriginalXPosition occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOriginalXPosition occurs more than once. I will take the last occurrence\n");
             original_x_position_column                    = current_column;
             parameters_that_were_read.original_x_position = true;
         }
         else if ( column_order_buffer[current_column] == ORIGINAL_Y_POSITION ) {
             if ( original_y_position_column != -1 )
-                wxPrintf("Warning :: _cisTEMOriginalYPosition occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOriginalYPosition occurs more than once. I will take the last occurrence\n");
             original_y_position_column                    = current_column;
             parameters_that_were_read.original_y_position = true;
         }
         else if ( column_order_buffer[current_column] == REFERENCE_3D_FILENAME ) {
             if ( reference_3d_filename_column != -1 )
-                wxPrintf("Warning :: _cisTEMReference3DFilename occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMReference3DFilename occurs more than once. I will take the last occurrence\n");
             reference_3d_filename_column                    = current_column;
             parameters_that_were_read.reference_3d_filename = true;
         }
         else if ( column_order_buffer[current_column] == ORIGINAL_IMAGE_FILENAME ) {
             if ( original_image_filename_column != -1 )
-                wxPrintf("Warning :: _cisTEMOriginalImageFilename occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMOriginalImageFilename occurs more than once. I will take the last occurrence\n");
             original_image_filename_column                    = current_column;
             parameters_that_were_read.original_image_filename = true;
         }
         else if ( column_order_buffer[current_column] == STACK_FILENAME ) {
             if ( stack_filename_column != -1 )
-                wxPrintf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
+                Printf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
             stack_filename_column                    = current_column;
             parameters_that_were_read.stack_filename = true;
         }
@@ -1316,56 +1311,56 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
 	if (phi_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (theta_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (psi_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (xshift_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (yshift_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (defocus1_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (defocus2_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (defocus_angle_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
@@ -1489,15 +1484,15 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
                     return false;
             }
             else if ( column_order_buffer[current_column] == STACK_FILENAME ) {
-                if ( SafelyReadFromBinaryBufferIntowxString(temp_parameters.stack_filename) == false )
+                if ( SafelyReadFromBinaryBufferIntoString(temp_parameters.stack_filename) == false )
                     return false;
             }
             else if ( column_order_buffer[current_column] == ORIGINAL_IMAGE_FILENAME ) {
-                if ( SafelyReadFromBinaryBufferIntowxString(temp_parameters.original_image_filename) == false )
+                if ( SafelyReadFromBinaryBufferIntoString(temp_parameters.original_image_filename) == false )
                     return false;
             }
             else if ( column_order_buffer[current_column] == REFERENCE_3D_FILENAME ) {
-                if ( SafelyReadFromBinaryBufferIntowxString(temp_parameters.reference_3d_filename) == false )
+                if ( SafelyReadFromBinaryBufferIntoString(temp_parameters.reference_3d_filename) == false )
                     return false;
             }
             else if ( column_order_buffer[current_column] == PARTICLE_GROUP ) {
@@ -1527,7 +1522,7 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
             else // We do not recongnize this column type
             {
                 if ( current_line == 0 )
-                    wxPrintf("Unknown Column Type in Binary File (%li) - it will be ignored.\n");
+                    Printf("Unknown Column Type in Binary File (%li) - it will be ignored.\n");
 
                 if ( column_data_types[current_column] == c_ft::integer_t ) {
                     int buffer_int;
@@ -1560,15 +1555,15 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
                         return false;
                 }
                 else if ( column_data_types[current_column] == c_ft::variable_length_t ) {
-                    wxString buffer_string;
-                    if ( SafelyReadFromBinaryBufferIntowxString(buffer_string) == false )
+                    std::string buffer_string;
+                    if ( SafelyReadFromBinaryBufferIntoString(buffer_string) == false )
                         return false;
                 }
             }
         }
 
         if ( temp_parameters.image_is_active >= 0 || exclude_negative_film_numbers == false )
-            cached_parameters->Add(temp_parameters);
+            cached_parameters->push_back(temp_parameters);
     }
 
     return true;

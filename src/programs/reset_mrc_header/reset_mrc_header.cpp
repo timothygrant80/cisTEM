@@ -40,7 +40,7 @@ bool ResetMRCHeaderApp::DoCalculation( ) {
 
     EmpiricalDistribution<double> my_distribution;
 
-    //wxPrintf("Resetting MRC header of file %s...\n",input_filename);
+    //Printf("Resetting MRC header of file %s...\n",input_filename);
 
     ProgressBar* my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices( ));
 
@@ -64,7 +64,7 @@ bool ResetMRCHeaderApp::DoCalculation( ) {
 
     my_input_file.WriteHeader( );
 
-    wxPrintf("\nAll done.\n");
+    Printf("\nAll done.\n");
 
     return true;
 }

@@ -60,7 +60,7 @@ bool DivideTwoStacks::DoCalculation( ) {
 
     float input_pixel_size = my_input_file_one.ReturnPixelSize( );
 
-    wxPrintf("\nDividing Images...\n\n");
+    Printf("\nDividing Images...\n\n");
     ProgressBar* my_progress = new ProgressBar(my_input_file_one.ReturnNumberOfSlices( ));
 
     for ( long image_counter = 0; image_counter < my_input_file_one.ReturnNumberOfSlices( ); image_counter++ ) {
@@ -80,7 +80,7 @@ bool DivideTwoStacks::DoCalculation( ) {
     }
 
     delete my_progress;
-    wxPrintf("\n\n");
+    Printf("\n\n");
 
     my_output_file.SetPixelSize(input_pixel_size);
     my_output_file.WriteHeader( );

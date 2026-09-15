@@ -20,7 +20,7 @@ FrealignParameterFile::FrealignParameterFile( ) {
     records_per_line = 0;
 }
 
-FrealignParameterFile::FrealignParameterFile(wxString wanted_filename, int wanted_access_type, int wanted_records_per_line) {
+FrealignParameterFile::FrealignParameterFile(std::string wanted_filename, int wanted_access_type, int wanted_records_per_line) {
     Open(wanted_filename, wanted_access_type, wanted_records_per_line);
 }
 
@@ -28,7 +28,7 @@ FrealignParameterFile::~FrealignParameterFile( ) {
     Close( );
 }
 
-void FrealignParameterFile::Open(wxString wanted_filename, int wanted_access_type, int wanted_records_per_line) {
+void FrealignParameterFile::Open(std::string wanted_filename, int wanted_access_type, int wanted_records_per_line) {
     filename        = wanted_filename;
     access_type     = wanted_access_type;
     number_of_lines = 0;
@@ -39,14 +39,14 @@ void FrealignParameterFile::Open(wxString wanted_filename, int wanted_access_typ
     defocus_coeff_b = 0.0;
 
     if ( access_type == 1 ) {
-        parameter_file = fopen(filename, "w");
+        parameter_file = fopen(filename.c_str( ), "w");
         if ( parameter_file == NULL ) {
             MyPrintWithDetails("Error: Cannot open Frealign parameter file (%s) for write\n", wanted_filename);
             DEBUG_ABORT;
         }
     }
     else {
-        parameter_file = fopen(filename, "r");
+        parameter_file = fopen(filename.c_str( ), "r");
         if ( parameter_file == NULL ) {
             MyPrintWithDetails("Error: Cannot open Frealign parameter file (%s) for read\n", wanted_filename);
             DEBUG_ABORT;
@@ -66,11 +66,11 @@ void FrealignParameterFile::Close( ) {
         fclose(parameter_file);
 }
 
-void FrealignParameterFile::WriteCommentLine(wxString comment_string) {
-    if ( comment_string.StartsWith("C") == false ) {
+void FrealignParameterFile::WriteCommentLine(std::string comment_string) {
+    if ( StartsWith(comment_string, "C") == false ) {
         comment_string = "C " + comment_string;
     }
-    fprintf(parameter_file, "%s\n", comment_string.ToUTF8( ).data( ));
+    fprintf(parameter_file, "%s\n", comment_string.c_str());
 }
 
 void FrealignParameterFile::WriteLine(float* parameters, bool comment) {
@@ -139,7 +139,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int part
     if ( line_length < 142 )
         records_per_line_in_file = 16;
     if ( records_per_line_in_file < records_per_line )
-        wxPrintf("\n Reading old parameter file...\n");
+        Printf("\n Reading old parameter file...\n");
 
     current_line = 0;
     for ( line = 0; line < number_of_lines + 1; line++ )
@@ -147,7 +147,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int part
     {
         if ( dataline[0] != 'C' ) {
             if ( strlen(dataline) != line_length && ! one_warning_length ) {
-                wxPrintf("Warning: line %i has different length than first data line\n", lines_read);
+                Printf("Warning: line %i has different length than first data line\n", lines_read);
                 one_warning_length = true;
             }
             elements_read = records_per_line * current_line;
@@ -164,7 +164,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int part
             }
             if ( parameter_cache[elements_read] < 1 || (parameter_cache[elements_read] > particles_in_stack && particles_in_stack > -1) ) {
                 if ( ! one_warning_range ) {
-                    wxPrintf("Warning: particle location in line %i is out of range\n", lines_read);
+                    Printf("Warning: particle location in line %i is out of range\n", lines_read);
                     one_warning_range = true;
                 }
             }
@@ -176,7 +176,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int part
             break;
     }
     number_of_lines = current_line;
-    wxPrintf("\n %i data lines read\n", number_of_lines);
+    Printf("\n %i data lines read\n", number_of_lines);
     current_line = 0;
 
     fclose(parameter_file);
@@ -327,7 +327,7 @@ void FrealignParameterFile::RemoveOutliers(int wanted_index, float wanted_standa
         std             = sqrtf(std);
         upper_threshold = average + 2.0 * wanted_standard_deviation * std;
         lower_threshold = average - 2.0 * wanted_standard_deviation * std;
-        //		wxPrintf("0: average, std, upper, lower = %g %g %g %g\n", float(average), std, upper_threshold, lower_threshold);
+        //		Printf("0: average, std, upper, lower = %g %g %g %g\n", float(average), std, upper_threshold, lower_threshold);
         average = 0.0;
         sum2    = 0.0;
         sum_i   = 0;
@@ -354,7 +354,7 @@ void FrealignParameterFile::RemoveOutliers(int wanted_index, float wanted_standa
         std             = sqrtf(std);
         upper_threshold = average + wanted_standard_deviation * std;
         lower_threshold = average - wanted_standard_deviation * std;
-        //		wxPrintf("1: average, std, upper, lower = %g %g %g %g\n", float(average), std, upper_threshold, lower_threshold);
+        //		Printf("1: average, std, upper, lower = %g %g %g %g\n", float(average), std, upper_threshold, lower_threshold);
 
         for ( line = 0; line < number_of_lines; line++ ) {
             index = records_per_line * line;
@@ -417,7 +417,7 @@ float FrealignParameterFile::ReturnThreshold(float wanted_percentage, bool exclu
         }
         percentage = sum_occ / number_of_lines / average_occ;
 
-        //	wxPrintf("sum_occ = %f : threshold = %f\n", sum_occ, threshold);
+        //	Printf("sum_occ = %f : threshold = %f\n", sum_occ, threshold);
         if ( percentage >= wanted_percentage )
             break;
     }
@@ -451,7 +451,7 @@ void FrealignParameterFile::CalculateDefocusDependence(bool exclude_negative_fil
     delta           = s * sxx - powf(sx, 2);
     defocus_coeff_a = (sxx * sy - sx * sxy) / delta;
     defocus_coeff_b = (s * sxy - sx * sy) / delta;
-    //	wxPrintf("average_defocus = %g, defocus_coeff_a = %g, defocus_coeff_b = %g\n", average_defocus, defocus_coeff_a, defocus_coeff_b);
+    //	Printf("average_defocus = %g, defocus_coeff_a = %g, defocus_coeff_b = %g\n", average_defocus, defocus_coeff_a, defocus_coeff_b);
 }
 
 void FrealignParameterFile::AdjustScores(bool exclude_negative_film_numbers) {

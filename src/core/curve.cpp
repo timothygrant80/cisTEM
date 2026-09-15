@@ -1,6 +1,4 @@
 #include "core_headers.h"
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayofCurves);
 
 void LS_POLY(float* x_data, float* y_data, int n_points, int order_of_polynomial, float* output_smoothed_curve, float* output_coefficients);
 
@@ -525,7 +523,7 @@ void Curve::AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float v
  */
 void Curve::PrintToStandardOut( ) {
     for ( int i = 0; i < NumberOfPoints( ); i++ ) {
-        wxPrintf("%f %f\n", data_x[i], data_y[i]);
+        Printf("%f %f\n", data_x[i], data_y[i]);
     }
 }
 
@@ -535,13 +533,13 @@ void Curve::PrintToStandardOut( ) {
  * @param output_file 
  * @param header_line 
  */
-void Curve::WriteToFile(wxString output_file, wxString header_line) {
+void Curve::WriteToFile(std::string output_file, std::string header_line) {
     DebugCheckEmpty( );
 
     std::array<float, 2> temp_float;
 
     NumericTextFile output_curve_file(output_file, OPEN_TO_WRITE, 2);
-    output_curve_file.WriteCommentLine(header_line);
+    output_curve_file.WriteCommentLine(header_line.c_str( ));
     for ( int i = 0; i < NumberOfPoints( ); i++ ) {
         temp_float[0] = data_x[i];
         temp_float[1] = data_y[i];
@@ -556,7 +554,7 @@ void Curve::WriteToFile(wxString output_file, wxString header_line) {
  * 
  * @param output_file 
  */
-void Curve::WriteToFile(wxString output_file) {
+void Curve::WriteToFile(std::string output_file) {
     WriteToFile(output_file, "C            X              Y");
 }
 
@@ -835,11 +833,11 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x) {
     }
 
     // Should never get here
-    wxPrintf("Error: wanted_x = %f\n", wanted_x);
-    wxPrintf("Size of data_x = %i\n", int(data_x.size( )));
-    wxPrintf("Front and back of data_x = %f %f\n", data_x.front( ), data_x.back( ));
-    wxPrintf("Number of points = %i\n", NumberOfPoints( ));
-    wxPrintf("index_of_last_point_used = %i\n", GetIndexOfLastPointUsed( ));
+    Printf("Error: wanted_x = %f\n", wanted_x);
+    Printf("Size of data_x = %i\n", int(data_x.size( )));
+    Printf("Front and back of data_x = %f %f\n", data_x.front( ), data_x.back( ));
+    Printf("Number of points = %i\n", NumberOfPoints( ));
+    Printf("index_of_last_point_used = %i\n", GetIndexOfLastPointUsed( ));
 
     MyDebugAssertTrue(false, "Oops, programming error\n");
     return 0;
@@ -1206,7 +1204,7 @@ void LS_POLY(float* x_data, float* y_data, int n_points, int order_of_polynomial
         x[i + 1] = x_data[i];
         y[i + 1] = y_data[i];
 
-        //wxPrintf("Before %i = %f\n", i, y_data[i]);
+        //Printf("Before %i = %f\n", i, y_data[i]);
     }
 
     // Initialize the arrays
@@ -1323,7 +1321,7 @@ fin:;
     for ( i = 0; i < n_points; i++ ) {
         output_smoothed_curve[i] = v[i + 1];
         //	output_smoothed_curve[i] = y[i + 1];
-        //wxPrintf("After %i = %f\n", i, output_smoothed_curve[i]);
+        //Printf("After %i = %f\n", i, output_smoothed_curve[i]);
     }
 
     // coefficient 0: constant

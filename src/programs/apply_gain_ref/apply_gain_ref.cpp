@@ -80,7 +80,7 @@ bool ApplyGainRef::DoCalculation( ) {
     bool        also_use_dark            = my_current_job.arguments[9].ReturnBoolArgument( );
     std::string input_dark_filename      = my_current_job.arguments[10].ReturnStringArgument( );
 
-    //wxFileName input_wx_filename(input_filename);
+    //std::filesystem::path input_wx_filename(input_filename);
 
     ImageFile my_input_file(input_filename, false);
     MRCFile   my_output_file(output_filename, true);
@@ -94,7 +94,7 @@ bool ApplyGainRef::DoCalculation( ) {
     if ( also_use_dark == true )
         dark_reference.QuickAndDirtyReadSlice(input_dark_filename, 1);
 
-    wxPrintf("\nCorrecting...\n\n");
+    Printf("\nCorrecting...\n\n");
 
     ProgressBar* my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices( ));
 
@@ -124,7 +124,7 @@ bool ApplyGainRef::DoCalculation( ) {
     }
 
     delete my_progress;
-    wxPrintf("\n\nApply Gain finished cleanly!\n\n");
+    Printf("\n\nApply Gain finished cleanly!\n\n");
 
     return true;
 }

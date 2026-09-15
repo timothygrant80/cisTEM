@@ -10,11 +10,11 @@ class AssetGroup {
     int      id;
     long*    members;
     long     number_of_members;
-    wxString name;
+    std::string name;
 
     bool can_be_picked; // Used by FindParticlesPanel to keep track of whether all images within the group are ready to be picked
 
-    void SetName(wxString wanted_name);
+    void SetName(std::string wanted_name);
     void AddMember(long number_to_add);
     void RemoveMember(long number_to_remove);
     void RemoveAll( );
@@ -40,7 +40,7 @@ class AssetGroupList {
 
     long ReturnNumberOfGroups( );
 
-    void AddGroup(wxString name);
+    void AddGroup(std::string name);
     void AddGroup(AssetGroup* group_to_add);
 
     void RemoveGroup(long number_to_remove);

@@ -49,9 +49,9 @@ int ccl3d::Find(int x, int parent[]) {
     return k;
 }
 
-float mostFrequent(wxVector<float> arr, int n) {
+float mostFrequent(std::vector<float> arr, int n) {
     // Sort the array
-    wxVectorSort(arr);
+    std::sort(arr.begin( ), arr.end( ));
     // find the max frequency using linear traversal
     int   max_count = 1, curr_count = 1;
     float res = arr[0];
@@ -153,7 +153,7 @@ void ccl3d::GetLargestConnectedDensityMask(Image& input3d, Image& output_largest
         }
     }
     //second pass
-    wxVector<float> pixel_value;
+    std::vector<float> pixel_value;
     long            pixel_counter1 = 0;
     for ( int z = 0; z < input3d.logical_z_dimension; z++ ) {
         for ( int y = 0; y < input3d.logical_y_dimension; y++ ) {
@@ -168,7 +168,7 @@ void ccl3d::GetLargestConnectedDensityMask(Image& input3d, Image& output_largest
         }
     }
     max = mostFrequent(pixel_value, pixel_value.size( ));
-    //	wxPrintf("%f\n", max);
+    //	Printf("%f\n", max);
 
     long pixel_counter2 = 0;
     for ( int z = 0; z < input3d.logical_z_dimension; z++ ) {

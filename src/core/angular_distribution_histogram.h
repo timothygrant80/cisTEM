@@ -1,9 +1,9 @@
 class AngularDistributionHistogram {
 
   public:
-    wxArrayFloat histogram_data;
-    wxArrayFloat phi_boundaries;
-    wxArrayFloat theta_boundaries;
+    std::vector<float> histogram_data;
+    std::vector<float> phi_boundaries;
+    std::vector<float> theta_boundaries;
 
     int number_of_theta_steps;
     int number_of_phi_steps;
@@ -26,7 +26,7 @@ class AngularDistributionHistogram {
 
         int theta_bin;
 
-        for ( theta_bin = 0; theta_bin < theta_boundaries.GetCount( ); theta_bin++ ) {
+        for ( theta_bin = 0; theta_bin < theta_boundaries.size(); theta_bin++ ) {
             if ( theta < theta_boundaries[theta_bin] ) {
                 return theta_bin;
             }
@@ -34,7 +34,7 @@ class AngularDistributionHistogram {
 
         // if we get here must be last bin..
 
-        return theta_boundaries.GetCount( );
+        return theta_boundaries.size();
     }
 
     inline int ReturnPhiBin(float phi) {
@@ -49,7 +49,7 @@ class AngularDistributionHistogram {
 
         int phi_bin;
 
-        for ( phi_bin = 0; phi_bin < phi_boundaries.GetCount( ); phi_bin++ ) {
+        for ( phi_bin = 0; phi_bin < phi_boundaries.size(); phi_bin++ ) {
             if ( phi < phi_boundaries[phi_bin] ) {
                 return phi_bin;
             }
@@ -57,8 +57,8 @@ class AngularDistributionHistogram {
 
         // if we got here, must be last bin..
 
-        return phi_boundaries.GetCount( );
+        return phi_boundaries.size();
     }
 };
 
-WX_DECLARE_OBJARRAY(AngularDistributionHistogram, ArrayofAngularDistributionHistograms);
+typedef std::vector<AngularDistributionHistogram> ArrayofAngularDistributionHistograms;

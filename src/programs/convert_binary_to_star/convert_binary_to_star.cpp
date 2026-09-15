@@ -29,16 +29,16 @@ void ConvertBinToStar::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool ConvertBinToStar::DoCalculation( ) {
-    wxString input_filename  = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_filename = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_filename  = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_filename = my_current_job.arguments[1].ReturnStringArgument( );
 
-    wxPrintf("\nConverting...\n\n");
+    Printf("\nConverting...\n\n");
 
     cisTEMParameters converted_params;
     converted_params.ReadFromcisTEMBinaryFile(input_filename);
     converted_params.parameters_to_write = converted_params.parameters_that_were_read;
     converted_params.WriteTocisTEMStarFile(output_filename);
-    wxPrintf("\n\n");
+    Printf("\n\n");
 
     return true;
 }

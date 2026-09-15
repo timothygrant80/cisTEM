@@ -24,7 +24,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
     center_mass           = false;
 }
 
-Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere) {
+Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, std::string wanted_symmetry, int wanted_correct_ewald_sphere) {
     logical_x_dimension  = 0;
     logical_y_dimension  = 0;
     logical_z_dimension  = 0;
@@ -48,7 +48,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
     center_mass           = false;
 }
 
-Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere) {
+Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, std::string wanted_symmetry, int wanted_correct_ewald_sphere) {
     ctf_reconstruction = NULL;
     Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_score, wanted_score_weights_conversion, wanted_correct_ewald_sphere);
 
@@ -613,7 +613,7 @@ float Reconstruct3D::Correct3DCTF(Image& buffer3d) {
     return correction_factor;
 }
 
-void Reconstruct3D::DumpArrays(wxString filename, bool insert_even) {
+void Reconstruct3D::DumpArrays(std::string filename, bool insert_even) {
     int   i;
     int   count = 0;
     int   oddeven;
@@ -686,7 +686,7 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even) {
     for ( i = 0; i < 4; i++ )
         temp_char[count + i] = ' ';
     for ( i = 0; i < symmetry_matrices.symmetry_symbol.length( ); i++ )
-        temp_char[count + i] = symmetry_matrices.symmetry_symbol.GetChar(i);
+        temp_char[count + i] = symmetry_matrices.symmetry_symbol[i];
     count += 4;
     oddeven = 1;
     if ( insert_even ) {
@@ -717,9 +717,9 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even) {
     b_stream.close( );
 }
 
-void Reconstruct3D::ReadArrayHeader(wxString filename, int& logical_x_dimension, int& logical_y_dimension, int& logical_z_dimension,
+void Reconstruct3D::ReadArrayHeader(std::string filename, int& logical_x_dimension, int& logical_y_dimension, int& logical_z_dimension,
                                     int& original_x_dimension, int& original_y_dimension, int& original_z_dimension, int& images_processed, float& pixel_size, float& original_pixel_size,
-                                    float& average_occupancy, float& average_score, float& score_weights_conversion, wxString& symmetry_symbol, bool& insert_even, bool& center_mass) {
+                                    float& average_occupancy, float& average_score, float& score_weights_conversion, std::string& symmetry_symbol, bool& insert_even, bool& center_mass) {
     int   i;
     int   count = 9 * sizeof(int) + 5 * sizeof(float) + 4;
     int   oddeven;
@@ -819,7 +819,7 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int& logical_x_dimension,
     b_stream.close( );
 }
 
-void Reconstruct3D::ReadArrays(wxString filename) {
+void Reconstruct3D::ReadArrays(std::string filename) {
     int   i;
     int   count = 9 * sizeof(int) + 5 * sizeof(float) + 4;
     int   oddeven;
@@ -838,7 +838,7 @@ void Reconstruct3D::ReadArrays(wxString filename) {
     int   input_original_y_dimension;
     int   input_original_z_dimension;
     //	int input_images_processed;
-    wxString input_symmetry_symbol;
+    std::string input_symmetry_symbol;
 
     std::ifstream b_stream(filename.c_str( ), std::fstream::in | std::fstream::binary);
 

@@ -136,9 +136,9 @@ bool FitTiltModel::DoCalculation( ) {
     NumericTextFile                   rawtlt(rawtltfile, OPEN_TO_READ, 1);
 
     // Read Inputs
-    wxPrintf("read txt file by numeric txtfile\n");
+    Printf("read txt file by numeric txtfile\n");
     image_no = inputfile.number_of_lines;
-    wxPrintf("number of tilts: %d\n", image_no);
+    Printf("number of tilts: %d\n", image_no);
     float temp_array[3];
 
     index    = new int[image_no];
@@ -148,7 +148,7 @@ bool FitTiltModel::DoCalculation( ) {
         index[image_ind] = temp_array[0];
         ctffind_phi.push_back(360 - temp_array[1]);
         ctffind_theta.push_back(-temp_array[2]);
-        // wxPrintf("theta phi read %f %f \n", ctffind_theta[image_ind], ctffind_phi[image_ind]);
+        // Printf("theta phi read %f %f \n", ctffind_theta[image_ind], ctffind_phi[image_ind]);
         rawtlt.ReadLine(&raw_tilt[image_ind]);
     }
     rawtlt.Close( );
@@ -192,8 +192,8 @@ bool FitTiltModel::DoCalculation( ) {
     simplex_minimzer.MinimizeFunction(this, optim_function);
     simplex_minimzer.GetMinimizedValues(min_values);
 
-    wxPrintf("\nfitted result: phi_zero, theta_zero, phi_tem\n");
-    wxPrintf(" %f, %f, %f\n", min_values[1], min_values[2], min_values[3]);
+    Printf("\nfitted result: phi_zero, theta_zero, phi_tem\n");
+    Printf(" %f, %f, %f\n", min_values[1], min_values[2], min_values[3]);
 
     fitted_phi_zero   = min_values[1];
     fitted_theta_zero = min_values[2];
@@ -210,11 +210,11 @@ bool FitTiltModel::DoCalculation( ) {
         }
     }
 
-    wxPrintf("\nadjusted fitted result: phi_zero, theta_zero, phi_tem\n");
-    wxPrintf(" %f, %f, %f\n", fitted_phi_zero, fitted_theta_zero, fitted_phi_tem);
+    Printf("\nadjusted fitted result: phi_zero, theta_zero, phi_tem\n");
+    Printf(" %f, %f, %f\n", fitted_phi_zero, fitted_theta_zero, fitted_phi_tem);
 
     rmse = optim_function(this, min_values);
-    wxPrintf("rmse is %f\n", rmse);
+    Printf("rmse is %f\n", rmse);
 
     zero_rot = CTFRotationMatrix(fitted_phi_zero, fitted_theta_zero);
 
@@ -230,22 +230,22 @@ bool FitTiltModel::DoCalculation( ) {
     }
 
     // save results to files :
-    wxPrintf("\nfitted tilt and axis direction\n");
+    Printf("\nfitted tilt and axis direction\n");
     for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-        wxPrintf("%d %f %f\n", image_ind, exp_theta[image_ind], exp_phi[image_ind]);
+        Printf("%d %f %f\n", image_ind, exp_theta[image_ind], exp_phi[image_ind]);
     }
 
-    wxPrintf("\noutlier indexes: ");
+    Printf("\noutlier indexes: ");
     NumericTextFile OutlierIndexFile(outpath + "outlier_index.txt", OPEN_TO_WRITE, 1);
     if ( outlier_indexes.size( ) == 0 ) {
-        wxPrintf("\n--- all data pairs were used for fitting, no outliers --- \n");
+        Printf("\n--- all data pairs were used for fitting, no outliers --- \n");
     }
     else {
         for ( float value : outlier_indexes ) {
-            wxPrintf("%f\t", value);
+            Printf("%f\t", value);
             OutlierIndexFile.WriteLine(&value);
         }
-        wxPrintf("\n");
+        Printf("\n");
     }
     OutlierIndexFile.Close( );
 
@@ -288,7 +288,7 @@ bool FitTiltModel::DoCalculation( ) {
     int              outlier_count = 0;
     std::vector<int> excluded_index;
     for ( int i = 0; i < image_no; i++ ) {
-        wxPrintf("%d %f %f %d %f %f\n", i, exp_theta[i], exp_phi[i], i, ctffind_theta[i], ctffind_phi[i]);
+        Printf("%d %f %f %d %f %f\n", i, exp_theta[i], exp_phi[i], i, ctffind_theta[i], ctffind_phi[i]);
         temp_array[0] = index[i];
         temp_array[1] = abs(exp_theta[i] - ctffind_theta[i]);
         temp_array[2] = abs(exp_phi[i] - ctffind_phi[i]);
@@ -311,19 +311,19 @@ bool FitTiltModel::DoCalculation( ) {
 
     NumericTextFile excludedpointindex(outpath + "abs_error_excluded_index.txt", OPEN_TO_WRITE, 1);
     for ( float value : excluded_index ) {
-        wxPrintf("%f\t", value);
+        Printf("%f\t", value);
         excludedpointindex.WriteLine(&value);
     }
     excludedpointindex.Close( );
 
-    wxPrintf("\nthe excluded index for calculating the mean abs error are:\n");
+    Printf("\nthe excluded index for calculating the mean abs error are:\n");
     for ( int value : excluded_index ) {
-        wxPrintf(" %d\t", value);
+        Printf(" %d\t", value);
     }
-    wxPrintf("\n");
+    Printf("\n");
     mean_theta_error = sum_theta_error / count;
     mean_phi_error   = sum_phi_error / count;
-    wxPrintf("\nthe mean abs error for theta and phi are: %f %f \n", mean_theta_error, mean_phi_error);
+    Printf("\nthe mean abs error for theta and phi are: %f %f \n", mean_theta_error, mean_phi_error);
 
     delete[] index;
     delete[] raw_tilt;

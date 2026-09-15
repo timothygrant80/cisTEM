@@ -112,11 +112,10 @@ void CTFTilt::Init(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf
 CTFTilt::~CTFTilt( ) {
     // Write out the json file
     if ( debug ) {
-        wxString json_string = wxString::FromUTF8(debug_json_output.dump(4));
-        wxFile   debug_file;
-        debug_file.Open(debug_json_output_filename, wxFile::write);
-        debug_file.Write(json_string);
-        debug_file.Close( );
+        std::string   json_string = debug_json_output.dump(4);
+        std::ofstream debug_file(debug_json_output_filename);
+        debug_file << json_string;
+        debug_file.close( );
     }
     delete[] input_image_buffer;
     delete[] resampled_power_spectra;
@@ -207,8 +206,8 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
             section_counter++;
         }
     }
-    // wxPrintf("-------------------------------------------------------------------");
-    // wxPrintf("the tiles real boxed: %d\n", tmp_count);
+    // Printf("-------------------------------------------------------------------");
+    // Printf("the tiles real boxed: %d\n", tmp_count);
 
     power_spectra_calculated = true;
 }
@@ -247,7 +246,7 @@ float CTFTilt::FindRoughDefocus( ) {
     defocus_2                = average_defocus;
     rough_defocus_determined = true;
 
-    //	wxPrintf("defocus, var = %g %g\n\n", average_defocus, variance_max);
+    //	Printf("defocus, var = %g %g\n\n", average_defocus, variance_max);
     return variance_max;
 }
 
@@ -300,7 +299,7 @@ float CTFTilt::FindDefocusAstigmatism( ) {
     astigmatic_angle               = min_values[3];
     defocus_astigmatism_determined = true;
 
-    //	wxPrintf("defocus_1, defocus_2, astigmatic_angle = %g %g %g\n\n", defocus_1, defocus_2, astigmatic_angle);
+    //	Printf("defocus_1, defocus_2, astigmatic_angle = %g %g %g\n\n", defocus_1, defocus_2, astigmatic_angle);
     return -ScoreValues(min_values);
 }
 
@@ -371,10 +370,10 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
 //     start_values[1] = best_tilt_axis;
 //     start_values[2] = best_tilt_angle;
 
-//     // wxPrintf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
+//     // Printf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
 
 //     simplex_minimzer.SetIinitalValues(start_values, ranges);
-//     // wxPrintf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
+//     // Printf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
 
 //     simplex_minimzer.initial_values[1][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1];
 //     simplex_minimzer.initial_values[1][2] = start_values[2] * simplex_minimzer.value_scalers[2];
@@ -385,7 +384,7 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
 //     simplex_minimzer.initial_values[3][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1] / 2.0f;
 //     simplex_minimzer.initial_values[3][2] = start_values[2] * simplex_minimzer.value_scalers[2] - ranges[2] * simplex_minimzer.value_scalers[2] * sqrtf(3.0f / 4.0f);
 
-//     wxPrintf("initial values %f, %f, %f\n", simplex_minimzer.initial_values[4][1], simplex_minimzer.initial_values[4][2], simplex_minimzer.initial_values[4][3]);
+//     Printf("initial values %f, %f, %f\n", simplex_minimzer.initial_values[4][1], simplex_minimzer.initial_values[4][2], simplex_minimzer.initial_values[4][3]);
 
 //     simplex_minimzer.MinimizeFunction(this, SampleTiltScoreFunctionForSimplexTiltAxis);
 //     simplex_minimzer.GetMinimizedValues(min_values);
@@ -499,7 +498,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     n_sec = std::max(input_image_buffer[0].logical_x_dimension / sub_section_dimension, input_image_buffer[0].logical_y_dimension / sub_section_dimension);
     if ( IsEven(n_sec) )
         n_sec++;
-    //	wxPrintf("n_sec, n_stp = %i %i\n", n_sec, n_stp);
+    //	Printf("n_sec, n_stp = %i %i\n", n_sec, n_stp);
 
     sub_section_x = input_image_buffer[0].logical_x_dimension / (n_sec + 1);
     if ( IsOdd(sub_section_x) )
@@ -525,7 +524,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     //	int section_counter = 0;
     MyDebugPrint("Calculating tilt corrected spectra with image_buffer_counter = %i, n_sec = %i, n_stp = %i\n", image_buffer_counter, n_sec, n_stp);
     for ( image_counter = 0; image_counter < image_buffer_counter; image_counter++ ) {
-        //		wxPrintf("working on frame %i\n", image_counter);
+        //		Printf("working on frame %i\n", image_counter);
         for ( iy = -(n_sec - 1) * n_stp / 2; iy <= (n_sec - 1) * n_stp / 2; iy++ ) {
             for ( ix = -(n_sec - 1) * n_stp / 2; ix <= (n_sec - 1) * n_stp / 2; ix++ ) {
                 x_coordinate_2d = float(ix) * sub_section_x / float(n_stp) * pixel_size_of_input_image;
@@ -536,7 +535,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
                     stretch_factor = sqrtf(fabsf(average_defocus + height) / average_defocus);
                 else
                     stretch_factor = 1.0f;
-                //				wxPrintf("x, y, x_coordinate_2d, y_coordinate_2d, stretch_factor = %i %i %g %g %g\n", ix, iy, x_coordinate_2d, y_coordinate_2d, stretch_factor);
+                //				Printf("x, y, x_coordinate_2d, y_coordinate_2d, stretch_factor = %i %i %g %g %g\n", ix, iy, x_coordinate_2d, y_coordinate_2d, stretch_factor);
 
                 input_image_buffer[image_counter].ClipInto(&section, 0.0f, false, 0.0f, myroundint(float(ix) * sub_section_x / float(n_stp)), myroundint(float(iy) * sub_section_y / float(n_stp)), 0);
                 padding_value = section.ReturnAverageOfRealValues( );
@@ -724,7 +723,7 @@ double CTFTilt::ScoreValuesFixedDefocus(double input_values[]) {
     // 1 = tilt_axis
     // 2 = tilt_angle
     // 3 = average_defocus
-    // wxPrintf("defocus1 defocus2 %f %f\n", defocus_1, defocus_2);
+    // Printf("defocus1 defocus2 %f %f\n", defocus_1, defocus_2);
 
     int    i, j;
     int    ix, iy;
@@ -823,7 +822,7 @@ double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]) {
 
 double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[]) {
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
-    // wxPrintf("average_defocus: %f\n",average_defocus);
+    // Printf("average_defocus: %f\n",average_defocus);
     float score = scorer_to_use->ScoreValuesFixedDefocus(values);
     MyDebugPrint("%f, %f, %f = %f\n", values[0], values[1], values[2], score);
     return score;

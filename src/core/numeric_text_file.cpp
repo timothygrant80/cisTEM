@@ -15,7 +15,7 @@ NumericTextFile::NumericTextFile( ) {
  * @param wanted_access_type OPEN_TO_READ, OPEN_TO_WRITE, OPEN_TO_APPEND
  * @param wanted_records_per_line expected to be equal for all lines, defaults to 1, ignored when reading and determined from file.
  */
-NumericTextFile::NumericTextFile(wxString Filename, long wanted_access_type, long wanted_records_per_line) {
+NumericTextFile::NumericTextFile(std::string Filename, long wanted_access_type, long wanted_records_per_line) {
     Open(Filename, wanted_access_type, wanted_records_per_line);
 }
 
@@ -30,20 +30,20 @@ NumericTextFile::~NumericTextFile( ) {
  * @param wanted_access_type OPEN_TO_READ, OPEN_TO_WRITE, OPEN_TO_APPEND
  * @param wanted_records_per_line expected to be equal for all lines, defaults to 1, ignored when reading and determined from file.
  */
-void NumericTextFile::Open(wxString Filename, long wanted_access_type, long wanted_records_per_line) {
+void NumericTextFile::Open(std::string Filename, long wanted_access_type, long wanted_records_per_line) {
     MyDebugAssertTrue(wanted_access_type == OPEN_TO_READ || wanted_access_type == OPEN_TO_WRITE || wanted_access_type == OPEN_TO_APPEND, "Invalid access type");
 
     access_type      = wanted_access_type;
     records_per_line = wanted_records_per_line;
     text_filename    = Filename;
 
-    file_is_not_dev_null = ! StartsWithDevNull(text_filename.ToStdString( ));
+    file_is_not_dev_null = ! StartsWithDevNull(text_filename);
     if ( file_is_not_dev_null ) {
 
         switch ( access_type ) {
             case OPEN_TO_READ: {
                 if ( input_file_stream ) {
-                    if ( input_file_stream->GetFile( )->IsOpened( ) ) {
+                    if ( input_file_stream->is_open( ) ) {
                         MyPrintWithDetails("File already Open\n");
                         DEBUG_ABORT;
                     }
@@ -57,7 +57,7 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
                 }
 
                 if ( output_file_stream ) {
-                    if ( output_file_stream->GetFile( )->IsOpened( ) ) {
+                    if ( output_file_stream->is_open( ) ) {
                         MyPrintWithDetails("File already Open\n");
                         DEBUG_ABORT;
                     }
@@ -83,45 +83,37 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
 }
 
 void NumericTextFile::Close( ) {
-    if ( input_text_stream )
-        delete input_text_stream;
-    if ( output_text_stream )
-        delete output_text_stream;
-
     if ( output_file_stream ) {
-        if ( output_file_stream->GetFile( )->IsOpened( ) )
-            output_file_stream->GetFile( )->Close( );
+        if ( output_file_stream->is_open( ) )
+            output_file_stream->close( );
         delete output_file_stream;
     }
 
     if ( input_file_stream ) {
-        if ( input_file_stream->GetFile( )->IsOpened( ) )
-            input_file_stream->GetFile( )->Close( );
+        if ( input_file_stream->is_open( ) )
+            input_file_stream->close( );
         delete input_file_stream;
     }
 
     input_file_stream  = nullptr;
-    input_text_stream  = nullptr;
     output_file_stream = nullptr;
-    output_text_stream = nullptr;
 }
 
 // private, only called form Open which has asserts there.
 void NumericTextFile::Init( ) {
     if ( file_is_not_dev_null ) {
         if ( access_type == OPEN_TO_READ ) {
-            wxString current_line;
-            wxString token;
+            std::string current_line;
+            std::string token;
             double   temp_double;
             int      current_records_per_line;
             // When reading, we ignore the records per line and get this info from the file.
             records_per_line          = -1;
             bool records_per_line_set = false;
 
-            input_file_stream = new wxFileInputStream(text_filename);
-            input_text_stream = new wxTextInputStream(*input_file_stream);
+            input_file_stream = new std::ifstream(text_filename);
 
-            if ( ! input_file_stream->IsOk( ) ) {
+            if ( ! input_file_stream->good( ) ) {
                 MyPrintWithDetails("Attempt to access %s for reading failed\n", text_filename);
                 DEBUG_ABORT;
             }
@@ -130,20 +122,21 @@ void NumericTextFile::Init( ) {
 
             number_of_lines = 0;
 
-            while ( ! input_file_stream->Eof( ) ) {
-                current_line = input_text_stream->ReadLine( );
-                current_line.Trim(false);
+            while ( std::getline(*input_file_stream, current_line) ) {
+                if ( ! current_line.empty( ) && current_line.back( ) == '\r' )
+                    current_line.pop_back( );
+                TrimLeft(current_line);
 
                 if ( ! LineIsACommentOrZeroLength(current_line) ) {
                     number_of_lines++;
-                    wxStringTokenizer tokenizer(current_line);
+                    std::vector<std::string> tokenizer = SplitString(current_line);
 
                     current_records_per_line = 0;
 
-                    while ( tokenizer.HasMoreTokens( ) ) {
-                        token = tokenizer.GetNextToken( );
+                    for ( size_t token_counter = 0; token_counter < tokenizer.size( ); token_counter++ ) {
+                        token = tokenizer[token_counter];
 
-                        if ( token.ToDouble(&temp_double) ) {
+                        if ( StringToDouble(token, temp_double) ) {
                             current_records_per_line++;
                         }
                         else {
@@ -174,13 +167,12 @@ void NumericTextFile::Init( ) {
             // check if the file exists..
 
             if ( DoesFileExist(text_filename) ) {
-                if ( wxRemoveFile(text_filename) == false ) {
+                if ( RemoveFile(text_filename) == false ) {
                     MyDebugPrintWithDetails("Cannot remove already existing text file");
                 }
             }
 
-            output_file_stream = new wxFileOutputStream(text_filename);
-            output_text_stream = new wxTextOutputStream(*output_file_stream);
+            output_file_stream = new std::ofstream(text_filename);
         }
         else {
             MyPrintWithDetails("Unknown access type!\n");
@@ -195,25 +187,23 @@ void NumericTextFile::Init( ) {
  */
 void NumericTextFile::Rewind( ) {
     if ( file_is_not_dev_null ) {
-        MyDebugAssertTrue(access_type == OPEN_TO_READ ? (input_file_stream && input_text_stream) : output_file_stream != nullptr, "Rewind called on a file that is not open");
+        MyDebugAssertTrue(access_type == OPEN_TO_READ ? input_file_stream != nullptr : output_file_stream != nullptr, "Rewind called on a file that is not open");
         if ( access_type == OPEN_TO_READ ) {
             delete input_file_stream;
-            delete input_text_stream;
 
-            input_file_stream = new wxFileInputStream(text_filename);
-            input_text_stream = new wxTextInputStream(*input_file_stream);
+            input_file_stream = new std::ifstream(text_filename);
         }
         else
-            output_file_stream->GetFile( )->Seek(0);
+            output_file_stream->seekp(0);
     }
 }
 
 void NumericTextFile::Flush( ) {
     if ( file_is_not_dev_null ) {
         if ( access_type == OPEN_TO_READ )
-            input_file_stream->GetFile( )->Flush( );
+            input_file_stream->sync( );
         else
-            output_file_stream->GetFile( )->Flush( );
+            output_file_stream->flush( );
     }
 }
 
@@ -224,25 +214,26 @@ void NumericTextFile::ReadLine(float* data_array) {
             DEBUG_ABORT;
         }
 
-        wxString current_line;
-        wxString token;
+        std::string current_line;
+        std::string token;
         double   temp_double;
 
-        while ( ! input_file_stream->Eof( ) ) {
-            current_line = input_text_stream->ReadLine( );
-            current_line.Trim(false);
+        while ( std::getline(*input_file_stream, current_line) ) {
+            if ( ! current_line.empty( ) && current_line.back( ) == '\r' )
+                current_line.pop_back( );
+            TrimLeft(current_line);
 
             if ( ! LineIsACommentOrZeroLength(current_line) )
                 break;
         }
 
-        wxStringTokenizer tokenizer(current_line);
+        std::vector<std::string> tokenizer = SplitString(current_line);
 
         for ( int counter = 0; counter < records_per_line; counter++ ) {
-            token = tokenizer.GetNextToken( );
+            token = size_t(counter) < tokenizer.size( ) ? tokenizer[counter] : std::string( );
 
-            if ( token.ToDouble(&temp_double) == false ) {
-                MyPrintWithDetails("Failed on the following record : %s\nFrom Line  : %s\n", token.ToUTF8( ).data( ), current_line.ToUTF8( ).data( ));
+            if ( StringToDouble(token, temp_double) == false ) {
+                MyPrintWithDetails("Failed on the following record : %s\nFrom Line  : %s\n", token.c_str(), current_line.c_str());
                 DEBUG_ABORT;
             }
             else {
@@ -266,17 +257,17 @@ void NumericTextFile::WriteLine(T* data_array) {
 
         for ( int counter = 0; counter < records_per_line; counter++ ) {
             if constexpr ( std::is_same_v<T, float> )
-                output_text_stream->WriteString(wxString::Format("%14.5f", data_array[counter]));
+                *output_file_stream << Format("%14.5f", data_array[counter]);
             else if constexpr ( std::is_same_v<T, double> )
-                output_text_stream->WriteDouble(data_array[counter]);
+                *output_file_stream << Format("%f", data_array[counter]);
             else
                 static_WriteLine_type_not_allowed( );
 
             if ( counter != records_per_line - 1 )
-                output_text_stream->WriteString(" ");
+                *output_file_stream << " ";
         }
 
-        output_text_stream->WriteString("\n");
+        *output_file_stream << "\n";
     }
 }
 
@@ -288,22 +279,22 @@ void NumericTextFile::WriteCommentLine(const char* format, ...) {
         va_list args;
         va_start(args, format);
 
-        wxString comment_string;
-        wxString buffer;
+        std::string comment_string;
+        std::string buffer;
 
-        comment_string.PrintfV(format, args);
+        comment_string = cistem::detail::VFormat(format, args);
 
         buffer = comment_string;
-        buffer.Trim(false);
+        TrimLeft(buffer);
 
-        if ( buffer.StartsWith("#") == false && buffer.StartsWith("C") == false ) {
+        if ( StartsWith(buffer, "#") == false && StartsWith(buffer, "C") == false ) {
             comment_string = "# " + comment_string;
         }
 
-        output_text_stream->WriteString(comment_string);
+        *output_file_stream << comment_string;
 
-        if ( comment_string.EndsWith("\n") == false )
-            output_text_stream->WriteString("\n");
+        if ( EndsWith(comment_string, "\n") == false )
+            *output_file_stream << "\n";
 
         va_end(args);
     }

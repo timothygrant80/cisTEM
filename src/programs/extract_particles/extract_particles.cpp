@@ -16,17 +16,17 @@ void ExtractParticlesApp::DoInteractiveUserInput( ) {
 
     UserInput* my_input = new UserInput("ExtractParticles", 0.0);
 
-    wxString micrograph_filename   = my_input->GetFilenameFromUser("Input micrograph filename", "The input micrograph, in which we will look for particles", "micrograph.mrc", true);
-    wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
-    wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
+    std::string micrograph_filename   = my_input->GetFilenameFromUser("Input micrograph filename", "The input micrograph, in which we will look for particles", "micrograph.mrc", true);
+    std::string coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+    std::string output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
     int      output_stack_box_size = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
 
     delete my_input;
 
     my_current_job.Reset(4);
-    my_current_job.ManualSetArguments("ttti", micrograph_filename.ToStdString( ).c_str( ),
-                                      coordinates_filename.ToStdString( ).c_str( ),
-                                      output_stack_filename.ToStdString( ).c_str( ),
+    my_current_job.ManualSetArguments("ttti", micrograph_filename.c_str( ),
+                                      coordinates_filename.c_str( ),
+                                      output_stack_filename.c_str( ),
                                       output_stack_box_size);
 }
 
@@ -38,13 +38,13 @@ bool ExtractParticlesApp::DoCalculation( ) {
     EmpiricalDistribution<double> my_dist;
 
     // Get the arguments for this job..
-    wxString micrograph_filename   = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString coordinates_filename  = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString output_stack_filename = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string micrograph_filename   = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string coordinates_filename  = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string output_stack_filename = my_current_job.arguments[2].ReturnStringArgument( );
     int      output_stack_box_size = my_current_job.arguments[3].ReturnIntegerArgument( );
 
     // Open input files so we know dimensions
-    MRCFile micrograph_file(micrograph_filename.ToStdString( ), false);
+    MRCFile micrograph_file(micrograph_filename, false);
     MyDebugAssertTrue(micrograph_file.ReturnNumberOfSlices( ) == 1, "Input micrograph file should only contain one image for now");
 
     // Let's box particles out
@@ -57,7 +57,7 @@ bool ExtractParticlesApp::DoCalculation( ) {
     input_coos_file             = new NumericTextFile(coordinates_filename, OPEN_TO_READ, 3);
     int     number_of_particles = input_coos_file->number_of_lines;
     MRCFile output_stack;
-    output_stack.OpenFile(output_stack_filename.ToStdString( ), true);
+    output_stack.OpenFile(output_stack_filename, true);
     my_progress_bar = new ProgressBar(number_of_particles);
     float plt_x, plt_y;
     float my_x, my_y;
@@ -82,7 +82,7 @@ bool ExtractParticlesApp::DoCalculation( ) {
         my_progress_bar->Update(counter + 1);
     }
     delete my_progress_bar;
-    wxPrintf("\nExtracted %i particles\n", number_of_particles);
+    Printf("\nExtracted %i particles\n", number_of_particles);
     delete input_coos_file;
 
     return true;

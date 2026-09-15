@@ -16,14 +16,14 @@ bool CompareComplexValues(Image& first_image, Image& second_image, float minimum
 
 Image GetAbsOfFourierTransformAsRealImage(Image& input_image);
 
-void SamplesPrintTestStartMessage(wxString message, bool bold = false);
+void SamplesPrintTestStartMessage(std::string message, bool bold = false);
 
 inline void SamplesPrintEndMessage( ) {
-    wxPrintf("\n");
+    Printf("\n");
 }
 
-void SamplesPrintUnderlined(wxString message);
-void SamplesPrintBold(wxString message);
+void SamplesPrintUnderlined(std::string message);
+void SamplesPrintBold(std::string message);
 
 void SamplesPrintResult(bool result, int line);
 void SamplesPrintResultCanFail(bool passed, int line);
@@ -37,17 +37,17 @@ class TestFile {
   public:
     // default constructor
     virtual ~TestFile(void) {
-        wxString tempString;
+        std::string tempString;
         // There is nothing to remove
-        if ( filePath.IsNull( ) || filePath.IsEmpty( ) || ! filePath || filePath.Len( ) == 0 ) {
+        if ( filePath.empty( ) ) {
             return;
         }
 
-        if ( ! filePath.IsNull( ) && ! filePath.IsEmpty( ) ) {
+        if ( ! filePath.empty( ) ) {
 
             tempString = "\nDeleting file " + filePath;
-            SamplesBeginPrint(tempString.ToUTF8( ));
-            const int result = remove(filePath.mb_str( ));
+            SamplesBeginPrint(tempString.c_str());
+            const int result = remove(filePath.c_str());
 
             if ( result == 0 )
                 SamplesPrintResult(true, 1);
@@ -56,7 +56,7 @@ class TestFile {
         }
     };
 
-    wxString filePath;
+    std::string filePath;
 };
 
 class FileTracker {

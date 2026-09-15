@@ -29,8 +29,8 @@ void MontageApp::DoInteractiveUserInput( ) {
 }
 
 bool MontageApp::DoCalculation( ) {
-    //const wxString input_stack_filename = "solvents.mrc";
-    //const wxString output_montage_filename = "montage.mrc";
+    //const std::string input_stack_filename = "solvents.mrc";
+    //const std::string output_montage_filename = "montage.mrc";
     //const int overlap = 5;
     //const int montage_num_pieces_x = 5;
     //const int montage_num_pieces_y = 5;
@@ -49,14 +49,14 @@ bool MontageApp::DoCalculation( ) {
 
     MRCFile input_stack(input_stack_filename);
     MRCFile output_montage(output_montage_filename, true);
-    wxPrintf("Input stack has %i images of %i by %i pixels\n", input_stack.ReturnNumberOfSlices( ), input_stack.ReturnXSize( ), input_stack.ReturnYSize( ));
+    Printf("Input stack has %i images of %i by %i pixels\n", input_stack.ReturnNumberOfSlices( ), input_stack.ReturnXSize( ), input_stack.ReturnYSize( ));
 
     MyDebugAssertTrue(montage_num_pieces_x * montage_num_pieces_y == input_stack.ReturnNumberOfSlices( ), "Number of input images incompatible with %i x %i montage\n", montage_num_pieces_x, montage_num_pieces_y);
 
     montage_dim_x = montage_num_pieces_x * input_stack.ReturnXSize( ) - ((montage_num_pieces_x - 1) * overlap);
     montage_dim_y = montage_num_pieces_y * input_stack.ReturnYSize( ) - ((montage_num_pieces_y - 1) * overlap);
 
-    wxPrintf("Output montage will be %i x %i pixels\n", montage_dim_x, montage_dim_y);
+    Printf("Output montage will be %i x %i pixels\n", montage_dim_x, montage_dim_y);
 
     montage.Allocate(montage_dim_x, montage_dim_y, true);
     montage.SetToConstant(0.0);

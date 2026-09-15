@@ -23,11 +23,11 @@ class
 
     void MyInteractiveProgramCleanup( ) { file_tracker.Cleanup( ); };
 
-    wxString temp_directory;
-    wxString hiv_image_80x80x1_filename;
-    wxString hiv_images_80x80x10_filename;
-    wxString sine_wave_128x128x1_filename;
-    wxString numeric_text_filename;
+    std::string temp_directory;
+    std::string hiv_image_80x80x1_filename;
+    std::string hiv_images_80x80x10_filename;
+    std::string sine_wave_128x128x1_filename;
+    std::string numeric_text_filename;
 
     FileTracker file_tracker;
 };

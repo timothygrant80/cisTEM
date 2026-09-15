@@ -355,7 +355,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
             scattering_potential[iSlab].ClipInto(&phase_grating[0], scattering_potential[iSlab].ReturnAverageOfRealValuesOnEdges( ));
 
             if ( do_beam_tilt ) {
-                //			wxPrintf("DO BEAM TILT\n\n");
+                //			Printf("DO BEAM TILT\n\n");
                 // For tilted illumination, the scattering plane sees only the z-component of the wave-vector = lower energy = stronger interaction
                 // so the interaction constant must be scaled. (Ishizuka 1982 eq 12) cos(B) = K/Kz K = 1/Lambda pointing to the displaced origin of the Ewald Sphere
                 phase_grating[0].DivideByConstant(cosf(beam_tilt_magnitude));
@@ -536,7 +536,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
                     float shift_x = 1.0f * propagator_distance[iSlab] * beam_tilt_shift_factor_x / pixel_size;
                     float shift_y = 1.0f * propagator_distance[iSlab] * beam_tilt_shift_factor_y / pixel_size;
 
-                    //					wxPrintf("Shifting by %f %f on slab %d\n", shift_x, shift_y, iSlab);
+                    //					Printf("Shifting by %f %f on slab %d\n", shift_x, shift_y, iSlab);
 
                     temp_img[iPar].MultiplyByConstant(cosf(beam_tilt_magnitude));
 
@@ -551,7 +551,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
                         }
                     }
 
-                    //					wxPrintf("Shifting b %f slab %d\n",-1.0f* propagator_distance[iSlab]*beam_tilt_y/wanted_pixel_size,iSlab);
+                    //					Printf("Shifting b %f slab %d\n",-1.0f* propagator_distance[iSlab]*beam_tilt_y/wanted_pixel_size,iSlab);
                 }
 
                 temp_img[iPar].ApplyCTF(fresnel_propagtor[prop_apply_real[iPar]], false);
@@ -648,18 +648,18 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
         //	// Limit based on objective aperture. Ideally this would be done prior to "imaging" where we take the square modulus. Unfortunately, the division of the complex image into its real and imaginary parts
         //	// only makes sense for linear operators (fft) and multiplication by scalars to both parts. Multiplying by the aperture function violates this linearity.
         if ( iContrast > 0 && estimate_amplitude_contrast ) {
-            wxPrintf("\nLimiting the resolution based on an objective aperture of diameter %3.3f micron to %3.3f Angstrom\n", GetObjectiveAperture( ), pixel_size / objective_aperture_resolution);
+            Printf("\nLimiting the resolution based on an objective aperture of diameter %3.3f micron to %3.3f Angstrom\n", GetObjectiveAperture( ), pixel_size / objective_aperture_resolution);
 
             ReturnImageContrast(sum_image[tilt_IDX], &total_contrast, false, tilt_angle); // - phase_contrast;
             //		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
 
-            wxPrintf("Total contrast is %3.3e\n", total_contrast);
+            Printf("Total contrast is %3.3e\n", total_contrast);
         }
         else if ( estimate_amplitude_contrast ) {
             ReturnImageContrast(sum_image[tilt_IDX], &phase_contrast, true, tilt_angle);
             //		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
 
-            wxPrintf("\nPhase contrast estimate at %3.3e\n", phase_contrast);
+            Printf("\nPhase contrast estimate at %3.3e\n", phase_contrast);
         }
 
         is_set_input_projections = false;
@@ -717,7 +717,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
     float known_astigmatism       = (original_defocus1 - original_defocus2) * pixel_size; // ctffind defines astigmatism as the difference in defocus1 and defocus2
     float known_astigmatism_angle = rad_2_deg(ctf_for_fitting->GetAstigmatismAzimuth( ));
 
-    wxPrintf("Astigmatism params are %3.3e %3.3e\n", known_astigmatism, known_astigmatism_angle);
+    Printf("Astigmatism params are %3.3e %3.3e\n", known_astigmatism, known_astigmatism_angle);
 
     //	std::string phase_name = "/dev/shm/phase_" + file_id + ".mrc";
     //	std::string text_file_name = "/dev/shm/fit_" + file_id;
@@ -800,7 +800,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
                 NumericTextFile myfile_in(text_file_name_2, 0, 2);
                 myfile_in.ReadLine(found_defocus);
                 myfile_in.Close( );
-                wxPrintf("\n\n\t\tFound a defocus of %f %f\n\n", found_defocus[0], found_defocus[1]);
+                Printf("\n\n\t\tFound a defocus of %f %f\n\n", found_defocus[0], found_defocus[1]);
             }
             else {
                 std::system(awk_command_2.c_str( ));
@@ -810,7 +810,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
                 found_fit_resolution[0] *= 0.9f;
                 float orig_fit             = for_ctffind.max_resolution;
                 for_ctffind.max_resolution = std::max(2 * pixel_size, std::min(10.0f, std::max(2.0f * pixel_size, found_fit_resolution[0])));
-                wxPrintf("\n\n\t\tChanging the fit resolution from %f %f Angstrom\n\n", orig_fit, for_ctffind.max_resolution);
+                Printf("\n\n\t\tChanging the fit resolution from %f %f Angstrom\n\n", orig_fit, for_ctffind.max_resolution);
             }
         }
 
@@ -852,7 +852,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
     float max_to_fit;
     float step_for_fit;
 
-    wxPrintf("def1 %6.6e def2 %6.6e btx/y %3.3e %3.3e CS %3.3e AMP %3.3e ASTIG %3.3e APH %3.3e WAVELENGTH %3.3e\n",
+    Printf("def1 %6.6e def2 %6.6e btx/y %3.3e %3.3e CS %3.3e AMP %3.3e ASTIG %3.3e APH %3.3e WAVELENGTH %3.3e\n",
              ctf_for_fitting->GetDefocus1( ), ctf_for_fitting->GetDefocus2( ), ctf_for_fitting->GetBeamTiltX( ), ctf_for_fitting->GetBeamTiltY( ),
              ctf_for_fitting->GetSphericalAberration( ), ctf_for_fitting->GetAmplitudeContrast( ), ctf_for_fitting->GetAstigmatismAzimuth( ),
              ctf_for_fitting->GetAdditionalPhaseShift( ), ctf_for_fitting->GetWavelength( ));
@@ -871,7 +871,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
         // update the search range based on the fit values found in the phase contrast image.
         ctf_for_fitting->SetHighestFrequencyForFitting(std::min(1 / for_ctffind.max_resolution * pixel_size, 1 / 4.0f));
 
-        wxPrintf("min max res for amplitude contrast fitting %f %f %f %f\n", 1 / min_resolution_for_fitting, 1 / max_resolution_for_fitting, ctf_for_fitting->GetLowestFrequencyForFitting( ), ctf_for_fitting->GetHighestFrequencyForFitting( ));
+        Printf("min max res for amplitude contrast fitting %f %f %f %f\n", 1 / min_resolution_for_fitting, 1 / max_resolution_for_fitting, ctf_for_fitting->GetLowestFrequencyForFitting( ), ctf_for_fitting->GetHighestFrequencyForFitting( ));
         amplitude_spectrum.ComputeFilteredAmplitudeSpectrumFull2D(&amplitude_spectrum_masked, &buffer, average, sigma, 1 / min_resolution_for_fitting, 1 / max_resolution_for_fitting, pixel_size);
 
         for ( int iIter = 0; iIter < 4; iIter++ ) {
@@ -903,7 +903,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
                 }
             }
 
-            wxPrintf("\n\n\tBest amplitude contrast so far is %2.4f, score %3.3e\n", best_fit_value, best_score);
+            Printf("\n\n\tBest amplitude contrast so far is %2.4f, score %3.3e\n", best_fit_value, best_score);
 
             // Step down by 1/10
             min_to_fit = best_fit_value - step_for_fit * 2;
@@ -925,10 +925,10 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
         float fit_2     = original_defocus2 - (found_defocus[1] / pixel_size);
         float max_error = 0.01f;
         if ( fabsf(fit_1) > fabsf(original_defocus1 * max_error) ) {
-            wxPrintf("The fit defocus error (%f angstrom) is > %f percent which is probably fit issue, and not a random error in the apparent focal plane. The Amplitude contrast ratio is probably incorrect\n", fit_1 * pixel_size, fit_1 / original_defocus1 * 100, max_error * 100);
+            Printf("The fit defocus error (%f angstrom) is > %f percent which is probably fit issue, and not a random error in the apparent focal plane. The Amplitude contrast ratio is probably incorrect\n", fit_1 * pixel_size, fit_1 / original_defocus1 * 100, max_error * 100);
         }
         else {
-            wxPrintf("Setting defocus to %f from %f because the fit appears %f off\n", pixel_size * (ctf[0].GetDefocus1( ) + fit_1), pixel_size * ctf[0].GetDefocus1( ), pixel_size * fit_1);
+            Printf("Setting defocus to %f from %f because the fit appears %f off\n", pixel_size * (ctf[0].GetDefocus1( ) + fit_1), pixel_size * ctf[0].GetDefocus1( ), pixel_size * fit_1);
             ctf[0].SetDefocus(ctf[0].GetDefocus1( ) + fit_1,
                               ctf[0].GetDefocus2( ) + fit_2,
                               ctf[0].GetAstigmatismAzimuth( ));

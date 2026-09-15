@@ -14,7 +14,7 @@
 #include "../common/common.h"
 #include "statistical_ops.h"
 
-void CPUvsGPUStatisticalOpsRunner(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+void CPUvsGPUStatisticalOpsRunner(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting CPU vs GPU masking tests:", false);
 
@@ -26,7 +26,7 @@ void CPUvsGPUStatisticalOpsRunner(const wxString& hiv_image_80x80x1_filename, wx
     return;
 }
 
-bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+bool DoStatsticalMomentsTests(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;
@@ -52,7 +52,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
         noise_image[n].Allocate(size, size, 1, true);
         noise_image[n].FillWithNoise(GAUSSIAN, random_mean, sqrtf(random_variance));
         noise_image[n].AddConstant(random_mean);
-        wxPrintf("cpu val at zero = %f\n", noise_image[n].real_values[0]);
+        Printf("cpu val at zero = %f\n", noise_image[n].real_values[0]);
 
         my_dist[n] = noise_image[n].ReturnDistributionOfRealValues( );
 
@@ -62,7 +62,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
     SamplesBeginTest("position-space mean", passed);
     n = 0;
     for ( auto size : img_size ) {
-        wxPrintf("cpu val at zero = %f\n", noise_image[n].real_values[0]);
+        Printf("cpu val at zero = %f\n", noise_image[n].real_values[0]);
         test_image.Init(noise_image[n], true, true);
         test_image.CopyHostToDevice(noise_image[n], true);
 

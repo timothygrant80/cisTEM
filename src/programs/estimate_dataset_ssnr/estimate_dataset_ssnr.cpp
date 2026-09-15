@@ -81,7 +81,7 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
     }
 
     if ( defocus_text.records_per_line == 4 )
-        wxPrintf("\nIncluding phase plate shifts in fourth column\n");
+        Printf("\nIncluding phase plate shifts in fourth column\n");
 
     Image my_image;
     Image scaled_image;
@@ -105,9 +105,9 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
     // mask radius
 
     mask_radius = powf(3.0 * kDa_to_Angstrom3(molecular_mass_in_kda) / 4.0 / PI / powf(pixel_size, 3), 1.0 / 3.0);
-    wxPrintf("mass = %f, mask_radius = %f\n", molecular_mass_in_kda, mask_radius);
+    Printf("mass = %f, mask_radius = %f\n", molecular_mass_in_kda, mask_radius);
 
-    wxPrintf("\nEstimating SSNR...\n\n");
+    Printf("\nEstimating SSNR...\n\n");
     ProgressBar* my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices( ));
 
     // read in first image and setup curve..
@@ -135,7 +135,7 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
     current_ctf.SetDefocus(temp_float[0] / pixel_size, temp_float[1] / pixel_size, deg_2_rad(temp_float[2]));
     if ( defocus_text.records_per_line == 4 )
         current_ctf.SetAdditionalPhaseShift(temp_float[3]);
-    //wxPrintf("Defocus = %f, %f, %f\n", temp_float[0], temp_float[1], temp_float[2], temp_float[3]);
+    //Printf("Defocus = %f, %f, %f\n", temp_float[0], temp_float[1], temp_float[2], temp_float[3]);
 
     for ( counter = 0; counter < average_frc.NumberOfPoints( ); counter++ ) {
         spatial_frequency_squared[counter] = powf(float(counter) * fourier_voxel_size, 2);
@@ -209,7 +209,7 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
 
     delete[] sum_of_ctf_squares;
     delete[] spatial_frequency_squared;
-    wxPrintf("\n\n");
+    Printf("\n\n");
 
     return true;
 }

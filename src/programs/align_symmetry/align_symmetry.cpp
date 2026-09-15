@@ -14,10 +14,10 @@ IMPLEMENT_APP(AlignSymmetryApp)
 // override the DoInteractiveUserInput
 
 void AlignSymmetryApp::DoInteractiveUserInput( ) {
-    wxString input_volume_file;
-    wxString output_volume_file_no_sym;
-    wxString output_volume_file_with_sym;
-    wxString wanted_symmetry;
+    std::string input_volume_file;
+    std::string output_volume_file_no_sym;
+    std::string output_volume_file_with_sym;
+    std::string wanted_symmetry;
     float    start_angle_for_search;
     float    end_angle_for_search;
     float    initial_angular_step;
@@ -38,10 +38,10 @@ void AlignSymmetryApp::DoInteractiveUserInput( ) {
 
     int current_class = 0;
     my_current_job.Reset(8);
-    my_current_job.ManualSetArguments("ttttfffi", input_volume_file.ToUTF8( ).data( ),
-                                      wanted_symmetry.ToUTF8( ).data( ),
-                                      output_volume_file_no_sym.ToUTF8( ).data( ),
-                                      output_volume_file_with_sym.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttttfffi", input_volume_file.c_str(),
+                                      wanted_symmetry.c_str(),
+                                      output_volume_file_no_sym.c_str(),
+                                      output_volume_file_with_sym.c_str(),
                                       start_angle_for_search,
                                       end_angle_for_search,
                                       initial_angular_step,
@@ -52,10 +52,10 @@ void AlignSymmetryApp::DoInteractiveUserInput( ) {
 
 bool AlignSymmetryApp::DoCalculation( ) {
 
-    wxString input_volume_file           = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString wanted_symmetry             = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString output_volume_file_no_sym   = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString output_volume_file_with_sym = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string input_volume_file           = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string wanted_symmetry             = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string output_volume_file_no_sym   = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string output_volume_file_with_sym = my_current_job.arguments[3].ReturnStringArgument( );
     float    start_angle_for_search      = my_current_job.arguments[4].ReturnFloatArgument( );
     float    end_angle_for_search        = my_current_job.arguments[5].ReturnFloatArgument( );
     float    initial_angular_step        = my_current_job.arguments[6].ReturnFloatArgument( );
@@ -126,7 +126,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
     float current_sum_score;
 
     ReconstructedVolume input_3d;
-    MRCFile*            input_file = new MRCFile(input_volume_file.ToStdString( ));
+    MRCFile*            input_file = new MRCFile(input_volume_file);
     input_pixel_size               = input_file->ReturnPixelSize( );
 
     input_3d.InitWithDimensions(input_file->ReturnXSize( ), input_file->ReturnYSize( ), input_file->ReturnZSize( ), 1, wanted_symmetry);
@@ -208,7 +208,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
     symmetry_matrices.Init(wanted_symmetry);
 
     if ( is_running_locally == true ) {
-        wxPrintf("\nSearching For Rotation...\n\n");
+        Printf("\nSearching For Rotation...\n\n");
         progress = new ProgressBar(total_number_to_search);
     }
 
@@ -297,7 +297,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
                         best_x           = current_x_angle;
                         best_y           = current_y_angle;
                         best_z           = current_z_angle;
-                        //wxPrintf("Results = %f, %f, %f (%i) = %f\n", best_x, best_y, best_z, number_searched + 1, best_correlation);
+                        //Printf("Results = %f, %f, %f (%i) = %f\n", best_x, best_y, best_z, number_searched + 1, best_correlation);
                     }
 
                     number_searched++;
@@ -336,7 +336,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
     // work out the shifts..
 
     if ( is_running_locally == true ) {
-        wxPrintf("\nSearching For Shifts...\n");
+        Printf("\nSearching For Shifts...\n");
     }
 
     // Top down projection - gives an estimate of X/Y shifts
@@ -385,7 +385,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
     average_z_shift /= float(symmetry_matrices.number_of_matrices);
 
     current_matrix.RotateCoords(average_x_shift, average_y_shift, average_z_shift, rotated_x_shift, rotated_y_shift, rotated_z_shift);
-    //	wxPrintf("shifts1 = %f, %f, %f\n", rotated_x_shift, rotated_y_shift, rotated_z_shift);
+    //	Printf("shifts1 = %f, %f, %f\n", rotated_x_shift, rotated_y_shift, rotated_z_shift);
     total_shift_x += rotated_x_shift;
     total_shift_y += rotated_y_shift;
     // z_shift should be zero
@@ -429,7 +429,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
         average_z_shift /= float(symmetry_matrices.number_of_matrices);
 
         combined_matrix.RotateCoords(average_x_shift, average_y_shift, average_z_shift, rotated_x_shift, rotated_y_shift, rotated_z_shift);
-        //wxPrintf("shifts2 = %f, %f, %f\n", rotated_x_shift, rotated_y_shift, rotated_z_shift);
+        //Printf("shifts2 = %f, %f, %f\n", rotated_x_shift, rotated_y_shift, rotated_z_shift);
         total_shift_y += rotated_y_shift;
         total_shift_z += -rotated_x_shift;
 
@@ -469,7 +469,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
         average_z_shift /= float(symmetry_matrices.number_of_matrices);
 
         combined_matrix.RotateCoords(average_x_shift, average_y_shift, average_z_shift, rotated_x_shift, rotated_y_shift, rotated_z_shift);
-        //	wxPrintf("shifts3 = %f, %f, %f\n", rotated_x_shift, rotated_y_shift, rotated_z_shift);
+        //	Printf("shifts3 = %f, %f, %f\n", rotated_x_shift, rotated_y_shift, rotated_z_shift);
 
         total_shift_x += rotated_x_shift;
         total_shift_z += rotated_y_shift;
@@ -486,19 +486,19 @@ bool AlignSymmetryApp::DoCalculation( ) {
         buffer_image.Rotate3DThenShiftThenApplySymmetry(inverse_matrix, total_shift_x, total_shift_y, total_shift_z, buffer_image.logical_x_dimension / 2.0f);
 
         MRCFile* output_file;
-        output_file = new MRCFile(output_volume_file_no_sym.ToStdString( ), true);
+        output_file = new MRCFile(output_volume_file_no_sym, true);
         buffer_image.WriteSlices(output_file, 1, input_volume.logical_z_dimension);
         output_file->SetPixelSize(input_pixel_size);
         delete output_file;
 
         input_volume.Rotate3DThenShiftThenApplySymmetry(inverse_matrix, total_shift_x, total_shift_y, total_shift_z, buffer_image.logical_x_dimension / 2.0f, wanted_symmetry);
-        output_file = new MRCFile(output_volume_file_with_sym.ToStdString( ), true);
+        output_file = new MRCFile(output_volume_file_with_sym, true);
         input_volume.WriteSlices(output_file, 1, input_volume.logical_z_dimension);
         output_file->SetPixelSize(input_pixel_size);
         delete output_file;
 
-        wxPrintf("\nResults :-\n\nX-Rot = %.2f degrees\nY-Rot =  %.2f degrees\nZ-Rot = %.2f degrees\n\nX-Shift = %.2f pix.\nY-Shift = %.2f pix.\nZ-Shift = %.2f pix. Best Score: %3.3f\n", best_x, best_y, best_z, total_shift_x, total_shift_y, total_shift_z, best_correlation);
-        wxPrintf("\nAlignSymmetry: Normal termination\n\n");
+        Printf("\nResults :-\n\nX-Rot = %.2f degrees\nY-Rot =  %.2f degrees\nZ-Rot = %.2f degrees\n\nX-Shift = %.2f pix.\nY-Shift = %.2f pix.\nZ-Shift = %.2f pix. Best Score: %3.3f\n", best_x, best_y, best_z, total_shift_x, total_shift_y, total_shift_z, best_correlation);
+        Printf("\nAlignSymmetry: Normal termination\n\n");
     }
     else {
         float result[8];

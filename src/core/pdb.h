@@ -33,19 +33,19 @@ enum AtomType : int { hydrogen       = 0,
 };
 
 class Atom {
-    // We don't know how many atoms there will be at the outset so use this wxArrayObj
+    // We don't know how many atoms there will be at the outset so use this dynamic array
 
   private:
 
   public:
     Atom( );
-    Atom(const wxString& name, const bool& is_real_particle, const AtomType& atom_type, const float& x, const float& y, const float& z, const float& occ, const float& bfactor, const float& charge);
+    Atom(const std::string& name, const bool& is_real_particle, const AtomType& atom_type, const float& x, const float& y, const float& z, const float& occ, const float& bfactor, const float& charge);
     Atom(const Atom& atom);
     Atom& operator=(const Atom& atom);
     Atom& operator=(const Atom* atom);
     ~Atom( );
     // If any fields are added or modified here, be sure to update the CopyAtom method in the PDB class.
-    wxString name;
+    std::string name;
     AtomType atom_type;
     bool     is_real_particle;
     float    x_coordinate; // Angstrom
@@ -58,7 +58,7 @@ class Atom {
 
 class ParticleTrajectory {
 
-    // We don't know how many time steps there will be at the outset so use this wxArrayObj
+    // We don't know how many time steps there will be at the outset so use this dynamic array
 
   private:
 
@@ -68,7 +68,7 @@ class ParticleTrajectory {
     float current_update[MAX_NUMBER_OF_TIMESTEPS][6]; // Update to get here. the first entries in these two should be the same.
 };
 
-WX_DECLARE_OBJARRAY(ParticleTrajectory, ArrayOfParticleTrajectories);
+typedef std::vector<ParticleTrajectory> ArrayOfParticleTrajectories;
 
 class InitialOrientations {
 
@@ -87,12 +87,10 @@ class PDB {
 
   private:
     void                Init( );
-    wxString            text_filename;
+    std::string            text_filename;
     long                access_type;
-    wxFileInputStream*  input_file_stream;
-    wxTextInputStream*  input_text_stream;
-    wxFileOutputStream* output_file_stream;
-    wxTextOutputStream* output_text_stream;
+    std::ifstream* input_file_stream;
+    std::ofstream* output_file_stream;
 
   public:
     std::vector<Atom>           atoms;
@@ -131,7 +129,7 @@ class PDB {
         bool  allow_hetatms,
         bool  use_star_file);
 
-    PDB(wxString          Filename,
+    PDB(std::string          Filename,
         long              wanted_access_type,
         float             wanted_pixel_size,
         long              wanted_records_per_line,
@@ -148,7 +146,7 @@ class PDB {
         cisTEMParameters& wanted_star_file,
         bool              use_star_file);
 
-    PDB(wxString Filename,
+    PDB(std::string Filename,
         long     wanted_access_type,
         float    wanted_pixel_size,
         long     wanted_records_per_line,
@@ -210,13 +208,13 @@ class PDB {
 
     // Methods
 
-    void Open(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
+    void Open(std::string Filename, long wanted_access_type, long wanted_records_per_line = 1);
     void SetEmpty( );
 
     void           Close( );
     void           Rewind( );
     void           Flush( );
-    wxString       ReturnFilename( );
+    std::string       ReturnFilename( );
     RotationMatrix defaultRot;
 
     void ReadLine(float* data_array);
@@ -229,7 +227,7 @@ class PDB {
 
     void TransformLocalAndCombine(PDB& clean_copy, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle = false);
 
-    inline bool IsNonAminoAcid(wxString atom_name) {
+    inline bool IsNonAminoAcid(std::string atom_name) {
         // TODO make sure this is a valid way to check
         bool isNonAminoAcid = true;
         if ( atom_name.length( ) == 3 ) {
@@ -238,7 +236,7 @@ class PDB {
         return isNonAminoAcid;
     }
 
-    inline bool IsBackbone(wxString atom_name) {
+    inline bool IsBackbone(std::string atom_name) {
         // Assuming I'm not going to run it any parsing problems with case sensitivity. This might be a bad assumption FIXME
         bool isBackbone = false;
         if ( atom_name == "C" || atom_name == "CA" || atom_name == "N" || atom_name == "O" ) {
@@ -247,7 +245,7 @@ class PDB {
         return isBackbone;
     }
 
-    inline bool IsAcidicOxygen(wxString atom_name) {
+    inline bool IsAcidicOxygen(std::string atom_name) {
         // Assuming I'm not going to run it any parsing problems with case sensitivity. This might be a bad assumption FIXME
         bool isAcidicOxygen = false; //Asp Glu C-term
         if ( atom_name == "OD2" || atom_name == "OE2" || atom_name == "OXT" ) {

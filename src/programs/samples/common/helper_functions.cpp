@@ -9,45 +9,45 @@
 
 void print2DArray(Image& image) {
     int i = 0;
-    wxPrintf("Image real space data:\n");
+    Printf("Image real space data:\n");
     for ( int z = 0; z < image.logical_z_dimension; z++ ) {
         for ( int y = 0; y < image.logical_y_dimension; y++ ) {
             for ( int x = 0; x < image.logical_x_dimension; x++ ) {
-                wxPrintf("%f\t", image.real_values[i]);
+                Printf("%f\t", image.real_values[i]);
 
                 i++;
             }
-            wxPrintf("\n");
+            Printf("\n");
             i += image.padding_jump_value;
         }
-        wxPrintf("\n");
+        Printf("\n");
     }
 }
 
 void PrintArray(float* p, int maxLoops) {
-    wxPrintf("Starting loop through array.\n");
+    Printf("Starting loop through array.\n");
 
     if ( p == nullptr ) {
-        wxPrintf("pointer is null, aborting.\n");
+        Printf("pointer is null, aborting.\n");
         return;
     }
     for ( int i = 0; i < maxLoops; i++ ) {
-        wxPrintf("%s \n", std::to_string(i));
-        // wxPrintf(" %s\n", *arr);
+        Printf("%s \n", std::to_string(i));
+        // Printf(" %s\n", *arr);
         // std::cout<< *arr <<" ";
         std::cout << *(p + i) << std::endl;
 
         p++;
     }
-    wxPrintf("Loop done.\n");
+    Printf("Loop done.\n");
 }
 
 // bool IsPointerNull(float *p) {
 //     if (p == nullptr) {
-//         wxPrintf("pointer is null!\n");
+//         Printf("pointer is null!\n");
 //         return true;
 //     }
-//     wxPrintf("pointer is valid!\n");
+//     Printf("pointer is valid!\n");
 //     return false;
 // }
 
@@ -65,7 +65,7 @@ bool CompareRealValues(Image& first_image, Image& second_image, float minimum_cc
     float score = first_image.ReturnCorrelationCoefficientUnnormalized(second_image, mask_radius);
 
     if ( score < minimum_ccc ) {
-        // wxPrintf("\nFailed CCC is %g\n", score);
+        // Printf("\nFailed CCC is %g\n", score);
         // first_image.QuickAndDirtyWriteSlice("first_image.mrc", 1);
         // second_image.QuickAndDirtyWriteSlice("second_image.mrc", 1);
         return false;
@@ -91,7 +91,7 @@ bool CompareComplexValues(Image& first_image, Image& second_image, float minimum
     float score = first_image.GetWeightedCorrelationWithImage(second_image, low_limit2, high_limit2, signed_cc_limit2);
 
     if ( score < minimum_ccc ) {
-        wxPrintf("\nFailed CCC is %g\n", score);
+        Printf("\nFailed CCC is %g\n", score);
         first_image.QuickAndDirtyWriteSlice("first_image.mrc", 1);
         second_image.QuickAndDirtyWriteSlice("second_image.mrc", 1);
         return false;
@@ -101,50 +101,50 @@ bool CompareComplexValues(Image& first_image, Image& second_image, float minimum
     }
 }
 
-// void SamplesPrintResult(wxString testName, bool result) {
+// void SamplesPrintResult(std::string testName, bool result) {
 
-//   wxPrintf("\t%s",testName);
-//   result ? wxPrintf(": [Success]\n") : wxPrintf(": [Failed]\n");
+//   Printf("\t%s",testName);
+//   result ? Printf(": [Success]\n") : Printf(": [Failed]\n");
 
 // }
 
-void SamplesPrintTestStartMessage(wxString message, bool bold) {
+void SamplesPrintTestStartMessage(std::string message, bool bold) {
     // If not bold we print underlined
-    wxPrintf("\n");
+    Printf("\n");
     if ( bold )
         SamplesPrintBold(message);
     else
         SamplesPrintUnderlined(message);
-    wxPrintf("\n\n");
+    Printf("\n\n");
 }
 
-void SamplesPrintUnderlined(wxString message) {
+void SamplesPrintUnderlined(std::string message) {
     if ( OutputIsAtTerminal( ) == true )
-        wxPrintf(ANSI_UNDERLINE + message + ANSI_UNDERLINE_OFF);
+        Printf(ANSI_UNDERLINE + message + ANSI_UNDERLINE_OFF);
     else
-        wxPrintf("%s", message);
+        Printf("%s", message);
 }
 
-void SamplesPrintBold(wxString message) {
+void SamplesPrintBold(std::string message) {
     if ( OutputIsAtTerminal( ) == true )
-        wxPrintf(ANSI_BOLD + message + ANSI_BOLD_OFF);
+        Printf(ANSI_BOLD + message + ANSI_BOLD_OFF);
     else
-        wxPrintf("%s", message);
+        Printf("%s", message);
 }
 
 void SamplesPrintResult(bool passed, int line) {
 
     if ( passed == true ) {
         if ( OutputIsAtTerminal( ) == true )
-            wxPrintf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
+            Printf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
         else
-            wxPrintf("PASSED!");
+            Printf("PASSED!");
     }
     else {
         if ( OutputIsAtTerminal( ) == true )
-            wxPrintf(ANSI_COLOR_RED "FAILED! (Line : %i)" ANSI_COLOR_RESET, line);
+            Printf(ANSI_COLOR_RED "FAILED! (Line : %i)" ANSI_COLOR_RESET, line);
         else
-            wxPrintf("FAILED! (Line : %i)", line);
+            Printf("FAILED! (Line : %i)", line);
         // Removing the exit behavior because I want all tests to run as this is more informative for CI, i.e.
         // multiple fixes can be made in a single go rather than a one at a time approach.
         // exit(1);
@@ -155,41 +155,41 @@ void SamplesPrintResultCanFail(bool passed, int line) {
 
     if ( passed == true ) {
         if ( OutputIsAtTerminal( ) == true )
-            wxPrintf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
+            Printf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
         else
-            wxPrintf("PASSED!");
+            Printf("PASSED!");
     }
     else {
         if ( OutputIsAtTerminal( ) == true )
-            wxPrintf(ANSI_COLOR_BLUE "FAILED, BUT SKIPPING! (Line : %i)" ANSI_COLOR_RESET, line);
+            Printf(ANSI_COLOR_BLUE "FAILED, BUT SKIPPING! (Line : %i)" ANSI_COLOR_RESET, line);
         else
-            wxPrintf("FAILED, BUT SKIPPING! (Line : %i)", line);
+            Printf("FAILED, BUT SKIPPING! (Line : %i)", line);
     }
 }
 
 void SamplesBeginTest(const char* test_name, bool& test_has_passed) {
     int length      = strlen(test_name);
     int blank_space = 45 - length;
-    wxPrintf("\n  Testing %s ", test_name);
+    Printf("\n  Testing %s ", test_name);
     test_has_passed = true;
 
     for ( int counter = 0; counter < blank_space; counter++ ) {
-        wxPrintf(" ");
+        Printf(" ");
     }
 
-    wxPrintf(": ");
+    Printf(": ");
 }
 
 void SamplesBeginPrint(const char* test_name) {
     int length      = strlen(test_name);
     int blank_space = 64 - length;
-    wxPrintf("  %s ", test_name);
+    Printf("  %s ", test_name);
 
     for ( int counter = 0; counter < blank_space; counter++ ) {
-        wxPrintf(" ");
+        Printf(" ");
     }
 
-    wxPrintf(": ");
+    Printf(": ");
 }
 
 FileTracker::~FileTracker( ) {
@@ -198,13 +198,13 @@ FileTracker::~FileTracker( ) {
 }
 
 void FileTracker::Cleanup( ) {
-    wxPrintf("\nRemoving test files ... \n");
+    Printf("\nRemoving test files ... \n");
 
     for ( auto& it : testFiles )
         delete it;
     testFiles.clear( );
 
-    wxPrintf("\ndone!\n");
+    Printf("\ndone!\n");
 }
 
 Image GetAbsOfFourierTransformAsRealImage(Image& input_image) {

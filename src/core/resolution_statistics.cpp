@@ -156,7 +156,7 @@ void ResolutionStatistics::ResampleParticleSSNR(ResolutionStatistics& other_stat
     }
 }
 
-float ResolutionStatistics::ReturnEstimatedResolution(bool use_part_fsc) {
+float ResolutionStatistics::ReturnEstimatedResolution(bool use_part_fsc) const {
     float estimated_resolution = 0.0f;
 
     if ( use_part_fsc == true ) {
@@ -475,7 +475,7 @@ void ResolutionStatistics::CalculateFSC(Image& reconstructed_volume_1, Image& re
         FSC.data_y[0] = FSC.data_y[1];
         FSC.FitSavitzkyGolayToData(window, 3);
         for ( i = 0; i < number_of_bins_extended; i++ ) {
-            //			wxPrintf("FSC,fit = %i %g %g\n", i, FSC.data_y[i], FSC.savitzky_golay_fit[i]);
+            //			Printf("FSC,fit = %i %g %g\n", i, FSC.data_y[i], FSC.savitzky_golay_fit[i]);
             //			if (FSC.data_y[i] < 0.8) FSC.data_y[i] = FSC.savitzky_golay_fit[i];
             // Make a smooth transition between original FSC curve and smoothed curve
             //			else FSC.data_y[i] = FSC.data_y[i] * (1.0 - (1.0 - FSC.data_y[i]) / 0.2) + FSC.savitzky_golay_fit[i] * (1.0 - FSC.data_y[i]) / 0.2;
@@ -586,10 +586,10 @@ void ResolutionStatistics::CalculateParticleSSNR(Image& image_reconstruction, fl
             // The factor of 1 / 2 is due to the average weight in the trilinear interpolation
             // Divide volume SSNR by float(sum_double[i]) / float(sum_int[i])
             // Factor of 8.0 is due to 8-point trilinear interpolation
-            //			wxPrintf("i = %i, fsc, sum_int, sum_double, ratio = %g %g %g %g\n", i, FSC.data_y[i], float(sum_int[i]), float(sum_double[i]), float(sum_int[i]) / float(sum_double[i]));
+            //			Printf("i = %i, fsc, sum_int, sum_double, ratio = %g %g %g %g\n", i, FSC.data_y[i], float(sum_int[i]), float(sum_double[i]), float(sum_int[i]) / float(sum_double[i]));
             //			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), 8.0 * 4.0 * mask_volume_fraction * fabsf(2.0 * fabsf(FSC.data_y[i]) / (1.00001 - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
             part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), mask_volume_fraction * fabsf(2.0f * fabsf(FSC.data_y[i]) / (1.00001f - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
-            //			wxPrintf("x = %g, y = %g\n", FSC.data_x[i], FSC.data_y[i]);
+            //			Printf("x = %g, y = %g\n", FSC.data_x[i], FSC.data_y[i]);
         }
         else if ( i > 0 ) {
             part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), 0.0f);
@@ -605,7 +605,7 @@ void ResolutionStatistics::CalculateParticleSSNR(Image& image_reconstruction, fl
 
     delete[] sum_double;
     delete[] sum_int;
-    //	wxPrintf("number_of_bins = %i, number_of_bins_extended = %i, ssnr = %i\n", number_of_bins, number_of_bins_extended, part_SSNR.NumberOfPoints( ));
+    //	Printf("number_of_bins = %i, number_of_bins_extended = %i, ssnr = %i\n", number_of_bins, number_of_bins_extended, part_SSNR.NumberOfPoints( ));
 }
 
 void ResolutionStatistics::RestrainParticleSSNR(float low_resolution_limit) {
@@ -655,10 +655,10 @@ void ResolutionStatistics::ZeroToResolution(float resolution_limit) {
 void ResolutionStatistics::PrintStatistics( ) {
     MyDebugAssertTrue(FSC.NumberOfPoints( ) > 0, "Resolution statistics have not been fully calculated");
 
-    wxPrintf("\nC                                             Sqrt       Sqrt  \n");
-    wxPrintf("C NO.   RESOL  RING_RAD       FSC  Part_FSC Part_SSNR  Rec_SSNR\n");
+    Printf("\nC                                             Sqrt       Sqrt  \n");
+    Printf("C NO.   RESOL  RING_RAD       FSC  Part_FSC Part_SSNR  Rec_SSNR\n");
     for ( int i = 1; i < number_of_bins; i++ ) {
-        wxPrintf("%5i%8.2f%10.4f%10.4f%10.4f%10.4f%10.4f\n", i + 1, FSC.data_x[i], pixel_size / FSC.data_x[i],
+        Printf("%5i%8.2f%10.4f%10.4f%10.4f%10.4f%10.4f\n", i + 1, FSC.data_x[i], pixel_size / FSC.data_x[i],
                  FSC.data_y[i], part_FSC.data_y[i],
                  sqrtf(part_SSNR.data_y[i]), sqrtf(rec_SSNR.data_y[i]));
     }
@@ -704,7 +704,7 @@ void ResolutionStatistics::WriteStatisticsToFile(NumericTextFile& output_statist
     }
 }
 
-void ResolutionStatistics::ReadStatisticsFromFile(wxString input_file) {
+void ResolutionStatistics::ReadStatisticsFromFile(std::string input_file) {
     int   i;
     float temp_float[10];
     float resolution;
@@ -776,7 +776,7 @@ void ResolutionStatistics::GenerateDefaultStatistics(float molecular_mass_in_kDa
         FSC.AddPoint(resolution, fsc);
         part_FSC.AddPoint(resolution, fsc);
         part_SSNR.AddPoint(resolution, ssnr);
-        //		wxPrintf("i = %i, res = %g, sqrt(pssnr) = %g\n", i, resolution, sqrtf(ssnr));
+        //		Printf("i = %i, res = %g, sqrt(pssnr) = %g\n", i, resolution, sqrtf(ssnr));
         rec_SSNR.AddPoint(resolution, ssnr);
     }
 }

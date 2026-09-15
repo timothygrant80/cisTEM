@@ -20,7 +20,7 @@ class ImageFile : public AbstractImageFile {
     EerFile  eer_file;
 
     int      file_type;
-    wxString file_type_string;
+    std::string file_type_string;
     void     SetFileTypeFromExtension( );
 
   public:

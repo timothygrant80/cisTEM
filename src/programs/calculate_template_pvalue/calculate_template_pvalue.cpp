@@ -41,12 +41,12 @@ typedef struct tm_job {
     std::vector<float>    defocus_2;
     std::vector<float>    defocus_angle;
     std::vector<float>    amplitude_contrast;
-    std::vector<wxString> mip_filename;
-    std::vector<wxString> scaled_mip_filename;
-    std::vector<wxString> psi_filename;
-    std::vector<wxString> theta_filename;
-    std::vector<wxString> phi_filename;
-    std::vector<wxString> defocus_filename;
+    std::vector<std::string> mip_filename;
+    std::vector<std::string> scaled_mip_filename;
+    std::vector<std::string> psi_filename;
+    std::vector<std::string> theta_filename;
+    std::vector<std::string> phi_filename;
+    std::vector<std::string> defocus_filename;
 } tm_job;
 
 static int extract_image_parameters(void* data, int argc, char** argv, char** azColName) {
@@ -234,7 +234,7 @@ std::vector<float> Calculate1QPValue(const std::vector<float>& ag_x1_,
     }
 
     float tmp_w = atan2(Uinv(1, 0), Uinv(0, 0));
-    // wxPrintf("Major axis = %f\n", tmp_w * 180 / M_PI);
+    // Printf("Major axis = %f\n", tmp_w * 180 / M_PI);
 
     float tmp_gamma = atan2(1.0, 0.5 * sin(2 * tmp_w) * (tmp_b / tmp_a - tmp_a / tmp_b));
 
@@ -276,18 +276,18 @@ IMPLEMENT_APP(CalculateTemplatePvalue)
 
 void CalculateTemplatePvalue::DoInteractiveUserInput( ) {
 
-    wxString input_scaled_mip_filename;
-    wxString input_mip_filename;
-    wxString input_best_psi_filename;
-    wxString input_best_theta_filename;
-    wxString input_best_phi_filename;
-    wxString input_best_defocus_filename;
-    wxString input_best_pixel_size_filename;
-    wxString xyz_coords_filename;
-    wxString output_star_filename;
-    wxString input_reconstruction_filename;
-    wxString output_result_image_filename;
-    wxString output_slab_filename;
+    std::string input_scaled_mip_filename;
+    std::string input_mip_filename;
+    std::string input_best_psi_filename;
+    std::string input_best_theta_filename;
+    std::string input_best_phi_filename;
+    std::string input_best_defocus_filename;
+    std::string input_best_pixel_size_filename;
+    std::string xyz_coords_filename;
+    std::string output_star_filename;
+    std::string input_reconstruction_filename;
+    std::string output_result_image_filename;
+    std::string output_slab_filename;
     float    slab_thickness;
     float    pixel_size;
     float    binning_factor;
@@ -296,7 +296,7 @@ void CalculateTemplatePvalue::DoInteractiveUserInput( ) {
     int ignore_N_pixels_from_the_border = -1;
 
     bool     run_batch = false;
-    wxString input_database_filename;
+    std::string input_database_filename;
     int      tm_job_id           = 1;
     float    cutoff              = 7.0;
     int      sorting_metric      = 1; // 1 for z-score, 2 for SNR, and 3 for p-value
@@ -338,27 +338,27 @@ void CalculateTemplatePvalue::DoInteractiveUserInput( ) {
 
     //	my_current_job.Reset(14);
     my_current_job.ManualSetArguments("btitittttttttfiiiiftttff", run_batch,
-                                      input_database_filename.ToUTF8( ).data( ),
+                                      input_database_filename.c_str(),
                                       tm_job_id,
-                                      output_star_filename.ToUTF8( ).data( ),
+                                      output_star_filename.c_str(),
                                       num_threads,
-                                      input_scaled_mip_filename.ToUTF8( ).data( ),
-                                      input_mip_filename.ToUTF8( ).data( ),
-                                      input_best_psi_filename.ToUTF8( ).data( ),
-                                      input_best_theta_filename.ToUTF8( ).data( ),
-                                      input_best_phi_filename.ToUTF8( ).data( ),
-                                      input_best_defocus_filename.ToUTF8( ).data( ),
-                                      input_best_pixel_size_filename.ToUTF8( ).data( ),
-                                      xyz_coords_filename.ToUTF8( ).data( ),
+                                      input_scaled_mip_filename.c_str(),
+                                      input_mip_filename.c_str(),
+                                      input_best_psi_filename.c_str(),
+                                      input_best_theta_filename.c_str(),
+                                      input_best_phi_filename.c_str(),
+                                      input_best_defocus_filename.c_str(),
+                                      input_best_pixel_size_filename.c_str(),
+                                      xyz_coords_filename.c_str(),
                                       pixel_size,
                                       min_peak_radius,
                                       ignore_N_pixels_from_the_border,
                                       sorting_metric,
                                       local_maxima_metric,
                                       cutoff,
-                                      input_reconstruction_filename.ToUTF8( ).data( ),
-                                      output_result_image_filename.ToUTF8( ).data( ),
-                                      output_slab_filename.ToUTF8( ).data( ),
+                                      input_reconstruction_filename.c_str(),
+                                      output_result_image_filename.c_str(),
+                                      output_slab_filename.c_str(),
                                       slab_thickness,
                                       binning_factor);
 }
@@ -367,35 +367,35 @@ void CalculateTemplatePvalue::DoInteractiveUserInput( ) {
 
 bool CalculateTemplatePvalue::DoCalculation( ) {
 
-    wxDateTime start_time                      = wxDateTime::Now( );
+    DateTime start_time                      = DateTime::Now( );
     bool       run_batch                       = my_current_job.arguments[0].ReturnBoolArgument( );
-    wxString   input_database_filename         = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string   input_database_filename         = my_current_job.arguments[1].ReturnStringArgument( );
     int        tm_job_id                       = my_current_job.arguments[2].ReturnIntegerArgument( );
-    wxString   output_star_filename            = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string   output_star_filename            = my_current_job.arguments[3].ReturnStringArgument( );
     int        num_threads                     = my_current_job.arguments[4].ReturnIntegerArgument( );
-    wxString   input_scaled_mip_filename       = my_current_job.arguments[5].ReturnStringArgument( );
-    wxString   input_mip_filename              = my_current_job.arguments[6].ReturnStringArgument( );
-    wxString   input_best_psi_filename         = my_current_job.arguments[7].ReturnStringArgument( );
-    wxString   input_best_theta_filename       = my_current_job.arguments[8].ReturnStringArgument( );
-    wxString   input_best_phi_filename         = my_current_job.arguments[9].ReturnStringArgument( );
-    wxString   input_best_defocus_filename     = my_current_job.arguments[10].ReturnStringArgument( );
-    wxString   input_best_pixel_size_filename  = my_current_job.arguments[11].ReturnStringArgument( );
-    wxString   xyz_coords_filename             = my_current_job.arguments[12].ReturnStringArgument( );
+    std::string   input_scaled_mip_filename       = my_current_job.arguments[5].ReturnStringArgument( );
+    std::string   input_mip_filename              = my_current_job.arguments[6].ReturnStringArgument( );
+    std::string   input_best_psi_filename         = my_current_job.arguments[7].ReturnStringArgument( );
+    std::string   input_best_theta_filename       = my_current_job.arguments[8].ReturnStringArgument( );
+    std::string   input_best_phi_filename         = my_current_job.arguments[9].ReturnStringArgument( );
+    std::string   input_best_defocus_filename     = my_current_job.arguments[10].ReturnStringArgument( );
+    std::string   input_best_pixel_size_filename  = my_current_job.arguments[11].ReturnStringArgument( );
+    std::string   xyz_coords_filename             = my_current_job.arguments[12].ReturnStringArgument( );
     float      pixel_size                      = my_current_job.arguments[13].ReturnFloatArgument( );
     int        min_peak_radius                 = my_current_job.arguments[14].ReturnIntegerArgument( );
     int        ignore_N_pixels_from_the_border = my_current_job.arguments[15].ReturnIntegerArgument( );
     int        sorting_metric                  = my_current_job.arguments[16].ReturnIntegerArgument( );
     int        local_maxima_metric             = my_current_job.arguments[17].ReturnIntegerArgument( );
     float      cutoff                          = my_current_job.arguments[18].ReturnFloatArgument( );
-    wxString   input_reconstruction_filename   = my_current_job.arguments[19].ReturnStringArgument( );
-    wxString   output_result_image_filename    = my_current_job.arguments[20].ReturnStringArgument( );
-    wxString   output_slab_filename            = my_current_job.arguments[21].ReturnStringArgument( );
+    std::string   input_reconstruction_filename   = my_current_job.arguments[19].ReturnStringArgument( );
+    std::string   output_result_image_filename    = my_current_job.arguments[20].ReturnStringArgument( );
+    std::string   output_slab_filename            = my_current_job.arguments[21].ReturnStringArgument( );
     float      slab_thickness                  = my_current_job.arguments[22].ReturnFloatArgument( );
     float      binning_factor                  = my_current_job.arguments[23].ReturnFloatArgument( );
 
     float     padding = 2.0f;
     ImageFile input_reconstruction_file;
-    input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString( ), false);
+    input_reconstruction_file.OpenFile(input_reconstruction_filename, false);
 
     Image output_image;
     Image scaled_mip_image;
@@ -444,18 +444,18 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
 
     if ( ! run_batch ) {
         // Read in images
-        mip_image.QuickAndDirtyReadSlice(input_mip_filename.ToStdString( ), 1);
-        scaled_mip_image.QuickAndDirtyReadSlice(input_scaled_mip_filename.ToStdString( ), 1);
-        psi_image.QuickAndDirtyReadSlice(input_best_psi_filename.ToStdString( ), 1);
-        theta_image.QuickAndDirtyReadSlice(input_best_theta_filename.ToStdString( ), 1);
-        phi_image.QuickAndDirtyReadSlice(input_best_phi_filename.ToStdString( ), 1);
-        defocus_image.QuickAndDirtyReadSlice(input_best_defocus_filename.ToStdString( ), 1);
-        pixel_size_image.QuickAndDirtyReadSlice(input_best_pixel_size_filename.ToStdString( ), 1);
+        mip_image.QuickAndDirtyReadSlice(input_mip_filename, 1);
+        scaled_mip_image.QuickAndDirtyReadSlice(input_scaled_mip_filename, 1);
+        psi_image.QuickAndDirtyReadSlice(input_best_psi_filename, 1);
+        theta_image.QuickAndDirtyReadSlice(input_best_theta_filename, 1);
+        phi_image.QuickAndDirtyReadSlice(input_best_phi_filename, 1);
+        defocus_image.QuickAndDirtyReadSlice(input_best_defocus_filename, 1);
+        pixel_size_image.QuickAndDirtyReadSlice(input_best_pixel_size_filename, 1);
         mip_x_dimension = mip_image.logical_x_dimension;
         mip_y_dimension = mip_image.logical_y_dimension;
 
         if ( ignore_N_pixels_from_the_border > 0 && (ignore_N_pixels_from_the_border > mip_image.logical_x_dimension / 2 || ignore_N_pixels_from_the_border > mip_image.logical_y_dimension / 2) ) {
-            wxPrintf("You have entered %d for ignore_N_pixels_from_the_border, which is too large given image half dimesnsions of %d (X) and %d (Y)",
+            Printf("You have entered %d for ignore_N_pixels_from_the_border, which is too large given image half dimesnsions of %d (X) and %d (Y)",
                      ignore_N_pixels_from_the_border, mip_image.logical_x_dimension / 2, mip_image.logical_y_dimension / 2);
             exit(-1);
         }
@@ -471,7 +471,7 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
         binning_factor           = float(input_reconstruction.logical_x_dimension) / float(binned_dimension_3d);
         binned_pixel_size        = pixel_size * binning_factor;
         slab_thickness_in_pixels = myroundint(slab_thickness / binned_pixel_size);
-        wxPrintf("\nSlab dimensions = %i %i %i\n", myroundint(mip_x_dimension / binning_factor), myroundint(mip_y_dimension / binning_factor), slab_thickness_in_pixels);
+        Printf("\nSlab dimensions = %i %i %i\n", myroundint(mip_x_dimension / binning_factor), myroundint(mip_y_dimension / binning_factor), slab_thickness_in_pixels);
 
         slab.Allocate(myroundint(mip_x_dimension / binning_factor), myroundint(mip_y_dimension / binning_factor), slab_thickness_in_pixels);
         slab.SetToConstant(0.0f);
@@ -503,7 +503,7 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
 
         // loop until the found peak is below the threshold
 
-        wxPrintf("\n");
+        Printf("\n");
 
         // Find local maxima in z-score map
         if ( local_maxima_metric == 1 ) {
@@ -565,7 +565,7 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
             }
         }
 
-        wxPrintf("Found %i local maxima...\n", localMaxima.size( ));
+        Printf("Found %i local maxima...\n", localMaxima.size( ));
         // Sort based on the local z-score maxima (descending order)
         sort(localMaxima.begin( ), localMaxima.end( ), [](const std::tuple<float, int, int, float>& a, const std::tuple<float, int, int, float>& b) {
             return std::get<0>(a) > std::get<0>(b); // Sorting by first element of std::tuple, which is the z-score
@@ -649,7 +649,7 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
             }
         }
 
-        wxPrintf("Found %i peaks above cutoff...\n", filteredLocalMaxima.size( ));
+        Printf("Found %i peaks above cutoff...\n", filteredLocalMaxima.size( ));
         number_of_peaks_found += filteredLocalMaxima.size( );
 
         // Write coordinate file with all three metrics
@@ -712,8 +712,8 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
 
         // save the output image
 
-        output_image.QuickAndDirtyWriteSlice(output_result_image_filename.ToStdString( ), 1, true, pixel_size);
-        slab.QuickAndDirtyWriteSlices(output_slab_filename.ToStdString( ), 1, slab_thickness_in_pixels, true, binned_pixel_size);
+        output_image.QuickAndDirtyWriteSlice(output_result_image_filename, 1, true, pixel_size);
+        slab.QuickAndDirtyWriteSlices(output_slab_filename, 1, slab_thickness_in_pixels, true, binned_pixel_size);
     }
     else {
         // test database
@@ -722,13 +722,13 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
         int      rc;
 
         // Open the database
-        rc = sqlite3_open(input_database_filename, &db);
+        rc = sqlite3_open(input_database_filename.c_str( ), &db);
         if ( rc ) {
-            wxPrintf("Can't open database: %s\n", sqlite3_errmsg(db));
+            Printf("Can't open database: %s\n", sqlite3_errmsg(db));
             return 1;
         }
         else {
-            wxPrintf("Opened database successfully\n");
+            Printf("Opened database successfully\n");
         }
         // SQL to fetch data
         //const char* sql = "SELECT * FROM TEMPLATE_MATCH_LIST";
@@ -737,14 +737,14 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
         // Execute SQL statement
         rc = sqlite3_exec(db, sql.c_str( ), extract_tm_parameters, &current_tm_jobs, &zErrMsg);
         if ( rc != SQLITE_OK ) {
-            wxPrintf("SQL error\n");
+            Printf("SQL error\n");
             sqlite3_free(zErrMsg);
         }
         // debug printout
         //else {
         //    for ( size_t i = 0; i < current_tm_jobs.image_asset_id.size( ); i++ ) {
-        //        wxPrintf("mip =%s\n", current_tm_jobs.mip_filename[i]);
-        //        wxPrintf("defocus =%s\n", current_tm_jobs.defocus_filename[i]);
+        //        Printf("mip =%s\n", current_tm_jobs.mip_filename[i]);
+        //        Printf("defocus =%s\n", current_tm_jobs.defocus_filename[i]);
         //    }
         //}
 
@@ -753,13 +753,13 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
         // Execute SQL statement
         rc = sqlite3_exec(db, sql.c_str( ), extract_image_parameters, &current_tm_images, &zErrMsg);
         if ( rc != SQLITE_OK ) {
-            wxPrintf("SQL error\n");
+            Printf("SQL error\n");
             sqlite3_free(zErrMsg);
         }
         // debug printout
         //else {
         //    for ( size_t i = 0; i < current_tm_images.image_asset_id.size( ); i++ ) {
-        //        wxPrintf("image id = %i pixel size =%f\n", current_tm_images.image_asset_id[i], current_tm_images.pixel_size[i]);
+        //        Printf("image id = %i pixel size =%f\n", current_tm_images.image_asset_id[i], current_tm_images.pixel_size[i]);
         //    }
         //}
 
@@ -767,32 +767,32 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
         sqlite3_close(db);
         number_of_images = current_tm_jobs.image_asset_id.size( );
         num_threads      = std::min(std::min(num_threads, number_of_images), static_cast<int>(std::thread::hardware_concurrency( )));
-        wxPrintf("Run %i image on %i threads...\n", number_of_images, num_threads);
+        Printf("Run %i image on %i threads...\n", number_of_images, num_threads);
 
-        wxPrintf("\n");
+        Printf("\n");
         // Parallel when running multiple images in a TM job
 #pragma omp parallel num_threads(num_threads) default(none) shared(current_tm_jobs, current_tm_images, ignore_N_pixels_from_the_border, min_peak_radius, output_star_file, number_of_peaks_found, number_of_images, cutoff, sorting_metric, local_maxima_metric) private(localMaxima, mip_image, scaled_mip_image, psi_image, theta_image, phi_image, defocus_image, pixel_size_image, output_parameters)
         {
 #pragma omp for schedule(dynamic, 1)
             // Loop through image
             for ( size_t img_idx = 0; img_idx < number_of_images; img_idx++ ) {
-                wxPrintf("\n\n");
+                Printf("\n\n");
                 // Clear peak std::vector for each image
                 localMaxima.clear( );
                 std::optional<image_asset> result;
                 // Read in TM job parameters
                 int image_asset_id = current_tm_jobs.image_asset_id[img_idx];
                 result             = getDataForAssetId(current_tm_images, image_asset_id);
-                wxPrintf("working on image ID = %i\n", image_asset_id);
-                mip_image.QuickAndDirtyReadSlice(current_tm_jobs.mip_filename[img_idx].ToStdString( ), 1);
-                scaled_mip_image.QuickAndDirtyReadSlice(current_tm_jobs.scaled_mip_filename[img_idx].ToStdString( ), 1);
-                psi_image.QuickAndDirtyReadSlice(current_tm_jobs.psi_filename[img_idx].ToStdString( ), 1);
-                theta_image.QuickAndDirtyReadSlice(current_tm_jobs.theta_filename[img_idx].ToStdString( ), 1);
-                phi_image.QuickAndDirtyReadSlice(current_tm_jobs.phi_filename[img_idx].ToStdString( ), 1);
-                defocus_image.QuickAndDirtyReadSlice(current_tm_jobs.defocus_filename[img_idx].ToStdString( ), 1);
+                Printf("working on image ID = %i\n", image_asset_id);
+                mip_image.QuickAndDirtyReadSlice(current_tm_jobs.mip_filename[img_idx], 1);
+                scaled_mip_image.QuickAndDirtyReadSlice(current_tm_jobs.scaled_mip_filename[img_idx], 1);
+                psi_image.QuickAndDirtyReadSlice(current_tm_jobs.psi_filename[img_idx], 1);
+                theta_image.QuickAndDirtyReadSlice(current_tm_jobs.theta_filename[img_idx], 1);
+                phi_image.QuickAndDirtyReadSlice(current_tm_jobs.phi_filename[img_idx], 1);
+                defocus_image.QuickAndDirtyReadSlice(current_tm_jobs.defocus_filename[img_idx], 1);
 
                 if ( ignore_N_pixels_from_the_border > 0 && (ignore_N_pixels_from_the_border > mip_image.logical_x_dimension / 2 || ignore_N_pixels_from_the_border > mip_image.logical_y_dimension / 2) ) {
-                    wxPrintf("You have entered %d for ignore_N_pixels_from_the_border, which is too large given image half dimesnsions of %d (X) and %d (Y)",
+                    Printf("You have entered %d for ignore_N_pixels_from_the_border, which is too large given image half dimesnsions of %d (X) and %d (Y)",
                              ignore_N_pixels_from_the_border, mip_image.logical_x_dimension / 2, mip_image.logical_y_dimension / 2);
                     exit(-1);
                 }
@@ -857,7 +857,7 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
                     }
                 }
 
-                wxPrintf("Found %i local maxima...\n", localMaxima.size( ));
+                Printf("Found %i local maxima...\n", localMaxima.size( ));
                 // Sort based on the local z-score maxima (descending order)
                 sort(localMaxima.begin( ), localMaxima.end( ), [](const std::tuple<float, int, int, float>& a, const std::tuple<float, int, int, float>& b) {
                     return std::get<0>(a) > std::get<0>(b);
@@ -938,7 +938,7 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
                     }
                 }
 
-                wxPrintf("Found %i peaks above cutoff...\n", filteredLocalMaxima.size( ));
+                Printf("Found %i peaks above cutoff...\n", filteredLocalMaxima.size( ));
 
                 // write cisTEM star output for batch images
                 for ( int rowId = 0; rowId < filteredLocalMaxima.size( ); ++rowId ) {
@@ -972,7 +972,7 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
                     output_parameters.pixel_size                                   = result->pixel_size;
                     output_star_file.all_parameters[rowId + number_of_peaks_found] = output_parameters;
                 }
-                wxPrintf("Written out peak at line %i - %i\n", number_of_peaks_found, filteredLocalMaxima.size( ) + number_of_peaks_found);
+                Printf("Written out peak at line %i - %i\n", number_of_peaks_found, filteredLocalMaxima.size( ) + number_of_peaks_found);
 
                 number_of_peaks_found += filteredLocalMaxima.size( );
             } // End loop through images
@@ -981,10 +981,10 @@ bool CalculateTemplatePvalue::DoCalculation( ) {
     }
 
     if ( is_running_locally == true ) {
-        wxPrintf("\nFound %i peaks.\n\n", number_of_peaks_found);
-        wxPrintf("\nMake Template Results: Normal termination\n");
-        wxDateTime finish_time = wxDateTime::Now( );
-        wxPrintf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
+        Printf("\nFound %i peaks.\n\n", number_of_peaks_found);
+        Printf("\nMake Template Results: Normal termination\n");
+        DateTime finish_time = DateTime::Now( );
+        Printf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
     }
 
     return true;

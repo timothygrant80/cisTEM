@@ -13,9 +13,9 @@ Project::Project( ) {
 Project::~Project( ) {
 }
 
-bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_project_directory, wxString wanted_project_name) {
+bool Project::CreateNewProject(std::filesystem::path wanted_database_file, std::string wanted_project_directory, std::string wanted_project_name) {
     int      return_code;
-    wxString directory_string;
+    std::string directory_string;
     bool     success;
 
     // is project already open?
@@ -25,12 +25,12 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
         return false;
     }
 
-    if ( wanted_project_name.IsEmpty( ) == true ) {
+    if ( wanted_project_name.empty() == true ) {
         MyDebugPrintWithDetails("Attempting to create a new project, but the project name is blank");
         return false;
     }
 
-    if ( wanted_project_directory.IsEmpty( ) == true ) {
+    if ( wanted_project_directory.empty() == true ) {
         MyDebugPrintWithDetails("Attempting to create a new project, but the project dir is blank");
         return false;
     }
@@ -45,86 +45,86 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 
     // create sub folders..
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets";
-    wxFileName::Mkdir(directory_string);
+    MakeDirectory(directory_string);
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Movies";
     movie_asset_directory = directory_string;
-    wxFileName::Mkdir(movie_asset_directory.GetFullPath( ));
+    MakeDirectory(movie_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Images";
     image_asset_directory = directory_string;
-    wxFileName::Mkdir(image_asset_directory.GetFullPath( ));
+    MakeDirectory(image_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Volumes";
     volume_asset_directory = directory_string;
-    wxFileName::Mkdir(volume_asset_directory.GetFullPath( ));
+    MakeDirectory(volume_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/TemplateMatching";
     template_matching_asset_directory = directory_string;
-    if ( wxDir::Exists(template_matching_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(template_matching_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(template_matching_asset_directory.string()) == false )
+        MakeDirectory(template_matching_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/PhaseDifferenceImages";
     phase_difference_asset_directory = directory_string;
-    wxFileName::Mkdir(phase_difference_asset_directory.GetFullPath( ));
+    MakeDirectory(phase_difference_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/CTF";
     ctf_asset_directory = directory_string;
-    wxFileName::Mkdir(ctf_asset_directory.GetFullPath( ));
+    MakeDirectory(ctf_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/ParticlePosition";
     particle_position_asset_directory = directory_string;
-    wxFileName::Mkdir(particle_position_asset_directory.GetFullPath( ));
+    MakeDirectory(particle_position_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/ParticleStacks";
     particle_stack_directory = directory_string;
-    wxFileName::Mkdir(particle_stack_directory.GetFullPath( ));
+    MakeDirectory(particle_stack_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/ClassAverages";
     class_average_directory = directory_string;
-    wxFileName::Mkdir(class_average_directory.GetFullPath( ));
+    MakeDirectory(class_average_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Parameters";
     parameter_file_directory = directory_string;
-    wxFileName::Mkdir(parameter_file_directory.GetFullPath( ));
+    MakeDirectory(parameter_file_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Scratch";
     scratch_directory = directory_string;
-    wxFileName::Mkdir(scratch_directory.GetFullPath( ));
+    MakeDirectory(scratch_directory.string());
 
     // sub directories
 
-    directory_string = image_asset_directory.GetFullPath( );
+    directory_string = image_asset_directory.string();
     directory_string += "/Spectra";
-    wxFileName::Mkdir(directory_string);
+    MakeDirectory(directory_string);
 
-    directory_string = image_asset_directory.GetFullPath( );
+    directory_string = image_asset_directory.string();
     directory_string += "/Scaled";
-    wxFileName::Mkdir(directory_string);
+    MakeDirectory(directory_string);
 
-    directory_string = volume_asset_directory.GetFullPath( );
+    directory_string = volume_asset_directory.string();
     directory_string += "/OrthViews";
-    wxFileName::Mkdir(directory_string);
+    MakeDirectory(directory_string);
 
     total_cpu_hours = 0;
     total_jobs_run  = 0;
 
     // set master settings..
 
-    if ( database.InsertOrReplace("MASTER_SETTINGS", "ittirit", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN", "CISTEM_VERSION_TEXT", 1, project_directory.GetFullPath( ).ToUTF8( ).data( ), project_name.ToUTF8( ).data( ), INTEGER_DATABASE_VERSION, total_cpu_hours, total_jobs_run, CISTEM_VERSION_TEXT) == false )
+    if ( database.InsertOrReplace("MASTER_SETTINGS", "ittirit", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN", "CISTEM_VERSION_TEXT", 1, project_directory.string().c_str(), project_name.c_str(), INTEGER_DATABASE_VERSION, total_cpu_hours, total_jobs_run, CISTEM_VERSION_TEXT) == false )
         return false;
 
     is_open = true;
@@ -132,9 +132,9 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
     return true;
 }
 
-bool Project::OpenProjectFromFile(wxFileName file_to_open) {
+bool Project::OpenProjectFromFile(std::filesystem::path file_to_open) {
     bool     success;
-    wxString directory_string;
+    std::string directory_string;
 
     // is project already open?
 
@@ -148,88 +148,88 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open) {
     success = ReadMasterSettings( );
     CheckSuccess(success);
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Movies";
     movie_asset_directory = directory_string;
-    if ( wxDir::Exists(movie_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(movie_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(movie_asset_directory.string()) == false )
+        MakeDirectory(movie_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Images";
     image_asset_directory = directory_string;
-    if ( wxDir::Exists(image_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(image_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(image_asset_directory.string()) == false )
+        MakeDirectory(image_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/TemplateMatching";
     template_matching_asset_directory = directory_string;
-    if ( wxDir::Exists(template_matching_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(template_matching_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(template_matching_asset_directory.string()) == false )
+        MakeDirectory(template_matching_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/PhaseDifferenceImages";
     phase_difference_asset_directory = directory_string;
-    if ( wxDir::Exists(phase_difference_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(phase_difference_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(phase_difference_asset_directory.string()) == false )
+        MakeDirectory(phase_difference_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Volumes";
     volume_asset_directory = directory_string;
-    if ( wxDir::Exists(volume_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(volume_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(volume_asset_directory.string()) == false )
+        MakeDirectory(volume_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/CTF";
     ctf_asset_directory = directory_string;
-    if ( wxDir::Exists(ctf_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(ctf_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(ctf_asset_directory.string()) == false )
+        MakeDirectory(ctf_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/ParticlePosition";
     particle_position_asset_directory = directory_string;
-    if ( wxDir::Exists(particle_position_asset_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(particle_position_asset_directory.GetFullPath( ));
+    if ( DirectoryExists(particle_position_asset_directory.string()) == false )
+        MakeDirectory(particle_position_asset_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/ParticleStacks";
     particle_stack_directory = directory_string;
-    if ( wxDir::Exists(particle_stack_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(particle_stack_directory.GetFullPath( ));
+    if ( DirectoryExists(particle_stack_directory.string()) == false )
+        MakeDirectory(particle_stack_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/ClassAverages";
     class_average_directory = directory_string;
-    if ( wxDir::Exists(class_average_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(class_average_directory.GetFullPath( ));
+    if ( DirectoryExists(class_average_directory.string()) == false )
+        MakeDirectory(class_average_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Assets/Parameters";
     parameter_file_directory = directory_string;
-    if ( wxDir::Exists(parameter_file_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(parameter_file_directory.GetFullPath( ));
+    if ( DirectoryExists(parameter_file_directory.string()) == false )
+        MakeDirectory(parameter_file_directory.string());
 
-    directory_string = project_directory.GetFullPath( );
+    directory_string = project_directory.string();
     directory_string += "/Scratch";
     scratch_directory = directory_string;
-    if ( wxDir::Exists(scratch_directory.GetFullPath( )) == false )
-        wxFileName::Mkdir(scratch_directory.GetFullPath( ));
+    if ( DirectoryExists(scratch_directory.string()) == false )
+        MakeDirectory(scratch_directory.string());
 
     // sub directories
 
-    directory_string = image_asset_directory.GetFullPath( );
+    directory_string = image_asset_directory.string();
     directory_string += "/Spectra";
-    if ( wxDir::Exists(directory_string) == false )
-        wxFileName::Mkdir(directory_string);
+    if ( DirectoryExists(directory_string) == false )
+        MakeDirectory(directory_string);
 
-    directory_string = image_asset_directory.GetFullPath( );
+    directory_string = image_asset_directory.string();
     directory_string += "/Scaled";
-    if ( wxDir::Exists(directory_string) == false )
-        wxFileName::Mkdir(directory_string);
+    if ( DirectoryExists(directory_string) == false )
+        MakeDirectory(directory_string);
 
-    directory_string = volume_asset_directory.GetFullPath( );
+    directory_string = volume_asset_directory.string();
     directory_string += "/OrthViews";
-    if ( wxDir::Exists(directory_string) == false )
-        wxFileName::Mkdir(directory_string);
+    if ( DirectoryExists(directory_string) == false )
+        MakeDirectory(directory_string);
 
     is_open = true;
 

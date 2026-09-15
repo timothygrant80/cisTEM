@@ -208,7 +208,7 @@ void BruteForceSearch::Run(float** all_valuesp, float** all_scoresp, int* num_va
     numThreads = CheckNumberOfThreads(desired_num_threads);
 
     if ( numThreads > 1 && ! minimise_at_every_step ) {
-        wxPrintf("\nRunning brute-force search with %i OpenMP threads\n", numThreads);
+        Printf("\nRunning brute-force search with %i OpenMP threads\n", numThreads);
     }
 
     if ( print_progress_bar ) {
@@ -275,30 +275,30 @@ void BruteForceSearch::Run(float** all_valuesp, float** all_scoresp, int* num_va
         }
         current_score = all_scores[current_iteration];
         // Print debug
-        /*wxPrintf("(BF dbg, it %04i) Values: ",current_iteration);
+        /*Printf("(BF dbg, it %04i) Values: ",current_iteration);
 		for (i=0;i<number_of_dimensions;i++)
 		{
-			wxPrintf("%g ",current_values[i]);
+			Printf("%g ",current_values[i]);
 		}
-		wxPrintf(" Score: %g\n",current_score);*/
+		Printf(" Score: %g\n",current_score);*/
 
         // if the score is the best we've seen so far, remember the values and the score
         if ( current_score < best_score ) {
             best_score = current_score;
-            //wxPrintf("new best values: ");
+            //Printf("new best values: ");
             if ( minimise_at_every_step ) {
                 for ( i = 0; i < number_of_dimensions; i++ ) {
                     best_value[i] = all_local_best_values[number_of_dimensions * current_iteration + i];
-                    //wxPrintf("%g ",best_value[i]);
+                    //Printf("%g ",best_value[i]);
                 }
             }
             else {
                 for ( i = 0; i < number_of_dimensions; i++ ) {
                     best_value[i] = current_values[i];
-                    //wxPrintf("%g ",best_value[i]);
+                    //Printf("%g ",best_value[i]);
                 }
             }
-            //wxPrintf("\n");
+            //Printf("\n");
         }
 
     } // End of loop over exhaustive search operation

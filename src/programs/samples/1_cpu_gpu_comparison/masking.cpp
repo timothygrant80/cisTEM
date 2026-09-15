@@ -40,7 +40,7 @@ struct GPUTimer {
     cudaEvent_t start_, stop_;
 };
 
-void CPUvsGPUMaskingTest(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+void CPUvsGPUMaskingTest(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting CPU vs GPU masking tests:", false);
 
@@ -51,17 +51,17 @@ void CPUvsGPUMaskingTest(const wxString& hiv_image_80x80x1_filename, wxString& t
     return;
 }
 
-bool DoCosineMaskingTest(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+bool DoCosineMaskingTest(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;
 
     SamplesBeginTest("Cosine mask real space", passed);
 
-    wxString tmp_img_filename = temp_directory + "/tmp1.mrc";
+    std::string tmp_img_filename = temp_directory + "/tmp1.mrc";
 
-    MRCFile input_file(hiv_image_80x80x1_filename.ToStdString( ), false);
-    MRCFile output_file(tmp_img_filename.ToStdString( ), false);
+    MRCFile input_file(hiv_image_80x80x1_filename, false);
+    MRCFile output_file(tmp_img_filename, false);
 
     Image    cpu_image;
     Image    gpu_host_image;

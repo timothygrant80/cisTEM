@@ -172,7 +172,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
     max_x_1 = *std::max_element(x_pos_1.begin( ), x_pos_1.end( ));
     max_y_1 = *std::max_element(y_pos_1.begin( ), y_pos_1.end( ));
 
-    wxPrintf("\nImage #1 has a dimension of %i,%i\n", max_x_1, max_y_1);
+    Printf("\nImage #1 has a dimension of %i,%i\n", max_x_1, max_y_1);
 
     my_image_1.Allocate(max_x_1, max_y_1, 1);
 
@@ -205,7 +205,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
 
     max_x_2 = *std::max_element(x_pos_2.begin( ), x_pos_2.end( ));
     max_y_2 = *std::max_element(y_pos_2.begin( ), y_pos_2.end( ));
-    wxPrintf("\nImage #2 has a dimension of %i,%i\n", max_x_2, max_y_2);
+    Printf("\nImage #2 has a dimension of %i,%i\n", max_x_2, max_y_2);
 
     my_image_2.Allocate(max_x_2, max_y_2, 1);
 
@@ -235,7 +235,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
         // filter first spectra
 
         if ( filter_type_1 == 1 ) {
-            wxPrintf("\nApplying Highpass filter...\n");
+            Printf("\nApplying Highpass filter...\n");
 
             my_image_1.ForwardFFT( );
             my_image_1.GaussianHighPassFilter(sigma_one);
@@ -243,7 +243,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
             my_image_1.WriteSlice(&my_output_file_1_filtered, 1);
         }
         else if ( filter_type_1 == 2 ) {
-            wxPrintf("\nApplying Lowpass filter...\n");
+            Printf("\nApplying Lowpass filter...\n");
 
             my_image_1.ForwardFFT( );
             my_image_1.GaussianLowPassFilter(sigma_one);
@@ -251,7 +251,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
             my_image_1.WriteSlice(&my_output_file_1_filtered, 1);
         }
         else if ( filter_type_1 == 3 ) {
-            wxPrintf("\nApplying Bandpass filter...\n");
+            Printf("\nApplying Bandpass filter...\n");
 
             my_image_1.ForwardFFT( );
             my_image_1.GaussianHighPassFilter(sigma_one);
@@ -259,17 +259,17 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
             my_image_1.BackwardFFT( );
             my_image_1.WriteSlice(&my_output_file_1_filtered, 1);
 
-            wxPrintf("\n\n");
+            Printf("\n\n");
         }
 
         else {
-            wxPrintf("\nNot a valid filter number, try again\n");
+            Printf("\nNot a valid filter number, try again\n");
         }
 
         // filter second spectra
 
         if ( filter_type_2 == 1 ) {
-            wxPrintf("\nApplying Highpass filter...\n");
+            Printf("\nApplying Highpass filter...\n");
 
             my_image_2.ForwardFFT( );
             my_image_2.GaussianHighPassFilter(sigma_three);
@@ -277,7 +277,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
             my_image_2.WriteSlice(&my_output_file_2_filtered, 1);
         }
         else if ( filter_type_2 == 2 ) {
-            wxPrintf("\nApplying Lowpass filter...\n");
+            Printf("\nApplying Lowpass filter...\n");
 
             my_image_2.ForwardFFT( );
             my_image_2.GaussianLowPassFilter(sigma_three);
@@ -285,7 +285,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
             my_image_2.WriteSlice(&my_output_file_2_filtered, 1);
         }
         else if ( filter_type_2 == 3 ) {
-            wxPrintf("\nApplying Bandpass filter...\n");
+            Printf("\nApplying Bandpass filter...\n");
 
             my_image_2.ForwardFFT( );
             my_image_2.GaussianHighPassFilter(sigma_three);
@@ -293,11 +293,11 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
             my_image_2.BackwardFFT( );
             my_image_2.WriteSlice(&my_output_file_2_filtered, 1);
 
-            wxPrintf("\n\n");
+            Printf("\n\n");
         }
 
         else {
-            wxPrintf("\nNot a valid filter number, try again\n");
+            Printf("\nNot a valid filter number, try again\n");
         }
 
         my_output_file_1_filtered.SetPixelSize(pixel_size_1);
@@ -335,8 +335,8 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
         my_image_2.ZeroFloatAndNormalize( );
         average_value_1 = my_image_1.ReturnAverageOfRealValues( );
         average_value_2 = my_image_2.ReturnAverageOfRealValues( );
-        wxPrintf("\nAverage value of Image #1 is %f\n", average_value_1);
-        wxPrintf("\nAverage value of Image #2 is %f\n", average_value_2);
+        Printf("\nAverage value of Image #1 is %f\n", average_value_1);
+        Printf("\nAverage value of Image #2 is %f\n", average_value_2);
 
         int half_diagonal_width = diagonal_width / 2;
 
@@ -364,10 +364,10 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
 
     // correlate NMR spectra with CC
     if ( crop_spectra == true ) {
-        wxPrintf("\nCorrelation is %f\n", cropped_image_1.NormalizedCrossCorrelation(&cropped_image_2));
+        Printf("\nCorrelation is %f\n", cropped_image_1.NormalizedCrossCorrelation(&cropped_image_2));
     }
     else {
-        wxPrintf("\nCorrelation is %f\n", my_image_1.NormalizedCrossCorrelation(&my_image_2));
+        Printf("\nCorrelation is %f\n", my_image_1.NormalizedCrossCorrelation(&my_image_2));
     }
 
     // correlate NMR spectra by FSC *haven't done yet* - Colin

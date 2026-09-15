@@ -10,17 +10,17 @@
 #include "helper_functions.h"
 #include "numeric_test_file.h"
 
-NumericTestFile::NumericTestFile(wxString path) {
+NumericTestFile::NumericTestFile(std::string path) {
 
-    const char* filename = path.mb_str( );
-    wxPrintf("  %s\n", filename);
+    const char* filename = path.c_str();
+    Printf("  %s\n", filename);
     FILE* output_file = NULL;
     output_file       = fopen(filename, "wb+");
 
     if ( output_file == NULL ) {
-        wxPrintf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n",
+        Printf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n",
                  filename);
-        wxPrintf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n",
+        Printf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n",
                  filename);
         DEBUG_ABORT;
     }

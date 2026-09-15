@@ -67,14 +67,14 @@ ProjectionComparisonObjects::~ProjectionComparisonObjects( ) {
 
 #ifdef DEBUG
     if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
-        wxPrintf("\n----------------------------------------------------\n");
-        wxPrintf("Image type : Calls : Allocs : HtoD copies\n");
-        wxPrintf("Particley image : %i : %i : %i\n", n_calls_to_prep_images, n_particle_image_allocations, n_particle_image_HtoD_copies);
-        wxPrintf("Projection image : %i : %i : %i\n", n_calls_to_prep_images, n_projection_image_allocations, n_projection_image_HtoD_copies);
-        wxPrintf("CTF image : %i : %i : %i\n", n_calls_to_prep_images, n_ctf_image_allocations, n_ctf_image_HtoD_copies);
-        wxPrintf("Particle search image : %i : %i : %i\n", n_calls_to_prep_search_images, n_search_particle_image_allocations, n_search_particle_image_HtoD_copies);
-        wxPrintf("Projection search image : %i : %i : %i\n", n_calls_to_prep_search_images, n_search_projection_image_allocations, n_search_projection_image_HtoD_copies);
-        wxPrintf("CTF search image : %i : %i : %i\n", n_calls_to_prep_search_images, n_search_ctf_image_allocations, n_search_ctf_image_HtoD_copies);
+        Printf("\n----------------------------------------------------\n");
+        Printf("Image type : Calls : Allocs : HtoD copies\n");
+        Printf("Particley image : %i : %i : %i\n", n_calls_to_prep_images, n_particle_image_allocations, n_particle_image_HtoD_copies);
+        Printf("Projection image : %i : %i : %i\n", n_calls_to_prep_images, n_projection_image_allocations, n_projection_image_HtoD_copies);
+        Printf("CTF image : %i : %i : %i\n", n_calls_to_prep_images, n_ctf_image_allocations, n_ctf_image_HtoD_copies);
+        Printf("Particle search image : %i : %i : %i\n", n_calls_to_prep_search_images, n_search_particle_image_allocations, n_search_particle_image_HtoD_copies);
+        Printf("Projection search image : %i : %i : %i\n", n_calls_to_prep_search_images, n_search_projection_image_allocations, n_search_projection_image_HtoD_copies);
+        Printf("CTF search image : %i : %i : %i\n", n_calls_to_prep_search_images, n_search_ctf_image_allocations, n_search_ctf_image_HtoD_copies);
     }
 #endif
 }
@@ -94,7 +94,7 @@ void ProjectionComparisonObjects::AllocateBuffers(int new_buffer_size) {
     //             if ( old_buffer_size > 0 ) {
     //                 delete[] buffer;
     //             }
-    //             wxPrintf("ALLOCATION\n");
+    //             Printf("ALLOCATION\n");
     //             buffer = new float[3 * new_buffer_size];
     //         }
     //     }

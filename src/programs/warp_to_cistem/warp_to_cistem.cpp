@@ -7,26 +7,26 @@
 using json = nlohmann::json;
 
 // Warp's XML is read with pugixml, which hands back UTF-8 C strings; wrap them
-// in wxString so the comparisons and ToDouble() calls below stay as they were.
-static wxString XmlName(const pugi::xml_node& node) {
-    return wxString::FromUTF8(node.name( ));
+// in std::string so the comparisons and ToDouble() calls below stay as they were.
+static std::string XmlName(const pugi::xml_node& node) {
+    return std::string(node.name( ));
 }
 
 // Returns "" when the attribute is missing, as the wxWidgets XML reader this replaces did.
-static wxString XmlAttribute(const pugi::xml_node& node, const char* name) {
-    return wxString::FromUTF8(node.attribute(name).value( ));
+static std::string XmlAttribute(const pugi::xml_node& node, const char* name) {
+    return std::string(node.attribute(name).value( ));
 }
 
 // Live2D's latest_run.json fields are read through these so that a value
 // written either as a JSON string ("1234") or as a JSON number (1234) is
 // accepted; the JSON reader this replaces converted numbers to strings
 // before parsing them and so accepted both.
-static wxString JsonToWxString(const json& value) {
+static std::string JsonToString(const json& value) {
     if ( value.is_string( ) )
-        return wxString::FromUTF8(value.get<std::string>( ).c_str( ));
+        return std::string(value.get<std::string>( ).c_str( ));
     if ( value.is_null( ) )
-        return wxString( );
-    return wxString::FromUTF8(value.dump( ).c_str( ));
+        return std::string( );
+    return std::string(value.dump( ).c_str( ));
 }
 
 static bool JsonToLong(const json& value, long& out) {
@@ -39,7 +39,7 @@ static bool JsonToLong(const json& value, long& out) {
         return true;
     }
     if ( value.is_string( ) )
-        return JsonToWxString(value).ToLong(&out);
+        return StringToLong(JsonToString(value), out);
     return false;
 }
 
@@ -49,7 +49,7 @@ static bool JsonToDouble(const json& value, double& out) {
         return true;
     }
     if ( value.is_string( ) )
-        return JsonToWxString(value).ToDouble(&out);
+        return StringToDouble(JsonToString(value), out);
     return false;
 }
 
@@ -58,24 +58,24 @@ class
 
   public:
     bool                          DoCalculation( );
-    bool                          GetSettingsFromWarp(const pugi::xml_document& warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions);
-    MovieAsset                    LoadMovieFromWarp(const pugi::xml_document& warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size);
-    ImageAsset                    LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
-    ArrayOfParticlePositionAssets LoadParticlePositionsFromWarp(wxString star_filename, ImageAsset new_image_asset, int starting_id);
-    CTF                           LoadCTFFromWarp(const pugi::xml_document& warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename);
-    RefinementPackage*            LoadRefinementPackageFromLive2D(wxString star_filename, wxString stack_filename, double pixel_size, double particle_mass, double voltage, double spherical_aberration, double amplitude_contrast, double picking_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement);
-    ArrayofClassifications        LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename);
+    bool                          GetSettingsFromWarp(const pugi::xml_document& warp_settings_doc, std::string& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions);
+    MovieAsset                    LoadMovieFromWarp(const pugi::xml_document& warp_doc, std::string warp_folder, std::string movie_filename, unsigned long count, float wanted_binned_pixel_size);
+    ImageAsset                    LoadImageFromWarp(std::string image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
+    ArrayOfParticlePositionAssets LoadParticlePositionsFromWarp(std::string star_filename, ImageAsset new_image_asset, int starting_id);
+    CTF                           LoadCTFFromWarp(const pugi::xml_document& warp_doc, float pixel_size, float voltage, float spherical_aberration, std::string wanted_avrot_filename);
+    RefinementPackage*            LoadRefinementPackageFromLive2D(std::string star_filename, std::string stack_filename, double pixel_size, double particle_mass, double voltage, double spherical_aberration, double amplitude_contrast, double picking_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement);
+    ArrayofClassifications        LoadClassificationsFromLive2D(std::string live_2d_path, std::string latest_settings_filename);
     void                          DoInteractiveUserInput( );
 
-    wxString warp_directory;
-    wxString cistem_parent_directory;
-    wxString project_name;
+    std::string warp_directory;
+    std::string cistem_parent_directory;
+    std::string project_name;
     float    wanted_binned_pixel_size;
     bool     do_import_images;
     bool     do_import_ctf_results;
     bool     do_import_particle_coordinates;
     bool     do_import_refinement_package;
-    wxString live_2d_directory;
+    std::string live_2d_directory;
     bool     do_import_classification_results;
 
     Project new_project;
@@ -86,16 +86,16 @@ class
 IMPLEMENT_APP(WarpToCistemApp)
 
 void WarpToCistemApp::DoInteractiveUserInput( ) {
-    wxString   warp_directory                   = "";
-    wxString   cistem_parent_directory          = "";
-    wxString   project_name                     = "";
+    std::string   warp_directory                   = "";
+    std::string   cistem_parent_directory          = "";
+    std::string   project_name                     = "";
     float      wanted_binned_pixel_size         = 1.0;
     bool       do_import_images                 = false;
     bool       do_scale_images_and_make_spectra = false;
     bool       do_import_ctf_results            = false;
     bool       do_import_particle_coordinates   = false;
     bool       do_import_refinement_package     = false;
-    wxString   live_2d_directory                = "";
+    std::string   live_2d_directory                = "";
     bool       do_import_classification_results = false;
     float      particle_mass                    = 100.0;
     UserInput* my_input                         = new UserInput("Warp to Cistem", 1.0);
@@ -135,32 +135,32 @@ void WarpToCistemApp::DoInteractiveUserInput( ) {
 
     delete my_input;
 
-    my_current_job.ManualSetArguments("tttbbfbbbtfb", warp_directory.ToUTF8( ).data( ), cistem_parent_directory.ToUTF8( ).data( ), project_name.ToUTF8( ).data( ), do_import_images, do_scale_images_and_make_spectra, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates, do_import_refinement_package, live_2d_directory.ToUTF8( ).data( ), particle_mass, do_import_classification_results);
+    my_current_job.ManualSetArguments("tttbbfbbbtfb", warp_directory.c_str(), cistem_parent_directory.c_str(), project_name.c_str(), do_import_images, do_scale_images_and_make_spectra, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates, do_import_refinement_package, live_2d_directory.c_str(), particle_mass, do_import_classification_results);
 }
 
-bool WarpToCistemApp::GetSettingsFromWarp(const pugi::xml_document& warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions) {
+bool WarpToCistemApp::GetSettingsFromWarp(const pugi::xml_document& warp_settings_doc, std::string& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions) {
     pugi::xml_node child_1 = warp_settings_doc.document_element( ).first_child( );
-    wxString       str_warp_picking_radius;
-    wxString       str_warp_picking_threshold;
-    wxString       str_distance;
+    std::string       str_warp_picking_radius;
+    std::string       str_warp_picking_threshold;
+    std::string       str_distance;
     while ( child_1 ) {
         if ( XmlName(child_1) == "Picking" ) {
             pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
                 if ( XmlAttribute(child_2, "Name") == "Diameter" ) {
                     str_warp_picking_radius = XmlAttribute(child_2, "Value");
-                    if ( ! str_warp_picking_radius.ToDouble(&warp_picking_radius) )
+                    if ( ! StringToDouble(str_warp_picking_radius, warp_picking_radius) )
                         SendErrorAndCrash("Couldn't convert Radius into a double");
                     warp_picking_radius = warp_picking_radius / 2; // Radius vs Diameter
                 }
                 if ( XmlAttribute(child_2, "Name") == "MinimumScore" ) {
                     str_warp_picking_threshold = XmlAttribute(child_2, "Value");
-                    if ( ! str_warp_picking_threshold.ToDouble(&warp_picking_threshold) )
+                    if ( ! StringToDouble(str_warp_picking_threshold, warp_picking_threshold) )
                         SendErrorAndCrash("Couldn't convert Threshold into a double");
                 }
                 if ( XmlAttribute(child_2, "Name") == "MinimumDistance" ) {
                     str_distance = XmlAttribute(child_2, "Value");
-                    if ( ! str_distance.ToDouble(&warp_minimum_distance_from_exclusions) )
+                    if ( ! StringToDouble(str_distance, warp_minimum_distance_from_exclusions) )
                         SendErrorAndCrash("Couldn't convert Minimum Distance into a double");
                 }
                 if ( XmlAttribute(child_2, "Name") == "ModelPath" ) {
@@ -178,10 +178,10 @@ bool WarpToCistemApp::GetSettingsFromWarp(const pugi::xml_document& warp_setting
     return true;
 }
 
-MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size) {
+MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc, std::string warp_folder, std::string movie_filename, unsigned long count, float wanted_binned_pixel_size) {
     MovieAsset new_asset            = MovieAsset( );
     new_asset.filename              = movie_filename;
-    new_asset.asset_name            = new_asset.filename.GetName( );
+    new_asset.asset_name            = new_asset.filename.stem().string();
     new_asset.asset_id              = count + 1;
     new_asset.dark_filename         = "";
     new_asset.output_binning_factor = 1.0;
@@ -190,7 +190,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc
     new_asset.mag_distortion_angle       = 0.0;
     new_asset.mag_distortion_major_scale = 1.0;
     new_asset.mag_distortion_minor_scale = 1.0;
-    wxString   dimension_string          = "";
+    std::string   dimension_string          = "";
     double     pixel_size                = 1.0;
     double     cs                        = 2.7;
     double     voltage                   = 300;
@@ -202,8 +202,8 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc
             pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
                 if ( XmlAttribute(child_2, "Name") == "PixelSizeX" ) {
-                    wxString str_pixel_size = XmlAttribute(child_2, "Value");
-                    if ( ! str_pixel_size.ToDouble(&pixel_size) ) {
+                    std::string str_pixel_size = XmlAttribute(child_2, "Value");
+                    if ( ! StringToDouble(str_pixel_size, pixel_size) ) {
                         SendInfo("Couldn't convert Pixel Size to a double");
                         is_valid = false;
                     }
@@ -214,21 +214,21 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc
                     }
                 }
                 if ( XmlAttribute(child_2, "Name") == "GainPath" ) {
-                    wxFileName gain_filename     = wxFileName(XmlAttribute(child_2, "Value"), wxPATH_WIN);
-                    wxString   adjusted_filename = warp_folder + gain_filename.GetFullName( ); // This requires that the gain filename be in the warp folder! todo locate gain file more flexibly... user selected?
+                    std::string gain_filename     = AfterLast(XmlAttribute(child_2, "Value"), '\\'); // a Windows path, so the file name is whatever follows the last backslash
+                    std::string adjusted_filename = warp_folder + gain_filename; // This requires that the gain filename be in the warp folder! todo locate gain file more flexibly... user selected?
                     new_asset.gain_filename      = adjusted_filename;
                 }
                 if ( XmlAttribute(child_2, "Name") == "Cs" ) {
-                    wxString str_cs = XmlAttribute(child_2, "Value");
-                    if ( ! str_cs.ToDouble(&cs) ) {
+                    std::string str_cs = XmlAttribute(child_2, "Value");
+                    if ( ! StringToDouble(str_cs, cs) ) {
                         SendInfo("Couldn't convert Spherical Aberration to a double");
                         is_valid = false;
                     }
                     new_asset.spherical_aberration = cs;
                 }
                 if ( XmlAttribute(child_2, "Name") == "Voltage" ) {
-                    wxString str_voltage = XmlAttribute(child_2, "Value");
-                    if ( ! str_voltage.ToDouble(&voltage) ) {
+                    std::string str_voltage = XmlAttribute(child_2, "Value");
+                    if ( ! StringToDouble(str_voltage, voltage) ) {
                         SendInfo("Couldn't convert Voltage to a double");
                         is_valid = false;
                     }
@@ -244,8 +244,8 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc
             pugi::xml_node child_2 = child_1.first_child( );
             while ( child_2 ) {
                 if ( XmlAttribute(child_2, "Name") == "DosePerAngstromFrame" ) {
-                    wxString str_dose_rate = XmlAttribute(child_2, "Value");
-                    if ( ! str_dose_rate.ToDouble(&dose_rate) ) {
+                    std::string str_dose_rate = XmlAttribute(child_2, "Value");
+                    if ( ! StringToDouble(str_dose_rate, dose_rate) ) {
                         SendInfo("Couldn't convert Dose Rate to a double");
                         is_valid = false;
                     }
@@ -259,21 +259,21 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc
     double x_size_angstroms = 0.0;
     double y_size_angstroms = 0.0;
 
-    wxStringTokenizer tokenizer(dimension_string, ",");
-    wxString          str_x_size           = tokenizer.GetNextToken( );
-    wxString          str_y_size           = tokenizer.GetNextToken( );
-    wxString          str_number_of_frames = tokenizer.GetNextToken( );
-    if ( ! str_x_size.ToDouble(&x_size_angstroms) ) {
+    std::vector<std::string> tokens               = SplitString(dimension_string, ",", false);
+    std::string              str_x_size           = tokens.size( ) > 0 ? tokens[0] : std::string( );
+    std::string              str_y_size           = tokens.size( ) > 1 ? tokens[1] : std::string( );
+    std::string              str_number_of_frames = tokens.size( ) > 2 ? tokens[2] : std::string( );
+    if ( ! StringToDouble(str_x_size, x_size_angstroms) ) {
         SendInfo("Couldn't convert x size to a double");
         is_valid = false;
     }
     int x_size = myroundint(x_size_angstroms / pixel_size);
-    if ( ! str_y_size.ToDouble(&y_size_angstroms) ) {
+    if ( ! StringToDouble(str_y_size, y_size_angstroms) ) {
         SendInfo("Couldn't convert y size to a double");
         is_valid = false;
     }
     int y_size                 = myroundint(y_size_angstroms / pixel_size);
-    int number_of_frames       = wxAtoi(str_number_of_frames);
+    int number_of_frames       = atoi(str_number_of_frames.c_str( ));
     new_asset.x_size           = x_size;
     new_asset.y_size           = y_size;
     new_asset.number_of_frames = number_of_frames;
@@ -283,17 +283,17 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(const pugi::xml_document& warp_doc
     return new_asset;
 }
 
-ImageAsset WarpToCistemApp::LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_is_white) {
+ImageAsset WarpToCistemApp::LoadImageFromWarp(std::string image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_is_white) {
     ImageAsset new_asset           = ImageAsset( );
     new_asset.filename             = image_filename;
-    new_asset.asset_name           = new_asset.filename.GetName( );
+    new_asset.asset_name           = new_asset.filename.stem().string();
     new_asset.parent_id            = parent_asset_id;
     new_asset.asset_id             = parent_asset_id;
     new_asset.alignment_id         = parent_asset_id;
     new_asset.microscope_voltage   = parent_voltage;
     new_asset.spherical_aberration = parent_cs;
     new_asset.protein_is_white     = parent_is_white;
-    ImageFile img_file(image_filename.ToStdString( ), false);
+    ImageFile img_file(image_filename, false);
     new_asset.x_size     = img_file.ReturnXSize( );
     new_asset.y_size     = img_file.ReturnYSize( );
     new_asset.pixel_size = img_file.ReturnPixelSize( );
@@ -301,35 +301,35 @@ ImageAsset WarpToCistemApp::LoadImageFromWarp(wxString image_filename, unsigned 
     return new_asset;
 }
 
-CTF WarpToCistemApp::LoadCTFFromWarp(const pugi::xml_document& warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename) {
+CTF WarpToCistemApp::LoadCTFFromWarp(const pugi::xml_document& warp_doc, float pixel_size, float voltage, float spherical_aberration, std::string wanted_avrot_filename) {
     double   defocus = 0.0;
-    wxString str_defocus;
+    std::string str_defocus;
     double   defocus_delta = 0.0;
-    wxString str_defocus_delta;
+    std::string str_defocus_delta;
     double   defocus_angle = 0.0;
-    wxString str_defocus_angle;
+    std::string str_defocus_angle;
     double   defocus_1 = 0.0;
     double   defocus_2 = 0.0;
     //	double defocus_max = 2.0;
-    //	wxString str_defocus_max;
+    //	std::string str_defocus_max;
     //	double defocus_min = 0.0;
-    //	wxString str_defocus_min;
+    //	std::string str_defocus_min;
     double   amplitude_contrast = 0.07;
-    wxString str_amplitude_contrast;
+    std::string str_amplitude_contrast;
     double   minimum_range     = .1;
     double   minimum_frequency = .1;
-    wxString str_minimum_range;
+    std::string str_minimum_range;
     double   maximum_range     = 0.6;
     double   maximum_frequency = 0.6;
-    wxString str_maximum_range;
+    std::string str_maximum_range;
 
     double   phase_shift = 0.0;
-    wxString str_phase_shift;
+    std::string str_phase_shift;
     double   resolution_estimate = 0.0;
-    wxString str_resolution_estimate;
+    std::string str_resolution_estimate;
 
     str_resolution_estimate = XmlAttribute(warp_doc.document_element( ), "CTFResolutionEstimate");
-    if ( ! str_resolution_estimate.ToDouble(&resolution_estimate) ) {
+    if ( ! StringToDouble(str_resolution_estimate, resolution_estimate) ) {
         SendErrorAndCrash("Couldn't convert resolution estimate to a double");
     }
     pugi::xml_node child_1 = warp_doc.document_element( ).first_child( );
@@ -340,20 +340,20 @@ CTF WarpToCistemApp::LoadCTFFromWarp(const pugi::xml_document& warp_doc, float p
             while ( child_2 ) {
                 if ( XmlAttribute(child_2, "Name") == "Amplitude" ) {
                     str_amplitude_contrast = XmlAttribute(child_2, "Value");
-                    if ( ! str_amplitude_contrast.ToDouble(&amplitude_contrast) ) {
+                    if ( ! StringToDouble(str_amplitude_contrast, amplitude_contrast) ) {
                         SendErrorAndCrash("Couldn't convert Amplitude to a double");
                     }
                 }
                 if ( XmlAttribute(child_2, "Name") == "RangeMax" ) {
                     str_maximum_range = XmlAttribute(child_2, "Value");
-                    if ( ! str_maximum_range.ToDouble(&maximum_range) ) {
+                    if ( ! StringToDouble(str_maximum_range, maximum_range) ) {
                         SendErrorAndCrash("Couldn't convert RangeMax to a double");
                     }
                     maximum_frequency = maximum_range / (2 * pixel_size);
                 }
                 if ( XmlAttribute(child_2, "Name") == "RangeMin" ) {
                     str_minimum_range = XmlAttribute(child_2, "Value");
-                    if ( ! str_minimum_range.ToDouble(&minimum_range) ) {
+                    if ( ! StringToDouble(str_minimum_range, minimum_range) ) {
                         SendErrorAndCrash("Couldn't convert RangeMin to a double");
                     }
                     minimum_frequency = minimum_range / (2 * pixel_size);
@@ -366,25 +366,25 @@ CTF WarpToCistemApp::LoadCTFFromWarp(const pugi::xml_document& warp_doc, float p
             while ( child_2 ) {
                 if ( XmlAttribute(child_2, "Name") == "DefocusAngle" ) {
                     str_defocus_angle = XmlAttribute(child_2, "Value");
-                    if ( ! str_defocus_angle.ToDouble(&defocus_angle) ) {
+                    if ( ! StringToDouble(str_defocus_angle, defocus_angle) ) {
                         SendErrorAndCrash("Couldn't convert DefocusAngle to a double");
                     }
                 }
                 if ( XmlAttribute(child_2, "Name") == "Defocus" ) {
                     str_defocus = XmlAttribute(child_2, "Value");
-                    if ( ! str_defocus.ToDouble(&defocus) ) {
+                    if ( ! StringToDouble(str_defocus, defocus) ) {
                         SendErrorAndCrash("Couldn't convert Defocus to a double");
                     }
                 }
                 if ( XmlAttribute(child_2, "Name") == "DefocusDelta" ) {
                     str_defocus_delta = XmlAttribute(child_2, "Value");
-                    if ( ! str_defocus_delta.ToDouble(&defocus_delta) ) {
+                    if ( ! StringToDouble(str_defocus_delta, defocus_delta) ) {
                         SendErrorAndCrash("Couldn't convert DefocusDelta to a double");
                     }
                 }
                 if ( XmlAttribute(child_2, "Name") == "PhaseShift" ) {
                     str_phase_shift = XmlAttribute(child_2, "Value");
-                    if ( ! str_phase_shift.ToDouble(&phase_shift) ) {
+                    if ( ! StringToDouble(str_phase_shift, phase_shift) ) {
                         SendErrorAndCrash("Couldn't convert Phaseshift to a double");
                     }
                 }
@@ -416,60 +416,55 @@ CTF WarpToCistemApp::LoadCTFFromWarp(const pugi::xml_document& warp_doc, float p
     return_ctf.SetHighestFrequencyWithGoodFit(pixel_size / resolution_estimate); // send in inverse pixels
 
     // Write out the avrot file here so we have it in the same scope as the xmldoc for when we want to actually scrape the plot.
-    wxTextFile* avrot_file = new wxTextFile(wanted_avrot_filename);
+    std::ofstream avrot_file(wanted_avrot_filename);
     // Stub file - all 1 all the time
-    avrot_file->AddLine(wxString("# This file is a stub that does not reflect the data from Warp"));
+    avrot_file << "# This file is a stub that does not reflect the data from Warp" << std::endl;
     for ( long counter = 0; counter < 6; counter++ ) {
-        avrot_file->AddLine(wxString("1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0"));
+        avrot_file << "1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0" << std::endl;
     }
-    avrot_file->Write( );
-    avrot_file->Close( );
+    avrot_file.close( );
 
     return return_ctf;
 }
 
-ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxString star_filename, ImageAsset new_image_asset, int starting_id) {
+ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(std::string star_filename, ImageAsset new_image_asset, int starting_id) {
     ArrayOfParticlePositionAssets loaded_positions;
     ParticlePositionAsset         temp_asset;
-    wxTextFile*                   input_file = new wxTextFile(star_filename);
-    wxString                      current_line;
-    wxStringTokenizer             tokenizer;
-    wxString                      str_x_pos;
+    std::ifstream                 input_file(star_filename);
+    std::string                   current_line;
+    std::string                   str_x_pos;
     double                        x_pos;
-    wxString                      str_y_pos;
+    std::string                   str_y_pos;
     double                        y_pos;
-    wxString                      str_figure_of_merit;
+    std::string                   str_figure_of_merit;
     double                        figure_of_merit;
     int                           current_id = starting_id;
 
-    input_file->Open( );
-    MyDebugAssertTrue(input_file->IsOpened( ), "File not open");
-    input_file->GoToLine(-1); // WARNING: integer conversion resulted in a change of sign
+    MyDebugAssertTrue(input_file.is_open( ), "File not open");
 
-    while ( input_file->Eof( ) == false ) {
-        current_line = input_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
-        if ( current_line.IsEmpty( ) == true )
+    while ( std::getline(input_file, current_line) ) {
+        TrimRight(current_line);
+        TrimLeft(current_line);
+        if ( current_line.empty() == true )
             continue;
         if ( current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';' || current_line[0] == 'd' || current_line[0] == 'l' || current_line[0] == '_' )
             continue; //Added a catch for data and loop
-        wxStringTokenizer tokenizer(current_line);
-        if ( tokenizer.CountTokens( ) != 4 )
+        std::vector<std::string> tokens = SplitString(current_line);
+        if ( tokens.size( ) != 4 )
             continue;
-        str_x_pos = tokenizer.GetNextToken( );
-        if ( ! str_x_pos.ToDouble(&x_pos) ) {
+        str_x_pos = tokens[0];
+        if ( ! StringToDouble(str_x_pos, x_pos) ) {
             SendErrorAndCrash("Couldn't convert X position to a double");
         }
         x_pos     = new_image_asset.pixel_size * x_pos;
-        str_y_pos = tokenizer.GetNextToken( );
-        if ( ! str_y_pos.ToDouble(&y_pos) ) {
+        str_y_pos = tokens[1];
+        if ( ! StringToDouble(str_y_pos, y_pos) ) {
             SendErrorAndCrash("Couldn't convert Y position to a double");
         }
         y_pos = new_image_asset.pixel_size * y_pos;
-        tokenizer.GetNextToken( ); // dumping the micrograph name
-        str_figure_of_merit = tokenizer.GetNextToken( );
-        if ( ! str_figure_of_merit.ToDouble(&figure_of_merit) ) {
+        // tokens[2] is the micrograph name, which is not used
+        str_figure_of_merit = tokens[3];
+        if ( ! StringToDouble(str_figure_of_merit, figure_of_merit) ) {
             SendErrorAndCrash("Couldn't convert Figure of Merit to a double");
         }
         current_id += 1;
@@ -482,29 +477,29 @@ ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxS
         temp_asset.peak_height = figure_of_merit;
         temp_asset.x_position  = x_pos;
         temp_asset.y_position  = y_pos;
-        loaded_positions.Add(temp_asset);
+        loaded_positions.push_back(temp_asset);
     }
     return loaded_positions;
 }
 
-RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString star_filename, wxString stack_filename, double pixel_size, double particle_weight, double voltage, double spherical_aberration, double amplitude_contrast, double particle_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement) {
+RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(std::string star_filename, std::string stack_filename, double pixel_size, double particle_weight, double voltage, double spherical_aberration, double amplitude_contrast, double particle_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement) {
     RefinementPackage*            refinement_package;
     RefinementPackageParticleInfo temp_particle_info;
     int                           stack_x_size;
     int                           stack_y_size;
     int                           stack_number_of_images;
-    bool                          stack_is_ok = GetMRCDetails(stack_filename, stack_x_size, stack_y_size, stack_number_of_images);
+    bool                          stack_is_ok = GetMRCDetails(stack_filename.c_str( ), stack_x_size, stack_y_size, stack_number_of_images);
     if ( stack_is_ok == false )
-        SendErrorAndCrash(wxString::Format("Could not load the Stack file: %s\n", stack_filename));
+        SendErrorAndCrash(Format("Could not load the Stack file: %s\n", stack_filename));
     MyDebugAssertTrue(stack_x_size == stack_y_size, "Particles are not square");
     BasicStarFileReader input_star_file;
-    wxString            star_error_text;
+    std::string            star_error_text;
     if ( input_star_file.ReadFile(star_filename, &star_error_text) == false ) {
-        SendErrorAndCrash(wxString::Format("Error: Encountered the following error - aborting :-\n%s", star_error_text));
+        SendErrorAndCrash(Format("Error: Encountered the following error - aborting :-\n%s", star_error_text));
     }
-    MyDebugAssertTrue(stack_number_of_images >= input_star_file.cached_parameters.GetCount( ), "Number of Particles in star is larger than in stack");
+    MyDebugAssertTrue(stack_number_of_images >= input_star_file.cached_parameters.size(), "Number of Particles in star is larger than in stack");
     refinement_package = new RefinementPackage;
-    refinement.SizeAndFillWithEmpty(input_star_file.cached_parameters.GetCount( ), 1);
+    refinement.SizeAndFillWithEmpty(input_star_file.cached_parameters.size(), 1);
     refinement_package->asset_id                 = 1;
     refinement_package->name                     = "Live2D Refinement Package";
     refinement_package->number_of_classes        = 1;
@@ -513,7 +508,7 @@ RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
     refinement_package->output_pixel_size        = pixel_size;
 
     refinement.number_of_classes                = refinement_package->number_of_classes;
-    refinement.number_of_particles              = input_star_file.cached_parameters.GetCount( );
+    refinement.number_of_particles              = input_star_file.cached_parameters.size();
     refinement.name                             = "Imported Parameters";
     refinement.resolution_statistics_box_size   = stack_x_size;
     refinement.resolution_statistics_pixel_size = pixel_size;
@@ -525,8 +520,8 @@ RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
     refinement_package->estimated_particle_weight_in_kda     = particle_weight;
     refinement_package->estimated_particle_size_in_angstroms = 2.0 * particle_radius;
 
-    refinement_package->refinement_ids.Add(1);
-    refinement_package->references_for_next_refinement.Add(-1);
+    refinement_package->refinement_ids.push_back(1);
+    refinement_package->references_for_next_refinement.push_back(-1);
 
     refinement.refinement_id                       = 1;
     refinement.resolution_statistics_are_generated = true;
@@ -540,12 +535,12 @@ RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
     refinement.class_refinement_results[0].class_resolution_statistics.Init(temp_particle_info.pixel_size, refinement.resolution_statistics_box_size);
     refinement.class_refinement_results[0].class_resolution_statistics.GenerateDefaultStatistics(refinement_package->estimated_particle_weight_in_kda);
     // Loop over all particles
-    wxString                      movie_name                          = "";
+    std::string                      movie_name                          = "";
     int                           particle_coordinate_index_per_image = 0;
     int                           parent_asset_id                     = 0;
     ArrayOfParticlePositionAssets particle_assets_by_parent;
     ParticlePositionAsset         particle_asset;
-    ProgressBar*                  my_progress = new ProgressBar(input_star_file.cached_parameters.GetCount( ));
+    ProgressBar*                  my_progress = new ProgressBar(input_star_file.cached_parameters.size());
     for ( int particle_counter = 0; particle_counter < stack_number_of_images; particle_counter++ ) {
         //		 Count number of particles in a given micrograph to associate back to relevant particle ID.
         //		 Micrograph ID = Image ID in this script always, so I can get away with querying movie_list instead of image_list to skip some filename wrangling.
@@ -558,7 +553,7 @@ RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
         }
         else
             particle_coordinate_index_per_image += 1;
-        particle_asset                                         = particle_assets_by_parent.Item(particle_coordinate_index_per_image);
+        particle_asset                                         = particle_assets_by_parent[particle_coordinate_index_per_image];
         temp_particle_info.parent_image_id                     = parent_asset_id;
         temp_particle_info.original_particle_position_asset_id = particle_asset.asset_id;
         temp_particle_info.x_pos                               = particle_asset.x_position;
@@ -569,7 +564,7 @@ RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
         temp_particle_info.defocus_angle                       = input_star_file.ReturnDefocusAngle(particle_counter);
         temp_particle_info.phase_shift                         = input_star_file.ReturnPhaseShift(particle_counter);
 
-        refinement_package->contained_particles.Add(temp_particle_info);
+        refinement_package->contained_particles.push_back(temp_particle_info);
 
         refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack = input_star_file.ReturnPositionInStack(particle_counter);
         refinement.class_refinement_results[0].particle_refinement_results[particle_counter].defocus1          = input_star_file.ReturnDefocus1(particle_counter);
@@ -598,9 +593,9 @@ RefinementPackage* WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
     return refinement_package;
 }
 
-ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename) {
+ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(std::string live_2d_path, std::string latest_settings_filename) {
     ArrayofClassifications classification_list;
-    std::ifstream          latest_settings(latest_settings_filename.ToUTF8( ).data( ));
+    std::ifstream          latest_settings(latest_settings_filename.c_str());
     if ( ! latest_settings.is_open( ) )
         SendErrorAndCrash("Couldn't open " + latest_settings_filename);
     json root = json::parse(latest_settings, nullptr, false);
@@ -634,10 +629,10 @@ ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString l
             SendErrorAndCrash("Couldn't read number of a Live2D cycle");
         classification->classification_id                        = number + 1; // Start from 1, not 0.
         classification->refinement_package_asset_id              = refinement_package_asset_id;
-        classification->name                                     = wxString::Format("Live2D Cycle #%ld", number);
-        classification->class_average_file                       = live_2d_path + JsonToWxString(cycle["name"]) + ".mrc";
+        classification->name                                     = Format("Live2D Cycle #%ld", number);
+        classification->class_average_file                       = live_2d_path + JsonToString(cycle["name"]) + ".mrc";
         classification->classification_was_imported_or_generated = true;
-        classification->datetime_of_run                          = wxDateTime::Now( );
+        classification->datetime_of_run                          = DateTime::Now( );
         classification->starting_classification_id               = parent_id;
         classification->number_of_particles                      = particle_count;
         if ( ! JsonToLong(cycle["settings"]["class_number"], class_count) )
@@ -662,7 +657,7 @@ ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString l
 
         // Load in data from the class file and move it to an ArrayOfClassificationResults.
         // This may eventually be worth moving into a class method for classification... I have to imagine this will be used elsewhere...
-        parameters.ReadFromcisTEMStarFile(live_2d_path + JsonToWxString(cycle["name"]) + ".star");
+        parameters.ReadFromcisTEMStarFile(live_2d_path + JsonToString(cycle["name"]) + ".star");
         MyDebugAssertTrue(particle_count == parameters.ReturnNumberofLines( ), "Wrong number of particles in Star File");
         for ( int line_number = 0; line_number < particle_count; line_number++ ) {
             classification->classification_results[line_number].position_in_stack                  = parameters.ReturnPositionInStack(line_number);
@@ -686,74 +681,76 @@ ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString l
             classification->classification_results[line_number].amplitude_contrast                 = parameters.ReturnAmplitudeContrast(line_number);
         }
         my_progress->Update(i + 1);
-        classification_list.Add(classification);
+        classification_list.push_back(*classification);
+        delete classification;
     }
     delete my_progress;
     return classification_list;
 }
 
 bool WarpToCistemApp::DoCalculation( ) {
-    wxString warp_directory                   = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString cistem_parent_directory          = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString project_name                     = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string warp_directory                   = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string cistem_parent_directory          = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string project_name                     = my_current_job.arguments[2].ReturnStringArgument( );
     bool     do_import_images                 = my_current_job.arguments[3].ReturnBoolArgument( );
     bool     do_scale_images_and_make_spectra = my_current_job.arguments[4].ReturnBoolArgument( );
     float    wanted_binned_pixel_size         = my_current_job.arguments[5].ReturnFloatArgument( );
     bool     do_import_ctf_results            = my_current_job.arguments[6].ReturnBoolArgument( );
     bool     do_import_particle_coordinates   = my_current_job.arguments[7].ReturnBoolArgument( );
     bool     do_import_refinement_package     = my_current_job.arguments[8].ReturnBoolArgument( );
-    wxString live_2d_directory                = my_current_job.arguments[9].ReturnStringArgument( );
+    std::string live_2d_directory                = my_current_job.arguments[9].ReturnStringArgument( );
     float    particle_mass                    = my_current_job.arguments[10].ReturnFloatArgument( );
     bool     do_import_classification_results = my_current_job.arguments[11].ReturnBoolArgument( );
 
     ProgressBar* my_progress;
     long         counter;
 
-    wxPrintf("\nGenerating New cisTEM Project...\n\n");
+    Printf("\nGenerating New cisTEM Project...\n\n");
 
-    if ( warp_directory.EndsWith("/") == false )
+    if ( EndsWith(warp_directory, "/") == false )
         warp_directory += "/";
-    if ( live_2d_directory != "" && live_2d_directory.EndsWith("/") == false )
+    if ( live_2d_directory != "" && EndsWith(live_2d_directory, "/") == false )
         live_2d_directory += "/";
 
-    if ( cistem_parent_directory.EndsWith("/") == false )
+    if ( EndsWith(cistem_parent_directory, "/") == false )
         cistem_parent_directory += "/";
-    wxString wanted_folder_name = cistem_parent_directory + project_name;
-    if ( wxFileName::Exists(wanted_folder_name) ) {
+    std::string wanted_folder_name = cistem_parent_directory + project_name;
+    if ( PathExists(wanted_folder_name) ) {
         SendErrorAndCrash("Database directory should not already exist, and does!\n");
     }
     else
-        wxFileName::Mkdir(wanted_folder_name);
-    wxFileName wanted_database_file = wanted_folder_name + "/" + project_name + ".db";
+        MakeDirectory(wanted_folder_name);
+    std::filesystem::path wanted_database_file = wanted_folder_name + "/" + project_name + ".db";
 
     Project new_project = Project( );
     new_project.CreateNewProject(wanted_database_file, wanted_folder_name, project_name);
-    wxPrintf(wanted_database_file.GetFullPath( ) + "\n");
-    wxPrintf("\nSuccessfully made project database\n\n");
+    Printf(wanted_database_file.string() + "\n");
+    Printf("\nSuccessfully made project database\n\n");
 
-    wxPrintf("\nImporting files from Warp...\n\n");
-    wxString      boxnet_name                           = "";
+    Printf("\nImporting files from Warp...\n\n");
+    std::string      boxnet_name                           = "";
     double        warp_picking_radius                   = 0.0;
     double        warp_picking_threshold                = 0.0;
     double        warp_minimum_distance_from_exclusions = 0.0;
-    wxString      warp_settings_file                    = warp_directory + "previous.settings";
+    std::string      warp_settings_file                    = warp_directory + "previous.settings";
     pugi::xml_document settings_doc;
-    if ( wxFileName::Exists(warp_settings_file) && settings_doc.load_file(warp_settings_file.ToUTF8( ).data( )) && settings_doc.document_element( ) ) {
+    if ( PathExists(warp_settings_file) && settings_doc.load_file(warp_settings_file.c_str()) && settings_doc.document_element( ) ) {
         GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius, warp_picking_threshold, warp_minimum_distance_from_exclusions);
     }
     else
         SendErrorAndCrash("Couldn't load warp settings");
 
-    wxArrayString all_files;
-    wxDir::GetAllFiles(warp_directory, &all_files, "*.mrc", wxDIR_FILES);
-    wxDir::GetAllFiles(warp_directory, &all_files, "*.mrcs", wxDIR_FILES);
-    wxDir::GetAllFiles(warp_directory, &all_files, "*.tif", wxDIR_FILES);
-    all_files.Sort( );
+    std::vector<std::string> all_files;
+    for ( const char* wanted_extension : {"*.mrc", "*.mrcs", "*.tif"} ) {
+        std::vector<std::string> matching_files = ReturnAllFilesInDirectory(warp_directory, wanted_extension);
+        all_files.insert(all_files.end( ), matching_files.begin( ), matching_files.end( ));
+    }
+    std::sort(all_files.begin( ), all_files.end( ));
     pugi::xml_document            doc;
-    size_t                        number_of_files = all_files.GetCount( );
-    wxString                      xml_filename;
-    wxString                      image_filename;
-    wxString                      star_filename;
+    size_t                        number_of_files = all_files.size();
+    std::string                      xml_filename;
+    std::string                      image_filename;
+    std::string                      star_filename;
     MovieAssetList                movie_list = MovieAssetList( );
     MovieAsset                    new_movie_asset;
     ImageAssetList                image_list = ImageAssetList( );
@@ -764,93 +761,93 @@ bool WarpToCistemApp::DoCalculation( ) {
     CTF                           new_ctf_asset;
     int                           starting_id = 0;
 
-    if ( all_files.IsEmpty( ) == true ) {
+    if ( all_files.empty() == true ) {
         SendErrorAndCrash("No movies were detected in the warp directory.");
     }
     my_progress = new ProgressBar(number_of_files);
 
     // Load filenames into memory first, then we'll do batch database inserts later.
-    for ( counter = 0; counter < all_files.GetCount( ); counter++ ) {
-        size_t split_point = all_files.Item(counter).find_last_of(".");
-        xml_filename       = all_files.Item(counter);
-        xml_filename       = xml_filename.Mid(0, split_point);
-        xml_filename.Append(".xml");
+    for ( counter = 0; counter < all_files.size(); counter++ ) {
+        size_t split_point = all_files[counter].find_last_of(".");
+        xml_filename       = all_files[counter];
+        xml_filename       = xml_filename.substr(0, split_point);
+        xml_filename += ".xml";
         // Check if warp xml exists before trying to do any more inserts
-        if ( wxFileName::Exists(xml_filename) && doc.load_file(xml_filename.ToUTF8( ).data( )) && doc.document_element( ) ) {
-            new_movie_asset = LoadMovieFromWarp(doc, warp_directory, all_files.Item(counter), counter, wanted_binned_pixel_size);
+        if ( PathExists(xml_filename) && doc.load_file(xml_filename.c_str()) && doc.document_element( ) ) {
+            new_movie_asset = LoadMovieFromWarp(doc, warp_directory, all_files[counter], counter, wanted_binned_pixel_size);
             if ( new_movie_asset.is_valid ) {
                 movie_list.AddAsset(&new_movie_asset);
 
-                image_filename = warp_directory + "average/" + wxFileName(xml_filename).GetName( ) + ".mrc";
-                if ( do_import_images && wxFileName(image_filename).IsOk( ) == true && wxFileName(image_filename).FileExists( ) == true ) {
+                image_filename = warp_directory + "average/" + std::filesystem::path(xml_filename).stem( ).string( ) + ".mrc";
+                if ( do_import_images && image_filename.empty( ) == false && FileExists(image_filename) == true ) {
                     new_image_asset = LoadImageFromWarp(image_filename, new_movie_asset.asset_id, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, new_movie_asset.protein_is_white);
                     // Need to do the ctf first to adjust the ctf_estimation_id if necessary
                     if ( do_import_ctf_results ) {
                         new_image_asset.ctf_estimation_id = new_image_asset.asset_id;
-                        wxString wanted_avrot_filename    = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0_avrot.txt", new_image_asset.asset_name);
+                        std::string wanted_avrot_filename    = wanted_folder_name + Format("/Assets/CTF/%s_CTF_0_avrot.txt", new_image_asset.asset_name);
 
                         CTF new_ctf_asset = LoadCTFFromWarp(doc, new_image_asset.pixel_size, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, wanted_avrot_filename);
                         ctf_list.push_back(new_ctf_asset);
                     }
                     if ( do_import_particle_coordinates ) {
                         star_filename = warp_directory + "matching/" + new_image_asset.asset_name + "_" + boxnet_name + ".star";
-                        if ( wxFileName::Exists(star_filename) ) {
+                        if ( PathExists(star_filename) ) {
                             temp_particle_list = LoadParticlePositionsFromWarp(star_filename, new_image_asset, starting_id);
-                            WX_APPEND_ARRAY(particle_list, temp_particle_list);
-                            starting_id += temp_particle_list.GetCount( );
+                            particle_list.insert(particle_list.end( ), temp_particle_list.begin( ), temp_particle_list.end( ));
+                            starting_id += temp_particle_list.size();
                         }
                     }
                     image_list.AddAsset(&new_image_asset);
                 }
                 else if ( do_import_images )
-                    wxPrintf("Couldn't find averaged image: %s\n", image_filename);
+                    Printf("Couldn't find averaged image: %s\n", image_filename);
             }
             else
-                wxPrintf("Corrupt warp xml output for movie " + all_files.Item(counter) + "\n");
+                Printf("Corrupt warp xml output for movie " + all_files[counter] + "\n");
         }
         else
-            wxPrintf("Couldn't find a valid warp xml output for movie " + all_files.Item(counter) + "\n");
+            Printf("Couldn't find a valid warp xml output for movie " + all_files[counter] + "\n");
         my_progress->Update(counter + 1);
     }
 
     // DB write operations and moving/writing files.
 
     delete my_progress;
-    wxPrintf("\nSuccessfully imported files\n\n");
+    Printf("\nSuccessfully imported files\n\n");
 
-    wxPrintf("\nWriting movies to database\n\n");
+    Printf("\nWriting movies to database\n\n");
     new_project.database.Begin( );
     my_progress = new ProgressBar(movie_list.number_of_assets);
     new_project.database.BeginMovieAssetInsert( );
     for ( counter = 0; counter < movie_list.number_of_assets; counter++ ) {
         new_movie_asset = reinterpret_cast<MovieAsset*>(movie_list.assets)[counter];
         // NOTE: EER not yet supported... setting eer_frames_per_image to 0
-        new_project.database.AddNextMovieAsset(new_movie_asset.asset_id, new_movie_asset.asset_name, new_movie_asset.filename.GetFullPath( ), 1, new_movie_asset.x_size, new_movie_asset.y_size, new_movie_asset.number_of_frames, new_movie_asset.microscope_voltage, new_movie_asset.pixel_size, new_movie_asset.dose_per_frame, new_movie_asset.spherical_aberration, new_movie_asset.gain_filename, new_movie_asset.dark_filename, new_movie_asset.output_binning_factor, new_movie_asset.correct_mag_distortion, new_movie_asset.mag_distortion_angle, new_movie_asset.mag_distortion_major_scale, new_movie_asset.mag_distortion_minor_scale, new_movie_asset.protein_is_white, 1, 0);
+        new_project.database.AddNextMovieAsset(new_movie_asset.asset_id, new_movie_asset.asset_name, new_movie_asset.filename.string(), 1, new_movie_asset.x_size, new_movie_asset.y_size, new_movie_asset.number_of_frames, new_movie_asset.microscope_voltage, new_movie_asset.pixel_size, new_movie_asset.dose_per_frame, new_movie_asset.spherical_aberration, new_movie_asset.gain_filename, new_movie_asset.dark_filename, new_movie_asset.output_binning_factor, new_movie_asset.correct_mag_distortion, new_movie_asset.mag_distortion_angle, new_movie_asset.mag_distortion_major_scale, new_movie_asset.mag_distortion_minor_scale, new_movie_asset.protein_is_white, 1, 0);
         my_progress->Update(counter + 1);
     }
     new_project.database.EndMovieAssetInsert( );
     new_project.database.Commit( );
     delete my_progress;
 
-    wxPrintf("\nSuccessfully imported movies\n\n");
+    Printf("\nSuccessfully imported movies\n\n");
 
     if ( do_import_images ) {
-        wxPrintf("\nWriting motion-corrected images to database and writing scaled images and spectra.\n\n");
-        wxDateTime now = wxDateTime::Now( );
+        Printf("\nWriting motion-corrected images to database and writing scaled images and spectra.\n\n");
+        DateTime now = DateTime::Now( );
         new_project.database.Begin( );
         my_progress = new ProgressBar(image_list.number_of_assets);
         new_project.database.BeginImageAssetInsert( );
         for ( counter = 0; counter < image_list.number_of_assets; counter++ ) {
             new_image_asset = reinterpret_cast<ImageAsset*>(image_list.assets)[counter];
-            new_project.database.AddNextImageAsset(new_image_asset.asset_id, new_image_asset.asset_name, new_image_asset.filename.GetFullPath( ), new_image_asset.position_in_stack, new_image_asset.parent_id, new_image_asset.alignment_id, new_image_asset.ctf_estimation_id, new_image_asset.x_size, new_image_asset.y_size, new_image_asset.microscope_voltage, new_image_asset.pixel_size, new_image_asset.spherical_aberration, new_image_asset.protein_is_white);
+            new_project.database.AddNextImageAsset(new_image_asset.asset_id, new_image_asset.asset_name, new_image_asset.filename.string(), new_image_asset.position_in_stack, new_image_asset.parent_id, new_image_asset.alignment_id, new_image_asset.ctf_estimation_id, new_image_asset.x_size, new_image_asset.y_size, new_image_asset.microscope_voltage, new_image_asset.pixel_size, new_image_asset.spherical_aberration, new_image_asset.protein_is_white);
             my_progress->Update(counter + 1);
         }
         new_project.database.EndImageAssetInsert( );
         delete my_progress;
 
-        wxPrintf("\nDone with database insert of images\n\n");
+        Printf("\nDone with database insert of images\n\n");
 
-        wxPrintf("\nInserting Image Alignment Jobs into Database\n\n");
+        Printf("\nInserting Image Alignment Jobs into Database\n\n");
         my_progress = new ProgressBar(image_list.number_of_assets);
         new_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM");
         for ( counter = 0; counter < image_list.number_of_assets; counter++ ) {
@@ -859,7 +856,7 @@ bool WarpToCistemApp::DoCalculation( ) {
                                                   (long int)now.GetAsDOS( ),
                                                   1, //alignment_job_id - set to 1
                                                   new_image_asset.asset_id,
-                                                  new_image_asset.filename.GetFullPath( ).ToStdString( ).c_str( ),
+                                                  new_image_asset.filename.string().c_str( ),
                                                   new_image_asset.microscope_voltage,
                                                   new_image_asset.pixel_size,
                                                   0.0, // exposure per frame
@@ -883,11 +880,11 @@ bool WarpToCistemApp::DoCalculation( ) {
         delete my_progress;
 
         my_progress = new ProgressBar(image_list.number_of_assets);
-        wxString current_table_name;
+        std::string current_table_name;
         long     frame_counter;
         for ( counter = 0; counter < image_list.number_of_assets; counter++ ) {
             new_image_asset    = reinterpret_cast<ImageAsset*>(image_list.assets)[counter];
-            current_table_name = wxString::Format("MOVIE_ALIGNMENT_PARAMETERS_%i", new_image_asset.alignment_id);
+            current_table_name = Format("MOVIE_ALIGNMENT_PARAMETERS_%i", new_image_asset.alignment_id);
             new_project.database.CreateTable(current_table_name, "prr", "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
             new_project.database.BeginBatchInsert(current_table_name, 3, "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
             for ( frame_counter = 0; frame_counter < 40; frame_counter++ ) // 5 is totally arbitrary
@@ -899,11 +896,11 @@ bool WarpToCistemApp::DoCalculation( ) {
         }
         delete my_progress;
         new_project.database.Commit( );
-        wxPrintf("\nDone with Image Alignment Jobs\n\n");
+        Printf("\nDone with Image Alignment Jobs\n\n");
     }
 
     if ( do_scale_images_and_make_spectra ) {
-        wxPrintf("\nPreparing scaled images and spectra\n\n");
+        Printf("\nPreparing scaled images and spectra\n\n");
         my_progress = new ProgressBar(image_list.number_of_assets);
         Image large_image;
         Image buffer_image;
@@ -912,11 +909,11 @@ bool WarpToCistemApp::DoCalculation( ) {
         for ( counter = 0; counter < image_list.number_of_assets; counter++ ) {
             new_image_asset = reinterpret_cast<ImageAsset*>(image_list.assets)[counter];
             //Spectrum
-            wxString wanted_spectrum_filename  = wanted_folder_name + wxString::Format("/Assets/Images/Spectra/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
-            wxString current_spectrum_filename = warp_directory + wxString::Format("powerspectrum/%s.mrc", new_image_asset.asset_name);
+            std::string wanted_spectrum_filename  = wanted_folder_name + Format("/Assets/Images/Spectra/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
+            std::string current_spectrum_filename = warp_directory + Format("powerspectrum/%s.mrc", new_image_asset.asset_name);
 
             // Warp spectra are halved and unthresholded, so this fixes that.
-            large_image.QuickAndDirtyReadSlice(current_spectrum_filename.ToStdString( ), 1); // reusing large image and buffer_image here
+            large_image.QuickAndDirtyReadSlice(current_spectrum_filename, 1); // reusing large image and buffer_image here
             buffer_image.Allocate(large_image.logical_x_dimension, large_image.logical_y_dimension * 2, 1);
             for ( int output_address = 0; output_address < large_image.real_memory_allocated; output_address++ ) {
                 buffer_image.real_values[output_address] = large_image.real_values[output_address];
@@ -937,16 +934,16 @@ bool WarpToCistemApp::DoCalculation( ) {
 
             buffer_image.ComputeAverageAndSigmaOfValuesInSpectrum(float(buffer_image.logical_x_dimension) * 0.5, float(buffer_image.logical_x_dimension), average, sigma, 12);
             buffer_image.SetMinimumAndMaximumValues(average - 15.0, average + 15.0);
-            buffer_image.QuickAndDirtyWriteSlice(wanted_spectrum_filename.ToStdString( ), 1);
+            buffer_image.QuickAndDirtyWriteSlice(wanted_spectrum_filename, 1);
             // Also write fake diagnostic ctf spectrum in this scope to reuse the work done above.
             if ( do_import_ctf_results ) {
-                wxString wanted_ctf_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name);
-                buffer_image.QuickAndDirtyWriteSlice(wanted_ctf_filename.ToStdString( ), 1, true);
+                std::string wanted_ctf_filename = wanted_folder_name + Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name);
+                buffer_image.QuickAndDirtyWriteSlice(wanted_ctf_filename, 1, true);
             }
 
             //Scaled Image - borrowed the logic heavily from Unblur
-            wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
-            //			wxString current_scaled_filename = warp_directory + wxString::Format("thumbnails/%s.png");
+            std::string wanted_scaled_filename = wanted_folder_name + Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
+            //			std::string current_scaled_filename = warp_directory + Format("thumbnails/%s.png");
             //			png_image = wxImage(current_scaled_filename);
             //			png_data = png_image.GetData();
             //			buffer_image.Allocate(png_image.GetWidth(), png_image.GetHeight(), true);
@@ -958,22 +955,22 @@ bool WarpToCistemApp::DoCalculation( ) {
             float scale_factor      = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
             if ( scale_factor > 1 )
                 scale_factor = 1.0;
-            large_image.QuickAndDirtyReadSlice(new_image_asset.filename.GetFullPath( ).ToStdString( ), 1);
+            large_image.QuickAndDirtyReadSlice(new_image_asset.filename.string(), 1);
             large_image.ForwardFFT( );
             buffer_image.Allocate(myroundint(new_image_asset.x_size * scale_factor), myroundint(new_image_asset.y_size * scale_factor), false);
             large_image.ClipInto(&buffer_image);
             buffer_image.BackwardFFT( );
-            buffer_image.QuickAndDirtyWriteSlice(wanted_scaled_filename.ToStdString( ), 1, true);
+            buffer_image.QuickAndDirtyWriteSlice(wanted_scaled_filename, 1, true);
 
             my_progress->Update(counter + 1);
         }
         delete my_progress;
-        wxPrintf("\nDone writing spectra and scaled images\n\n");
+        Printf("\nDone writing spectra and scaled images\n\n");
     }
 
     if ( do_import_ctf_results ) {
-        wxPrintf("\nInserting CTF results in database\n\n");
-        wxDateTime now = wxDateTime::Now( );
+        Printf("\nInserting CTF results in database\n\n");
+        DateTime now = DateTime::Now( );
         new_project.database.Begin( );
         my_progress = new ProgressBar(image_list.number_of_assets);
         new_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 32,
@@ -1012,7 +1009,7 @@ bool WarpToCistemApp::DoCalculation( ) {
         for ( counter = 0; counter < image_list.number_of_assets; counter++ ) {
             new_image_asset              = reinterpret_cast<ImageAsset*>(image_list.assets)[counter];
             CTF      new_ctf             = ctf_list.at(counter);
-            wxString wanted_ctf_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name); // This logic is repeated before - its the only case of straight repeating code I've resorted to, but calculating it twice is easier than storing the data in an object somewhere for multiple iterations.
+            std::string wanted_ctf_filename = wanted_folder_name + Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name); // This logic is repeated before - its the only case of straight repeating code I've resorted to, but calculating it twice is easier than storing the data in an object somewhere for multiple iterations.
             new_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiir",
                                                   new_image_asset.ctf_estimation_id, // Image asset join column reference
                                                   1, // CTF Job id
@@ -1042,7 +1039,7 @@ bool WarpToCistemApp::DoCalculation( ) {
                                                   -1.0, // Score
                                                   new_image_asset.pixel_size / new_ctf.GetHighestFrequencyWithGoodFit( ), //Resolution of fit.
                                                   0.0, // Alias Resolution
-                                                  wanted_ctf_filename.ToStdString( ).c_str( ),
+                                                  wanted_ctf_filename.c_str( ),
                                                   -1, // Number of frames averaged
                                                   0, // Large Astigmatism Expected is not used by warp
                                                   -1.0); // Iciness is not calculated by warp
@@ -1052,18 +1049,18 @@ bool WarpToCistemApp::DoCalculation( ) {
         delete my_progress;
         new_project.database.EndBatchInsert( );
         new_project.database.Commit( );
-        wxPrintf("\nDone with CTF database insertions");
+        Printf("\nDone with CTF database insertions");
     }
 
     if ( do_import_particle_coordinates ) {
-        wxPrintf("\nInserting Particle Coordinates into database\n\n");
+        Printf("\nInserting Particle Coordinates into database\n\n");
         new_project.database.Begin( );
         new_project.database.CreateParticlePickingResultsTable(1); // hardcode 1
         new_project.database.AddArrayOfParticlePositionAssetsToResultsTable(1, &particle_list);
         new_project.database.AddArrayOfParticlePositionAssetsToAssetsTable(&particle_list);
-        wxPrintf("\nDone with Particle Coordinates insert\n\n");
+        Printf("\nDone with Particle Coordinates insert\n\n");
 
-        wxPrintf("\nInserting Particle Picking Job Metadata into database\n\n");
+        Printf("\nInserting Particle Picking Job Metadata into database\n\n");
         new_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST", 14,
                                               "PICKING_ID",
                                               "PICKING_JOB_ID",
@@ -1079,7 +1076,7 @@ bool WarpToCistemApp::DoCalculation( ) {
                                               "AVOID_HIGH_LOW_MEAN",
                                               "NUM_BACKGROUND_BOXES",
                                               "MANUAL_EDIT");
-        wxDateTime now = wxDateTime::Now( );
+        DateTime now = DateTime::Now( );
         my_progress    = new ProgressBar(image_list.number_of_assets);
         for ( counter = 0; counter < image_list.number_of_assets; counter++ ) {
             new_image_asset = reinterpret_cast<ImageAsset*>(image_list.assets)[counter];
@@ -1102,23 +1099,23 @@ bool WarpToCistemApp::DoCalculation( ) {
         new_project.database.EndBatchInsert( );
         delete my_progress;
         new_project.database.Commit( );
-        wxPrintf("\nDone with Particle Coordinate Metadata insert\n\n");
+        Printf("\nDone with Particle Coordinate Metadata insert\n\n");
     }
 
-    wxPrintf("\nDone with database operations for Warp import\n\n");
+    Printf("\nDone with database operations for Warp import\n\n");
 
     if ( do_import_refinement_package ) {
-        wxPrintf("\nImporting Refinement Package from Live2D\n\n");
+        Printf("\nImporting Refinement Package from Live2D\n\n");
         double             pixel_size           = new_image_asset.pixel_size;
         double             voltage              = new_image_asset.microscope_voltage;
         double             spherical_aberration = new_image_asset.spherical_aberration;
         double             amplitude_contrast   = ctf_list.at(0).GetAmplitudeContrast( );
-        wxString           star_filename        = warp_directory + "allparticles_" + boxnet_name + ".star";
-        wxString           stack_filename       = live_2d_directory + "combined_stack.mrcs";
+        std::string           star_filename        = warp_directory + "allparticles_" + boxnet_name + ".star";
+        std::string           stack_filename       = live_2d_directory + "combined_stack.mrcs";
         Refinement         refinement;
         RefinementPackage* refinement_package = LoadRefinementPackageFromLive2D(star_filename, stack_filename, pixel_size, particle_mass, voltage, spherical_aberration, amplitude_contrast, warp_picking_radius, new_project.database, movie_list, refinement);
         new_project.database.Begin( );
-        wxPrintf("\nRefinement Package Loading Complete\nInserting Into Database\n\n");
+        Printf("\nRefinement Package Loading Complete\nInserting Into Database\n\n");
         new_project.database.AddRefinementPackageAsset(refinement_package);
         new_project.database.AddRefinement(&refinement);
         ArrayofAngularDistributionHistograms all_histograms;
@@ -1127,30 +1124,30 @@ bool WarpToCistemApp::DoCalculation( ) {
             new_project.database.AddRefinementAngularDistribution(all_histograms[class_counter], refinement.refinement_id, class_counter + 1);
         }
         new_project.database.Commit( );
-        wxPrintf("\nDone Inserting Refinement Package\n\n");
+        Printf("\nDone Inserting Refinement Package\n\n");
     }
 
     if ( do_import_classification_results ) {
-        wxPrintf("\nImporting Classification Results from Live2D\n\n");
-        wxString               latest_settings_filename = live_2d_directory + "latest_run.json";
+        Printf("\nImporting Classification Results from Live2D\n\n");
+        std::string               latest_settings_filename = live_2d_directory + "latest_run.json";
         ArrayofClassifications classification_list      = LoadClassificationsFromLive2D(live_2d_directory, latest_settings_filename);
         Classification*        classification;
-        wxPrintf("\nDone Importing Classification Results\nInserting Into Database\n\n");
+        Printf("\nDone Importing Classification Results\nInserting Into Database\n\n");
         new_project.database.Begin( );
-        my_progress = new ProgressBar(classification_list.GetCount( ));
-        for ( counter = 0; counter < classification_list.GetCount( ); counter++ ) {
-            classification = &classification_list.Item(counter);
+        my_progress = new ProgressBar(classification_list.size());
+        for ( counter = 0; counter < classification_list.size(); counter++ ) {
+            classification = &classification_list[counter];
             new_project.database.AddClassification(classification);
             long refinement_package_id = 1; // hardcoded above.
             long classification_id     = classification->classification_id;
-            new_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li (CLASSIFICATION_NUMBER, CLASSIFICATION_ID) VALUES (%li, %li);", refinement_package_id, classification_id, classification_id));
+            new_project.database.ExecuteSQL(Format("INSERT INTO REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li (CLASSIFICATION_NUMBER, CLASSIFICATION_ID) VALUES (%li, %li);", refinement_package_id, classification_id, classification_id));
             my_progress->Update(counter + 1);
         }
         delete my_progress;
         new_project.database.Commit( );
-        wxPrintf("\nDone Inserting Classification Results\n\n");
+        Printf("\nDone Inserting Classification Results\n\n");
     }
 
-    wxPrintf("\ncisTEM project ready to be loaded by GUI.\n");
+    Printf("\ncisTEM project ready to be loaded by GUI.\n");
     return true;
 }

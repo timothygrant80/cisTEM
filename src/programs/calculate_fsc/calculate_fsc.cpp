@@ -18,10 +18,10 @@ void CalculateFSC::DoInteractiveUserInput( ) {
 
     UserInput* my_input = new UserInput("CalculateFSC", 1.0);
 
-    wxString output_reconstruction_1 = my_input->GetFilenameFromUser("Input reconstruction 1", "The first input 3D reconstruction used for FSC calculation", "my_reconstruction_1.mrc", false);
-    wxString output_reconstruction_2 = my_input->GetFilenameFromUser("Input reconstruction 2", "The second input 3D reconstruction used for FSC calculation", "my_reconstruction_2.mrc", false);
-    wxString input_mask              = my_input->GetFilenameFromUser("Input mask file name", "Name of input 3D volume to be applied to input reconstructions ", "mask.mrc", false);
-    wxString res_statistics          = my_input->GetFilenameFromUser("Output resolution statistics", "The table listing FSC, Part_FSC, Part_SSNR and Rec_SSNR", "my_statistics.txt", false);
+    std::string output_reconstruction_1 = my_input->GetFilenameFromUser("Input reconstruction 1", "The first input 3D reconstruction used for FSC calculation", "my_reconstruction_1.mrc", false);
+    std::string output_reconstruction_2 = my_input->GetFilenameFromUser("Input reconstruction 2", "The second input 3D reconstruction used for FSC calculation", "my_reconstruction_2.mrc", false);
+    std::string input_mask              = my_input->GetFilenameFromUser("Input mask file name", "Name of input 3D volume to be applied to input reconstructions ", "mask.mrc", false);
+    std::string res_statistics          = my_input->GetFilenameFromUser("Output resolution statistics", "The table listing FSC, Part_FSC, Part_SSNR and Rec_SSNR", "my_statistics.txt", false);
     float    pixel_size              = my_input->GetFloatFromUser("Pixel size (A)", "Pixel size of the map in Angstroms", "1.0", 0.000001);
     float    inner_mask_radius       = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the input reconstructions, in Angstroms", "0.0", 0.0);
     float    outer_mask_radius       = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the input reconstructions, in Angstroms", "100.0", inner_mask_radius);
@@ -31,7 +31,7 @@ void CalculateFSC::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(9);
-    my_current_job.ManualSetArguments("ttttffffb", output_reconstruction_1.ToUTF8( ).data( ), output_reconstruction_2.ToUTF8( ).data( ), input_mask.ToUTF8( ).data( ), res_statistics.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttttffffb", output_reconstruction_1.c_str(), output_reconstruction_2.c_str(), input_mask.c_str(), res_statistics.c_str(),
                                       pixel_size, inner_mask_radius, outer_mask_radius, molecular_mass_in_kDa, use_mask);
 }
 
@@ -39,18 +39,18 @@ void CalculateFSC::DoInteractiveUserInput( ) {
 
 bool CalculateFSC::DoCalculation( ) {
 
-    wxString output_reconstruction_1 = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_reconstruction_2 = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_mask              = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString res_statistics          = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string output_reconstruction_1 = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_reconstruction_2 = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_mask              = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string res_statistics          = my_current_job.arguments[3].ReturnStringArgument( );
     float    pixel_size              = my_current_job.arguments[4].ReturnFloatArgument( );
     float    inner_mask_radius       = my_current_job.arguments[5].ReturnFloatArgument( );
     float    outer_mask_radius       = my_current_job.arguments[6].ReturnFloatArgument( );
     float    molecular_mass_in_kDa   = my_current_job.arguments[7].ReturnFloatArgument( );
     bool     use_mask                = my_current_job.arguments[8].ReturnBoolArgument( );
 
-    MRCFile         reconstruction_1(output_reconstruction_1.ToStdString( ), false);
-    MRCFile         reconstruction_2(output_reconstruction_2.ToStdString( ), false);
+    MRCFile         reconstruction_1(output_reconstruction_1, false);
+    MRCFile         reconstruction_2(output_reconstruction_2, false);
     NumericTextFile output_statistics_file(res_statistics, OPEN_TO_WRITE, 7);
     MRCFile*        input_mask_file;
 
@@ -75,14 +75,14 @@ bool CalculateFSC::DoCalculation( ) {
     }
 
     if ( reconstruction_1.ReturnXSize( ) != reconstruction_2.ReturnXSize( ) || reconstruction_1.ReturnYSize( ) != reconstruction_2.ReturnYSize( ) || reconstruction_1.ReturnZSize( ) != reconstruction_2.ReturnZSize( ) && reconstruction_1.ReturnZSize( ) != 1 ) {
-        wxPrintf("\nInput reconstructions have different dimensions\n");
+        Printf("\nInput reconstructions have different dimensions\n");
         DEBUG_ABORT;
     }
 
     if ( use_mask ) {
-        input_mask_file = new MRCFile(input_mask.ToStdString( ), false);
+        input_mask_file = new MRCFile(input_mask, false);
         if ( reconstruction_1.ReturnXSize( ) != input_mask_file->ReturnXSize( ) || reconstruction_1.ReturnYSize( ) != input_mask_file->ReturnYSize( ) || reconstruction_1.ReturnZSize( ) != input_mask_file->ReturnZSize( ) ) {
-            wxPrintf("\nVolume and mask file have different dimensions\n");
+            Printf("\nVolume and mask file have different dimensions\n");
             DEBUG_ABORT;
         }
         else
@@ -102,9 +102,9 @@ bool CalculateFSC::DoCalculation( ) {
         float estimated_molecule_size = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size, 3);
         float volume_fraction         = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size, 3) / mask_volume_in_voxels;
 
-        wxPrintf("\nEstimated molecule volume = %.2f voxels\n", estimated_molecule_size);
-        wxPrintf("Mask volume = %.2f voxels\n", mask_volume_in_voxels);
-        wxPrintf("Volume Fraction = %.3f\n\n", volume_fraction);
+        Printf("\nEstimated molecule volume = %.2f voxels\n", estimated_molecule_size);
+        Printf("Mask volume = %.2f voxels\n", mask_volume_in_voxels);
+        Printf("Volume Fraction = %.3f\n\n", volume_fraction);
     }
     else {
         mask_volume_in_voxels = density_map_1.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
@@ -113,9 +113,9 @@ bool CalculateFSC::DoCalculation( ) {
         float estimated_molecule_size = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size, 3);
         float volume_fraction         = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size, 3) / mask_volume_in_voxels;
 
-        wxPrintf("\nEstimated molecule volume = %.2f voxels\n", estimated_molecule_size);
-        wxPrintf("Mask volume = %.2f voxels\n", mask_volume_in_voxels);
-        wxPrintf("Volume Fraction = %.3f\n\n", volume_fraction);
+        Printf("\nEstimated molecule volume = %.2f voxels\n", estimated_molecule_size);
+        Printf("Mask volume = %.2f voxels\n", mask_volume_in_voxels);
+        Printf("Volume Fraction = %.3f\n\n", volume_fraction);
     }
 
     density_map_1.ForwardFFT( );

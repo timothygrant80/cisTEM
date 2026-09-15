@@ -109,7 +109,7 @@ void StopWatch::mark_entry_or_exit_point(bool threadsafe) {
     else {
         // If we are not recording on an exit point, we have a problem.
         if ( ! is_recording_elapsed_time ) {
-            wxPrintf("a exit point was encounterd with no elapsed time being recorded Stopwatch at line %d in file %s\n", __LINE__, __FILE__);
+            Printf("a exit point was encounterd with no elapsed time being recorded Stopwatch at line %d in file %s\n", __LINE__, __FILE__);
             exit(-1);
         }
         record_elapsed( );
@@ -137,11 +137,11 @@ float StopWatch::get_ratio_of_times(std::string event_1, std::string event_2, bo
     }
 
     if ( ! found_event_1 ) {
-        wxPrintf("Event 1 %s not found in Stopwatch at line %d in file %s\n", event_1.c_str( ), __LINE__, __FILE__);
+        Printf("Event 1 %s not found in Stopwatch at line %d in file %s\n", event_1.c_str( ), __LINE__, __FILE__);
         exit(-1);
     }
     if ( ! found_event_2 ) {
-        wxPrintf("Event 2 %s not found in Stopwatch at line %d in file %s\n", event_2.c_str( ), __LINE__, __FILE__);
+        Printf("Event 2 %s not found in Stopwatch at line %d in file %s\n", event_2.c_str( ), __LINE__, __FILE__);
         exit(-1);
     }
     return time_1 / time_2;
@@ -172,7 +172,7 @@ void StopWatch::lap(std::string name, bool threadsafe) {
     // Check to see if the event has been encountered. If not, first create it and set elapsed time to zero. Return the events index.
     check_for_name_and_set_current_idx(name);
     if ( is_new ) {
-        wxPrintf("a new event name was encountered when calling Stopwatch::lap(%s) at line %d in file %s\n", name, __LINE__, __FILE__);
+        Printf("a new event name was encountered when calling Stopwatch::lap(%s) at line %d in file %s\n", name, __LINE__, __FILE__);
         exit(-1);
     }
     record_end( );
@@ -220,7 +220,7 @@ void StopWatch::print_times(bool threadsafe) {
             break;
     }
 
-    wxPrintf("\n\n\t\t---------Timing Results---------\n\n");
+    Printf("\n\n\t\t---------Timing Results---------\n\n");
     for ( size_t iName = 0; iName < event_names.size( ); iName++ ) {
 
         convert_time(elapsed_times[iName]);
@@ -228,18 +228,18 @@ void StopWatch::print_times(bool threadsafe) {
         switch ( iName ) {
 
             case (SpecialIDX)total_elapsed:
-                wxPrintf("\t\t%-32s : %2.2ld:%2.2ld:%2.2ld:%03ld\n", event_names[iName], hrminsec[0], hrminsec[1], hrminsec[2], hrminsec[3]);
+                Printf("\t\t%-32s : %2.2ld:%2.2ld:%2.2ld:%03ld\n", event_names[iName], hrminsec[0], hrminsec[1], hrminsec[2], hrminsec[3]);
                 break;
             case (SpecialIDX)total_measured:
-                wxPrintf("\t\t%-32s : %2.2ld:%2.2ld:%2.2ld:%03ld  %7.2f% \n", event_names[iName], hrminsec[0], hrminsec[1], hrminsec[2], hrminsec[3], 100.0f * (float)elapsed_times[iName] / (float)elapsed_times[(SpecialIDX)total_elapsed]);
+                Printf("\t\t%-32s : %2.2ld:%2.2ld:%2.2ld:%03ld  %7.2f% \n", event_names[iName], hrminsec[0], hrminsec[1], hrminsec[2], hrminsec[3], 100.0f * (float)elapsed_times[iName] / (float)elapsed_times[(SpecialIDX)total_elapsed]);
                 break;
             default:
-                wxPrintf("\t\t%-32s : %2.2ld:%2.2ld:%2.2ld:%03ld  %7.2f% \n", event_names[iName], hrminsec[0], hrminsec[1], hrminsec[2], hrminsec[3], 100.0f * (float)elapsed_times[iName] / (float)elapsed_times[(SpecialIDX)total_measured]);
+                Printf("\t\t%-32s : %2.2ld:%2.2ld:%2.2ld:%03ld  %7.2f% \n", event_names[iName], hrminsec[0], hrminsec[1], hrminsec[2], hrminsec[3], 100.0f * (float)elapsed_times[iName] / (float)elapsed_times[(SpecialIDX)total_measured]);
                 break;
         }
     }
 
-    wxPrintf("\n\t\t--------------------------------\n\n");
+    Printf("\n\t\t--------------------------------\n\n");
 }
 
 void StopWatch::convert_time(uint64_t microsec) {

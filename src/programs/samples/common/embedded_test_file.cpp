@@ -9,14 +9,14 @@
 #include "helper_functions.h"
 #include "embedded_test_file.h"
 
-EmbeddedTestFile::EmbeddedTestFile(wxString path, const unsigned char* dataArray, long length) {
+EmbeddedTestFile::EmbeddedTestFile(std::string path, const unsigned char* dataArray, long length) {
 
     try {
-        //wxPrintf("Size of embbeded file: %s\n", std::to_string(length));
-        WriteEmbeddedArray(path, dataArray, length);
+        //Printf("Size of embbeded file: %s\n", std::to_string(length));
+        WriteEmbeddedArray(path.c_str( ), dataArray, length);
         filePath = path;
     } catch ( ... ) {
-        wxPrintf("Failed writing embbeded file: %s\n", path);
+        Printf("Failed writing embbeded file: %s\n", path);
     }
 }
 
@@ -25,13 +25,13 @@ void EmbeddedTestFile::WriteEmbeddedArray(const char*          filename,
                                           long                 length) {
 
     FILE* output_file = NULL;
-    wxPrintf("  %s\n", filename);
+    Printf("  %s\n", filename);
     output_file = fopen(filename, "wb+");
 
     if ( output_file == NULL ) {
-        wxPrintf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n",
+        Printf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n",
                  filename);
-        wxPrintf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n",
+        Printf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n",
                  filename);
         DEBUG_ABORT;
     }

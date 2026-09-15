@@ -71,8 +71,8 @@ void TiffFile::CloseFile( ) {
 }
 
 void TiffFile::PrintInfo( ) {
-    wxPrintf("Filename  : %s\n", filename.GetFullName( ));
-    wxPrintf("Dimensions: %i %i %i\n", ReturnXSize( ), ReturnYSize( ), ReturnZSize( ));
+    Printf("Filename  : %s\n", filename.filename().string());
+    Printf("Dimensions: %i %i %i\n", ReturnXSize( ), ReturnYSize( ), ReturnZSize( ));
 }
 
 /*
@@ -127,7 +127,7 @@ bool TiffFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image) {
                 set_dir_ret = TIFFSetDirectory(tif, dircount - 1);
 
                 if ( set_dir_ret != 1 ) {
-                    MyPrintfRed("Warning: Image %i of file %s seems to be corrupted\n", dircount, filename.GetFullName( ));
+                    MyPrintfRed("Warning: Image %i of file %s seems to be corrupted\n", dircount, filename.filename().string());
                     return_value = false;
                     dircount--;
                     break;
@@ -137,7 +137,7 @@ bool TiffFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image) {
                     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &current_y);
 
                     if ( current_x != original_x || logical_dimension_y != current_y ) {
-                        MyPrintfRed("Warning: Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n", dircount, filename.GetFullName( ), current_x, current_y, original_x, logical_dimension_y);
+                        MyPrintfRed("Warning: Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n", dircount, filename.filename().string(), current_x, current_y, original_x, logical_dimension_y);
                         return_value = false;
                         dircount--;
                         break;
@@ -184,14 +184,14 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_
 
         // We don't support tiles, only strips
         if ( TIFFIsTiled(tif) ) {
-            MyPrintfRed("Error. Cannot read tiled TIF files. Filename = %s, Directory # %i. Number of tiles per image = %i\n", filename.GetFullPath( ), directory_counter, TIFFNumberOfTiles(tif));
+            MyPrintfRed("Error. Cannot read tiled TIF files. Filename = %s, Directory # %i. Number of tiles per image = %i\n", filename.string(), directory_counter, TIFFNumberOfTiles(tif));
         }
 
         // Get bit depth etc
         TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bits_per_sample);
         TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samples_per_pixel);
         if ( samples_per_pixel != 1 ) {
-            MyPrintfRed("Error. Unsupported number of samples per pixel: %i. Filename = %s, Directory # %i\n", samples_per_pixel, filename.GetFullPath( ), directory_counter);
+            MyPrintfRed("Error. Unsupported number of samples per pixel: %i. Filename = %s, Directory # %i\n", samples_per_pixel, filename.string(), directory_counter);
         }
         TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &sample_format);
 
@@ -218,7 +218,7 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_
                             strip_counter = 0;
 
                             number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char*)buf, (tsize_t)-1);
-                            //wxPrintf("%i %i %i\n",int(number_of_bytes_placed_in_buffer),int(rows_per_strip), int(rows_per_strip * ReturnXSize()));
+                            //Printf("%i %i %i\n",int(number_of_bytes_placed_in_buffer),int(rows_per_strip), int(rows_per_strip * ReturnXSize()));
                             if ( strip_counter < TIFFNumberOfStrips(tif) - 1 )
                                 MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize( ), "Unexpected number of bytes in uint8 buffer");
 
@@ -276,7 +276,7 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_
                         delete[] buf;
                     } break;
                     default:
-                        MyPrintfRed("Error. Unsupported uint bit depth: %i. Filename = %s, Directory # %i\n", bits_per_sample, filename.GetFullPath( ), directory_counter);
+                        MyPrintfRed("Error. Unsupported uint bit depth: %i. Filename = %s, Directory # %i\n", bits_per_sample, filename.string(), directory_counter);
                         break;
                 }
                 break;
@@ -298,7 +298,7 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_
                         delete[] buf;
                     } break;
                     default:
-                        MyPrintfRed("Error. Unsupported int bit depth: %i. Filename = %s, Directory # %i\n", bits_per_sample, filename.GetFullPath( ), directory_counter);
+                        MyPrintfRed("Error. Unsupported int bit depth: %i. Filename = %s, Directory # %i\n", bits_per_sample, filename.string(), directory_counter);
                         break;
                 }
                 break;
@@ -320,13 +320,13 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_
                         delete[] buf;
                     } break;
                     default:
-                        MyPrintfRed("Error. Unsupported float bit depth: %i. Filename = %s, Directory # %i\n", bits_per_sample, filename.GetFullPath( ), directory_counter);
+                        MyPrintfRed("Error. Unsupported float bit depth: %i. Filename = %s, Directory # %i\n", bits_per_sample, filename.string(), directory_counter);
                         break;
                 }
                 break;
             } break;
             default:
-                MyPrintfRed("Error. Unsupported sample format: %i. Filename = %s, Directory # %i\n", sample_format, filename.GetFullPath( ), directory_counter);
+                MyPrintfRed("Error. Unsupported sample format: %i. Filename = %s, Directory # %i\n", sample_format, filename.string(), directory_counter);
                 break;
         }
 

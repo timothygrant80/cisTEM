@@ -24,7 +24,7 @@ class ClassificationResult {
     float phase_shift;
 };
 
-WX_DECLARE_OBJARRAY(ClassificationResult, ArrayofClassificationResults);
+typedef std::vector<ClassificationResult> ArrayofClassificationResults;
 
 class Classification {
 
@@ -34,10 +34,10 @@ class Classification {
 
     long       classification_id;
     long       refinement_package_asset_id;
-    wxString   name;
-    wxString   class_average_file;
+    std::string   name;
+    std::string   class_average_file;
     bool       classification_was_imported_or_generated;
-    wxDateTime datetime_of_run;
+    DateTime datetime_of_run;
     long       starting_classification_id;
     long       number_of_particles;
     int        number_of_classes;
@@ -58,11 +58,11 @@ class Classification {
     void SizeAndFillWithEmpty(long number_of_particles);
 
     ArrayofClassificationResults classification_results;
-    wxString                     WriteFrealignParameterFiles(wxString base_filename, RefinementPackage* parent_refinement_package);
-    wxString                     WritecisTEMStarFile(wxString base_filename, RefinementPackage* parent_refinement_package, bool write_as_cistem_binary_file = false);
+    std::string                     WriteFrealignParameterFiles(std::string base_filename, RefinementPackage* parent_refinement_package);
+    std::string                     WritecisTEMStarFile(std::string base_filename, RefinementPackage* parent_refinement_package, bool write_as_cistem_binary_file = false);
 };
 
-WX_DECLARE_OBJARRAY(Classification, ArrayofClassifications);
+typedef std::vector<Classification> ArrayofClassifications;
 
 class ShortClassificationInfo {
 
@@ -71,8 +71,8 @@ class ShortClassificationInfo {
 
     long     classification_id;
     long     refinement_package_asset_id;
-    wxString name;
-    wxString class_average_file;
+    std::string name;
+    std::string class_average_file;
     long     number_of_particles;
     int      number_of_classes;
     float    high_resolution_limit;
@@ -81,4 +81,4 @@ class ShortClassificationInfo {
     ShortClassificationInfo& operator=(const Classification* other_classification);
 };
 
-WX_DECLARE_OBJARRAY(ShortClassificationInfo, ArrayofShortClassificationInfos);
+typedef std::vector<ShortClassificationInfo> ArrayofShortClassificationInfos;

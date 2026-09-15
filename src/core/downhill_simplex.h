@@ -70,8 +70,8 @@ class DownhillSimplex {
 
     long number_of_dimensions;
 
-    wxDateTime time_start;
-    wxDateTime time_end;
+    DateTime time_start;
+    DateTime time_end;
 
     double tolerance;
     void   MinimizeFunction(void* pt2Object, double (*callback)(void* pt2Object, double[]));
@@ -93,5 +93,5 @@ class DownhillSimplex {
     void SetIinitalValues(double* intial_values, double* wanted_range);
     void GetMinimizedValues(double output_values[]);
 
-    wxTimeSpan ReturnTimeSpanOfMinimization( ) { return time_end - time_start; }
+    TimeSpan ReturnTimeSpanOfMinimization( ) { return time_end - time_start; }
 };

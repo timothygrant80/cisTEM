@@ -11,7 +11,7 @@
 #include "../common/common.h"
 #include "masking.h"
 
-void TestRunner(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+void TestRunner(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting a test to be a runner", false);
 
@@ -22,7 +22,7 @@ void TestRunner(const wxString& hiv_image_80x80x1_filename, wxString& temp_direc
     return;
 }
 
-bool MyTest(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+bool MyTest(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;

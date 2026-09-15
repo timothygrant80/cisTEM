@@ -1,6 +1,4 @@
 #include "core_headers.h"
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayofStarFileParameters);
 
 StarFileParameters::StarFileParameters( ) {
     position_in_stack = -1;
@@ -21,10 +19,9 @@ StarFileParameters::StarFileParameters( ) {
 
 BasicStarFileReader::BasicStarFileReader( ) {
     filename = "";
-    //	input_file_stream = NULL;
-    //	input_text_stream = NULL;
 
-    input_file = NULL;
+    input_file_is_opened = false;
+    current_line_number  = -1;
 
     current_position_in_stack = 0;
     current_column            = 0;
@@ -45,7 +42,7 @@ BasicStarFileReader::BasicStarFileReader( ) {
     random_subset_column   = -1;
 }
 
-BasicStarFileReader::BasicStarFileReader(wxString wanted_filename) {
+BasicStarFileReader::BasicStarFileReader(std::string wanted_filename) {
     ReadFile(wanted_filename);
 }
 
@@ -53,53 +50,46 @@ BasicStarFileReader::~BasicStarFileReader( ) {
     Close( );
 }
 
-void BasicStarFileReader::Open(wxString wanted_filename) {
+void BasicStarFileReader::Open(std::string wanted_filename) {
     Close( );
-    cached_parameters.Clear( );
+    cached_parameters.clear( );
 
     filename = wanted_filename;
 
-    //	input_file_stream = new wxFileInputStream(wanted_filename);
-    //	input_text_stream = new wxTextInputStream(*input_file_stream);
+    std::ifstream input_stream(wanted_filename);
 
-    input_file = new wxTextFile(wanted_filename);
-    input_file->Open( );
+    if ( input_stream.is_open( ) == true ) {
+        std::string current_file_line;
 
-    //if (input_file_stream->IsOk() == false)
-    if ( input_file->IsOpened( ) == false ) {
+        while ( std::getline(input_stream, current_file_line) ) {
+            if ( ! current_file_line.empty( ) && current_file_line.back( ) == '\r' )
+                current_file_line.pop_back( );
+            input_file_lines.push_back(current_file_line);
+        }
+
+        input_file_is_opened = true;
+    }
+
+    if ( input_file_is_opened == false ) {
         MyPrintWithDetails("Error: Cannot open star file (%s) for read\n", wanted_filename);
         DEBUG_ABORT;
     }
 }
 
 void BasicStarFileReader::Close( ) {
-    cached_parameters.Clear( );
+    cached_parameters.clear( );
 
-    /*	if (input_text_stream != NULL) delete input_text_stream;
-	if (input_file_stream != NULL)
-	{
-		if (input_file_stream->GetFile()->IsOpened() == true) input_file_stream->GetFile()->Close();
-		delete input_file_stream;
-	}
-
-	input_file_stream = NULL;
-	input_text_stream = NULL;*/
-
-    if ( input_file != NULL )
-        delete input_file;
+    input_file_lines.clear( );
+    input_file_is_opened = false;
+    current_line_number  = -1;
 }
 
-bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxString* error_string) {
+bool BasicStarFileReader::ExtractParametersFromLine(std::string& wanted_line, std::string* error_string) {
     // extract info.
 
-    wxArrayString      all_tokens;
-    wxStringTokenizer  tokens(wanted_line);
-    StarFileParameters temp_parameters;
-    double             temp_double;
-
-    while ( tokens.HasMoreTokens( ) == true ) {
-        all_tokens.Add(tokens.GetNextToken( ));
-    }
+    std::vector<std::string> all_tokens = SplitString(wanted_line);
+    StarFileParameters       temp_parameters;
+    double                   temp_double;
 
     current_position_in_stack++;
     temp_parameters.position_in_stack = current_position_in_stack;
@@ -108,10 +98,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     if ( phi_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[phi_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[phi_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[phi_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[phi_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[phi_column]);
         return false;
     }
 
@@ -121,10 +111,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     if ( theta_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[theta_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[theta_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[theta_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[theta_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[theta_column]);
         return false;
     }
 
@@ -134,10 +124,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     if ( psi_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[psi_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[psi_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[psi_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[psi_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[psi_column]);
         return false;
     }
 
@@ -147,10 +137,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     if ( xcoordinate_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[xcoordinate_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[xcoordinate_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[xcoordinate_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[xcoordinate_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[xcoordinate_column]);
         return false;
     }
 
@@ -160,10 +150,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     if ( ycoordinate_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[ycoordinate_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[ycoordinate_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[ycoordinate_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[ycoordinate_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[ycoordinate_column]);
         return false;
     }
 
@@ -173,10 +163,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     if ( xshift_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[xshift_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[xshift_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[xshift_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[xshift_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[xshift_column]);
         return false;
     }
 
@@ -186,10 +176,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     if ( yshift_column == -1 )
         temp_double = 0.0;
-    else if ( all_tokens[yshift_column].ToDouble(&temp_double) == false ) {
+    else if ( StringToDouble(all_tokens[yshift_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[yshift_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[yshift_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[yshift_column]);
         return false;
     }
 
@@ -197,10 +187,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     // defocus1
 
-    if ( all_tokens[defocus1_column].ToDouble(&temp_double) == false ) {
+    if ( StringToDouble(all_tokens[defocus1_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[defocus1_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[defocus1_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[defocus1_column]);
         return false;
     }
 
@@ -208,10 +198,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     // defocus2
 
-    if ( all_tokens[defocus2_column].ToDouble(&temp_double) == false ) {
+    if ( StringToDouble(all_tokens[defocus2_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[defocus2_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[defocus2_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[defocus2_column]);
         return false;
     }
 
@@ -219,10 +209,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
 
     // defocus_angle
 
-    if ( all_tokens[defocus_angle_column].ToDouble(&temp_double) == false ) {
+    if ( StringToDouble(all_tokens[defocus_angle_column], temp_double) == false ) {
         MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[defocus_angle_column]);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[defocus_angle_column]);
+            *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[defocus_angle_column]);
         return false;
     }
 
@@ -233,10 +223,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
     if ( phase_shift_column == -1 )
         temp_parameters.phase_shift = 0.0;
     else {
-        if ( all_tokens[phase_shift_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[phase_shift_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[phase_shift_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[phase_shift_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[phase_shift_column]);
             return false;
         }
 
@@ -248,10 +238,10 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
     if ( random_subset_column == -1 )
         temp_parameters.random_subset = -1;
     else {
-        if ( all_tokens[random_subset_column].ToDouble(&temp_double) == false ) {
+        if ( StringToDouble(all_tokens[random_subset_column], temp_double) == false ) {
             MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[random_subset_column]);
             if ( error_string != NULL )
-                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[random_subset_column]);
+                *error_string = Format("Error: Converting to a number (%s)\n", all_tokens[random_subset_column]);
             return false;
         }
 
@@ -272,17 +262,16 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxStr
     else
         temp_parameters.image_name = all_tokens[image_name_column];
 
-    cached_parameters.Add(temp_parameters);
+    cached_parameters.push_back(temp_parameters);
 
     return true;
 }
 
-bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString* error_string) {
+bool BasicStarFileReader::ReadFile(std::string wanted_filename, std::string* error_string) {
     Open(wanted_filename);
-    wxString current_line;
+    std::string current_line;
 
-    //MyDebugAssertTrue(input_file_stream != NULL, "FileStream is NULL!");
-    MyDebugAssertTrue(input_file->IsOpened( ), "File not open");
+    MyDebugAssertTrue(input_file_is_opened, "File not open");
 
     bool found_valid_data_block = false;
     bool found_valid_loop_block = false;
@@ -290,17 +279,15 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString* error_str
     x_shifts_are_in_angst = false;
     y_shifts_are_in_angst = false;
 
-    input_file->GoToLine(-1); //this triggers warning: integer conversion resulted in a change of sign
+    current_line_number = -1;
     // find a data block
 
-    //while (input_file_stream->Eof() == false)
-    while ( input_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
-        if ( current_line.Find("data_") != wxNOT_FOUND ) {
-            if ( current_line.Contains("data_optics") == true )
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
+        if ( current_line.find("data_") != std::string::npos ) {
+            if ( Contains(current_line, "data_optics") == true )
                 continue;
             else {
                 found_valid_data_block = true;
@@ -313,20 +300,18 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString* error_str
         MyPrintWithDetails("Error: Couldn't find a valid data block in star file (%s)\n", wanted_filename);
 
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Couldn't find a valid data block in star file (%s)\n", wanted_filename);
+            *error_string = Format("Error: Couldn't find a valid data block in star file (%s)\n", wanted_filename);
         return false;
     }
 
     // find a loop block
 
-    //while (input_file_stream->Eof() == false)
-    while ( input_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
 
-        if ( current_line.Find("loop_") != wxNOT_FOUND ) {
+        if ( current_line.find("loop_") != std::string::npos ) {
             found_valid_loop_block = true;
             break;
         }
@@ -335,18 +320,16 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString* error_str
     if ( found_valid_loop_block == false ) {
         MyPrintWithDetails("Error: Couldn't find a valid loop block in star file (%s)\n", wanted_filename);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Couldn't find a valid loop block in star file (%s)\n", wanted_filename);
+            *error_string = Format("Error: Couldn't find a valid loop block in star file (%s)\n", wanted_filename);
         return false;
     }
 
     // now we can get headers..
 
-    //while (input_file_stream->Eof() == false)
-    while ( input_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
 
         if ( current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';' )
             continue;
@@ -355,43 +338,43 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString* error_str
 
         // otherwise it is a label, is it a label we want though?
 
-        if ( current_line.StartsWith("_rlnAngleRot") == true )
+        if ( StartsWith(current_line, "_rlnAngleRot") == true )
             phi_column = current_column;
-        else if ( current_line.StartsWith("_rlnAngleTilt") == true )
+        else if ( StartsWith(current_line, "_rlnAngleTilt") == true )
             theta_column = current_column;
-        else if ( current_line.StartsWith("_rlnAnglePsi") == true )
+        else if ( StartsWith(current_line, "_rlnAnglePsi") == true )
             psi_column = current_column;
-        else if ( current_line.StartsWith("_rlnCoordinateX") == true )
+        else if ( StartsWith(current_line, "_rlnCoordinateX") == true )
             xcoordinate_column = current_column;
-        if ( current_line.StartsWith("_rlnCoordinateY") == true )
+        if ( StartsWith(current_line, "_rlnCoordinateY") == true )
             ycoordinate_column = current_column;
-        if ( current_line.StartsWith("_rlnOriginX") == true ) {
+        if ( StartsWith(current_line, "_rlnOriginX") == true ) {
             xshift_column = current_column;
-            if ( current_line.StartsWith("_rlnOriginXAngst") == true )
+            if ( StartsWith(current_line, "_rlnOriginXAngst") == true )
                 x_shifts_are_in_angst = true;
             else
                 ;
         }
-        else if ( current_line.StartsWith("_rlnOriginY") == true ) {
+        else if ( StartsWith(current_line, "_rlnOriginY") == true ) {
             yshift_column = current_column;
-            if ( current_line.StartsWith("_rlnOriginYAngst") == true )
+            if ( StartsWith(current_line, "_rlnOriginYAngst") == true )
                 y_shifts_are_in_angst = true;
             else
                 ;
         }
-        else if ( current_line.StartsWith("_rlnDefocusU") == true )
+        else if ( StartsWith(current_line, "_rlnDefocusU") == true )
             defocus1_column = current_column;
-        else if ( current_line.StartsWith("_rlnDefocusV") == true )
+        else if ( StartsWith(current_line, "_rlnDefocusV") == true )
             defocus2_column = current_column;
-        else if ( current_line.StartsWith("_rlnDefocusAngle") == true )
+        else if ( StartsWith(current_line, "_rlnDefocusAngle") == true )
             defocus_angle_column = current_column;
-        else if ( current_line.StartsWith("_rlnPhaseShift") == true )
+        else if ( StartsWith(current_line, "_rlnPhaseShift") == true )
             phase_shift_column = current_column;
-        else if ( current_line.StartsWith("_rlnMicrographName") == true )
+        else if ( StartsWith(current_line, "_rlnMicrographName") == true )
             micrograph_name_column = current_column;
-        else if ( current_line.StartsWith("_rlnRandomSubset") == true )
+        else if ( StartsWith(current_line, "_rlnRandomSubset") == true )
             random_subset_column = current_column;
-        else if ( current_line.StartsWith("_rlnImageName") == true )
+        else if ( StartsWith(current_line, "_rlnImageName") == true )
             image_name_column = current_column;
 
         current_column++;
@@ -402,56 +385,56 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString* error_str
 	if (phi_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (theta_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAngleTilt in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (psi_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnAnglePsi in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (xshift_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnOriginX in star file (%s)\n", wanted_filename);
 		return false;
 	}
 
 	if (yshift_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
-		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
+		if (error_string != NULL) *error_string = Format("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
 		return false;
 	}
 */
     if ( defocus1_column == -1 ) {
         MyPrintWithDetails("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
+            *error_string = Format("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
         return false;
     }
 
     if ( defocus2_column == -1 ) {
         MyPrintWithDetails("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
+            *error_string = Format("Error: Couldn't find _rlnDefocusV in star file (%s)\n", wanted_filename);
         return false;
     }
 
     if ( defocus_angle_column == -1 ) {
         MyPrintWithDetails("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
         if ( error_string != NULL )
-            *error_string = wxString::Format("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
+            *error_string = Format("Error: Couldn't find _rlnDefocusAngle in star file (%s)\n", wanted_filename);
         return false;
     }
 
@@ -466,14 +449,12 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString* error_str
 
     // loop over the data lines and fill in..
 
-    //while (input_file_stream->Eof() == false)
-    while ( input_file->Eof( ) == false ) {
-        //current_line = input_text_stream->ReadLine();
-        current_line = input_file->GetNextLine( );
-        current_line = current_line.Trim(true);
-        current_line = current_line.Trim(false);
+    while ( AtEndOfFile( ) == false ) {
+        current_line = ReturnNextLine( );
+        TrimRight(current_line);
+        TrimLeft(current_line);
 
-        if ( current_line.IsEmpty( ) == true )
+        if ( current_line.empty() == true )
             break;
         if ( current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';' )
             continue;

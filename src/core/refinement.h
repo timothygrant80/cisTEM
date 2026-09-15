@@ -33,7 +33,7 @@ class RefinementResult {
     float total_exposure;
 };
 
-WX_DECLARE_OBJARRAY(RefinementResult, ArrayofRefinementResults);
+typedef std::vector<RefinementResult> ArrayofRefinementResults;
 
 class ClassRefinementResults {
   public:
@@ -80,7 +80,7 @@ class ClassRefinementResults {
     ArrayofRefinementResults particle_refinement_results;
 };
 
-WX_DECLARE_OBJARRAY(ClassRefinementResults, ArrayofClassRefinementResults);
+typedef std::vector<ClassRefinementResults> ArrayofClassRefinementResults;
 
 class Refinement {
 
@@ -90,9 +90,9 @@ class Refinement {
 
     long       refinement_id;
     long       refinement_package_asset_id;
-    wxString   name;
+    std::string   name;
     bool       resolution_statistics_are_generated;
-    wxDateTime datetime_of_run;
+    DateTime datetime_of_run;
     long       starting_refinement_id;
     long       number_of_particles;
     int        number_of_classes;
@@ -104,9 +104,9 @@ class Refinement {
     void         SizeAndFillWithEmpty(long number_of_particles, int number_of_classes);
     void         UpdateOccupancies(bool use_old_occupancies = true);
     void         UpdateAverageOccupancy( );
-    wxArrayFloat UpdatePSSNR( );
+    std::vector<float> UpdatePSSNR( );
 
-    wxArrayLong reference_volume_ids;
+    std::vector<long> reference_volume_ids;
 
     ArrayofClassRefinementResults class_refinement_results;
 
@@ -114,18 +114,18 @@ class Refinement {
 
     RefinementResult ReturnRefinementResultByClassAndPositionInStack(int wanted_class, long wanted_position_in_stack);
 
-    void WriteSingleClassFrealignParameterFile(wxString filename, int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
-    void WriteSingleClasscisTEMStarFile(wxString filename, int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f, bool write_binary_file = false);
+    void WriteSingleClassFrealignParameterFile(std::string filename, int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
+    void WriteSingleClasscisTEMStarFile(std::string filename, int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f, bool write_binary_file = false);
 
-    wxArrayString WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
-    wxArrayString WritecisTEMStarFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f, bool write_binary_files = false);
-    wxArrayString WriteResolutionStatistics(wxString base_filename, float pssnr_division_factor = 1.0f);
+    std::vector<std::string> WriteFrealignParameterFiles(std::string base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
+    std::vector<std::string> WritecisTEMStarFiles(std::string base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f, bool write_binary_files = false);
+    std::vector<std::string> WriteResolutionStatistics(std::string base_filename, float pssnr_division_factor = 1.0f);
 
     long ReturnNumberOfActiveParticlesInFirstClass( );
 
     int                                  ReturnClassWithHighestOccupanyForGivenParticle(long wanted_particle);
-    ArrayofAngularDistributionHistograms ReturnAngularDistributions(wxString desired_symmetry);
-    void                                 FillAngularDistributionHistogram(wxString wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram& histogram_to_fill);
+    ArrayofAngularDistributionHistograms ReturnAngularDistributions(std::string desired_symmetry);
+    void                                 FillAngularDistributionHistogram(std::string wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram& histogram_to_fill);
 
     void SetAllPixelSizes(float wanted_pixel_size);
     void SetAllVoltages(float wanted_voltage_in_kV);
@@ -134,7 +134,7 @@ class Refinement {
     void SetAssignedSubsetToEvenOdd( );
 };
 
-WX_DECLARE_OBJARRAY(Refinement, ArrayofRefinements);
+typedef std::vector<Refinement> ArrayofRefinements;
 
 class ShortRefinementInfo {
 
@@ -143,16 +143,16 @@ class ShortRefinementInfo {
 
     long     refinement_id;
     long     refinement_package_asset_id;
-    wxString name;
+    std::string name;
     long     number_of_particles;
     int      number_of_classes;
 
-    wxArrayFloat average_occupancy;
-    wxArrayFloat estimated_resolution;
-    wxArrayLong  reconstructed_volume_asset_ids;
+    std::vector<float> average_occupancy;
+    std::vector<float> estimated_resolution;
+    std::vector<long>  reconstructed_volume_asset_ids;
 
     ShortRefinementInfo& operator=(const Refinement& other_refinement);
     ShortRefinementInfo& operator=(const Refinement* other_other_refinement);
 };
 
-WX_DECLARE_OBJARRAY(ShortRefinementInfo, ArrayofShortRefinementInfos);
+typedef std::vector<ShortRefinementInfo> ArrayofShortRefinementInfos;

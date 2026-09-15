@@ -16,8 +16,8 @@ IMPLEMENT_APP(CreateMask)
 
 void CreateMask::DoInteractiveUserInput( ) {
     UserInput* my_input                    = new UserInput("CreateMask", 1.0);
-    wxString   input_volume                = my_input->GetFilenameFromUser("Input image/volume file name", "Name of input image file", "input.mrc", true);
-    wxString   output_volume               = my_input->GetFilenameFromUser("Output masked image/volume file name", "Name of output image with mask applied", "output.mrc", false);
+    std::string   input_volume                = my_input->GetFilenameFromUser("Input image/volume file name", "Name of input image file", "input.mrc", true);
+    std::string   output_volume               = my_input->GetFilenameFromUser("Output masked image/volume file name", "Name of output image with mask applied", "output.mrc", false);
     float      pixel_size                  = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.000001);
     float      outer_mask_radius           = my_input->GetFloatFromUser("Outer radius of mask (A)", "The mask radius in Angstroms", "100", 0.0);
     bool       auto_estimate_bin_threshold = my_input->GetYesNoFromUser("Auto Estimate Binarization threshold?", "If Yes, the initial binarization threshold will be estimated automatically, answer NO to provide your own (e.g. from Chimera thresholding)", "YES");
@@ -30,15 +30,15 @@ void CreateMask::DoInteractiveUserInput( ) {
 
     delete my_input;
     //	my_current_job.Reset(9);
-    my_current_job.ManualSetArguments("ttffffbf", input_volume.ToUTF8( ).data( ), output_volume.ToUTF8( ).data( ), pixel_size, outer_mask_radius, filter_resolution, rebin_value, auto_estimate_bin_threshold, initial_bin_threshold);
+    my_current_job.ManualSetArguments("ttffffbf", input_volume.c_str(), output_volume.c_str(), pixel_size, outer_mask_radius, filter_resolution, rebin_value, auto_estimate_bin_threshold, initial_bin_threshold);
 }
 
 // override the do calculation method which will be what is actually run..
 
 bool CreateMask::DoCalculation( ) {
 
-    wxString input_volume                = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_volume               = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_volume                = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_volume               = my_current_job.arguments[1].ReturnStringArgument( );
     float    pixel_size                  = my_current_job.arguments[2].ReturnFloatArgument( );
     float    outer_mask_radius           = my_current_job.arguments[3].ReturnFloatArgument( );
     float    filter_resolution           = my_current_job.arguments[4].ReturnFloatArgument( );
@@ -53,13 +53,13 @@ bool CreateMask::DoCalculation( ) {
     clock_t startTime, endTime;
     startTime = clock( );
 
-    input_file.OpenFile(input_volume.ToStdString( ), false);
+    input_file.OpenFile(input_volume, false);
     input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
     input_file.CloseFile( );
 
     input_image.ConvertToAutoMask(pixel_size, outer_mask_radius, filter_resolution, rebin_value, auto_estimate_bin_threshold, initial_bin_threshold);
 
-    output_file.OpenFile(output_volume.ToStdString( ), true);
+    output_file.OpenFile(output_volume, true);
     input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
     output_file.CloseFile( );
 

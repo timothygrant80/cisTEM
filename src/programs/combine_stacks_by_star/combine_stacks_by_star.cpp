@@ -38,7 +38,7 @@ bool CombineStack::DoCalculation( ) {
     int   input_pixel_size_set = 0;
 
     BasicStarFileReader input_star_file_reader;
-    wxString            star_error_text;
+    std::string            star_error_text;
 
     if ( input_star_file_reader.ReadFile(input_star_file, &star_error_text) == false ) {
         //print error
@@ -57,7 +57,7 @@ bool CombineStack::DoCalculation( ) {
 
     for ( int particle_counter = 0; particle_counter < numLines; particle_counter++ ) {
 
-        std::string current_mrc_name = std::string((input_star_file_reader.ReturnImageName(particle_counter)).ToStdString( ));
+        std::string current_mrc_name = std::string((input_star_file_reader.ReturnImageName(particle_counter)));
 
         //parse image name
         std::string slice = current_mrc_name.substr(0, current_mrc_name.find(delim1));

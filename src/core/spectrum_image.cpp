@@ -277,7 +277,7 @@ void SpectrumImage::ComputeRotationalAverageOfPowerSpectrum(CTF* ctf, Image* num
             spatial_frequency[counter]         = sqrt(current_spatial_frequency_squared);
             ctf_values_profile[counter]        = ctf->Evaluate(current_spatial_frequency_squared, azimuth_of_mid_defocus);
             number_of_extrema_profile[counter] = ctf->ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(current_spatial_frequency_squared, azimuth_of_mid_defocus);
-            //wxPrintf("bin %i: phase shift= %f, number of extrema = %f\n",counter,ctf->PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(current_spatial_frequency_squared,azimuth_of_mid_defocus),number_of_extrema_profile[counter]);
+            //Printf("bin %i: phase shift= %f, number of extrema = %f\n",counter,ctf->PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(current_spatial_frequency_squared,azimuth_of_mid_defocus),number_of_extrema_profile[counter]);
         }
 
         // Now we can loop over the spectrum again and decide to which bin to add each component

@@ -5,8 +5,8 @@ class
   public:
     bool DoCalculation( );
     void DoInteractiveUserInput( );
-    void ReadArrayHeader(wxString filename);
-    void ReadArrays(wxString filename);
+    void ReadArrayHeader(std::string filename);
+    void ReadArrays(std::string filename);
     void AddArrays( );
 
     int      xy_dimensions;
@@ -30,7 +30,7 @@ class
     float*   temp_logp;
     Image*   temp_averages;
     Image*   temp_sums;
-    wxString dump_file_seed;
+    std::string dump_file_seed;
 
   private:
 };
@@ -40,7 +40,7 @@ IMPLEMENT_APP(Merge2DApp)
 // override the DoInteractiveUserInput
 
 void Merge2DApp::DoInteractiveUserInput( ) {
-    wxString ouput_class_averages;
+    std::string ouput_class_averages;
 
     UserInput* my_input = new UserInput("Merge2D", 1.00);
 
@@ -51,15 +51,15 @@ void Merge2DApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     //	my_current_job.Reset(3);
-    my_current_job.ManualSetArguments("tti", ouput_class_averages.ToUTF8( ).data( ),
-                                      dump_file_seed.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tti", ouput_class_averages.c_str(),
+                                      dump_file_seed.c_str(),
                                       number_of_dump_files);
 }
 
 // override the do calculation method which will be what is actually run..
 
 bool Merge2DApp::DoCalculation( ) {
-    wxString ouput_class_averages = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string ouput_class_averages = my_current_job.arguments[0].ReturnStringArgument( );
     dump_file_seed                = my_current_job.arguments[1].ReturnStringArgument( );
     int number_of_dump_files      = my_current_job.arguments[2].ReturnIntegerArgument( );
 
@@ -70,19 +70,19 @@ bool Merge2DApp::DoCalculation( ) {
     float      variance;
     float      occupancy;
     float      temp_float;
-    wxFileName dump_file_name = wxFileName::FileName(dump_file_seed);
-    wxString   extension      = dump_file_name.GetExt( );
-    wxString   dump_file;
+    std::filesystem::path dump_file_name = std::filesystem::path(dump_file_seed);
+    std::string   extension      = ReturnFileExtension(dump_file_name.string());
+    std::string   dump_file;
 
-    dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", 1) + "." + extension;
+    dump_file = StripExtension(dump_file_seed) + Format("%i", 1) + "." + extension;
 
     if ( (is_running_locally && DoesFileExist(dump_file)) || (! is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
     {
         ReadArrayHeader(dump_file);
-        wxPrintf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, pixel size = %f\n", number_of_classes, number_of_nonzero_classes, xy_dimensions, pixel_size);
+        Printf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, pixel size = %f\n", number_of_classes, number_of_nonzero_classes, xy_dimensions, pixel_size);
     }
     else {
-        SendErrorAndCrash(wxString::Format("Error: Dump file %s not found\n", dump_file));
+        SendErrorAndCrash(Format("Error: Dump file %s not found\n", dump_file));
     }
 
     list_of_nozero_classes = new int[number_of_classes];
@@ -102,7 +102,7 @@ bool Merge2DApp::DoCalculation( ) {
         class_logp[i] = -std::numeric_limits<float>::max( );
     }
 
-    wxPrintf("\nReading intermediate arrays...\n\n");
+    Printf("\nReading intermediate arrays...\n\n");
 
     i                = 1;
     sum_logp_total   = -std::numeric_limits<float>::max( );
@@ -110,8 +110,8 @@ bool Merge2DApp::DoCalculation( ) {
     images_processed = 0;
 
     for ( i = 1; i <= number_of_dump_files; i++ ) {
-        dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", i) + "." + extension;
-        wxPrintf("%s\n", dump_file);
+        dump_file = StripExtension(dump_file_seed) + Format("%i", i) + "." + extension;
+        Printf("%s\n", dump_file);
 
         if ( (is_running_locally && DoesFileExist(dump_file)) || (! is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
         {
@@ -119,11 +119,11 @@ bool Merge2DApp::DoCalculation( ) {
             AddArrays( );
         }
         else {
-            SendErrorAndCrash(wxString::Format("Error: Dump file not found: %s\n", dump_file));
+            SendErrorAndCrash(Format("Error: Dump file not found: %s\n", dump_file));
         }
     }
 
-    MRCFile output_classes(ouput_class_averages.ToStdString( ), true);
+    MRCFile output_classes(ouput_class_averages, true);
     Image   temp_image;
     temp_image.Allocate(xy_dimensions, xy_dimensions, true);
 
@@ -147,18 +147,18 @@ bool Merge2DApp::DoCalculation( ) {
                 class_averages[current_class].BackwardFFT( );
             }
             variance = class_averages[current_class].ReturnSumOfSquares( );
-            //			wxPrintf("images_processed = %i, occupancy = %g, variance = %g\n", images_processed, occupancy, variance);
+            //			Printf("images_processed = %i, occupancy = %g, variance = %g\n", images_processed, occupancy, variance);
         }
         else {
             occupancy = 0.0;
         }
         while ( image_counter < list_of_nozero_classes[current_class] ) {
             temp_image.WriteSlice(&output_classes, image_counter + 1);
-            wxPrintf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 0.0);
+            Printf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 0.0);
             image_counter++;
         }
         class_averages[current_class].WriteSlice(&output_classes, image_counter + 1);
-        wxPrintf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 100.0 * occupancy);
+        Printf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 100.0 * occupancy);
         image_counter++;
     }
     while ( image_counter < number_of_classes ) {
@@ -166,7 +166,7 @@ bool Merge2DApp::DoCalculation( ) {
         image_counter++;
     }
 
-    wxPrintf("\nTotal logp = %g\n", sum_logp_total);
+    Printf("\nTotal logp = %g\n", sum_logp_total);
 
     delete[] list_of_nozero_classes;
     delete[] class_averages;
@@ -176,12 +176,12 @@ bool Merge2DApp::DoCalculation( ) {
     delete[] class_logp;
     delete[] temp_logp;
 
-    wxPrintf("\nMerge2D: Normal termination\n\n");
+    Printf("\nMerge2D: Normal termination\n\n");
 
     return true;
 }
 
-void Merge2DApp::ReadArrayHeader(wxString filename) {
+void Merge2DApp::ReadArrayHeader(std::string filename) {
     int   i;
     int   count = 4 * sizeof(int) + 6 * sizeof(float);
     float local_mask_radius;
@@ -246,7 +246,7 @@ void Merge2DApp::ReadArrayHeader(wxString filename) {
     b_stream.close( );
 }
 
-void Merge2DApp::ReadArrays(wxString filename) {
+void Merge2DApp::ReadArrays(std::string filename) {
     int   i;
     int   count = 4 * sizeof(int) + 6 * sizeof(float);
     char  temp_char[count];

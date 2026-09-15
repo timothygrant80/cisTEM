@@ -21,7 +21,7 @@
 #include "../common/common.h"
 #include "resize_comparison.h"
 
-void CPUvsGPUResizeRunner(wxString hiv_image_80x80x1_filename, wxString temp_directory) {
+void CPUvsGPUResizeRunner(std::string hiv_image_80x80x1_filename, std::string temp_directory) {
 
     SamplesPrintTestStartMessage("Starting CPU vs GPU resize tests:", false);
 
@@ -33,17 +33,17 @@ void CPUvsGPUResizeRunner(wxString hiv_image_80x80x1_filename, wxString temp_dir
     return;
 }
 
-bool DoCPUvsGPURealSpaceResize(wxString hiv_image_80x80x1_filename, wxString temp_directory) {
+bool DoCPUvsGPURealSpaceResize(std::string hiv_image_80x80x1_filename, std::string temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;
     int  logical_x_start;
     int  logical_y_start;
 
-    wxString tmp_img_filename = temp_directory + "/tmp1.mrc";
+    std::string tmp_img_filename = temp_directory + "/tmp1.mrc";
 
-    MRCFile input_file(hiv_image_80x80x1_filename.ToStdString( ), false);
-    MRCFile output_file(tmp_img_filename.ToStdString( ), true);
+    MRCFile input_file(hiv_image_80x80x1_filename, false);
+    MRCFile output_file(tmp_img_filename, true);
 
     all_passed = passed ? all_passed : false;
 
@@ -117,15 +117,15 @@ bool DoCPUvsGPURealSpaceResize(wxString hiv_image_80x80x1_filename, wxString tem
     return all_passed;
 }
 
-bool DoCPUvsGPUFourierResize(wxString hiv_image_80x80x1_filename, wxString temp_directory) {
+bool DoCPUvsGPUFourierResize(std::string hiv_image_80x80x1_filename, std::string temp_directory) {
     bool passed     = true;
     bool all_passed = true;
 
-    MRCFile input_file(hiv_image_80x80x1_filename.ToStdString( ), false);
+    MRCFile input_file(hiv_image_80x80x1_filename, false);
 
-    wxString tmp_img_filename = temp_directory + "/tmp1.mrc";
+    std::string tmp_img_filename = temp_directory + "/tmp1.mrc";
 
-    MRCFile output_file(tmp_img_filename.ToStdString( ), true);
+    MRCFile output_file(tmp_img_filename, true);
 
     SamplesBeginTest("Fourier Crop CPU and GPU images", passed);
     Image cpu_image;

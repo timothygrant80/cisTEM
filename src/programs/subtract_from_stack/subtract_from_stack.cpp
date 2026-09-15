@@ -14,12 +14,12 @@ IMPLEMENT_APP(SubtractFromStackApp)
 // override the DoInteractiveUserInput
 
 void SubtractFromStackApp::DoInteractiveUserInput( ) {
-    wxString input_particle_images;
-    wxString input_parameter_file;
-    wxString input_reconstruction;
-    wxString input_reconstruction_statistics = "";
+    std::string input_particle_images;
+    std::string input_parameter_file;
+    std::string input_reconstruction;
+    std::string input_reconstruction_statistics = "";
     bool     use_statistics                  = false;
-    wxString output_subtracted_images;
+    std::string output_subtracted_images;
     float    pixel_size              = 1.0;
     float    voltage_kV              = 300.0;
     float    spherical_aberration_mm = 2.7;
@@ -49,12 +49,12 @@ void SubtractFromStackApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(12);
-    my_current_job.ManualSetArguments("ttttbtffffbfii", input_particle_images.ToUTF8( ).data( ),
-                                      input_parameter_file.ToUTF8( ).data( ),
-                                      input_reconstruction.ToUTF8( ).data( ),
-                                      input_reconstruction_statistics.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttttbtffffbfii", input_particle_images.c_str(),
+                                      input_parameter_file.c_str(),
+                                      input_reconstruction.c_str(),
+                                      input_reconstruction_statistics.c_str(),
                                       use_statistics,
-                                      output_subtracted_images.ToUTF8( ).data( ),
+                                      output_subtracted_images.c_str(),
                                       pixel_size,
                                       voltage_kV,
                                       spherical_aberration_mm,
@@ -71,12 +71,12 @@ bool SubtractFromStackApp::DoCalculation( ) {
     Particle refine_particle;
     Particle search_particle;
 
-    wxString input_particle_images           = my_current_job.arguments[0].ReturnStringArgument( ); // global
-    wxString input_parameter_file            = my_current_job.arguments[1].ReturnStringArgument( ); // not sure
-    wxString input_reconstruction_filename   = my_current_job.arguments[2].ReturnStringArgument( ); // global
-    wxString input_reconstruction_statistics = my_current_job.arguments[3].ReturnStringArgument( ); // global
+    std::string input_particle_images           = my_current_job.arguments[0].ReturnStringArgument( ); // global
+    std::string input_parameter_file            = my_current_job.arguments[1].ReturnStringArgument( ); // not sure
+    std::string input_reconstruction_filename   = my_current_job.arguments[2].ReturnStringArgument( ); // global
+    std::string input_reconstruction_statistics = my_current_job.arguments[3].ReturnStringArgument( ); // global
     bool     use_statistics                  = my_current_job.arguments[4].ReturnBoolArgument( ); // global
-    wxString output_subtracted_images        = my_current_job.arguments[5].ReturnStringArgument( ); // ignore (always false)
+    std::string output_subtracted_images        = my_current_job.arguments[5].ReturnStringArgument( ); // ignore (always false)
     float    pixel_size                      = my_current_job.arguments[6].ReturnFloatArgument( ); // local
     float    voltage_kV                      = my_current_job.arguments[7].ReturnFloatArgument( ); // local
     float    spherical_aberration_mm         = my_current_job.arguments[8].ReturnFloatArgument( ); // local
@@ -119,11 +119,11 @@ bool SubtractFromStackApp::DoCalculation( ) {
 
     ProgressBar* my_progress;
 
-    MRCFile               input_stack(input_particle_images.ToStdString( ), false);
+    MRCFile               input_stack(input_particle_images, false);
     FrealignParameterFile my_input_par_file(input_parameter_file, OPEN_TO_READ);
     my_input_par_file.ReadFile( );
-    MRCFile         input_file(input_reconstruction_filename.ToStdString( ), false);
-    MRCFile         output_file(output_subtracted_images.ToStdString( ), true);
+    MRCFile         input_file(input_reconstruction_filename, false);
+    MRCFile         output_file(output_subtracted_images, true);
     AnglesAndShifts my_parameters;
     CTF             my_ctf;
 
@@ -147,7 +147,7 @@ bool SubtractFromStackApp::DoCalculation( ) {
 
     number_of_pixels_in_image = long(input_stack.ReturnXSize( )) * long(input_stack.ReturnYSize( ));
 
-    wxPrintf("\nCalculating noise power spectrum...\n\n");
+    Printf("\nCalculating noise power spectrum...\n\n");
 
     percentage = float(2500) / float(my_input_par_file.number_of_lines);
     sum_power.SetToConstant(0.0);
@@ -192,7 +192,7 @@ bool SubtractFromStackApp::DoCalculation( ) {
 
     my_input_par_file.Rewind( );
 
-    wxPrintf("\nSubtracting...\n\n");
+    Printf("\nSubtracting...\n\n");
     image_counter = 0;
     my_progress   = new ProgressBar(number_of_images_to_process);
 
@@ -254,7 +254,7 @@ bool SubtractFromStackApp::DoCalculation( ) {
 
             scale_factor = dot_product / self_dot_product;
             //scale_factor = 1.0f / scale_factor;
-            //wxPrintf("Scale factor = %f\n", scale_factor);
+            //Printf("Scale factor = %f\n", scale_factor);
             projection_image.MultiplyByConstant(scale_factor);
         }
 
@@ -267,7 +267,7 @@ bool SubtractFromStackApp::DoCalculation( ) {
         my_progress->Update(number_of_images_processed);
     }
     delete my_progress;
-    wxPrintf("\nSubtractFromStack: Normal termination\n\n");
+    Printf("\nSubtractFromStack: Normal termination\n\n");
 
     return true;
 }

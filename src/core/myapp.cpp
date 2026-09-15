@@ -178,7 +178,7 @@ void MyApp::OnEventLoopEnter( ) {
     number_of_arguments = int(command_line_parser.GetParamCount( ));
 
     if ( parse_status != 0 ) {
-        wxPrintf("\n\n");
+        Printf("\n\n");
         ExitMainLoop( );
         exit(0);
         return;
@@ -198,7 +198,7 @@ void MyApp::OnEventLoopEnter( ) {
     }
     else if ( number_of_arguments != 4 ) {
         command_line_parser.Usage( );
-        wxPrintf("\n\n");
+        Printf("\n\n");
         ExitMainLoop( );
         exit(0);
         return;
@@ -285,7 +285,7 @@ void MyApp::SendNextJobTo(TcpSocket* socket) {
         number_of_dispatched_jobs++;
     }
     else {
-        WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+        WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
         // stop monitoring the socket..
         //StopMonitoringSocket(socket); stopped doing this for timings
 
@@ -295,19 +295,19 @@ void MyApp::SendNextJobTo(TcpSocket* socket) {
 }
 
 void MyApp::SendJobFinished(int job_number) {
-    WriteToSocket(controller_socket, socket_job_finished, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(controller_socket, socket_job_finished, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
     // send the job number of the current job..
-    WriteToSocket(controller_socket, &job_number, sizeof(int), true, "SendJobNumber", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(controller_socket, &job_number, sizeof(int), true, "SendJobNumber", FUNCTION_DETAILS_AS_STRING);
 }
 
 void MyApp::SendJobResult(JobResult* result) {
-    WriteToSocket(controller_socket, socket_job_result, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(controller_socket, socket_job_result, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
     // See JobResult::SendToSocket() Doxygen for encoding order specification
     result->SendToSocket(controller_socket);
 }
 
 void MyApp::SendJobResultQueue(ArrayofJobResults& queue_to_send) {
-    WriteToSocket(controller_socket, socket_job_result_queue, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(controller_socket, socket_job_result_queue, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
     // See SendResultQueueToSocket() Doxygen for encoding order specification
     SendResultQueueToSocket(controller_socket, queue_to_send);
 }
@@ -327,8 +327,8 @@ void MyApp::SendAllJobsFinished( ) {
     if ( master_job_queue.size( ) != 0 )
         MasterSendIntenalQueue( );
 
-    WriteToSocket(controller_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-    WriteToSocket(controller_socket, &total_milliseconds_spent_on_threads, sizeof(long), true, "SendTotalMillisecondsSpentOnThreads", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(controller_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
+    WriteToSocket(controller_socket, &total_milliseconds_spent_on_threads, sizeof(long), true, "SendTotalMillisecondsSpentOnThreads", FUNCTION_DETAILS_AS_STRING);
 }
 
 void MyApp::OnZombieTimer( ) {
@@ -383,7 +383,7 @@ void MyApp::OnThreadComplete(bool success) {
     SendAllResultsFromResultQueue( );
 
     // get the next job..
-    WriteToSocket(master_socket, socket_send_next_job, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(master_socket, socket_send_next_job, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
 
     // if there is a result - send it to the gui..
     my_result.job_number = my_current_job.job_number;
@@ -400,11 +400,11 @@ void MyApp::OnThreadEnding( ) {
     }
 }
 
-void MyApp::OnThreadSendError(wxString error_message) {
+void MyApp::OnThreadSendError(std::string error_message) {
     SocketSendError(error_message);
 }
 
-void MyApp::OnThreadSendInfo(wxString info_message) {
+void MyApp::OnThreadSendInfo(std::string info_message) {
     SocketSendInfo(info_message);
 }
 
@@ -415,17 +415,17 @@ void MyApp::OnThreadIntermediateResultAvailable( ) {
     }
 }
 
-void MyApp::OnThreadSendImageResult(std::shared_ptr<Image> image_to_send, int position_in_stack, wxString filename_to_write) {
+void MyApp::OnThreadSendImageResult(std::shared_ptr<Image> image_to_send, int position_in_stack, std::string filename_to_write) {
     int details[3];
 
     details[0] = image_to_send->logical_x_dimension;
     details[1] = image_to_send->logical_y_dimension;
     details[2] = position_in_stack;
 
-    WriteToSocket(master_socket, socket_result_with_image_to_write, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-    WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
-    WriteToSocket(master_socket, image_to_send->real_values, image_to_send->real_memory_allocated * sizeof(float), true, "SendResultImageDataFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
-    SendwxStringToSocket(&filename_to_write, master_socket);
+    WriteToSocket(master_socket, socket_result_with_image_to_write, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
+    WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING);
+    WriteToSocket(master_socket, image_to_send->real_values, image_to_send->real_memory_allocated * sizeof(float), true, "SendResultImageDataFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING);
+    SendStringToSocket(filename_to_write, master_socket);
 
     // post a message to the message queue to allow the calulcation thread to send the next image..
     inter_thread_message_queue.Post(0);
@@ -438,9 +438,9 @@ void MyApp::OnThreadSendProgramDefinedResult(float* array_to_send, long size_of_
     details[1] = result_number;
     details[2] = number_of_expected_results;
 
-    WriteToSocket(master_socket, socket_program_defined_result, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-    WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendProgramDefinedResultDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
-    WriteToSocket(master_socket, array_to_send, size_of_array * sizeof(float), true, "SendProgramDefinedResultArrayFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(master_socket, socket_program_defined_result, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
+    WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendProgramDefinedResultDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING);
+    WriteToSocket(master_socket, array_to_send, size_of_array * sizeof(float), true, "SendProgramDefinedResultArrayFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING);
 
     delete[] array_to_send;
 }
@@ -476,34 +476,34 @@ void MyApp::SendAllResultsFromResultQueue( ) {
 
 void MyApp::SendIntermediateResultQueue(ArrayofJobResults& queue_to_send) {
     if ( queue_to_send.size( ) > 0 ) {
-        WriteToSocket(master_socket, socket_job_result_queue, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+        WriteToSocket(master_socket, socket_job_result_queue, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
         SendResultQueueToSocket(master_socket, queue_to_send);
     }
 
     time_of_last_queue_send = time(NULL);
 }
 
-void MyApp::SocketSendError(wxString error_to_send) {
+void MyApp::SocketSendError(std::string error_to_send) {
     // send the error message flag
 
     if ( is_running_locally == false ) {
-        WriteToSocket(controller_socket, socket_i_have_an_error, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-        SendwxStringToSocket(&error_to_send, controller_socket);
+        WriteToSocket(controller_socket, socket_i_have_an_error, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
+        SendStringToSocket(error_to_send, controller_socket);
     }
 }
 
-void MyApp::SocketSendInfo(wxString info_to_send) {
+void MyApp::SocketSendInfo(std::string info_to_send) {
     // send the info message flag
 
     if ( is_running_locally == false ) {
-        WriteToSocket(controller_socket, socket_i_have_info, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-        SendwxStringToSocket(&info_to_send, controller_socket);
+        WriteToSocket(controller_socket, socket_i_have_info, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
+        SendStringToSocket(info_to_send, controller_socket);
     }
 }
 
-void MyApp::SendError(wxString error_to_send) {
+void MyApp::SendError(std::string error_to_send) {
     if ( is_running_locally == true ) {
-        wxPrintf("\nError : %s\n", error_to_send);
+        Printf("\nError : %s\n", error_to_send);
     }
     else if ( work_thread != NULL ) {
         work_thread->QueueError(error_to_send);
@@ -513,16 +513,16 @@ void MyApp::SendError(wxString error_to_send) {
     }
 }
 
-void MyApp::SendErrorAndCrash(wxString error_to_send) {
+void MyApp::SendErrorAndCrash(std::string error_to_send) {
     SendError(error_to_send);
     if ( ! is_running_locally )
         SleepForSeconds(2); // wait for the main thread to actually send the error
     DEBUG_ABORT;
 }
 
-void MyApp::SendInfo(wxString info_to_send) {
+void MyApp::SendInfo(std::string info_to_send) {
     if ( is_running_locally == true ) {
-        wxPrintf("\nInfo : %s\n", info_to_send);
+        Printf("\nInfo : %s\n", info_to_send);
     }
     else if ( work_thread != NULL ) {
         work_thread->QueueInfo(info_to_send);
@@ -544,16 +544,16 @@ void MyApp::AddJobToResultQueue(JobResult* result_to_add) {
         work_thread->MarkIntermediateResultAvailable( );
     }
     else {
-        wxPrintf("Work thread is NULL!\n");
+        Printf("Work thread is NULL!\n");
     }
 }
 
-void MyApp::SendProcessedImageResult(Image* image_to_send, int position_in_stack, wxString filename_to_save) {
+void MyApp::SendProcessedImageResult(Image* image_to_send, int position_in_stack, std::string filename_to_save) {
     if ( work_thread != NULL ) {
         work_thread->SendProcessedImageResult(image_to_send, position_in_stack, filename_to_save);
     }
     else {
-        wxPrintf("Work thread is NULL!\n");
+        Printf("Work thread is NULL!\n");
     }
 }
 
@@ -562,7 +562,7 @@ void MyApp::SendProgramDefinedResultToMaster(float* array_to_send, long size_of_
         work_thread->SendProgramDefinedResultToMaster(array_to_send, size_of_array, result_number, number_of_expected_results);
     }
     else {
-        wxPrintf("Work thread is NULL!\n");
+        Printf("Work thread is NULL!\n");
     }
 }
 
@@ -647,8 +647,8 @@ void CalculateThread::Entry( ) {
 
             if ( millis_sleeping > job_wait_time * 1000 ) {
                 // we have been waiting for a long time, something probably went wrong - so die.
-                wxPrintf("Calculation thread has been waiting for something to do for %f.2 seconds - going to finish\n", job_wait_time);
-                QueueError(wxString::Format("Calculation thread has been waiting for something to do for %f.2 seconds - going to finish", job_wait_time));
+                Printf("Calculation thread has been waiting for something to do for %f.2 seconds - going to finish\n", job_wait_time);
+                QueueError(Format("Calculation thread has been waiting for something to do for %f.2 seconds - going to finish", job_wait_time));
                 break;
             }
         }
@@ -662,12 +662,12 @@ void CalculateThread::Entry( ) {
     fftwf_cleanup( ); // this is needed to stop valgrind reporting memory leaks..
 }
 
-void CalculateThread::QueueError(wxString error_to_queue) {
+void CalculateThread::QueueError(std::string error_to_queue) {
     MyApp* app = main_thread_pointer;
     app->CallAfter([app, error_to_queue]( ) { app->OnThreadSendError(error_to_queue); });
 }
 
-void CalculateThread::QueueInfo(wxString info_to_queue) {
+void CalculateThread::QueueInfo(std::string info_to_queue) {
     MyApp* app = main_thread_pointer;
     app->CallAfter([app, info_to_queue]( ) { app->OnThreadSendInfo(info_to_queue); });
 }
@@ -677,7 +677,7 @@ void CalculateThread::MarkIntermediateResultAvailable( ) {
     app->CallAfter([app]( ) { app->OnThreadIntermediateResultAvailable( ); });
 }
 
-void CalculateThread::SendProcessedImageResult(Image* image_to_send, int position_in_stack, wxString filename_to_save) {
+void CalculateThread::SendProcessedImageResult(Image* image_to_send, int position_in_stack, std::string filename_to_save) {
     char message;
     if ( main_thread_pointer->inter_thread_message_queue.ReceiveTimeout(300000, message) == false ) // timeout after 5 minutes;
     {
@@ -751,11 +751,11 @@ void MyApp::HandleSocketYouAreTheMaster(TcpSocket* connected_socket, JobPackage*
     // This is possibly dodgy as it's not being controlled by SocketCommunicator - hopefully it is ok, as this socket is not yet
     // being monitored in the corresponding read in the job controller - but it's a possible point of failure.
 
-    SendwxStringToSocket(&my_ip_address, connected_socket);
-    SendwxStringToSocket(&my_port_string, connected_socket);
+    SendStringToSocket(my_ip_address, connected_socket);
+    SendStringToSocket(my_port_string, connected_socket);
 }
 
-void MyApp::HandleSocketYouAreAWorker(TcpSocket* connected_socket, wxString master_ip_address, wxString master_port_string) {
+void MyApp::HandleSocketYouAreAWorker(TcpSocket* connected_socket, std::string master_ip_address, std::string master_port_string) {
 
     // we got real communication, so we are not a zombie
 
@@ -763,7 +763,7 @@ void MyApp::HandleSocketYouAreAWorker(TcpSocket* connected_socket, wxString mast
 
     long received_port;
 
-    master_port_string.ToLong(&received_port);
+    StringToLong(master_port_string, received_port);
     master_port = (short int)received_port;
 
     // remove this socket from monitoring and destroy it..
@@ -775,7 +775,7 @@ void MyApp::HandleSocketYouAreAWorker(TcpSocket* connected_socket, wxString mast
 
     master_socket = new TcpSocket( );
 
-    active_controller_address = master_ip_address.ToStdString( );
+    active_controller_address = master_ip_address;
     controller_port           = master_port;
 
     master_socket->Connect(active_controller_address, master_port, 30);
@@ -816,7 +816,7 @@ void MyApp::HandleSocketTimeToDie(TcpSocket* connected_socket) // This can be se
         // tell any connected workers to die. then exit..
 
         for ( size_t counter = 0; counter < worker_socket_pointers.size( ); counter++ ) {
-            WriteToSocket(worker_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+            WriteToSocket(worker_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
         }
 
         worker_socket_pointers.clear( );
@@ -826,8 +826,8 @@ void MyApp::HandleSocketTimeToDie(TcpSocket* connected_socket) // This can be se
         // Timing stuff here
         long milliseconds_spent_by_thread = stopwatch.Time( );
 
-        WriteToSocket(master_socket, socket_send_thread_timing, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-        WriteToSocket(master_socket, &milliseconds_spent_by_thread, sizeof(long), true, "SendMillisecondsSpentByThread", FUNCTION_DETAILS_AS_WXSTRING);
+        WriteToSocket(master_socket, socket_send_thread_timing, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
+        WriteToSocket(master_socket, &milliseconds_spent_by_thread, sizeof(long), true, "SendMillisecondsSpentByThread", FUNCTION_DETAILS_AS_STRING);
 
         // time to die!
         {
@@ -895,11 +895,11 @@ void MyApp::HandleSocketSendNextJob(TcpSocket* connected_socket, JobResult* rece
     delete received_result;
 }
 
-void MyApp::HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message) {
+void MyApp::HandleSocketIHaveAnError(TcpSocket* connected_socket, std::string error_message) {
     SocketSendError(error_message);
 }
 
-void MyApp::HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message) {
+void MyApp::HandleSocketIHaveInfo(TcpSocket* connected_socket, std::string info_message) {
     SocketSendInfo(info_message);
 }
 
@@ -925,7 +925,7 @@ void MyApp::HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobRe
     }
 }
 
-void MyApp::HandleSocketResultWithImageToWrite(TcpSocket* connected_socket, wxString filename_to_write_to, int position_in_stack) {
+void MyApp::HandleSocketResultWithImageToWrite(TcpSocket* connected_socket, std::string filename_to_write_to, int position_in_stack) {
     // The image itself was written by the socket monitor thread; queue the position as a result for the controller.
 
     float temp_float;
@@ -1002,7 +1002,7 @@ void MyApp::HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* 
         max_number_of_connected_workers++;
 
         // tell it is is connected..
-        WriteToSocket(new_connection, socket_you_are_connected, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+        WriteToSocket(new_connection, socket_you_are_connected, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
 
         int number_of_commands_to_run;
         if ( current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs( ) )
@@ -1033,7 +1033,7 @@ void MyApp::HandleSocketYouAreConnected(TcpSocket* connected_socket) {
     // we are connected, request the first job..
     is_connected = true;
 
-    WriteToSocket(connected_socket, socket_send_next_job, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+    WriteToSocket(connected_socket, socket_send_next_job, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
     JobResult temp_result; // dummy result for the initial request - not really very nice
     temp_result.job_number  = -1;
     temp_result.result_size = 0;
@@ -1056,7 +1056,7 @@ void MyApp::HandleSocketDisconnect(TcpSocket* connected_socket) {
         MyDebugPrint("Master received disconnect from controller");
 
         for ( size_t counter = 0; counter < worker_socket_pointers.size( ); counter++ ) {
-            WriteToSocket(worker_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+            WriteToSocket(worker_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
             StopMonitoringAndDestroySocket(worker_socket_pointers[counter]);
             worker_socket_pointers[counter] = NULL;
         }
@@ -1077,7 +1077,7 @@ void MyApp::HandleSocketDisconnect(TcpSocket* connected_socket) {
         if ( number_of_dispatched_jobs < current_job_package.number_of_jobs ) {
             SocketSendError("Error: A worker has disconnected before all jobs are finished.");
             if ( socket_to_worker_job_pointer_hash.count(connected_socket) > 0 )
-                SocketSendInfo("The disconnected worker was running a job with the following arguments:\n" + socket_to_worker_job_pointer_hash[connected_socket]->PrintAllArgumentsTowxString( ));
+                SocketSendInfo("The disconnected worker was running a job with the following arguments:\n" + socket_to_worker_job_pointer_hash[connected_socket]->PrintAllArgumentsToString( ));
         }
 
         StopMonitoringAndDestroySocket(connected_socket);

@@ -16,10 +16,10 @@ IMPLEMENT_APP(PrepareStackApp)
 // override the DoInteractiveUserInput
 
 void PrepareStackApp::DoInteractiveUserInput( ) {
-    wxString input_particle_images;
-    wxString output_classaverage_images;
-    wxString input_star_file;
-    wxString input_selection_file;
+    std::string input_particle_images;
+    std::string output_classaverage_images;
+    std::string input_star_file;
+    std::string input_selection_file;
     int      wanted_output_box_size;
 
     bool  resample_box;
@@ -59,10 +59,10 @@ void PrepareStackApp::DoInteractiveUserInput( ) {
 
     delete my_input;
 
-    my_current_job.ManualSetArguments("ttttffbiiibbii", input_particle_images.ToUTF8( ).data( ),
-                                      output_classaverage_images.ToUTF8( ).data( ),
-                                      input_star_file.ToUTF8( ).data( ),
-                                      input_selection_file.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttttffbiiibbii", input_particle_images.c_str(),
+                                      output_classaverage_images.c_str(),
+                                      input_star_file.c_str(),
+                                      input_selection_file.c_str(),
                                       output_pixel_size,
                                       mask_radius,
                                       resample_box,
@@ -79,10 +79,10 @@ void PrepareStackApp::DoInteractiveUserInput( ) {
 
 bool PrepareStackApp::DoCalculation( ) {
 
-    wxString input_particle_images      = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_classaverage_images = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_star_filename        = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString input_selection_file       = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string input_particle_images      = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_classaverage_images = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_star_filename        = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string input_selection_file       = my_current_job.arguments[3].ReturnStringArgument( );
     float    output_pixel_size          = my_current_job.arguments[4].ReturnFloatArgument( );
     float    mask_radius                = my_current_job.arguments[5].ReturnFloatArgument( );
     bool     resample_box               = my_current_job.arguments[6].ReturnBoolArgument( );
@@ -129,7 +129,7 @@ bool PrepareStackApp::DoCalculation( ) {
     Image sum_power;
     Image temp_image;
 
-    wxArrayInt classaverages_to_make;
+    std::vector<int> classaverages_to_make;
 
     cisTEMParameterLine         temp_line;
     ArrayOfcisTEMParameterLines class_members;
@@ -144,7 +144,7 @@ bool PrepareStackApp::DoCalculation( ) {
         my_result.SetResult(1, &result);
     }
 
-    ImageFile input_file(input_particle_images.ToStdString( ));
+    ImageFile input_file(input_particle_images);
     int       images_to_process = input_file.ReturnNumberOfSlices( );
 
     bin_factor = input_file.ReturnXSize( ) / wanted_output_box_size;
@@ -159,14 +159,14 @@ bool PrepareStackApp::DoCalculation( ) {
 
     cisTEMParameters input_star_file;
 
-    wxFileName star_filename(input_star_filename);
-    if ( star_filename.GetExt( ) == "cistem" )
+    std::filesystem::path star_filename(input_star_filename);
+    if ( ReturnFileExtension(star_filename.string()) == "cistem" )
         input_star_file.ReadFromcisTEMBinaryFile(input_star_filename);
     else
         input_star_file.ReadFromcisTEMStarFile(input_star_filename);
 
     if ( is_running_locally == true )
-        output_file = new MRCFile(output_classaverage_images.ToStdString( ), true);
+        output_file = new MRCFile(output_classaverage_images, true);
 
     Curve                 noise_power_spectrum;
     Curve                 number_of_terms;
@@ -183,7 +183,7 @@ bool PrepareStackApp::DoCalculation( ) {
     rotated_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), 1);
 
     if ( is_running_locally == true )
-        wxPrintf("\nCalculating noise power spectrum...\n\n");
+        Printf("\nCalculating noise power spectrum...\n\n");
 
     float percentage = float(max_samples) / float(images_to_process);
     sum_power.SetToConstant(0.0);
@@ -227,7 +227,7 @@ bool PrepareStackApp::DoCalculation( ) {
         delete my_progress;
 
     if ( is_running_locally == true ) {
-        wxPrintf("\nPreparing Stack...\n\n");
+        Printf("\nPreparing Stack...\n\n");
         total_positions = ((last_classaverage - first_classaverage) + 1) * number_of_classes;
         my_progress     = new ProgressBar(total_positions);
     }
@@ -236,20 +236,20 @@ bool PrepareStackApp::DoCalculation( ) {
 
     for ( current_image = 0; current_image < wanted_class_averages.number_of_lines; current_image++ ) {
         wanted_class_averages.ReadLine(temp_float);
-        classaverages_to_make.Add(int(temp_float[0]));
+        classaverages_to_make.push_back(int(temp_float[0]));
     }
 
     for ( current_classaverage = first_classaverage; current_classaverage <= last_classaverage; current_classaverage++ ) {
         // get all image members of the selected class
 
-        class_members.Clear( );
+        class_members.clear( );
 
         for ( line_counter = 0; line_counter < input_star_file.ReturnNumberofLines( ); line_counter++ ) {
 
             if ( input_star_file.ReturnBest2DClass(line_counter) == classaverages_to_make[current_classaverage] ) {
                 temp_line = input_star_file.ReturnLine(line_counter);
 
-                class_members.Add(temp_line);
+                class_members.push_back(temp_line);
             }
         }
 
@@ -266,9 +266,9 @@ bool PrepareStackApp::DoCalculation( ) {
             ctf_sum_image.is_in_real_space = false;
 
             for ( image_counter = 0; image_counter < images_per_class; image_counter++ ) {
-                random_image = myroundint(fabsf(global_random_number_generator.GetUniformRandom( ) * (class_members.GetCount( ) - 1)));
+                random_image = myroundint(fabsf(global_random_number_generator.GetUniformRandom( ) * (class_members.size() - 1)));
                 //random_image = image_counter;// + 1;
-                //wxPrintf("random = %i\n", random_image);
+                //Printf("random = %i\n", random_image);
                 input_image.ReadSlice(&input_file, class_members[random_image].position_in_stack);
                 input_image.ChangePixelSize(&input_image, output_pixel_size / input_star_file.ReturnPixelSize(current_image - 1), 0.001f);
                 if ( invert_contrast == true )
@@ -314,7 +314,7 @@ bool PrepareStackApp::DoCalculation( ) {
             output_file_position = (number_of_classes * current_classaverage + class_counter) + 1;
 
             if ( is_running_locally == true ) {
-                //	wxPrintf("Writing to %i (%i, %i)\n", output_file_position, current_classaverage, class_counter);
+                //	Printf("Writing to %i (%i, %i)\n", output_file_position, current_classaverage, class_counter);
                 sum_image.WriteSlice(output_file, output_file_position);
                 current_position++;
                 my_progress->Update(current_position);
@@ -331,8 +331,8 @@ bool PrepareStackApp::DoCalculation( ) {
     }
 
     if ( is_running_locally == true )
-        wxPrintf("\nPrepareStack: Normal termination\n\n");
-    //else wxSleep(10); // to make sure we don't die before the image data has been sent over completely (not sure if necessary)
+        Printf("\nPrepareStack: Normal termination\n\n");
+    //else SleepForSeconds(10); // to make sure we don't die before the image data has been sent over completely (not sure if necessary)
 
     return true;
 }

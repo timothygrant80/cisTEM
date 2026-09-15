@@ -437,7 +437,7 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
     for ( current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++ ) {
 
         if ( current_search_position % 10 == 0 ) {
-            wxPrintf("Starting position %d/ %d\n", current_search_position, last_search_position);
+            Printf("Starting position %d/ %d\n", current_search_position, last_search_position);
         }
 
         for ( float current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step ) {
@@ -689,7 +689,7 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
 
     projection_queue.PrintTimes( );
 
-    wxPrintf("\t\t\ntotal number %d, total mips %d\n", ccc_counter, total_mip_processed);
+    Printf("\t\t\ntotal number %d, total mips %d\n", ccc_counter, total_mip_processed);
 
     // If we have a total number of cccs that is not a multiple of n_mips_to_process_at_once, we need to process the remaining mips
     // Make sure the last stack has been processed before we start the next one

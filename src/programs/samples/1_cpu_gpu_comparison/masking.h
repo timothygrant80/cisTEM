@@ -5,7 +5,7 @@
 // #include <cutensor.h>
 // #endif
 
-void CPUvsGPUMaskingTest(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory);
-bool DoCosineMaskingTest(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory);
+void CPUvsGPUMaskingTest(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory);
+bool DoCosineMaskingTest(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory);
 
 #endif

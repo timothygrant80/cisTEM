@@ -7,10 +7,10 @@ UserInput::UserInput( ) {
 }
 
 UserInput::UserInput(const char* program_name, float program_version) {
-    Init(program_name, wxString::Format("%0.2f", program_version));
+    Init(program_name, Format("%0.2f", program_version));
 }
 
-UserInput::UserInput(const char* program_name, wxString program_version) {
+UserInput::UserInput(const char* program_name, std::string program_version) {
     Init(program_name, program_version);
 }
 
@@ -52,11 +52,11 @@ void UserInput::AskQuestion(const char* question_text, const char* help_text, co
         current_length = 50 - strlen(temp_string);
 
         if ( current_length >= 0 ) {
-            wxPrintf("%s ", question_text);
+            Printf("%s ", question_text);
             MyPrintfCyan("[%s]", default_value);
         }
         else {
-            wxPrintf("%s\n", question_text);
+            Printf("%s\n", question_text);
             MyPrintfCyan("[%s]", default_value);
 
             current_length = 48 - strlen(default_value);
@@ -64,14 +64,14 @@ void UserInput::AskQuestion(const char* question_text, const char* help_text, co
     }
     else {
         current_length = 50 - strlen(temp_string);
-        wxPrintf("%s", question_text);
+        Printf("%s", question_text);
     }
 
     for ( long temp_counter = 0; temp_counter < current_length; temp_counter++ ) {
-        wxPrintf(" ");
+        Printf(" ");
     }
 
-    wxPrintf(" : ");
+    Printf(" : ");
 
     // get some input..
 
@@ -81,18 +81,18 @@ void UserInput::AskQuestion(const char* question_text, const char* help_text, co
         exit(0); // user request exit
     else if ( received_input[0] == 0 ) {
         if ( input_is_a_tty == false ) {
-            wxPrintf("\n Error: Blank answer in scripted mode, exiting...\n\n");
+            Printf("\n Error: Blank answer in scripted mode, exiting...\n\n");
             exit(-1);
         }
         else
             strcpy(received_input, default_value);
     }
     else if ( received_input[0] == '?' ) {
-        wxPrintf("\n%s\n\n", help_text);
+        Printf("\n%s\n\n", help_text);
     }
 }
 
-void UserInput::Init(const char* program_name, wxString program_version) {
+void UserInput::Init(const char* program_name, std::string program_version) {
     int counter;
 
     defaults_file     = NULL;
@@ -129,30 +129,30 @@ void UserInput::Init(const char* program_name, wxString program_version) {
         new_defaults_file = fopen(new_defaults_filename, "w+");
 
         if ( new_defaults_file == 0 )
-            wxPrintf("\n\nError Can't open defaults file! for writing\n\n");
+            Printf("\n\nError Can't open defaults file! for writing\n\n");
     }
 
-    wxPrintf("\n\n        **   Welcome to %s   **\n\n", program_name);
+    Printf("\n\n        **   Welcome to %s   **\n\n", program_name);
     for ( counter = 0; counter < strlen(program_name) / 2; counter++ )
-        wxPrintf(" ");
-    wxPrintf("         Version : %s\n", program_version);
+        Printf(" ");
+    Printf("         Version : %s\n", program_version);
     for ( counter = 0; counter < strlen(program_name) / 2; counter++ )
-        wxPrintf(" ");
-    wxPrintf("        Compiled : %s\n", __DATE__);
+        Printf(" ");
+    Printf("        Compiled : %s\n", __DATE__);
     for ( counter = 0; counter < strlen(program_name) / 2; counter++ )
-        wxPrintf(" ");
-    wxPrintf(" Library Version : %s\n", CISTEM_VERSION_TEXT);
+        Printf(" ");
+    Printf(" Library Version : %s\n", CISTEM_VERSION_TEXT);
     for ( counter = 0; counter < strlen(program_name) / 2; counter++ )
-        wxPrintf(" ");
-    wxPrintf("     From Branch : %s\n", CISTEM_CURRENT_BRANCH);
+        Printf(" ");
+    Printf("     From Branch : %s\n", CISTEM_CURRENT_BRANCH);
     for ( counter = 0; counter < strlen(program_name) / 2; counter++ )
-        wxPrintf(" ");
-    wxPrintf("            Mode : ");
+        Printf(" ");
+    Printf("            Mode : ");
 
     if ( input_is_a_tty == true )
-        wxPrintf("Interactive\n\n");
+        Printf("Interactive\n\n");
     else
-        wxPrintf("Scripted\n\n");
+        Printf("Scripted\n\n");
 }
 
 bool UserInput::GetYesNoFromUser(const char* my_text, const char* help_text, const char* wanted_default_value) {
@@ -213,7 +213,7 @@ float UserInput::GetFloatFromUser(const char* my_text, const char* help_text, co
                         MyPrintfRed("\nError: Number outside of acceptable range!\n\n");
                     }
                     else {
-                        wxPrintf("\nError: Number outside of acceptable range!\n\n");
+                        Printf("\nError: Number outside of acceptable range!\n\n");
                     }
                 }
             }
@@ -229,7 +229,7 @@ float UserInput::GetFloatFromUser(const char* my_text, const char* help_text, co
                     MyPrintfRed("\nError: Number outside of acceptable range!\n\n");
                 }
                 else {
-                    wxPrintf("\nError: Number outside of acceptable range!\n\n");
+                    Printf("\nError: Number outside of acceptable range!\n\n");
                 }
             }
         }
@@ -265,7 +265,7 @@ int UserInput::GetIntFromUser(const char* my_text, const char* help_text, const 
                         MyPrintfRed("\nError: Number outside of acceptable range!\n\n");
                     }
                     else {
-                        wxPrintf("\nError: Number outside of acceptable range!\n\n");
+                        Printf("\nError: Number outside of acceptable range!\n\n");
                     }
                 }
             }
@@ -281,7 +281,7 @@ int UserInput::GetIntFromUser(const char* my_text, const char* help_text, const 
                     MyPrintfRed("\nError: Number outside of acceptable range!\n\n");
                 }
                 else {
-                    wxPrintf("\nError: Number outside of acceptable range!\n\n");
+                    Printf("\nError: Number outside of acceptable range!\n\n");
                 }
             }
         }
@@ -330,32 +330,32 @@ std::string UserInput::GetSymmetryFromUser(const char* my_text, const char* help
         AskQuestion(my_text, help_text, default_value, input);
 
         if ( input[0] != 0 && input[0] != '?' ) {
-            wxString supplied_input = input;
-            wxChar   symmetry_type;
+            std::string supplied_input = input;
+            char   symmetry_type;
             long     symmetry_number;
 
-            if ( supplied_input.Length( ) < 1 ) {
+            if ( supplied_input.length() < 1 ) {
                 if ( output_is_a_tty == true ) {
                     MyPrintfRed("\nError: Must specify symmetry symbol!\n\n");
                 }
                 else {
-                    wxPrintf("\nError: Must specify symmetry symbol!\n\n");
+                    Printf("\nError: Must specify symmetry symbol!\n\n");
                 }
             }
             else {
-                symmetry_type = supplied_input.Capitalize( )[0];
+                symmetry_type = toupper(static_cast<unsigned char>(supplied_input[0]));
 
-                if ( supplied_input.Length( ) == 1 ) {
+                if ( supplied_input.length() == 1 ) {
                     symmetry_number = 0;
                 }
                 else {
-                    if ( ! supplied_input.Mid(1).ToLong(&symmetry_number) ) {
+                    if ( ! StringToLong(supplied_input.substr(1), symmetry_number) ) {
                         symmetry_number = -1;
                         if ( output_is_a_tty == true ) {
                             MyPrintfRed("\nError: Unrecognized symmetry number!\n\n");
                         }
                         else {
-                            wxPrintf("\nError: Unrecognized symmetry number!\n\n");
+                            Printf("\nError: Unrecognized symmetry number!\n\n");
                         }
                     }
                 }
@@ -389,7 +389,7 @@ std::string UserInput::GetSymmetryFromUser(const char* my_text, const char* help
                         MyPrintfRed("\nError: Unrecognized symmetry!\n\n");
                     }
                     else {
-                        wxPrintf("\nError: Unrecognized symmetry!\n\n");
+                        Printf("\nError: Unrecognized symmetry!\n\n");
                     }
                 }
             }
@@ -423,7 +423,7 @@ std::string UserInput::GetFilenameFromUser(const char* my_text, const char* help
             else {
                 // check the file exits..
 
-                if ( wxFileName::FileExists(input) == true ) {
+                if ( FileExists(input) == true ) {
                     DoGotValidAnswer(my_text, input);
                     std::string my_string(input);
                     return my_string;
@@ -433,7 +433,7 @@ std::string UserInput::GetFilenameFromUser(const char* my_text, const char* help
                         MyPrintfRed("\nError: File does not exist, please provide an existing file!\n\n");
                     }
                     else {
-                        wxPrintf("\nError: File does not exist, please provide an existing file!\n\n");
+                        Printf("\nError: File does not exist, please provide an existing file!\n\n");
                     }
                 }
             }
@@ -493,14 +493,14 @@ void UserInput::DoGotValidAnswer(const char* question_text, const char* new_defa
     if ( new_defaults_file != 0 && input_is_a_tty == true )
         fprintf(new_defaults_file, "%s:: %s\n", question_text, new_default);
     if ( input_is_a_tty == false )
-        wxPrintf("%s\n", new_default);
+        Printf("%s\n", new_default);
 }
 
 void UserInput::DoGotInvalidAnswer( ) {
     // if we got here and we are in scripted mode, something went wrong.
 
     if ( input_is_a_tty == false ) {
-        wxPrintf("\n Error: Running as script, and answer is not recognized...\n\n");
+        Printf("\n Error: Running as script, and answer is not recognized...\n\n");
         exit(-1);
     }
 }

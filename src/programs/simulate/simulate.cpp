@@ -189,7 +189,7 @@ class SimulateApp : public MyApp {
     std::string           input_star_file_name;
     std::string           output_star_file_name;
     long                  number_preexisting_particles;
-    wxString              preexisting_particle_file_name;
+    std::string              preexisting_particle_file_name;
 
     std::array<float, 17> parameter_vect;
     float                 water_scaling               = 1.0f;
@@ -202,7 +202,7 @@ class SimulateApp : public MyApp {
     Coords    coords;
     StopWatch timer;
 
-    wxString wanted_symmetry = "C1";
+    std::string wanted_symmetry = "C1";
 
     // Intermediate images that may be useful for diagnostics.
     void AddCommandLineOptions( );
@@ -484,7 +484,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
         emulate_tilt_angle = (float)temp_double;
     }
 
-    wxString temp_string;
+    std::string temp_string;
     if ( command_line_parser.Found("wanted-symmetry", &temp_string) ) {
         wanted_symmetry = temp_string;
     }
@@ -520,7 +520,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
 
     // Limit the total 3d size allowed. This should probably depend on the pixel size, because of the oversampling
     if ( do3d && wanted_output_size > MAX_3D_SIZE ) {
-        wxPrintf("WARNING: wanted 3d size is too big, max size is %d\n", MAX_3D_SIZE);
+        Printf("WARNING: wanted 3d size is too big, max size is %d\n", MAX_3D_SIZE);
         exit(-1);
     }
     number_of_threads = my_input->GetIntFromUser("Number of threads", "Max is number of tilts", "1", 1);
@@ -534,7 +534,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
         add_more_pdbs = my_input->GetYesNoFromUser("Add another type of particle?", "Add another pdb to create additional features in the ensemble", "no");
         runaway_counter++;
         if ( runaway_counter > 1000 ) {
-            wxPrintf("ERROR: runaway_counter > 1000");
+            Printf("ERROR: runaway_counter > 1000");
             exit(-1);
         }
     }
@@ -551,7 +551,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
         // Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
         if ( wanted_pixel_size > 1.5 ) {
             if ( wanted_output_size * 4 < MAX_3D_SIZE ) {
-                wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
+                Printf("\nOversampling your 3d by a factor of 4 for calculation.\n");
                 wanted_pixel_size /= 4.f;
                 bin3d                  = 4;
                 found_the_best_binning = true;
@@ -560,7 +560,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
 
         if ( wanted_pixel_size > 0.75 && ! found_the_best_binning ) {
             if ( wanted_output_size * 2 < MAX_3D_SIZE ) {
-                wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
+                Printf("\nOversampling your 3d by a factor of 2 for calculation.\n");
                 wanted_pixel_size /= 2.f;
                 bin3d                  = 2;
                 found_the_best_binning = true;
@@ -584,10 +584,10 @@ void SimulateApp::DoInteractiveUserInput( ) {
                 input_star_file.ReadFromcisTEMStarFile(preexisting_particle_file_name);
                 number_preexisting_particles = input_star_file.ReturnNumberofLines( );
                 default_number_parameters    = number_preexisting_particles;
-                wxPrintf("\nFound %ld particles in the input star file\n", number_preexisting_particles);
+                Printf("\nFound %ld particles in the input star file\n", number_preexisting_particles);
             }
             else {
-                SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", preexisting_particle_file_name));
+                SendErrorAndCrash(Format("Error: Input star file %s not found\n", preexisting_particle_file_name));
             }
             // The following doesn't work if there is a .dff file
             // std::string wanted_default = std::to_string(default_number_parameters);
@@ -691,7 +691,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
         if ( fabsf(propagation_distance) > minimum_thickness_z ) {
             minimum_thickness_z = fabsf(propagation_distance);
             if ( DO_PRINT ) {
-                wxPrintf("min thickness was less than propagation distance, so setting it there\n");
+                Printf("min thickness was less than propagation distance, so setting it there\n");
             }
         }
         // To add error to the global alignment
@@ -725,7 +725,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
     if ( DO_PHASE_PLATE ) {
         if ( SURFACE_PHASE_ERROR < 0 ) {
             if ( DO_PRINT ) {
-                wxPrintf("SURFACE_PHASE_ERROR < 0, subbing min thickness for phase plate thickness\n");
+                Printf("SURFACE_PHASE_ERROR < 0, subbing min thickness for phase plate thickness\n");
             }
             phase_plate_thickness = minimum_thickness_z;
         }
@@ -734,10 +734,10 @@ void SimulateApp::DoInteractiveUserInput( ) {
         }
 
         if ( DO_PRINT ) {
-            wxPrintf("With a mean inner potential of %2.2fV a thickness of %2.2f ang is needed for a pi/2 phase shift \n", MEAN_INNER_POTENTIAL, phase_plate_thickness);
+            Printf("With a mean inner potential of %2.2fV a thickness of %2.2f ang is needed for a pi/2 phase shift \n", MEAN_INNER_POTENTIAL, phase_plate_thickness);
         }
         if ( DO_PRINT ) {
-            wxPrintf("Phase shift params %f %f %f\n", BOND_PHASE_ERROR, BOND_SCALING_FACTOR, SURFACE_PHASE_ERROR);
+            Printf("Phase shift params %f %f %f\n", BOND_PHASE_ERROR, BOND_SCALING_FACTOR, SURFACE_PHASE_ERROR);
         }
     }
 
@@ -771,7 +771,7 @@ bool SimulateApp::DoCalculation( ) {
     current_total_exposure = pre_exposure;
 
     if ( CORRECT_CTF && use_existing_params ) {
-        wxPrintf("I did not set up ctf correction and the use of existing parameters. FIXME\n");
+        Printf("I did not set up ctf correction and the use of existing parameters. FIXME\n");
         exit(-1);
     }
 
@@ -798,10 +798,10 @@ bool SimulateApp::DoCalculation( ) {
     }
 
     if ( DO_PRINT ) {
-        wxPrintf("\nThere are %ld non-solvent atoms in the specimen.\n", sp.ReturnTotalNumberOfNonSolventAtoms( ));
+        Printf("\nThere are %ld non-solvent atoms in the specimen.\n", sp.ReturnTotalNumberOfNonSolventAtoms( ));
     }
     if ( DO_PRINT ) {
-        wxPrintf("\nCurrent number of PDBs %d\n", sp.pdb_file_names.size( ));
+        Printf("\nCurrent number of PDBs %d\n", sp.pdb_file_names.size( ));
     }
 
     // FIXME add time steps.
@@ -810,7 +810,7 @@ bool SimulateApp::DoCalculation( ) {
     this->probability_density_2d(sp.pdb_ensemble.data( ), time_step);
 
     if ( DO_PRINT ) {
-        wxPrintf("\nFinished pre seg fault\n");
+        Printf("\nFinished pre seg fault\n");
     }
 
     // It gives a segfault at the end either way.
@@ -865,7 +865,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     float              defocus_offset = 0;
 
     if ( DO_PRINT ) {
-        wxPrintf("Using extra phase shift of %f radians\n", wanted_additional_phase_shift_in_radians);
+        Printf("Using extra phase shift of %f radians\n", wanted_additional_phase_shift_in_radians);
     }
 
     int frame_lines;
@@ -943,8 +943,8 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     parameters.image_shift_x                      = particle_shift_x;
     parameters.image_shift_y                      = particle_shift_y;
     parameters.stack_filename                     = output_filename;
-    parameters.original_image_filename            = wxEmptyString;
-    parameters.reference_3d_filename              = wxEmptyString;
+    parameters.original_image_filename            = std::string();
+    parameters.reference_3d_filename              = std::string();
     parameters.best_2d_class                      = 0;
     parameters.beam_tilt_group                    = 0;
     parameters.particle_group                     = 0;
@@ -977,7 +977,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
         number_of_images = n_tilt_angles;
         if ( this->use_existing_params ) {
-            wxPrintf("\n\nUsing an existing parameter file only supported on a particle stack\n\n");
+            Printf("\n\nUsing an existing parameter file only supported on a particle stack\n\n");
             exit(-1);
         }
         //        max_tilt  = 60.0f;
@@ -1001,7 +1001,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
             tilt_theta.push_back(SET_TILT_ANGLES[iTilt]);
             if ( DO_PRINT ) {
-                wxPrintf("%f\n", SET_TILT_ANGLES[iTilt]);
+                Printf("%f\n", SET_TILT_ANGLES[iTilt]);
             }
             tilt_phi.push_back(0.0f);
             shift_x.push_back(this->stdErr * my_rand.GetUniformRandomSTD(-8.f, 8.f));
@@ -1119,7 +1119,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     // For odd sizes there will be an offset of 0.5 pix if simply padded by 2 and cropped by 2 so make it even to start then trim at the end.
 
     if ( DO_PRINT ) {
-        wxPrintf("Got here emulate is %f\n", emulate_tilt_angle);
+        Printf("Got here emulate is %f\n", emulate_tilt_angle);
     }
     // FIXME I think this should somehow be derived from the information already stored in the scattering potential  object
     PDB current_specimen(sp.ReturnTotalNumberOfNonSolventAtoms( ), bin3d * (wanted_output_size - IsOdd(wanted_output_size)), wanted_pixel_size, minimum_padding_x_and_y, minimum_thickness_z,
@@ -1136,7 +1136,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     timer.lap("Init H20 & Spec");
 
     if ( DO_PRINT ) {
-        wxPrintf("\nThere are %d tilts\n", number_of_images);
+        Printf("\nThere are %d tilts\n", number_of_images);
     }
 
     for ( iTilt = 0; iTilt < number_of_images; iTilt++ ) {
@@ -1145,7 +1145,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
         this->wanted_pixel_size_sq = this->wanted_pixel_size * this->wanted_pixel_size;
 
-        wxPrintf("for Tilt %d, scaling the pixel size from %3.3f to %3.3f\n", iTilt, this->unscaled_pixel_size, this->wanted_pixel_size);
+        Printf("for Tilt %d, scaling the pixel size from %3.3f to %3.3f\n", iTilt, this->unscaled_pixel_size, this->wanted_pixel_size);
 
         float          total_drift = 0.0f;
         RotationMatrix rotate_waters;
@@ -1165,7 +1165,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             float psiOUT   = 0;
             float thetaOUT = 0;
 
-            wxPrintf("\n\nWorking on iParticle %d/ %d\n\n", iTilt, number_of_images);
+            Printf("\n\nWorking on iParticle %d/ %d\n\n", iTilt, number_of_images);
 
             particle_rot.SetToEulerRotation(-tilt_psi[iTilt], -tilt_theta[iTilt], -tilt_phi[iTilt]);
             // For particle stack, use the fixed supplied mean_defocus, and apply a fixed amount of astigmatism at random angle to make sure everything is filled in
@@ -1179,7 +1179,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
             else {
                 defocus_randomizer = my_rand.GetUniformRandomSTD(0.f, 1.f) * this->astigmatism_scaling * this->stdErr;
-                wxPrintf("For the particle stack, stretching the mean_defocus by %3.2f percent and randmozing the astigmatism angle -90,90", 100 * defocus_randomizer);
+                Printf("For the particle stack, stretching the mean_defocus by %3.2f percent and randmozing the astigmatism angle -90,90", 100 * defocus_randomizer);
                 wanted_defocus_1_in_angstroms = this->mean_defocus * (1 + defocus_randomizer) + shift_z[iTilt]; // A
                 wanted_defocus_2_in_angstroms = this->mean_defocus * (1 - defocus_randomizer) + shift_z[iTilt]; //A
                 wanted_astigmatism_azimuth    = my_rand.GetUniformRandomSTD(-89.9999f, 89.99999f);
@@ -1194,7 +1194,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             wanted_defocus_1_in_angstroms *= scale_defocus;
             wanted_defocus_2_in_angstroms *= scale_defocus;
             if ( DO_PRINT ) {
-                wxPrintf("Scaling the mean_defocus by %6.6f to match the def at 300 KeV\n", scale_defocus);
+                Printf("Scaling the mean_defocus by %6.6f to match the def at 300 KeV\n", scale_defocus);
             }
         }
         // Scale the mean_defocus so that it is equivalent to 300KeV for experiment
@@ -1272,7 +1272,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             size_neighborhood = sp.GetNeighborhoodSize(BF);
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\n\tfor frame %d the size neigborhood is %d\n\n", iFrame, this->size_neighborhood);
+                Printf("\n\n\tfor frame %d the size neigborhood is %d\n\n", iFrame, this->size_neighborhood);
             }
 
             if ( DO_PHASE_PLATE ) {
@@ -1283,7 +1283,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("using neighborhood of %2.2f vox^3 for waters and %2.2f vox^3 for non-waters\n", powf(this->size_neighborhood_water * 2 + 1, 3), powf(this->size_neighborhood * 2 + 1, 3));
+                Printf("using neighborhood of %2.2f vox^3 for waters and %2.2f vox^3 for non-waters\n", powf(this->size_neighborhood_water * 2 + 1, 3), powf(this->size_neighborhood * 2 + 1, 3));
             }
             timer.start("Calc H20 Atoms");
             ////////////////////////////////////////////////////////////////////////////////
@@ -1301,12 +1301,12 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 }
 
                 if ( DO_PRINT ) {
-                    wxPrintf("Starting projected water calc with sizeN %d, %d\n", this->size_neighborhood_water * 2 + 1, this->size_neighborhood_water * 2 + 1);
+                    Printf("Starting projected water calc with sizeN %d, %d\n", this->size_neighborhood_water * 2 + 1, this->size_neighborhood_water * 2 + 1);
                 }
                 calc_water_potential(projected_water, water);
 
                 if ( DO_PRINT ) {
-                    wxPrintf("Finishing projected water calc\n");
+                    Printf("Finishing projected water calc\n");
                 }
                 need_to_allocate_projected_water = false;
             }
@@ -1339,14 +1339,14 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\n\tfor frame %d the size of the specimen is %d, %d\n\n", iFrame, padSpecimenX, padSpecimenY);
+                Printf("\n\n\tfor frame %d the size of the specimen is %d, %d\n\n", iFrame, padSpecimenX, padSpecimenY);
             }
 
             // Set the minimum specimen volume to allow trimming of the tapered region. Note that the z dimension must be set on each slab, it is ignored for 2d
             coords.SetSpecimenVolume(current_specimen.vol_nX, current_specimen.vol_nY, current_specimen.vol_nZ);
             coords.SetSolventPadding(current_specimen.vol_nX + padSpecimenX, current_specimen.vol_nY + padSpecimenY, current_specimen.vol_nZ);
             if ( DO_PRINT ) {
-                wxPrintf("\n\n\t\twanted size is %d\n\n", padSpecimenX);
+                Printf("\n\n\t\twanted size is %d\n\n", padSpecimenX);
             }
 
             // TODO put me at the top
@@ -1360,10 +1360,10 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 else
                     pad_based_on_rotation = true;
                 if ( DO_PRINT ) {
-                    wxPrintf("Padding based on image rotation is (%d)\n", pad_based_on_rotation);
+                    Printf("Padding based on image rotation is (%d)\n", pad_based_on_rotation);
                 }
                 if ( DO_PRINT ) {
-                    wxPrintf("Current specimen is x,y,z %d,%d,%d\n", current_specimen.vol_nX, current_specimen.vol_nY, current_specimen.vol_nZ);
+                    Printf("Current specimen is x,y,z %d,%d,%d\n", current_specimen.vol_nX, current_specimen.vol_nY, current_specimen.vol_nZ);
                 }
                 water_box.Init(&current_specimen, this->size_neighborhood_water, this->wanted_pixel_size, this->dose_per_frame, max_rotation, tilt_axis, &padSpecimenX, &padSpecimenY, number_of_threads, pad_based_on_rotation);
             }
@@ -1378,7 +1378,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             if ( DO_PHASE_PLATE ) {
 
                 if ( DO_PRINT ) {
-                    wxPrintf("\n\nSimulating a phase plate for validation\n\n");
+                    Printf("\n\nSimulating a phase plate for validation\n\n");
                 }
                 coords.Allocate(&sum_phase, (PaddingStatus)solvent, true, true);
                 sum_phase.SetToConstant(0.0f);
@@ -1398,7 +1398,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
             total_drift += 0.0f; //iDrift/sqrt(2);
             if ( DO_PRINT ) {
-                wxPrintf("\n\tDrift for iTilt %d, iFrame %d is %4.4f Ang\n", iTilt, iFrame, total_drift);
+                Printf("\n\tDrift for iTilt %d, iFrame %d is %4.4f Ang\n", iTilt, iFrame, total_drift);
             }
 
             timer.start("Xform Global");
@@ -1463,20 +1463,20 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("tilt angle in radians/deg %2.2e/%2.2e iFrame %d/%f\n", full_tilt_radians, tilt_theta[iTilt], iFrame, this->number_of_frames);
+                Printf("tilt angle in radians/deg %2.2e/%2.2e iFrame %d/%f\n", full_tilt_radians, tilt_theta[iTilt], iFrame, this->number_of_frames);
             }
 
             rotated_Z = myroundint((float)water_box.vol_nX * fabsf(std::sin(full_tilt_radians)) + (float)water_box.vol_nZ * std::cos(full_tilt_radians));
 
             if ( DO_PRINT ) {
-                wxPrintf("wZ %d csZ %d,rotZ %d\n", water_box.vol_nZ, current_specimen.vol_nZ, rotated_Z);
+                Printf("wZ %d csZ %d,rotZ %d\n", water_box.vol_nZ, current_specimen.vol_nZ, rotated_Z);
             }
 
             //rotated_oZ = ceilf((rotated_Z+1)/2);
             if ( DO_PRINT ) {
-                wxPrintf("\nflat thicknes, %d and rotated_Z %d\n", current_specimen.vol_nZ, rotated_Z);
+                Printf("\nflat thicknes, %d and rotated_Z %d\n", current_specimen.vol_nZ, rotated_Z);
             }
-            wxPrintf("\nWorking on iTilt %d at %f degrees for frame %d\n", iTilt, tilt_theta[iTilt], iFrame);
+            Printf("\nWorking on iTilt %d at %f degrees for frame %d\n", iTilt, tilt_theta[iTilt], iFrame);
 
             //  TODO Should separate the mimimal slab thickness, which is a smaller to preserve memory from the minimal prop distance (ie. project sub regions of a slab)
             if ( this->propagation_distance < 0 ) {
@@ -1498,7 +1498,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             nS = ceil((float)rotated_Z / (float)nSlabs);
-            wxPrintf("rotated_Z %d nSlabs %d\n", rotated_Z, nSlabs);
+            Printf("rotated_Z %d nSlabs %d\n", rotated_Z, nSlabs);
 
             int slabIDX_start[nSlabs];
             int slabIDX_end[nSlabs];
@@ -1507,7 +1507,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             for ( iSlab = 0; iSlab < nSlabs; iSlab++ ) {
                 slabIDX_start[iSlab] = iSlab * nS;
                 slabIDX_end[iSlab]   = (iSlab + 1) * nS - 1;
-                //            if (iSlab < nSlabs - 1) if (DO_PRINT) {wxPrintf("%d %d\n",slabIDX_start[iSlab],slabIDX_end[iSlab]);}
+                //            if (iSlab < nSlabs - 1) if (DO_PRINT) {Printf("%d %d\n",slabIDX_start[iSlab],slabIDX_end[iSlab]);}
             }
             // The last slab may be a bit bigger, so make sure you don't miss acurrent_specimen.vol_nYthing.
             slabIDX_end[nSlabs - 1] = rotated_Z - 1;
@@ -1515,10 +1515,10 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 nSlabs -= 1;
             }
             if ( nSlabs > 2 ) {
-                wxPrintf("\n\nnSlabs %d\niSlab %d\nlSlab %d\n", nSlabs, slabIDX_end[nSlabs - 2] - slabIDX_end[nSlabs - 3] + 1, slabIDX_end[nSlabs - 1] - slabIDX_end[nSlabs - 2] + 1);
+                Printf("\n\nnSlabs %d\niSlab %d\nlSlab %d\n", nSlabs, slabIDX_end[nSlabs - 2] - slabIDX_end[nSlabs - 3] + 1, slabIDX_end[nSlabs - 1] - slabIDX_end[nSlabs - 2] + 1);
             }
             else {
-                wxPrintf("\n\nnSlabs %d\niSlab %d\nlSlab %d\n", nSlabs, slabIDX_end[0] + 1, slabIDX_start[nSlabs - 1] + 1);
+                Printf("\n\nnSlabs %d\niSlab %d\nlSlab %d\n", nSlabs, slabIDX_end[0] + 1, slabIDX_start[nSlabs - 1] + 1);
             }
 
             bool no_material_encountered = true;
@@ -1547,7 +1547,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
             for ( iSlab = 0; iSlab < nSlabs; iSlab++ ) {
                 if ( DO_PRINT )
-                    wxPrintf("Working on slice %d/%d\n", iSlab, nSlabs);
+                    Printf("Working on slice %d/%d\n", iSlab, nSlabs);
 
                 scattering_total_shift[iSlab] = 0.0f;
                 propagator_distance[iSlab]    = -1.0f * (this->wanted_pixel_size * (slabIDX_end[iSlab] - slabIDX_start[iSlab] + 1));
@@ -1569,10 +1569,10 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
                 // Because we will project along Z, we could put Z on the rows
                 if ( DO_PRINT ) {
-                    wxPrintf("iSlab %d %d %d\n", iSlab, slabIDX_start[iSlab], slabIDX_end[iSlab]);
+                    Printf("iSlab %d %d %d\n", iSlab, slabIDX_start[iSlab], slabIDX_end[iSlab]);
                 }
                 if ( DO_PRINT ) {
-                    wxPrintf("slab_oZ %f slab_nZ %d rotated_oZ %f\n", slab_oZ, slab_nZ, rotated_oZ);
+                    Printf("slab_oZ %f slab_nZ %d rotated_oZ %f\n", slab_oZ, slab_nZ, rotated_oZ);
                 }
 
                 timer.start("Allocate 3d slabs");
@@ -1677,7 +1677,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                             distance_slab.BackwardFFT( );
                         }
                         if ( DO_PRINT ) {
-                            wxPrintf("\n\n\t\tMultiplying distance slab by wgt %4.4e\n\n", wgt);
+                            Printf("\n\n\t\tMultiplying distance slab by wgt %4.4e\n\n", wgt);
                         }
 
                         distance_slab.MultiplyByConstant(this->wgt);
@@ -1693,7 +1693,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                     //for trouble shooting, save each 3d slab
 
                     int offset_slab = scattering_slab.physical_address_of_box_center_z - Potential_3d.physical_address_of_box_center_z + slabIDX_start[iSlab];
-                    wxPrintf("Inserting slab %d at position %d\n", iSlab, offset_slab);
+                    Printf("Inserting slab %d at position %d\n", iSlab, offset_slab);
                     Potential_3d.InsertOtherImageAtSpecifiedPosition(&scattering_slab, 0, 0, offset_slab);
 
                     if ( iSlab == nSlabs - 1 ) {
@@ -1703,7 +1703,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                         int         cubic_size = std::max(std::max(Potential_3d.logical_x_dimension, Potential_3d.logical_y_dimension), Potential_3d.logical_z_dimension);
                         // To get the pixel size exact, ensure the volume is a factor of the binning size. If this differs from the wanted size, address after Fourier cropping.
                         int exact_cropping_size = cubic_size + (wanted_output_size - IsOdd(wanted_output_size)) - (cubic_size / bin3d);
-                        wxPrintf("Found a max cubic dimension of %d\nFound an exact cropping size of %d\n", cubic_size, exact_cropping_size);
+                        Printf("Found a max cubic dimension of %d\nFound an exact cropping size of %d\n", cubic_size, exact_cropping_size);
                         Potential_3d.Resize(exact_cropping_size, exact_cropping_size, exact_cropping_size, Potential_3d.ReturnAverageOfRealValuesOnEdges( ));
                         //                    Potential_3d.QuickAndDirtyWriteSlices("tmpNotCropped.mrc",1,cubic_size);
 
@@ -1748,7 +1748,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                         delete[] dose_filter;
 
                         if ( this->bin3d > 1 ) {
-                            wxPrintf("\nFourier cropping your 3d by a factor of %d\n", this->bin3d);
+                            Printf("\nFourier cropping your 3d by a factor of %d\n", this->bin3d);
                             Potential_3d.Resize(exact_cropping_size / this->bin3d, exact_cropping_size / this->bin3d, exact_cropping_size / this->bin3d);
                         }
 
@@ -1757,7 +1757,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                         // Now make sure we come out at the correct 3d size.
                         Potential_3d.Resize(wanted_output_size, wanted_output_size, wanted_output_size, 0.0f);
 
-                        wxPrintf("Writing out your 3d slices %d --> %d\n", 1, wanted_output_size);
+                        Printf("Writing out your 3d slices %d --> %d\n", 1, wanted_output_size);
                         Potential_3d.WriteSlices(&mrc_out, 1, wanted_output_size);
                         mrc_out.SetPixelSize(this->wanted_pixel_size * this->bin3d);
                         mrc_out.CloseFile( );
@@ -1839,7 +1839,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                     int   y_coordinate_2d;
                     int   x_coordinate_2d;
                     float sinc_weight;
-                    // wxPrintf("For frame %d blur is %f %f\n", iFrame, this_shift_x, this_shift_y);
+                    // Printf("For frame %d blur is %f %f\n", iFrame, this_shift_x, this_shift_y);
 
                     for ( int j = 0; j <= scattering_potential[iSlab].physical_upper_bound_complex_y; j++ ) {
                         y_coordinate_2d = scattering_potential[iSlab].ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * scattering_potential[iSlab].fourier_voxel_size_y / wanted_pixel_size;
@@ -1891,7 +1891,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                     timer.start("Fill H20");
                     // Now loop back over adding waters where appropriate
                     if ( DO_PRINT ) {
-                        wxPrintf("Working on waters, slab %d\n", iSlab);
+                        Printf("Working on waters, slab %d\n", iSlab);
                     }
 
                     if ( add_mean_water_potential ) {
@@ -2023,7 +2023,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 total_mass += scattering_mass[iTot];
                 total_prod += scattering_mass[iTot] * scattering_total_shift[iTot];
                 if ( DO_PRINT )
-                    wxPrintf("Mass, prj %3.3e %3.3e\n", scattering_mass[iTot], scattering_total_shift[iTot]);
+                    Printf("Mass, prj %3.3e %3.3e\n", scattering_mass[iTot], scattering_total_shift[iTot]);
 
                 //            inelastic_potential[iTot].AddConstant(fractional_surface_error);
             }
@@ -2031,16 +2031,16 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             scattering_center_of_mass = total_prod / total_mass;
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\nFound a scattering cetner of mass at %3.3f Ang\n\n", scattering_center_of_mass);
+                Printf("\n\nFound a scattering cetner of mass at %3.3f Ang\n\n", scattering_center_of_mass);
             }
 
             this->current_total_exposure += this->dose_per_frame; // increment the dose
             if ( DO_PRINT ) {
-                wxPrintf("Exposure is %3.3f for frame\n", this->current_total_exposure, iFrame + 1);
+                Printf("Exposure is %3.3f for frame\n", this->current_total_exposure, iFrame + 1);
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonSolventAtoms( ));
+                Printf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonSolventAtoms( ));
             }
 
             //        #pragma omp parallel num_threads(4)
@@ -2066,7 +2066,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("%f %f %f\n", scattering_center_of_mass, propagator_distance[0], defocus_offset / (2.0f * (float)nSlabs));
+                Printf("%f %f %f\n", scattering_center_of_mass, propagator_distance[0], defocus_offset / (2.0f * (float)nSlabs));
             }
 
             // todo it still isn't immediately clear which approach is correct. I would think the center of mass is what will be measured by ctffind
@@ -2074,11 +2074,11 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             defocus_offset = scattering_center_of_mass - propagator_distance[0] / 2.0f;
 
             if ( DO_PRINT ) {
-                wxPrintf("Propagator distance is %3.3e Angstroms, with offset for CTF of %3.3e Angstroms for the specimen.\n", propagator_distance[0], defocus_offset);
+                Printf("Propagator distance is %3.3e Angstroms, with offset for CTF of %3.3e Angstroms for the specimen.\n", propagator_distance[0], defocus_offset);
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonSolventAtoms( ));
+                Printf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonSolventAtoms( ));
             }
 
             //        #pragma omp parallel num_threads(4)
@@ -2100,7 +2100,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             //        WaveFunctionPropagator wave_function(this->set_real_part_wave_function_in, wanted_amplitude_contrast, wanted_pixel_size, number_of_threads, beam_tilt_x, beam_tilt_y, DO_BEAM_TILT_FULL);
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\nWanted defocus 1 and 2  %5.5e %5.5e\n\n", wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms);
+                Printf("\n\nWanted defocus 1 and 2  %5.5e %5.5e\n\n", wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms);
             }
             if ( DO_COHERENCE_ENVELOPE ) {
                 wave_function.SetCTF(wanted_acceleration_voltage,
@@ -2141,7 +2141,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                     // Measuring the amplitude contrast is expensive as the wave propagation has to be done twice, along with  multiple CTF fits, which include disk writes. Only do on the first frame.
                     amplitude_contrast = wave_function.DoPropagation(img_frame, scattering_potential, inelastic_potential, 0, nSlabs, image_mean.data( ), inelastic_mean.data( ), propagator_distance.data( ), true, tilt_to_scale_search_range);
                     if ( DO_PRINT ) {
-                        wxPrintf("\nFound an amplitude contrast of %3.6f\n\n", amplitude_contrast);
+                        Printf("\nFound an amplitude contrast of %3.6f\n\n", amplitude_contrast);
                     }
                 }
                 else {
@@ -2223,7 +2223,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             } // loop over image, then optionally perfect reference
 
             if ( DO_PRINT ) {
-                wxPrintf("before the destructor there are %ld non-water-atoms\n", sp.ReturnTotalNumberOfNonSolventAtoms( ));
+                Printf("before the destructor there are %ld non-water-atoms\n", sp.ReturnTotalNumberOfNonSolventAtoms( ));
             }
             if ( DO_PHASE_PLATE ) {
 
@@ -2231,7 +2231,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 MRCFile     mrc_out(fileNameOUT, true);
                 coords.PadToWantedSize(&sum_phase, wanted_output_size);
                 EmpiricalDistribution<double> phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues( );
-                wxPrintf("\n\tPhase plate shift avg: %3.6f\n\tPhase plate shift std %3.6f\n\tPhase plate shift relative error %3.6f\n",
+                Printf("\n\tPhase plate shift avg: %3.6f\n\tPhase plate shift std %3.6f\n\tPhase plate shift relative error %3.6f\n",
                          phase_shift_distribution.GetSampleMean( ), phase_shift_distribution.GetSampleVariance( ), 100.f * std::abs(phase_shift_distribution.GetSampleMean( ) - pi_v<float> / 2) / (pi_v<float> / 2));
                 sum_phase.WriteSlices(&mrc_out, 1, 1);
 
@@ -2282,7 +2282,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             parameters.total_exposure                     = current_total_exposure;
 
             if ( (ONLY_SAVE_SUMS && iFrame < 1) || (! ONLY_SAVE_SUMS) ) {
-                output_star_file.all_parameters.Add(parameters);
+                output_star_file.all_parameters.push_back(parameters);
             }
 
             output_image_stack[iTilt * (int)number_of_frames + iFrame].CopyFrom(img_frame);
@@ -2388,7 +2388,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     output_star_file.WriteTocisTEMStarFile(output_star_file_name);
 
     if ( DO_PRINT ) {
-        wxPrintf("%s\n", this->output_filename);
+        Printf("%s\n", this->output_filename);
     }
 
     bool    over_write = true;
@@ -2411,7 +2411,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     }
 
     if ( DO_PRINT ) {
-        wxPrintf("\n\nnumber_of_images %d N_FRAMES %d\n\n", number_of_images, myroundint(this->number_of_frames));
+        Printf("\n\nnumber_of_images %d N_FRAMES %d\n\n", number_of_images, myroundint(this->number_of_frames));
     }
 
     Curve whitening_filter;
@@ -2439,7 +2439,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     // This assumes all tilts have been made the same size (which they should be.)
     //        tilt_sum.Allocate(xDIM,yDIM, 1);
     if ( DO_PRINT ) {
-        wxPrintf("outputSize %d %d\n", outputSize.x, outputSize.y);
+        Printf("outputSize %d %d\n", outputSize.x, outputSize.y);
     }
     tilt_sum.Allocate(outputSize.x, outputSize.y, 1);
     tilt_sum.SetToConstant(0.0);
@@ -2467,13 +2467,13 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     for ( int iImg = 0; iImg < number_of_images * (int)this->number_of_frames; iImg += final_tilt_inc ) {
 
         if ( DO_PRINT ) {
-            wxPrintf("save sums inc saved i %d %d %d %d\n", ONLY_SAVE_SUMS, final_tilt_inc, n_tilts_saved, iImg);
+            Printf("save sums inc saved i %d %d %d %d\n", ONLY_SAVE_SUMS, final_tilt_inc, n_tilts_saved, iImg);
         }
         // I am getting some nans on occassion, but so far they only show up in big expensive calcs, so add a nan check and print info to see if
         // the problem can be isolated.
         if ( output_image_stack[iImg].HasNan( ) == true ) {
             if ( DO_PRINT ) {
-                wxPrintf("Frame %d / %d has NaN values, trashing it\n", iImg, number_of_images * (int)this->number_of_frames);
+                Printf("Frame %d / %d has NaN values, trashing it\n", iImg, number_of_images * (int)this->number_of_frames);
             }
             output_image_stack[iImg].SetToConstant(0.0f);
             continue;
@@ -2600,7 +2600,7 @@ void SimulateApp::calc_water_potential(Image* projected_water, AtomType wanted_a
     }
 
     if ( DO_PRINT ) {
-        wxPrintf("\nbFactor and leadterm and wavelength %f %4.4e %4.4e %4.4e\n", bFactor, water_lead_term, sp.lead_term( ), wavelength);
+        Printf("\nbFactor and leadterm and wavelength %f %4.4e %4.4e %4.4e\n", bFactor, water_lead_term, sp.lead_term( ), wavelength);
     }
 
     float bPlusB[5];
@@ -2793,14 +2793,14 @@ void SimulateApp::fill_water_potential(const PDB* current_specimen, Image* scatt
 
                         current_distance = sqrtf(current_distance);
                         current_weight   = return_hydration_weight(current_distance, wanted_pixel_size);
-                        //                    wxPrintf("Hydration weight at distance r is %3.3e %3.3f\n",current_weight,current_distance);
+                        //                    Printf("Hydration weight at distance r is %3.3e %3.3f\n",current_weight,current_distance);
                     }
                     else {
                         current_weight = 1.0f;
                     }
                 }
 
-                //            wxPrintf("This water scale is %3.3f\n",current_weight);
+                //            Printf("This water scale is %3.3f\n",current_weight);
                 if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
                     timer.start("w_neigh");
 
@@ -2811,10 +2811,10 @@ void SimulateApp::fill_water_potential(const PDB* current_specimen, Image* scatt
                         // Even with the periodic boundaries checked in shake, the rotation may place waters out of bounds. TODO this is true for non-waters as well.
                         if ( indX >= 0 && indX < projected_water_atoms.logical_x_dimension && indY >= 0 && indY < projected_water_atoms.logical_y_dimension ) {
 
-                            //                        wxPrintf("%d %d ,%d,  %d %d %d sx sy idx\n", sx, sy, iSubPixLinearIndex, iSubPixX, iSubPixY, iSubPixZ);
+                            //                        Printf("%d %d ,%d,  %d %d %d sx sy idx\n", sx, sy, iSubPixLinearIndex, iSubPixX, iSubPixY, iSubPixZ);
                             //                        if (iSubPixLinearIndex < 0 || iSubPixLinearIndex > SUB_PIXEL_NeL -1)
                             //                        {
-                            //                            wxPrintf("%d %d ,%d,  %d %d %d sx sy idx\n", sx, sy, iSubPixLinearIndex, iSubPixX, iSubPixY, iSubPixZ);
+                            //                            Printf("%d %d ,%d,  %d %d %d sx sy idx\n", sx, sy, iSubPixLinearIndex, iSubPixX, iSubPixY, iSubPixZ);
                             //                            continue;
                             //                        }
                             if ( iSubPixLinearIndex >= 0 && iSubPixLinearIndex <= SUB_PIXEL_NeL - 1 ) {
@@ -2828,7 +2828,7 @@ void SimulateApp::fill_water_potential(const PDB* current_specimen, Image* scatt
                                     timer.lap("omp");
                             }
 
-                            //                        wxPrintf("Current Water %3.3e\n",current_weight*this->projected_water[iSubPixLinearIndex].real_values[this->projected_water[iSubPixLinearIndex].ReturnReal1DAddressFromPhysicalCoord(sx,sy,0)]);
+                            //                        Printf("Current Water %3.3e\n",current_weight*this->projected_water[iSubPixLinearIndex].real_values[this->projected_water[iSubPixLinearIndex].ReturnReal1DAddressFromPhysicalCoord(sx,sy,0)]);
                         }
                     }
                 }
@@ -2840,10 +2840,10 @@ void SimulateApp::fill_water_potential(const PDB* current_specimen, Image* scatt
 
     //    this->project(&volume_water,projected_water,0);
 
-    //    if (DO_PRINT) {wxPrintf("\nnWaters %ld added (%2.2f%%) of total on slab %d\n",nWatersAdded,100.0f*(float)nWatersAdded/(float)water_box->number_of_waters, iSlab);}
+    //    if (DO_PRINT) {Printf("\nnWaters %ld added (%2.2f%%) of total on slab %d\n",nWatersAdded,100.0f*(float)nWatersAdded/(float)water_box->number_of_waters, iSlab);}
     if ( DO_PRINT ) {
         this->total_waters_incorporated += nWatersAdded;
-        wxPrintf("Water occupies %2.2f percent of the 3d, total added = %2.0f of %ld (%2.2f)\n",
+        Printf("Water occupies %2.2f percent of the 3d, total added = %2.0f of %ld (%2.2f)\n",
                  100 * nWatersAdded / ((double)water_box->number_of_waters), this->total_waters_incorporated, water_box->number_of_waters, 100 * this->total_waters_incorporated / (double)(water_box->number_of_waters));
     }
 
@@ -2992,7 +2992,7 @@ void SimulateApp::taper_edges(Image* image_to_taper, int iSlab, bool inelastic_i
         this->image_mean[iSlab] = image_to_taper[iSlab].ReturnAverageOfRealValues(0.0);
     }
     if ( DO_PRINT ) {
-        wxPrintf("%d image mean for taper %f\n", iSlab, this->image_mean[iSlab]);
+        Printf("%d image mean for taper %f\n", iSlab, this->image_mean[iSlab]);
     }
 }
 

@@ -1,7 +1,7 @@
 class AbstractImageFile {
 
   public:
-    wxFileName filename;
+    std::filesystem::path filename;
 
     AbstractImageFile( );
     AbstractImageFile(std::string filename, bool overwrite = false);

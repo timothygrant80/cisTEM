@@ -69,7 +69,7 @@ void RunProfile::AddCommand(RunCommand wanted_command) {
     number_of_run_commands++;
 }
 
-void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms) {
+void RunProfile::AddCommand(std::string wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms) {
     // check we have enough memory
 
     CheckNumberAndGrow( );
@@ -114,9 +114,9 @@ long RunProfile::ReturnTotalJobs( ) {
     return total_jobs;
 }
 
-void RunProfile::SubstituteExecutableName(wxString executable_name) {
+void RunProfile::SubstituteExecutableName(std::string executable_name) {
     for ( long counter = 0; counter < number_of_run_commands; counter++ ) {
-        run_commands[counter].command_to_run.Replace("$command", executable_name);
+        ReplaceAll(run_commands[counter].command_to_run, "$command", executable_name);
     }
 }
 

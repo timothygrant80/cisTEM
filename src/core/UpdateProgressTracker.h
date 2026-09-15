@@ -7,7 +7,7 @@
 // wx-base only, so libcore does not depend on GUI code.
 class UpdateProgressTracker {
   public:
-    virtual void OnUpdateProgress(int progress, wxString new_msg, bool& should_update_text) = 0;
+    virtual void OnUpdateProgress(int progress, std::string new_msg, bool& should_update_text) = 0;
     virtual void OnCompletion( )                                                            = 0;
 };
 #endif

@@ -82,7 +82,7 @@ class RunJob {
     bool     SendJob(TcpSocket* socket);
     bool     RecieveJob(TcpSocket* socket);
     void     PrintAllArguments( );
-    wxString PrintAllArgumentsTowxString( );
+    std::string PrintAllArgumentsToString( );
 
     RunJob& operator=(const RunJob& other_job);
     RunJob& operator=(const RunJob* other_job);
@@ -97,11 +97,11 @@ class JobPackage {
     RunProfile my_profile;
     RunJob*    jobs;
 
-    JobPackage(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs);
+    JobPackage(RunProfile wanted_profile, std::string wanted_executable_name, int wanted_number_of_jobs);
     JobPackage( );
     ~JobPackage( );
 
-    void Reset(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs);
+    void Reset(RunProfile wanted_profile, std::string wanted_executable_name, int wanted_number_of_jobs);
     void AddJob(const char* format, ...);
     bool SendJobPackage(TcpSocket* socket);
     bool ReceiveJobPackage(TcpSocket* socket);

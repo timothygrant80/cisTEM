@@ -14,13 +14,13 @@ IMPLEMENT_APP(SymmetryExpandStackAndPar)
 // override the DoInteractiveUserInput
 
 void SymmetryExpandStackAndPar::DoInteractiveUserInput( ) {
-    wxString input_particle_images;
-    wxString input_parameter_file;
-    wxString output_particle_images;
-    wxString output_parameter_file;
-    wxString symmetry;
-    wxString input_reconstruction_filename;
-    wxString input_mask_filename;
+    std::string input_particle_images;
+    std::string input_parameter_file;
+    std::string output_particle_images;
+    std::string output_parameter_file;
+    std::string symmetry;
+    std::string input_reconstruction_filename;
+    std::string input_mask_filename;
 
     bool do_subtraction;
 
@@ -93,13 +93,13 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(21);
-    my_current_job.ManualSetArguments("tttttbtffffbfbfffiiit", input_particle_images.ToUTF8( ).data( ),
-                                      input_parameter_file.ToUTF8( ).data( ),
-                                      output_particle_images.ToUTF8( ).data( ),
-                                      output_parameter_file.ToUTF8( ).data( ),
-                                      symmetry.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tttttbtffffbfbfffiiit", input_particle_images.c_str(),
+                                      input_parameter_file.c_str(),
+                                      output_particle_images.c_str(),
+                                      output_parameter_file.c_str(),
+                                      symmetry.c_str(),
                                       do_subtraction,
-                                      input_reconstruction_filename.ToUTF8( ).data( ),
+                                      input_reconstruction_filename.c_str(),
                                       pixel_size,
                                       voltage_kV,
                                       spherical_aberration_mm,
@@ -113,7 +113,7 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput( ) {
                                       cropped_box_size,
                                       first_particle,
                                       last_particle,
-                                      input_mask_filename.ToUTF8( ).data( ));
+                                      input_mask_filename.c_str());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -122,13 +122,13 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
     Particle refine_particle;
     Particle search_particle;
 
-    wxString input_particle_images         = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_parameter_file          = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString output_particle_images        = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString output_parameter_file         = my_current_job.arguments[3].ReturnStringArgument( );
-    wxString symmetry                      = my_current_job.arguments[4].ReturnStringArgument( );
+    std::string input_particle_images         = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_parameter_file          = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string output_particle_images        = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string output_parameter_file         = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string symmetry                      = my_current_job.arguments[4].ReturnStringArgument( );
     bool     do_subtraction                = my_current_job.arguments[5].ReturnBoolArgument( );
-    wxString input_reconstruction_filename = my_current_job.arguments[6].ReturnStringArgument( );
+    std::string input_reconstruction_filename = my_current_job.arguments[6].ReturnStringArgument( );
     float    pixel_size                    = my_current_job.arguments[7].ReturnFloatArgument( );
     float    voltage_kV                    = my_current_job.arguments[8].ReturnFloatArgument( );
     float    spherical_aberration_mm       = my_current_job.arguments[9].ReturnFloatArgument( );
@@ -142,7 +142,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
     int      cropped_box_size              = my_current_job.arguments[17].ReturnIntegerArgument( );
     int      first_particle                = my_current_job.arguments[18].ReturnIntegerArgument( );
     int      last_particle                 = my_current_job.arguments[19].ReturnIntegerArgument( );
-    wxString input_mask_filename           = my_current_job.arguments[20].ReturnStringArgument( );
+    std::string input_mask_filename           = my_current_job.arguments[20].ReturnStringArgument( );
 
     long current_image;
     long position_in_output_stack = 1;
@@ -205,7 +205,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
     RotationMatrix current_symmetry_related_matrix;
     RotationMatrix matrix_for_centring;
 
-    ImageFile input_stack(input_particle_images.ToStdString( ), false);
+    ImageFile input_stack(input_particle_images, false);
 
     ImageFile* input_3d_file;
     ImageFile* input_mask_file;
@@ -222,7 +222,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
         last_particle = my_input_par_file.number_of_lines;
     number_of_images_to_process = (last_particle - first_particle) + 1;
 
-    MRCFile output_stack(output_particle_images.ToStdString( ), true);
+    MRCFile output_stack(output_particle_images, true);
     my_symmetry_matrices.Init(symmetry);
 
     AnglesAndShifts my_parameters;
@@ -244,7 +244,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
         unmasked_projection_image.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
         sum_power.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
 
-        wxPrintf("\nCalculating noise power spectrum...\n\n");
+        Printf("\nCalculating noise power spectrum...\n\n");
 
         percentage = float(2500) / float(my_input_par_file.number_of_lines);
         sum_power.SetToConstant(0.0);
@@ -287,8 +287,8 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
         my_input_par_file.Rewind( );
         delete my_progress;
 
-        input_3d_file   = new ImageFile(input_reconstruction_filename.ToStdString( ), false);
-        input_mask_file = new ImageFile(input_mask_filename.ToStdString( ), false);
+        input_3d_file   = new ImageFile(input_reconstruction_filename, false);
+        input_mask_file = new ImageFile(input_mask_filename, false);
 
         input_3d.InitWithDimensions(input_3d_file->ReturnXSize( ), input_3d_file->ReturnYSize( ), input_3d_file->ReturnZSize( ), pixel_size, "C1");
         input_3d_masked.InitWithDimensions(input_3d_file->ReturnXSize( ), input_3d_file->ReturnYSize( ), input_3d_file->ReturnZSize( ), pixel_size, "C1");
@@ -298,7 +298,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
         input_3d.mask_radius = FLT_MAX;
         input_3d.density_map->CorrectSinc(900000000, 1.0, true, 0.0);
 
-        wxPrintf("Adding %f\n", -input_3d.density_map->ReturnAverageOfRealValuesAtRadius(input_3d.density_map->physical_address_of_box_center_x * 0.9));
+        Printf("Adding %f\n", -input_3d.density_map->ReturnAverageOfRealValuesAtRadius(input_3d.density_map->physical_address_of_box_center_x * 0.9));
         //offset
         input_3d.density_map->AddConstant(-input_3d.density_map->ReturnAverageOfRealValuesAtRadius(input_3d.density_map->physical_address_of_box_center_x * 0.9));
         input_3d.density_map->CorrectSinc(9000000000, 1.0, true, 0.0);
@@ -322,9 +322,9 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
     }
 
     if ( do_subtraction == false )
-        wxPrintf("\nExpanding...\n\n");
+        Printf("\nExpanding...\n\n");
     else
-        wxPrintf("\nExpanding and Subtracting...\n\n");
+        Printf("\nExpanding and Subtracting...\n\n");
 
     my_progress = new ProgressBar(number_of_images_to_process);
 
@@ -511,11 +511,11 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
 
         average_scale_factor /= double(number_of_scale_factors_calculated);
         average_difference /= double(number_of_differences_calculated);
-        wxPrintf("Average scale factor = %f\n", average_scale_factor);
-        wxPrintf("Average differnce = %f\n", average_difference);
+        Printf("Average scale factor = %f\n", average_scale_factor);
+        Printf("Average differnce = %f\n", average_difference);
     }
 
-    wxPrintf("\nSymmetryExpandStackAndPar: Normal termination\n\n");
+    Printf("\nSymmetryExpandStackAndPar: Normal termination\n\n");
 
     return true;
 }

@@ -16,7 +16,7 @@ ScatteringPotential::ScatteringPotential( ) {
 ScatteringPotential::~ScatteringPotential( ) {
 }
 
-ScatteringPotential::ScatteringPotential(const wxString& filename, int wanted_cubic_size) {
+ScatteringPotential::ScatteringPotential(const std::string& filename, int wanted_cubic_size) {
     SetDefaultValues( );
     _cubic_size = wanted_cubic_size;
     pdb_file_names.push_back(filename);
@@ -37,7 +37,7 @@ void ScatteringPotential::SetDefaultValues( ) {
     _use_hydrogens                        = 0.f;
 }
 
-void ScatteringPotential::InitPdbObject(const wxString& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass) {
+void ScatteringPotential::InitPdbObject(const std::string& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass) {
     MyDebugAssertFalse(pdb_file_names.size( ) > 0, "You can only call this function once");
     _cubic_size = wanted_cubic_size;
     pdb_file_names.push_back(filename);
@@ -346,7 +346,7 @@ void ScatteringPotential::calc_scattering_potential(const PDB* current_specimen,
                 } // end of loop over the neighborhood Y
             } // end of loop over the neighborhood X
 
-            //        wxPrintf("Possible positions added %3.3e %\n", 100.0f* (float)n_atoms_added/(float)cubic_vol);
+            //        Printf("Possible positions added %3.3e %\n", 100.0f* (float)n_atoms_added/(float)cubic_vol);
 #pragma omp critical
             for ( int iIDX = 0; iIDX < n_atoms_added - 1; iIDX++ ) {
                 //                #pragma omp atomic update

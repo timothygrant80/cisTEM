@@ -67,9 +67,9 @@ class cisTEMParameterLine {
     float        beam_tilt_y;
     float        image_shift_x;
     float        image_shift_y;
-    wxString     stack_filename;
-    wxString     original_image_filename;
-    wxString     reference_3d_filename;
+    std::string     stack_filename;
+    std::string     original_image_filename;
+    std::string     reference_3d_filename;
     int          best_2d_class;
     int          beam_tilt_group; // identify particles expected to have the same beam tilt parameters
     int          particle_group; // identify images of the same particle (all images of a given particle should have the same PARTICLE_GROUP number. E.g. across a tilt-series or movie, i.e. a frame-series))
@@ -138,12 +138,12 @@ class cisTEMParameterMask {
     cisTEMParameterMask( );
 };
 
-WX_DECLARE_OBJARRAY(cisTEMParameterLine, ArrayOfcisTEMParameterLines);
+typedef std::vector<cisTEMParameterLine> ArrayOfcisTEMParameterLines;
 
 class cisTEMParameters {
 
   public:
-    wxArrayString               header_comments;
+    std::vector<std::string>               header_comments;
     ArrayOfcisTEMParameterLines all_parameters;
 
     cisTEMParameterMask parameters_to_write;
@@ -158,10 +158,10 @@ class cisTEMParameters {
     cisTEMParameters( );
     ~cisTEMParameters( );
 
-    void ReadFromcisTEMStarFile(wxString wanted_filename, bool exclude_negative_film_numbers = false);
-    void ReadFromcisTEMBinaryFile(wxString wanted_filename, bool exclude_negative_film_numbers = false);
+    void ReadFromcisTEMStarFile(std::string wanted_filename, bool exclude_negative_film_numbers = false);
+    void ReadFromcisTEMBinaryFile(std::string wanted_filename, bool exclude_negative_film_numbers = false);
 
-    void ReadFromFrealignParFile(wxString wanted_filename,
+    void ReadFromFrealignParFile(std::string wanted_filename,
                                  float    wanted_pixel_size         = 0.0f,
                                  float    wanted_microscope_voltage = 0.0f,
                                  float    wanted_microscope_cs      = 0.0f,
@@ -176,88 +176,88 @@ class cisTEMParameters {
 
     int  ReturnNumberOfParametersToWrite( );
     int  ReturnNumberOfLinesToWrite(int first_image_to_write, int last_image_to_write);
-    void WriteTocisTEMBinaryFile(wxString wanted_filename, int first_image_to_write = -1, int last_image_to_write = -1);
+    void WriteTocisTEMBinaryFile(std::string wanted_filename, int first_image_to_write = -1, int last_image_to_write = -1);
 
-    void AddCommentToHeader(wxString comment_to_add);
-    void WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write = -1, int last_line_to_write = -1, int first_image_to_write = -1, int last_image_to_write = -1);
+    void AddCommentToHeader(std::string comment_to_add);
+    void WriteTocisTEMStarFile(std::string wanted_filename, int first_line_to_write = -1, int last_line_to_write = -1, int first_image_to_write = -1, int last_image_to_write = -1);
 
     void ClearAll( );
 
     void PreallocateMemoryAndBlank(int number_to_allocate);
 
-    inline long ReturnNumberofLines( ) { return all_parameters.GetCount( ); }
+    inline long ReturnNumberofLines( ) { return all_parameters.size(); }
 
-    inline cisTEMParameterLine ReturnLine(int line_number) { return all_parameters.Item(line_number); }
+    inline cisTEMParameterLine ReturnLine(int line_number) { return all_parameters[line_number]; }
 
-    inline int ReturnPositionInStack(int line_number) { return all_parameters.Item(line_number).position_in_stack; }
+    inline int ReturnPositionInStack(int line_number) { return all_parameters[line_number].position_in_stack; }
 
-    inline int ReturnImageIsActive(int line_number) { return all_parameters.Item(line_number).image_is_active; }
+    inline int ReturnImageIsActive(int line_number) { return all_parameters[line_number].image_is_active; }
 
-    inline float ReturnPhi(int line_number) { return all_parameters.Item(line_number).phi; }
+    inline float ReturnPhi(int line_number) { return all_parameters[line_number].phi; }
 
-    inline float ReturnTheta(int line_number) { return all_parameters.Item(line_number).theta; }
+    inline float ReturnTheta(int line_number) { return all_parameters[line_number].theta; }
 
-    inline float ReturnPsi(int line_number) { return all_parameters.Item(line_number).psi; }
+    inline float ReturnPsi(int line_number) { return all_parameters[line_number].psi; }
 
-    inline float ReturnXShift(int line_number) { return all_parameters.Item(line_number).x_shift; }
+    inline float ReturnXShift(int line_number) { return all_parameters[line_number].x_shift; }
 
-    inline float ReturnYShift(int line_number) { return all_parameters.Item(line_number).y_shift; }
+    inline float ReturnYShift(int line_number) { return all_parameters[line_number].y_shift; }
 
-    inline float ReturnDefocus1(int line_number) { return all_parameters.Item(line_number).defocus_1; }
+    inline float ReturnDefocus1(int line_number) { return all_parameters[line_number].defocus_1; }
 
-    inline float ReturnDefocus2(int line_number) { return all_parameters.Item(line_number).defocus_2; }
+    inline float ReturnDefocus2(int line_number) { return all_parameters[line_number].defocus_2; }
 
-    inline float ReturnDefocusAngle(int line_number) { return all_parameters.Item(line_number).defocus_angle; }
+    inline float ReturnDefocusAngle(int line_number) { return all_parameters[line_number].defocus_angle; }
 
-    inline float ReturnPhaseShift(int line_number) { return all_parameters.Item(line_number).phase_shift; }
+    inline float ReturnPhaseShift(int line_number) { return all_parameters[line_number].phase_shift; }
 
-    inline float ReturnOccupancy(int line_number) { return all_parameters.Item(line_number).occupancy; }
+    inline float ReturnOccupancy(int line_number) { return all_parameters[line_number].occupancy; }
 
-    inline float ReturnLogP(int line_number) { return all_parameters.Item(line_number).logp; }
+    inline float ReturnLogP(int line_number) { return all_parameters[line_number].logp; }
 
-    inline float ReturnSigma(int line_number) { return all_parameters.Item(line_number).sigma; }
+    inline float ReturnSigma(int line_number) { return all_parameters[line_number].sigma; }
 
-    inline float ReturnScore(int line_number) { return all_parameters.Item(line_number).score; }
+    inline float ReturnScore(int line_number) { return all_parameters[line_number].score; }
 
-    inline float ReturnScoreChange(int line_number) { return all_parameters.Item(line_number).score_change; }
+    inline float ReturnScoreChange(int line_number) { return all_parameters[line_number].score_change; }
 
-    inline float ReturnPixelSize(int line_number) { return all_parameters.Item(line_number).pixel_size; }
+    inline float ReturnPixelSize(int line_number) { return all_parameters[line_number].pixel_size; }
 
-    inline float ReturnMicroscopekV(int line_number) { return all_parameters.Item(line_number).microscope_voltage_kv; }
+    inline float ReturnMicroscopekV(int line_number) { return all_parameters[line_number].microscope_voltage_kv; }
 
-    inline float ReturnMicroscopeCs(int line_number) { return all_parameters.Item(line_number).microscope_spherical_aberration_mm; }
+    inline float ReturnMicroscopeCs(int line_number) { return all_parameters[line_number].microscope_spherical_aberration_mm; }
 
-    inline float ReturnAmplitudeContrast(int line_number) { return all_parameters.Item(line_number).amplitude_contrast; }
+    inline float ReturnAmplitudeContrast(int line_number) { return all_parameters[line_number].amplitude_contrast; }
 
-    inline float ReturnBeamTiltX(int line_number) { return all_parameters.Item(line_number).beam_tilt_x; }
+    inline float ReturnBeamTiltX(int line_number) { return all_parameters[line_number].beam_tilt_x; }
 
-    inline float ReturnBeamTiltY(int line_number) { return all_parameters.Item(line_number).beam_tilt_y; }
+    inline float ReturnBeamTiltY(int line_number) { return all_parameters[line_number].beam_tilt_y; }
 
-    inline float ReturnImageShiftX(int line_number) { return all_parameters.Item(line_number).image_shift_x; }
+    inline float ReturnImageShiftX(int line_number) { return all_parameters[line_number].image_shift_x; }
 
-    inline float ReturnImageShiftY(int line_number) { return all_parameters.Item(line_number).image_shift_y; }
+    inline float ReturnImageShiftY(int line_number) { return all_parameters[line_number].image_shift_y; }
 
-    inline wxString ReturnStackFilename(int line_number) { return all_parameters.Item(line_number).stack_filename; }
+    inline std::string ReturnStackFilename(int line_number) { return all_parameters[line_number].stack_filename; }
 
-    inline wxString ReturnOriginalImageFilename(int line_number) { return all_parameters.Item(line_number).original_image_filename; }
+    inline std::string ReturnOriginalImageFilename(int line_number) { return all_parameters[line_number].original_image_filename; }
 
-    inline wxString ReturnReference3DFilename(int line_number) { return all_parameters.Item(line_number).reference_3d_filename; }
+    inline std::string ReturnReference3DFilename(int line_number) { return all_parameters[line_number].reference_3d_filename; }
 
-    inline int ReturnBest2DClass(int line_number) { return all_parameters.Item(line_number).best_2d_class; }
+    inline int ReturnBest2DClass(int line_number) { return all_parameters[line_number].best_2d_class; }
 
-    inline int ReturnBeamTiltGroup(int line_number) { return all_parameters.Item(line_number).beam_tilt_group; }
+    inline int ReturnBeamTiltGroup(int line_number) { return all_parameters[line_number].beam_tilt_group; }
 
-    inline int ReturnParticleGroup(int line_number) { return all_parameters.Item(line_number).particle_group; }
+    inline int ReturnParticleGroup(int line_number) { return all_parameters[line_number].particle_group; }
 
-    inline int ReturnAssignedSubset(int line_number) { return all_parameters.Item(line_number).assigned_subset; }
+    inline int ReturnAssignedSubset(int line_number) { return all_parameters[line_number].assigned_subset; }
 
-    inline float ReturnPreExposure(int line_number) { return all_parameters.Item(line_number).pre_exposure; }
+    inline float ReturnPreExposure(int line_number) { return all_parameters[line_number].pre_exposure; }
 
-    inline float ReturnTotalExposure(int line_number) { return all_parameters.Item(line_number).total_exposure; }
+    inline float ReturnTotalExposure(int line_number) { return all_parameters[line_number].total_exposure; }
 
-    inline float ReturnOriginalXPosition(int line_number) { return all_parameters.Item(line_number).original_x_position; }
+    inline float ReturnOriginalXPosition(int line_number) { return all_parameters[line_number].original_x_position; }
 
-    inline float ReturnOriginalYPosition(int line_number) { return all_parameters.Item(line_number).original_y_position; }
+    inline float ReturnOriginalYPosition(int line_number) { return all_parameters[line_number].original_y_position; }
 
     float ReturnAverageSigma(bool exclude_negative_film_numbers = false);
     float ReturnAverageOccupancy(bool exclude_negative_film_numbers = false);
@@ -278,7 +278,7 @@ class cisTEMParameters {
     int   ReturnMinPositionInStack(bool exclude_negative_film_numbers = false);
     int   ReturnMaxPositionInStack(bool exclude_negative_film_numbers = false);
 
-    void SetAllReference3DFilename(wxString wanted_filename);
+    void SetAllReference3DFilename(std::string wanted_filename);
     void SortByReference3DFilename( );
 
     cisTEMParameterLine ReturnParameterAverages(bool only_average_active = true);

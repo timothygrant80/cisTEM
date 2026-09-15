@@ -1,8 +1,4 @@
 #include "core_headers.h"
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayofClassificationResults);
-WX_DEFINE_OBJARRAY(ArrayofClassifications);
-WX_DEFINE_OBJARRAY(ArrayofShortClassificationInfos);
 
 ClassificationResult::ClassificationResult( ) {
     position_in_stack                  = -1;
@@ -32,7 +28,7 @@ ClassificationResult::~ClassificationResult( ) {
 ShortClassificationInfo::ShortClassificationInfo( ) {
     classification_id           = -1;
     refinement_package_asset_id = -1;
-    name                        = wxEmptyString;
+    name                        = std::string();
     number_of_particles         = 0;
     number_of_classes           = 0;
     class_average_file          = "";
@@ -60,10 +56,10 @@ Classification::Classification( ) {
 
     classification_id                        = -1;
     refinement_package_asset_id              = -1;
-    name                                     = wxEmptyString;
-    class_average_file                       = wxEmptyString;
+    name                                     = std::string();
+    class_average_file                       = std::string();
     classification_was_imported_or_generated = true;
-    datetime_of_run                          = wxDateTime::Now( );
+    datetime_of_run                          = DateTime::Now( );
     starting_classification_id               = -1;
     number_of_particles                      = 0;
     number_of_classes                        = 0;
@@ -88,16 +84,16 @@ void Classification::SizeAndFillWithEmpty(long wanted_number_of_particles) {
     ClassificationResult junk_result;
 
     number_of_particles = wanted_number_of_particles;
-    classification_results.Alloc(number_of_particles);
-    classification_results.Add(junk_result, number_of_particles);
+    classification_results.reserve(number_of_particles);
+    classification_results.insert(classification_results.end( ), number_of_particles, junk_result);
 }
 
-wxString Classification::WritecisTEMStarFile(wxString base_filename, RefinementPackage* parent_refinement_package, bool write_as_cistem_binary_file) {
-    wxString output_filename;
+std::string Classification::WritecisTEMStarFile(std::string base_filename, RefinementPackage* parent_refinement_package, bool write_as_cistem_binary_file) {
+    std::string output_filename;
     if ( write_as_cistem_binary_file == false )
-        output_filename = base_filename + wxString::Format("_%li.star", classification_id);
+        output_filename = base_filename + Format("_%li.star", classification_id);
     else
-        output_filename = base_filename + wxString::Format("_%li.cistem", classification_id);
+        output_filename = base_filename + Format("_%li.cistem", classification_id);
 
     long particle_counter;
 
@@ -135,8 +131,8 @@ wxString Classification::WritecisTEMStarFile(wxString base_filename, RefinementP
     return output_filename;
 }
 
-wxString Classification::WriteFrealignParameterFiles(wxString base_filename, RefinementPackage* parent_refinement_package) {
-    wxString output_filename;
+std::string Classification::WriteFrealignParameterFiles(std::string base_filename, RefinementPackage* parent_refinement_package) {
+    std::string output_filename;
 
     float output_parameters[17];
     float parameter_average[17];
@@ -147,7 +143,7 @@ wxString Classification::WriteFrealignParameterFiles(wxString base_filename, Ref
     ZeroFloatArray(output_parameters, 17);
     ZeroFloatArray(parameter_average, 17);
 
-    output_filename                           = base_filename + wxString::Format("_%li.par", classification_id);
+    output_filename                           = base_filename + Format("_%li.par", classification_id);
     FrealignParameterFile* my_output_par_file = new FrealignParameterFile(output_filename, OPEN_TO_WRITE);
 
     my_output_par_file->WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE");

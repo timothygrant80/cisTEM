@@ -23,7 +23,7 @@ class
     float*   class_logp;
     Image*   class_averages;
     Image*   CTF_sums;
-    wxString dump_file;
+    std::string dump_file;
 
     void SendRefineResult(cisTEMParameterLine* current_params);
 
@@ -35,11 +35,11 @@ IMPLEMENT_APP(Refine2DApp)
 // override the DoInteractiveUserInput
 
 void Refine2DApp::DoInteractiveUserInput( ) {
-    wxString input_particle_images;
-    wxString input_star_filename;
-    wxString input_class_averages;
-    wxString output_star_filename;
-    wxString ouput_class_averages;
+    std::string input_particle_images;
+    std::string input_star_filename;
+    std::string input_class_averages;
+    std::string output_star_filename;
+    std::string ouput_class_averages;
     int      number_of_classes = 0;
     int      first_particle    = 1;
     int      last_particle     = 0;
@@ -101,16 +101,16 @@ void Refine2DApp::DoInteractiveUserInput( ) {
 
     int current_class = 0;
     //	my_current_job.Reset(25);
-    my_current_job.ManualSetArguments("tttttiiiffffffffibbbbtbbi", input_particle_images.ToUTF8( ).data( ),
-                                      input_star_filename.ToUTF8( ).data( ),
-                                      input_class_averages.ToUTF8( ).data( ),
-                                      output_star_filename.ToUTF8( ).data( ),
-                                      ouput_class_averages.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tttttiiiffffffffibbbbtbbi", input_particle_images.c_str(),
+                                      input_star_filename.c_str(),
+                                      input_class_averages.c_str(),
+                                      output_star_filename.c_str(),
+                                      ouput_class_averages.c_str(),
                                       number_of_classes, first_particle, last_particle, percent_used,
                                       pixel_size, mask_radius, low_resolution_limit, high_resolution_limit,
                                       angular_step, max_search_range, smoothing_factor,
                                       padding_factor, normalize_particles, invert_contrast,
-                                      exclude_blank_edges, dump_arrays, dump_file.ToUTF8( ).data( ),
+                                      exclude_blank_edges, dump_arrays, dump_file.c_str(),
                                       auto_mask, auto_centre, max_threads);
 }
 
@@ -120,11 +120,11 @@ bool Refine2DApp::DoCalculation( ) {
     Particle input_particle;
     Particle input_particle_local;
 
-    wxString input_particle_images = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_star_filename   = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_class_averages  = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString output_star_filename  = my_current_job.arguments[3].ReturnStringArgument( );
-    wxString ouput_class_averages  = my_current_job.arguments[4].ReturnStringArgument( );
+    std::string input_particle_images = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_star_filename   = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_class_averages  = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string output_star_filename  = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string ouput_class_averages  = my_current_job.arguments[4].ReturnStringArgument( );
     number_of_classes              = my_current_job.arguments[5].ReturnIntegerArgument( );
     int   first_particle           = my_current_job.arguments[6].ReturnIntegerArgument( );
     int   last_particle            = my_current_job.arguments[7].ReturnIntegerArgument( );
@@ -216,7 +216,7 @@ bool Refine2DApp::DoCalculation( ) {
     bool       keep_reading;
     int        current_block_read_size;
     bool       file_read;
-    wxDateTime my_time_in;
+    DateTime my_time_in;
 
     cisTEMParameterLine input_parameters;
     cisTEMParameterLine output_parameters;
@@ -229,10 +229,10 @@ bool Refine2DApp::DoCalculation( ) {
     //	ZeroFloatArray(parameter_variance, 17);
 
     if ( (is_running_locally && ! DoesFileExist(input_star_filename)) || (! is_running_locally && ! DoesFileExistWithWait(input_star_filename, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
+        SendErrorAndCrash(Format("Error: Input star file %s not found\n", input_star_filename));
     }
     if ( (is_running_locally && ! DoesFileExist(input_particle_images)) || (! is_running_locally && ! DoesFileExistWithWait(input_particle_images, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
+        SendErrorAndCrash(Format("Error: Input particle stack %s not found\n", input_particle_images));
     }
 
     cisTEMParameters input_star_file;
@@ -244,23 +244,23 @@ bool Refine2DApp::DoCalculation( ) {
     parameter_average  = input_star_file.ReturnParameterAverages( );
     parameter_variance = input_star_file.ReturnParameterVariances( );
 
-    MRCFile input_stack(input_particle_images.ToStdString( ), false);
+    MRCFile input_stack(input_particle_images, false);
     //	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
     //	FrealignParameterFile output_par_file(ouput_parameter_file, OPEN_TO_WRITE);
     MRCFile* input_classes  = NULL;
     MRCFile* output_classes = NULL;
     if ( ! dump_arrays || number_of_classes != 0 )
-        output_classes = new MRCFile(ouput_class_averages.ToStdString( ), true);
+        output_classes = new MRCFile(ouput_class_averages, true);
 
     if ( input_stack.ReturnXSize( ) != input_stack.ReturnYSize( ) ) {
-        SendErrorAndCrash(wxString::Format("Error: Particles are not square\n", input_particle_images));
+        SendErrorAndCrash(Format("Error: Particles are not square\n", input_particle_images));
     }
 
     if ( number_of_classes == 0 ) {
         if ( ! DoesFileExist(input_class_averages) ) {
-            SendErrorAndCrash(wxString::Format("Error: Input class averages %s not found\n", input_class_averages));
+            SendErrorAndCrash(Format("Error: Input class averages %s not found\n", input_class_averages));
         }
-        input_classes = new MRCFile(input_class_averages.ToStdString( ), false);
+        input_classes = new MRCFile(input_class_averages, false);
         if ( input_classes->ReturnXSize( ) != input_stack.ReturnXSize( ) || input_classes->ReturnYSize( ) != input_stack.ReturnYSize( ) ) {
             SendErrorAndCrash("Error: Dimension of particles and input classes differ\n");
         }
@@ -353,7 +353,7 @@ bool Refine2DApp::DoCalculation( ) {
     average_snr = 1.0 / powf(parameter_average.sigma, 2);
     // *****
     //	average_snr = 0.002;
-    wxPrintf("\nShift averages x, y = %g, %g, shift std x, y = %g, %g, average SNR = %g\n", parameter_average.x_shift, parameter_average.y_shift,
+    Printf("\nShift averages x, y = %g, %g, shift std x, y = %g, %g, average SNR = %g\n", parameter_average.x_shift, parameter_average.y_shift,
              sqrtf(parameter_variance.x_shift), sqrtf(parameter_variance.y_shift), average_snr);
 
     input_particle.SetParameterStatistics(parameter_average, parameter_variance);
@@ -369,24 +369,24 @@ bool Refine2DApp::DoCalculation( ) {
     output_star_file.PreallocateMemoryAndBlank(input_star_file.ReturnNumberofLines( ));
     output_star_file.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | BEST_2D_CLASS | PSI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | LOGP | SCORE | SCORE_CHANGE | OCCUPANCY | SIGMA | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y);
 
-    my_time_in = wxDateTime::Now( );
+    my_time_in = DateTime::Now( );
     output_star_file.AddCommentToHeader("# Refine2D run date and time:              " + my_time_in.FormatISOCombined(' '));
     output_star_file.AddCommentToHeader("# Input particle images:                   " + input_particle_images);
     output_star_file.AddCommentToHeader("# Input cisTEM parameter filename:         " + input_star_filename);
     output_star_file.AddCommentToHeader("# Input class averages:                    " + input_class_averages);
     output_star_file.AddCommentToHeader("# Output cisTEM parameter file:            " + output_star_filename);
     output_star_file.AddCommentToHeader("# Output class averages:                   " + ouput_class_averages);
-    output_star_file.AddCommentToHeader("# First particle to refine:                " + wxString::Format("%i", first_particle));
-    output_star_file.AddCommentToHeader("# Last particle to refine:                 " + wxString::Format("%i", last_particle));
-    output_star_file.AddCommentToHeader("# Percent of particles to use:             " + wxString::Format("%f", percent_used));
-    output_star_file.AddCommentToHeader("# Pixel size of class averages (A):        " + wxString::Format("%f", pixel_size));
-    output_star_file.AddCommentToHeader("# Mask radius for refinement (A):          " + wxString::Format("%f", mask_radius));
-    output_star_file.AddCommentToHeader("# Low resolution limit (A):                " + wxString::Format("%f", low_resolution_limit));
-    output_star_file.AddCommentToHeader("# High resolution limit (A):               " + wxString::Format("%f", high_resolution_limit));
-    output_star_file.AddCommentToHeader("# Angular step:                            " + wxString::Format("%f", angular_step));
-    output_star_file.AddCommentToHeader("# Search range (A):                        " + wxString::Format("%f", max_search_range));
-    output_star_file.AddCommentToHeader("# Smoothing factor:                        " + wxString::Format("%f", smoothing_factor));
-    output_star_file.AddCommentToHeader("# Padding factor:                          " + wxString::Format("%i", padding_factor));
+    output_star_file.AddCommentToHeader("# First particle to refine:                " + Format("%i", first_particle));
+    output_star_file.AddCommentToHeader("# Last particle to refine:                 " + Format("%i", last_particle));
+    output_star_file.AddCommentToHeader("# Percent of particles to use:             " + Format("%f", percent_used));
+    output_star_file.AddCommentToHeader("# Pixel size of class averages (A):        " + Format("%f", pixel_size));
+    output_star_file.AddCommentToHeader("# Mask radius for refinement (A):          " + Format("%f", mask_radius));
+    output_star_file.AddCommentToHeader("# Low resolution limit (A):                " + Format("%f", low_resolution_limit));
+    output_star_file.AddCommentToHeader("# High resolution limit (A):               " + Format("%f", high_resolution_limit));
+    output_star_file.AddCommentToHeader("# Angular step:                            " + Format("%f", angular_step));
+    output_star_file.AddCommentToHeader("# Search range (A):                        " + Format("%f", max_search_range));
+    output_star_file.AddCommentToHeader("# Smoothing factor:                        " + Format("%f", smoothing_factor));
+    output_star_file.AddCommentToHeader("# Padding factor:                          " + Format("%i", padding_factor));
     output_star_file.AddCommentToHeader("# Normalize particles:                     " + BoolToYesNo(normalize_particles));
     output_star_file.AddCommentToHeader("# Invert particle contrast:                " + BoolToYesNo(invert_contrast));
     output_star_file.AddCommentToHeader("# Exclude images with blank edges:         " + BoolToYesNo(exclude_blank_edges));
@@ -459,7 +459,7 @@ bool Refine2DApp::DoCalculation( ) {
     psi_start           = psi_step / 2.0 * global_random_number_generator.GetUniformRandom( );
     //	psi_max = 360.0;
 
-    wxPrintf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, binning factor = %f, new pixel size = %f, resolution limit = %f, angular step size = %f, percent_used = %f\n",
+    Printf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, binning factor = %f, new pixel size = %f, resolution limit = %f, angular step size = %f, percent_used = %f\n",
              number_of_classes, number_of_nonzero_classes, fourier_size, binning_factor, binned_pixel_size, binned_pixel_size * 2.0, psi_step, percent_used);
 
     class_logp                       = new float[number_of_nonzero_classes];
@@ -606,7 +606,7 @@ bool Refine2DApp::DoCalculation( ) {
         }
     }
     else {
-        wxPrintf("\nGenerating %i starting class averages...\n\n", number_of_classes);
+        Printf("\nGenerating %i starting class averages...\n\n", number_of_classes);
         my_progress           = new ProgressBar(images_to_process);
         number_of_blank_edges = 0;
         image_counter         = 0;
@@ -643,7 +643,7 @@ bool Refine2DApp::DoCalculation( ) {
 						JobResult *temp_result = new JobResult;
 						temp_result->SetResult(1, &temp_float);
 						AddJobToResultQueue(temp_result);
-						//wxPrintf("Refine3D : Adding job to job queue..\n");
+						//Printf("Refine3D : Adding job to job queue..\n");
 					} */
                     continue;
                 }
@@ -699,7 +699,7 @@ bool Refine2DApp::DoCalculation( ) {
                 JobResult* temp_result = new JobResult;
                 temp_result->SetResult(1, &temp_float);
                 AddJobToResultQueue(temp_result);
-                //wxPrintf("Refine2D : Adding job to job queue..\n");
+                //Printf("Refine2D : Adding job to job queue..\n");
             }
         }
 
@@ -722,14 +722,14 @@ bool Refine2DApp::DoCalculation( ) {
         delete output_classes;
         delete my_progress;
         if ( exclude_blank_edges ) {
-            wxPrintf("\nNumber of excluded images with blank edges = %i\n", number_of_blank_edges);
+            Printf("\nNumber of excluded images with blank edges = %i\n", number_of_blank_edges);
         }
-        wxPrintf("\nRefine2D: Normal termination\n\n");
+        Printf("\nRefine2D: Normal termination\n\n");
         return true;
     }
 
     if ( normalize_particles ) {
-        wxPrintf("\nCalculating noise power spectrum...\n\n");
+        Printf("\nCalculating noise power spectrum...\n\n");
         percentage = float(max_samples) / float(images_to_process);
         sum_power.SetToConstant(0.0);
         number_of_blank_edges = 0;
@@ -813,7 +813,7 @@ bool Refine2DApp::DoCalculation( ) {
                     continue;
                 }
                 //			if (input_image_local.logical_x_dimension != 128 || input_image_local.logical_y_dimension != 128 || pixel_size != 3.32 || input_parameters.pixel_size != 3.32) \
-//			wxPrintf("input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size = %i %i %g %g\n", input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size);
+//			Printf("input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size = %i %i %g %g\n", input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size);
                 input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
                 variance = input_image_local.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0f, 0.0f, 0.0f, true);
 
@@ -847,11 +847,11 @@ bool Refine2DApp::DoCalculation( ) {
         noise_power_spectrum.Reciprocal( );
 
         if ( exclude_blank_edges ) {
-            wxPrintf("\nNumber of excluded images with blank edges = %i\n", number_of_blank_edges);
+            Printf("\nNumber of excluded images with blank edges = %i\n", number_of_blank_edges);
         }
     }
 
-    wxPrintf("\nCalculating new class averages...\n\n");
+    Printf("\nCalculating new class averages...\n\n");
     number_of_blank_edges = 0;
     images_processed      = 0;
     sum_logp_total        = -std::numeric_limits<float>::max( );
@@ -1040,7 +1040,7 @@ bool Refine2DApp::DoCalculation( ) {
                 //			rotation_cache[i].SwapRealSpaceQuadrants();
             }
             input_particle_local.mask_volume = rotation_cache[0].number_of_real_space_pixels * input_particle_local.mask_volume / cropped_input_image_local.number_of_real_space_pixels;
-            //		wxPrintf("rot = %li, in = %li, mask = %g\n", rotation_cache[0].number_of_real_space_pixels, cropped_input_image_local.number_of_real_space_pixels, input_particle_local.mask_volume);
+            //		Printf("rot = %li, in = %li, mask = %g\n", rotation_cache[0].number_of_real_space_pixels, cropped_input_image_local.number_of_real_space_pixels, input_particle_local.mask_volume);
             input_particle_local.is_masked = true;
 
             sum_logp_particle_local = -std::numeric_limits<float>::max( );
@@ -1063,7 +1063,7 @@ bool Refine2DApp::DoCalculation( ) {
                 rotation_cache[number_of_rotations].MultiplyByConstant(sqrtf(variance / temp_float));
                 //			rotation_cache[number_of_rotations].MultiplyByConstant(-1.0);
                 //			rotation_cache[number_of_rotations].QuickAndDirtyWriteSlice("rot.mrc", 1);
-                //			wxPrintf("best class = %i angle = %g\n", best_class, input_parameters[3]);
+                //			Printf("best class = %i angle = %g\n", best_class, input_parameters[3]);
                 //			exit(0);
                 rotation_cache[number_of_rotations].ForwardFFT( );
                 temp_float = input_particle_local.MLBlur(input_classes_cache, ssq_X, cropped_input_image_local, rotation_cache,
@@ -1072,7 +1072,7 @@ bool Refine2DApp::DoCalculation( ) {
             }
 
             for ( current_class = 0; current_class < number_of_nonzero_classes; current_class++ ) {
-                //wxPrintf("Working on class %i\n", current_class);
+                //Printf("Working on class %i\n", current_class);
                 logp[current_class] = input_particle_local.MLBlur(input_classes_cache, ssq_X, cropped_input_image_local, rotation_cache,
                                                                   blurred_images[current_class], current_class, number_of_rotations, psi_step, psi_start, smoothing_factor,
                                                                   max_logp_particle, best_class, input_parameters.psi, best_correlation_map, false, true, true, NULL, NULL, max_search_range);
@@ -1158,7 +1158,7 @@ bool Refine2DApp::DoCalculation( ) {
         delete my_progress;
 
     if ( exclude_blank_edges && ! normalize_particles ) {
-        wxPrintf("\nNumber of excluded images with blank edges = %i\n", number_of_blank_edges);
+        Printf("\nNumber of excluded images with blank edges = %i\n", number_of_blank_edges);
     }
 
     for ( current_class = 0; current_class < number_of_nonzero_classes; current_class++ ) {
@@ -1170,13 +1170,13 @@ bool Refine2DApp::DoCalculation( ) {
     output_star_file.WriteTocisTEMStarFile(output_star_filename, -1, -1, first_particle, last_particle);
 
     if ( dump_arrays ) {
-        wxPrintf("\nDumping intermediate files...\n");
+        Printf("\nDumping intermediate files...\n");
         DumpArrays( );
     }
     else {
         image_counter = 0;
         temp_image.SetToConstant(0.0);
-        wxPrintf("\n");
+        Printf("\n");
         for ( current_class = 0; current_class < number_of_nonzero_classes; current_class++ ) {
             if ( fabsf(class_logp[current_class]) <= log_range ) {
                 // Divide summed class likelihood by number of images
@@ -1195,7 +1195,7 @@ bool Refine2DApp::DoCalculation( ) {
                     class_averages[current_class].BackwardFFT( );
                 }
                 variance = class_averages[current_class].ReturnVarianceOfRealValues( );
-                //				wxPrintf("images_processed = %i, occupancy = %g, variance = %g\n", images_processed, occupancy, variance);
+                //				Printf("images_processed = %i, occupancy = %g, variance = %g\n", images_processed, occupancy, variance);
             }
             else {
                 occupancy = 0.0;
@@ -1203,11 +1203,11 @@ bool Refine2DApp::DoCalculation( ) {
 
             while ( image_counter < list_of_nozero_classes[current_class] ) {
                 temp_image.WriteSlice(output_classes, image_counter + 1);
-                wxPrintf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 0.0);
+                Printf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 0.0);
                 image_counter++;
             }
             class_averages[current_class].WriteSlice(output_classes, image_counter + 1);
-            wxPrintf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 100.0 * occupancy);
+            Printf("Class = %4i, average occupancy = %10.4f\n", image_counter + 1, 100.0 * occupancy);
             image_counter++;
         }
         while ( image_counter < number_of_classes ) {
@@ -1216,7 +1216,7 @@ bool Refine2DApp::DoCalculation( ) {
         }
     }
 
-    wxPrintf("\nTotal logP = %g\n", sum_logp_total);
+    Printf("\nTotal logP = %g\n", sum_logp_total);
 
     delete[] list_of_nozero_classes;
     delete[] reverse_list_of_nozero_classes;
@@ -1234,7 +1234,7 @@ bool Refine2DApp::DoCalculation( ) {
     if ( output_classes != NULL )
         delete output_classes;
 
-    wxPrintf("\nRefine2D: Normal termination\n\n");
+    Printf("\nRefine2D: Normal termination\n\n");
 
     return true;
 }
@@ -1327,7 +1327,7 @@ void Refine2DApp::SendRefineResult(cisTEMParameterLine* current_params) {
         gui_result_params[2] = current_params->x_shift;
         gui_result_params[3] = current_params->y_shift;
         gui_result_params[4] = current_params->best_2d_class;
-        //	wxPrintf("best class = %i\n", current_params->best_2d_class);
+        //	Printf("best class = %i\n", current_params->best_2d_class);
         gui_result_params[5]  = current_params->sigma;
         gui_result_params[6]  = current_params->logp;
         gui_result_params[7]  = current_params->amplitude_contrast;

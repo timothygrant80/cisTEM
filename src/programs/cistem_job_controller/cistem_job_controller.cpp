@@ -125,16 +125,6 @@ static std::string JsonToStdString(const json& value) {
     return value.dump( );
 }
 
-static wxString JsonToWxString(const json& value) {
-    std::string utf8 = JsonToStdString(value);
-    return wxString::FromUTF8(utf8.data( ), utf8.size( ));
-}
-
-// wxString -> JSON string value (UTF-8).
-static std::string ToUtf8(const wxString& text) {
-    return text.utf8_string( );
-}
-
 // Member lookup that yields null for a missing key or a non-object, so nested
 // lookups like JsonMember(message["program"], "executable") are always safe.
 static const json& JsonMember(const json& value, const char* key) {
@@ -279,7 +269,7 @@ class JobControllerApp : public EventLoop, public SocketCommunicator {
     // ---- command line ----
     std::vector<std::string> server_hosts;
     long                     server_port;
-    wxString                 token;
+    std::string                 token;
     double        reconnect_window_seconds;
     double        worker_timeout_seconds;
     // 0 = not waiting; otherwise the NowMs() by which the first worker must
@@ -310,8 +300,8 @@ class JobControllerApp : public EventLoop, public SocketCommunicator {
     // ---- worker side (as in guix_job_control) ----
     bool          have_assigned_master;
     TcpSocket*    master_socket;
-    wxString      master_ip_address;
-    wxString      master_port;
+    std::string      master_ip_address;
+    std::string      master_port;
     long          number_of_workers_already_connected;
     bool          all_jobs_are_finished;
     bool          cancel_in_progress;
@@ -326,12 +316,12 @@ class JobControllerApp : public EventLoop, public SocketCommunicator {
     void Start(int argc, char** argv);
 
     // ---- v1: sending ----
-    long SendToServer(const wxString& type, json fields, bool buffer_for_resend = true);
-    void SendLog(const wxString& level, const wxString& text);
+    long SendToServer(const std::string& type, json fields, bool buffer_for_resend = true);
+    void SendLog(const std::string& level, const std::string& text);
     void SendWorkers( );
     void SendTaskDone(int task, const JobResult* result);
     void SendTaskProgress(const JobResult& result);
-    void SendJobDone(const wxString& status, long cpu_ms, const wxString& error = wxEmptyString);
+    void SendJobDone(const std::string& status, long cpu_ms, const std::string& error = std::string());
     int  ExpectedWorkers( );
 
     // ---- v1: receiving. The link thread handles ack/ping/pong itself and
@@ -343,13 +333,13 @@ class JobControllerApp : public EventLoop, public SocketCommunicator {
     void HandlePackage(json message);
     void HandleTasks(json message);
     void HandlePackageEnd( );
-    void HandleCancel(const wxString& reason);
-    void ProtocolFailure(const wxString& reason);
+    void HandleCancel(const std::string& reason);
+    void ProtocolFailure(const std::string& reason);
 
     // ---- worker side: legacy SocketCommunicator overrides ----
     void HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* identification_code);
-    void HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message);
-    void HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message);
+    void HandleSocketIHaveAnError(TcpSocket* connected_socket, std::string error_message);
+    void HandleSocketIHaveInfo(TcpSocket* connected_socket, std::string info_message);
     void HandleSocketJobResult(TcpSocket* connected_socket, JobResult* received_result);
     void HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue);
     void HandleSocketJobFinished(TcpSocket* connected_socket, int finished_job_number);
@@ -374,7 +364,7 @@ class JobControllerApp : public EventLoop, public SocketCommunicator {
 
 class LaunchJobThread {
   public:
-    LaunchJobThread(JobControllerApp* handler, RunProfile wanted_run_profile, wxString wanted_ip_address, wxString wanted_port, const unsigned char* wanted_job_code, long wanted_actual_number_of_jobs) {
+    LaunchJobThread(JobControllerApp* handler, RunProfile wanted_run_profile, std::string wanted_ip_address, std::string wanted_port, const unsigned char* wanted_job_code, long wanted_actual_number_of_jobs) {
         main_thread_pointer   = handler;
         current_run_profile   = wanted_run_profile;
         ip_address            = wanted_ip_address;
@@ -401,13 +391,13 @@ class LaunchJobThread {
   protected:
     JobControllerApp* main_thread_pointer;
     RunProfile        current_run_profile;
-    wxString          ip_address;
-    wxString          port_number;
+    std::string          ip_address;
+    std::string          port_number;
     long              actual_number_of_jobs;
     unsigned char     job_code[SOCKET_CODE_SIZE];
 
     void Entry( ) {
-        wxString executable;
+        std::string executable;
         if ( current_run_profile.controller_address == "" )
             executable = current_run_profile.executable_name + " " + ip_address + " " + port_number + " ";
         else
@@ -423,21 +413,21 @@ class LaunchJobThread {
         for ( long command_counter = 0; command_counter < current_run_profile.number_of_run_commands; command_counter++ ) {
             long number_to_run_for_this_command = std::min(long(current_run_profile.run_commands[command_counter].number_of_copies),
                                                            number_of_commands_to_run - number_of_commands_run);
-            wxString execution_command       = current_run_profile.run_commands[command_counter].command_to_run;
-            wxString executable_with_threads = executable + wxString::Format(" %i", current_run_profile.run_commands[command_counter].number_of_threads_per_copy);
-            execution_command.Replace("$command", executable_with_threads);
-            execution_command.Replace("$program_name", current_run_profile.executable_name);
+            std::string execution_command       = current_run_profile.run_commands[command_counter].command_to_run;
+            std::string executable_with_threads = executable + Format(" %i", current_run_profile.run_commands[command_counter].number_of_threads_per_copy);
+            ReplaceAll(execution_command, "$command", executable_with_threads);
+            ReplaceAll(execution_command, "$program_name", current_run_profile.executable_name);
             execution_command += "&";
 
             for ( long process_counter = 0; process_counter < number_to_run_for_this_command; process_counter++ ) {
                 SleepForMilliseconds(current_run_profile.run_commands[command_counter].delay_time_in_ms);
                 if ( process_counter == 0 ) {
                     // Blank the job code before it reaches any log.
-                    wxString shown = execution_command;
-                    shown.Replace(wxString::From8BitData(reinterpret_cast<const char*>(job_code), SOCKET_CODE_SIZE), "<job code>");
-                    main_thread_pointer->SendLog("info", wxString::Format("Job Control : Executing '%s' %li times.", shown, number_to_run_for_this_command));
+                    std::string shown = execution_command;
+                    ReplaceAll(shown, std::string(reinterpret_cast<const char*>(job_code), SOCKET_CODE_SIZE), "<job code>");
+                    main_thread_pointer->SendLog("info", Format("Job Control : Executing '%s' %li times.", shown, number_to_run_for_this_command));
                 }
-                system(execution_command.ToUTF8( ).data( ));
+                system(execution_command.c_str());
                 number_of_commands_run++;
             }
         }
@@ -500,7 +490,7 @@ class ServerLinkThread {
         json versions = json::array( );
         versions.push_back(kProtocolVersion);
         hello["protocol_versions"] = versions;
-        hello["token"]             = ToUtf8(app->token);
+        hello["token"]             = app->token;
         json controller;
         controller["name"]    = "cistem_job_controller";
         controller["version"] = CISTEM_JOB_CONTROLLER_VERSION;
@@ -580,7 +570,7 @@ class ServerLinkThread {
                 if ( kind == kKindBinary )
                     continue; // no v1 message uses one; skip (spec section 3)
                 if ( kind != kKindJson ) {
-                    app->ProtocolFailure(wxString::Format("unknown frame kind 0x%02x", kind));
+                    app->ProtocolFailure(Format("unknown frame kind 0x%02x", kind));
                     return;
                 }
                 json message;
@@ -588,12 +578,12 @@ class ServerLinkThread {
                     app->ProtocolFailure("frame from server is not a JSON object");
                     return;
                 }
-                wxString type = JsonToWxString(JsonMember(message, "type"));
+                std::string type = JsonToStdString(JsonMember(message, "type"));
 
                 if ( ! welcomed ) {
                     if ( type == "reject" ) {
-                        wxString code = message.contains("code") ? JsonToWxString(message["code"]) : "?";
-                        fprintf(stderr, "cistem_job_controller: rejected by server: %s %s\n", code.ToUTF8( ).data( ),
+                        std::string code = message.contains("code") ? JsonToStdString(message["code"]) : "?";
+                        fprintf(stderr, "cistem_job_controller: rejected by server: %s %s\n", code.c_str(),
                                 JsonToStdString(JsonMember(message, "reason")).c_str( ));
                         if ( code == "already_connected" ) {
                             // Our previous connection hasn't been declared dead yet; wait and retry.
@@ -605,7 +595,7 @@ class ServerLinkThread {
                         return;
                     }
                     if ( type != "welcome" ) {
-                        wxString detail = message.contains("reason") ? " (" + JsonToWxString(message["reason"]) + ")" : wxString( );
+                        std::string detail = message.contains("reason") ? " (" + JsonToStdString(message["reason"]) + ")" : std::string( );
                         app->ProtocolFailure("expected welcome from server, got " + type + detail);
                         return;
                     }
@@ -741,7 +731,7 @@ void JobControllerApp::Start(int argc, char** argv) {
         exit(EXIT_OTHER);
     }
     token = command_line_parser.GetParam(2);
-    if ( token.IsEmpty( ) ) {
+    if ( token.empty() ) {
         fprintf(stderr, "cistem_job_controller: empty token\n");
         exit(EXIT_OTHER);
     }
@@ -757,7 +747,7 @@ void JobControllerApp::Start(int argc, char** argv) {
     // enough for its purpose (it only has to tell this job's workers from
     // a stale one's); the token itself never goes to the workers.
     for ( int counter = 0; counter < SOCKET_CODE_SIZE; counter++ )
-        current_job_code[counter] = (unsigned char)token.GetChar(counter % token.Length( ));
+        current_job_code[counter] = (unsigned char)token.at(counter % token.length());
 
     link_thread = new ServerLinkThread(this);
     if ( link_thread->Run( ) == false ) {
@@ -770,10 +760,10 @@ void JobControllerApp::Start(int argc, char** argv) {
 // v1 sending
 // ---------------------------------------------------------------------------
 
-long JobControllerApp::SendToServer(const wxString& type, json fields, bool buffer_for_resend) {
+long JobControllerApp::SendToServer(const std::string& type, json fields, bool buffer_for_resend) {
     std::lock_guard<std::mutex> lock(link_mutex);
     our_seq++;
-    fields["type"] = ToUtf8(type);
+    fields["type"] = type;
     fields["seq"]  = our_seq;
     fields["t"]    = NowMs( );
     std::string frame = JsonToString(fields);
@@ -786,10 +776,10 @@ long JobControllerApp::SendToServer(const wxString& type, json fields, bool buff
     return our_seq;
 }
 
-void JobControllerApp::SendLog(const wxString& level, const wxString& text) {
+void JobControllerApp::SendLog(const std::string& level, const std::string& text) {
     json fields;
-    fields["level"] = ToUtf8(level);
-    fields["text"]  = ToUtf8(text);
+    fields["level"] = level;
+    fields["text"]  = text;
     SendToServer("log", fields);
 }
 
@@ -807,7 +797,7 @@ void JobControllerApp::SendWorkers( ) {
 
 void JobControllerApp::SendTaskDone(int task, const JobResult* result) {
     if ( task < 0 || task >= int(task_reported.size( )) ) {
-        SendLog("error", wxString::Format("master reported task %i, outside 0..%i", task, int(task_reported.size( )) - 1));
+        SendLog("error", Format("master reported task %i, outside 0..%i", task, int(task_reported.size( )) - 1));
         return;
     }
     if ( task_reported[task] )
@@ -857,14 +847,14 @@ void JobControllerApp::SendTaskProgress(const JobResult& result) {
     SendToServer("task_progress", fields);
 }
 
-void JobControllerApp::SendJobDone(const wxString& status, long cpu_ms, const wxString& error) {
+void JobControllerApp::SendJobDone(const std::string& status, long cpu_ms, const std::string& error) {
     json fields;
-    fields["status"]       = ToUtf8(status);
+    fields["status"]       = status;
     fields["cpu_ms"]       = cpu_ms;
     fields["tasks_ok"]     = tasks_ok;
     fields["tasks_failed"] = tasks_failed;
-    if ( ! error.IsEmpty( ) )
-        fields["error"] = ToUtf8(error);
+    if ( ! error.empty() )
+        fields["error"] = error;
     long seq = SendToServer("job_done", fields);
     std::lock_guard<std::mutex> lock(link_mutex);
     job_done_seq     = seq;
@@ -886,7 +876,7 @@ void JobControllerApp::HandleServerMessageText(std::string payload) {
 }
 
 void JobControllerApp::HandleServerMessage(json message) {
-    wxString type = JsonToWxString(JsonMember(message, "type"));
+    std::string type = JsonToStdString(JsonMember(message, "type"));
     long     seq  = JsonToLong(JsonMember(message, "seq"));
     if ( seq > 0 )
         last_server_seq = std::max(last_server_seq, seq);
@@ -912,7 +902,7 @@ void JobControllerApp::HandleServerMessage(json message) {
         HandlePackageEnd( );
     }
     else if ( type == "cancel" ) {
-        HandleCancel(JsonToWxString(JsonMember(message, "reason")));
+        HandleCancel(JsonToStdString(JsonMember(message, "reason")));
     }
     else if ( type == "protocol_error" ) {
         fprintf(stderr, "cistem_job_controller: server reported a protocol error: %s\n",
@@ -923,7 +913,7 @@ void JobControllerApp::HandleServerMessage(json message) {
         ProtocolFailure("unexpected " + type + " mid-session");
     }
     else {
-        fprintf(stderr, "cistem_job_controller: ignoring unknown message type '%s'\n", type.ToUTF8( ).data( ));
+        fprintf(stderr, "cistem_job_controller: ignoring unknown message type '%s'\n", type.c_str());
     }
 }
 
@@ -945,15 +935,15 @@ void JobControllerApp::HandlePackage(json message) {
 
     const json& profile_json = message["profile"];
     RunProfile  profile;
-    profile.name               = profile_json.contains("name") ? JsonToWxString(profile_json["name"]) : "unnamed";
+    profile.name               = profile_json.contains("name") ? JsonToStdString(profile_json["name"]) : "unnamed";
     profile.manager_command    = "$command";
     profile.gui_address        = "";
-    profile.controller_address = profile_json.contains("controller_address") ? JsonToWxString(profile_json["controller_address"]) : "";
+    profile.controller_address = profile_json.contains("controller_address") ? JsonToStdString(profile_json["controller_address"]) : "";
     if ( profile_json.contains("run_commands") && profile_json["run_commands"].is_array( ) ) {
         const json& commands = profile_json["run_commands"];
         for ( unsigned counter = 0; counter < unsigned(commands.size( )); counter++ ) {
             const json& c = commands[counter];
-            profile.AddCommand(c.contains("command") ? JsonToWxString(c["command"]) : "$command",
+            profile.AddCommand(c.contains("command") ? JsonToStdString(c["command"]) : "$command",
                                c.contains("copies") ? JsonToInt(c["copies"]) : 1,
                                c.contains("threads_per_copy") ? JsonToInt(c["threads_per_copy"]) : 1,
                                c.contains("override_total_copies") ? JsonToBool(c["override_total_copies"]) : false,
@@ -962,8 +952,8 @@ void JobControllerApp::HandlePackage(json message) {
         }
     }
     const json& program    = message["program"];
-    wxString    executable = program.contains("executable") ? JsonToWxString(program["executable"])
-                                                            : JsonToWxString(JsonMember(program, "name"));
+    std::string    executable = program.contains("executable") ? JsonToStdString(program["executable"])
+                                                            : JsonToStdString(JsonMember(program, "name"));
 
     forward_progress = ! message.contains("forward_progress") || JsonToBool(message["forward_progress"]);
     current_job_package.Reset(profile, executable, expected_task_count);
@@ -980,7 +970,7 @@ void JobControllerApp::HandleTasks(json message) {
     }
     int first_index = message.contains("first_index") ? JsonToInt(message["first_index"]) : -1;
     if ( first_index != tasks_received ) {
-        ProtocolFailure(wxString::Format("tasks out of order: expected first_index %i, got %i", tasks_received, first_index));
+        ProtocolFailure(Format("tasks out of order: expected first_index %i, got %i", tasks_received, first_index));
         return;
     }
     if ( ! message.contains("tasks") || ! message["tasks"].is_array( ) ) {
@@ -992,11 +982,11 @@ void JobControllerApp::HandleTasks(json message) {
         const json& task  = tasks[counter];
         int         index = task.contains("index") ? JsonToInt(task["index"]) : -1;
         if ( index != tasks_received || index >= expected_task_count ) {
-            ProtocolFailure(wxString::Format("task index %i where %i was expected", index, tasks_received));
+            ProtocolFailure(Format("task index %i where %i was expected", index, tasks_received));
             return;
         }
         if ( ! task.contains("args") || ! task["args"].is_array( ) ) {
-            ProtocolFailure(wxString::Format("task %i has no args array", index));
+            ProtocolFailure(Format("task %i has no args array", index));
             return;
         }
         const json& args = task["args"];
@@ -1005,9 +995,9 @@ void JobControllerApp::HandleTasks(json message) {
         job.job_number = index;
         for ( unsigned a = 0; a < unsigned(args.size( )); a++ ) {
             const json& arg   = args[a];
-            wxString    atype = JsonToWxString(JsonMember(arg, "type"));
+            std::string    atype = JsonToStdString(JsonMember(arg, "type"));
             if ( ! arg.contains("value") ) {
-                ProtocolFailure(wxString::Format("task %i argument %u has no value", index, a));
+                ProtocolFailure(Format("task %i argument %u has no value", index, a));
                 return;
             }
             if ( atype == "text" )
@@ -1019,7 +1009,7 @@ void JobControllerApp::HandleTasks(json message) {
             else if ( atype == "bool" )
                 job.arguments[a].SetBoolArgument(JsonToBool(arg["value"]));
             else {
-                ProtocolFailure(wxString::Format("task %i argument %u has unknown type '%s'", index, a, atype));
+                ProtocolFailure(Format("task %i argument %u has unknown type '%s'", index, a, atype));
                 return;
             }
         }
@@ -1030,7 +1020,7 @@ void JobControllerApp::HandleTasks(json message) {
 
 void JobControllerApp::HandlePackageEnd( ) {
     if ( ! package_started || tasks_received != expected_task_count ) {
-        ProtocolFailure(wxString::Format("package_end with %i of %i tasks", tasks_received, expected_task_count));
+        ProtocolFailure(Format("package_end with %i of %i tasks", tasks_received, expected_task_count));
         return;
     }
     package_complete                         = true;
@@ -1038,19 +1028,19 @@ void JobControllerApp::HandlePackageEnd( ) {
     LaunchWorkers( );
 }
 
-void JobControllerApp::HandleCancel(const wxString& reason) {
+void JobControllerApp::HandleCancel(const std::string& reason) {
     if ( cancel_in_progress || job_done_seq >= 0 )
         return;
     cancel_in_progress = true;
-    SendLog("info", "cancelled by the server" + (reason.IsEmpty( ) ? wxString( ) : ": " + reason));
+    SendLog("info", "cancelled by the server" + (reason.empty() ? std::string( ) : ": " + reason));
     KillWorkers( );
     SendJobDone("cancelled", 0);
 }
 
-void JobControllerApp::ProtocolFailure(const wxString& reason) {
-    fprintf(stderr, "cistem_job_controller: protocol error: %s\n", reason.ToUTF8( ).data( ));
+void JobControllerApp::ProtocolFailure(const std::string& reason) {
+    fprintf(stderr, "cistem_job_controller: protocol error: %s\n", reason.c_str());
     json fields;
-    fields["reason"] = ToUtf8(reason);
+    fields["reason"] = reason;
     SendToServer("protocol_error", fields, false);
     Shutdown(EXIT_PROTOCOL_ERROR, true);
 }
@@ -1061,32 +1051,32 @@ void JobControllerApp::ProtocolFailure(const wxString& reason) {
 
 void JobControllerApp::LaunchWorkers( ) {
     SetupServer( );
-    wxString my_port_string = ReturnServerPortString( );
+    std::string my_port_string = ReturnServerPortString( );
 
     // Prefer the address the server reached us on (it's the one most likely
     // to be routable), then everything else we have.
-    wxString      current_address_according_to_server;
-    wxArrayString my_possible_ip_addresses;
+    std::string      current_address_according_to_server;
+    std::vector<std::string> my_possible_ip_addresses;
     {
         std::lock_guard<std::mutex> lock(link_mutex);
         if ( server_socket != NULL )
             current_address_according_to_server = ReturnIPAddressFromSocket(server_socket);
     }
-    if ( ! current_address_according_to_server.IsEmpty( ) )
-        my_possible_ip_addresses.Add(current_address_according_to_server);
-    wxArrayString buffer_addresses = ReturnServerAllIpAddresses( );
-    for ( size_t counter = 0; counter < buffer_addresses.GetCount( ); counter++ )
-        if ( buffer_addresses.Item(counter) != current_address_according_to_server )
-            my_possible_ip_addresses.Add(buffer_addresses.Item(counter));
+    if ( ! current_address_according_to_server.empty() )
+        my_possible_ip_addresses.push_back(current_address_according_to_server);
+    std::vector<std::string> buffer_addresses = ReturnServerAllIpAddresses( );
+    for ( size_t counter = 0; counter < buffer_addresses.size(); counter++ )
+        if ( buffer_addresses[counter] != current_address_according_to_server )
+            my_possible_ip_addresses.push_back(buffer_addresses[counter]);
 
-    wxString ip_address_string;
-    for ( size_t counter = 0; counter < my_possible_ip_addresses.GetCount( ); counter++ ) {
+    std::string ip_address_string;
+    for ( size_t counter = 0; counter < my_possible_ip_addresses.size(); counter++ ) {
         if ( counter != 0 )
             ip_address_string += ",";
-        ip_address_string += my_possible_ip_addresses.Item(counter);
+        ip_address_string += my_possible_ip_addresses[counter];
     }
 
-    SendLog("info", wxString::Format("Launching %i worker process(es) for %s", ExpectedWorkers( ), current_job_package.my_profile.executable_name));
+    SendLog("info", Format("Launching %i worker process(es) for %s", ExpectedWorkers( ), current_job_package.my_profile.executable_name));
     SendWorkers( );
     if ( worker_timeout_seconds > 0 )
         worker_connect_deadline_ms = NowMs( ) + long(worker_timeout_seconds * 1000.0);
@@ -1110,7 +1100,7 @@ void JobControllerApp::CheckWorkerTimeout( ) {
 void JobControllerApp::WorkerTimeoutExpired( ) {
     if ( have_assigned_master || cancel_in_progress || job_done_seq >= 0 )
         return;
-    wxString why = wxString::Format(
+    std::string why = Format(
             "no worker process connected within %.0f s of launching the run commands -- check that '%s' is on the PATH "
             "where they run, and that the commands themselves succeed (their output is in this job's controller log)",
             worker_timeout_seconds, current_job_package.my_profile.executable_name);
@@ -1121,7 +1111,7 @@ void JobControllerApp::WorkerTimeoutExpired( ) {
 
 void JobControllerApp::KillWorkers( ) {
     if ( have_assigned_master && master_socket != NULL ) {
-        WriteToSocket(master_socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+        WriteToSocket(master_socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
         StopMonitoringAndDestroySocket(master_socket);
         master_socket = NULL;
     }
@@ -1152,37 +1142,37 @@ void JobControllerApp::HandleNewSocketConnection(TcpSocket* new_connection, unsi
         worker_connect_deadline_ms = 0; // somebody made it; the rest may still be queued
         master_socket        = new_connection;
         have_assigned_master = true;
-        WriteToSocket(new_connection, socket_you_are_the_master, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+        WriteToSocket(new_connection, socket_you_are_the_master, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
         current_job_package.SendJobPackage(new_connection);
         bool no_error;
-        master_ip_address = ReceivewxStringFromSocket(new_connection, no_error);
-        master_port       = ReceivewxStringFromSocket(new_connection, no_error);
+        master_ip_address = ReceiveStringFromSocket(new_connection, no_error);
+        master_port       = ReceiveStringFromSocket(new_connection, no_error);
         MonitorSocket(new_connection);
         number_of_workers_already_connected++;
         SendWorkers( );
     }
     else {
-        WriteToSocket(new_connection, socket_you_are_a_worker, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-        SendwxStringToSocket(&master_ip_address, new_connection);
-        SendwxStringToSocket(&master_port, new_connection);
+        WriteToSocket(new_connection, socket_you_are_a_worker, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
+        SendStringToSocket(master_ip_address, new_connection);
+        SendStringToSocket(master_port, new_connection);
         MonitorSocket(new_connection);
         number_of_workers_already_connected++;
         SendWorkers( );
     }
 
     if ( number_of_workers_already_connected == ExpectedWorkers( ) ) {
-        SendLog("info", wxString::Format("All %ld processes are connected.", number_of_workers_already_connected));
+        SendLog("info", Format("All %ld processes are connected.", number_of_workers_already_connected));
         ShutDownServer( ); // nobody else is expected
     }
 
     delete[] identification_code;
 }
 
-void JobControllerApp::HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message) {
+void JobControllerApp::HandleSocketIHaveAnError(TcpSocket* connected_socket, std::string error_message) {
     SendLog("error", error_message);
 }
 
-void JobControllerApp::HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message) {
+void JobControllerApp::HandleSocketIHaveInfo(TcpSocket* connected_socket, std::string info_message) {
     SendLog("info", info_message);
 }
 
@@ -1219,13 +1209,13 @@ void JobControllerApp::HandleSocketAllJobsFinished(TcpSocket* connected_socket, 
         }
     }
     SendJobDone(tasks_failed == 0 ? "completed" : "failed", received_timing_in_milliseconds,
-                tasks_failed == 0 ? wxString( ) : wxString::Format("%i task(s) reported no result", tasks_failed));
+                tasks_failed == 0 ? std::string( ) : Format("%i task(s) reported no result", tasks_failed));
     // Don't exit yet: the link thread does, once the server acks job_done.
 }
 
 void JobControllerApp::HandleSocketTemplateMatchResultReady(TcpSocket* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // Phase 2 material: becomes a result.kind. Note it rather than lose it silently.
-    SendLog("info", wxString::Format("template match result for image %i (%zu peaks) received; not relayed in protocol v1 phase 1", image_number, size_t(peak_infos.GetCount( ))));
+    SendLog("info", Format("template match result for image %i (%zu peaks) received; not relayed in protocol v1 phase 1", image_number, size_t(peak_infos.size())));
 }
 
 void JobControllerApp::HandleSocketDisconnect(TcpSocket* connected_socket) {

@@ -13,8 +13,8 @@ class JobTracker {
     long  time_of_last_remaining_time_call;
 
     int        old_percent_complete;
-    wxTimeSpan old_time_remaining;
-    wxTimeSpan time_remaining;
+    TimeSpan old_time_remaining;
+    TimeSpan time_remaining;
 
     JobTracker( );
     ~JobTracker( );
@@ -22,8 +22,8 @@ class JobTracker {
     void       StartTracking(int wanted_total_number_of_jobs);
     void       AddConnection( );
     void       MarkJobFinished( );
-    wxTimeSpan ReturnRemainingTime( );
-    wxTimeSpan ReturnTimeSinceStart( );
+    TimeSpan ReturnRemainingTime( );
+    TimeSpan ReturnTimeSinceStart( );
 
     inline int ReturnPercentCompleted( ) {
         int percent_completed = myround((float(total_number_of_finished_jobs) / float(total_number_of_jobs)) * 100.0);

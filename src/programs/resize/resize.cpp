@@ -59,7 +59,7 @@ bool Resize::DoCalculation( ) {
     pixel_size = my_input_file.ReturnPixelSize( );
 
     if ( is_a_volume == true ) {
-        wxPrintf("\nResizing Volume...\n\n");
+        Printf("\nResizing Volume...\n\n");
         my_image.ReadSlices(&my_input_file, 1, my_input_file.ReturnNumberOfSlices( ));
 
         if ( should_normalise == true ) {
@@ -70,7 +70,7 @@ bool Resize::DoCalculation( ) {
         my_image.WriteSlices(&my_output_file, 1, new_z_size);
     }
     else {
-        wxPrintf("\nResizing Images...\n\n");
+        Printf("\nResizing Images...\n\n");
         ProgressBar* my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices( ));
 
         for ( long image_counter = 0; image_counter < my_input_file.ReturnNumberOfSlices( ); image_counter++ ) {
@@ -87,7 +87,7 @@ bool Resize::DoCalculation( ) {
         }
 
         delete my_progress;
-        wxPrintf("\n\n");
+        Printf("\n\n");
     }
 
     my_output_file.SetPixelSize(pixel_size);

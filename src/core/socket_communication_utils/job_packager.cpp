@@ -8,7 +8,7 @@
  *
  * @warning No protocol version checking - mixed-version clusters corrupt data silently (C-2)
  * @warning No buffer overflow protection - decoder may crash on malformed data (C-5)
- * @warning wxString uses ASCII encoding - non-ASCII characters truncated (C-6)
+ * @warning std::string uses ASCII encoding - non-ASCII characters truncated (C-6)
  * @warning No endianness checking - assumes little-endian (C-10)
  * @warning Partial write failure leaves inconsistent state (H-11)
  * @see src/core/socket_communication_utils/FUTURE_REFACTOR_IDEAS.md for detailed security analysis
@@ -16,17 +16,17 @@
  * @note Encoding order:
  * 1. number_of_jobs (int → 4 bytes)
  * 2. my_profile.number_of_run_commands (int → 4 bytes)
- * 3. my_profile.executable_name (wxString):
+ * 3. my_profile.executable_name (std::string):
  *    - length (int → 4 bytes)
  *    - characters [i=0..length-1] (char → 1 byte each)
- * 4. my_profile.gui_address (wxString):
+ * 4. my_profile.gui_address (std::string):
  *    - length (int → 4 bytes)
  *    - characters [i=0..length-1] (char → 1 byte each)
- * 5. my_profile.controller_address (wxString):
+ * 5. my_profile.controller_address (std::string):
  *    - length (int → 4 bytes)
  *    - characters [i=0..length-1] (char → 1 byte each)
  * 6. For each run_command [cmd=0..number_of_run_commands-1]:
- *    a. command_to_run (wxString):
+ *    a. command_to_run (std::string):
  *       - length (int → 4 bytes)
  *       - characters [i=0..length-1] (char → 1 byte each)
  *    b. number_of_copies (int → 4 bytes)
@@ -105,7 +105,7 @@ bool JobPackage::SendJobPackage(TcpSocket* socket) // package the whole object i
 
     // executable name
 
-    temp_int     = my_profile.executable_name.Length( );
+    temp_int     = my_profile.executable_name.length();
     char_pointer = (unsigned char*)&temp_int;
 
     transfer_buffer[8]  = char_pointer[0];
@@ -115,15 +115,15 @@ bool JobPackage::SendJobPackage(TcpSocket* socket) // package the whole object i
 
     byte_counter = 12;
 
-    for ( counter = 0; counter < my_profile.executable_name.Length( ); counter++ ) {
-        transfer_buffer[byte_counter] = my_profile.executable_name.GetChar(counter);
+    for ( counter = 0; counter < my_profile.executable_name.length(); counter++ ) {
+        transfer_buffer[byte_counter] = my_profile.executable_name[counter];
 
         byte_counter++;
     }
 
     // gui_address
 
-    temp_int     = my_profile.gui_address.Length( );
+    temp_int     = my_profile.gui_address.length();
     char_pointer = (unsigned char*)&temp_int;
 
     transfer_buffer[byte_counter] = char_pointer[0];
@@ -135,14 +135,14 @@ bool JobPackage::SendJobPackage(TcpSocket* socket) // package the whole object i
     transfer_buffer[byte_counter] = char_pointer[3];
     byte_counter++;
 
-    for ( counter = 0; counter < my_profile.gui_address.Length( ); counter++ ) {
-        transfer_buffer[byte_counter] = my_profile.gui_address.GetChar(counter);
+    for ( counter = 0; counter < my_profile.gui_address.length(); counter++ ) {
+        transfer_buffer[byte_counter] = my_profile.gui_address[counter];
         byte_counter++;
     }
 
     // controller_address
 
-    temp_int     = my_profile.controller_address.Length( );
+    temp_int     = my_profile.controller_address.length();
     char_pointer = (unsigned char*)&temp_int;
 
     transfer_buffer[byte_counter] = char_pointer[0];
@@ -154,15 +154,15 @@ bool JobPackage::SendJobPackage(TcpSocket* socket) // package the whole object i
     transfer_buffer[byte_counter] = char_pointer[3];
     byte_counter++;
 
-    for ( counter = 0; counter < my_profile.controller_address.Length( ); counter++ ) {
-        transfer_buffer[byte_counter] = my_profile.controller_address.GetChar(counter);
+    for ( counter = 0; counter < my_profile.controller_address.length(); counter++ ) {
+        transfer_buffer[byte_counter] = my_profile.controller_address[counter];
         byte_counter++;
     }
 
     // now add each run_command
 
     for ( command_counter = 0; command_counter < my_profile.number_of_run_commands; command_counter++ ) {
-        length_of_string = my_profile.run_commands[command_counter].command_to_run.Length( );
+        length_of_string = my_profile.run_commands[command_counter].command_to_run.length();
 
         char_pointer = (unsigned char*)&length_of_string;
 
@@ -377,10 +377,8 @@ bool JobPackage::SendJobPackage(TcpSocket* socket) // package the whole object i
     }
 
     // now we should everything encoded, so send the information to the socket..
-    // disable events on the socket..
-    //socket->SetNotify(wxSOCKET_LOST_FLAG);
     // inform what we want to do..
-    //	 if (WriteToSocket(socket, socket_sending_job_package, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false)
+    //	 if (WriteToSocket(socket, socket_sending_job_package, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING) == false)
     //	 {
     //		 delete [] transfer_buffer;
     //		 return false;
@@ -388,14 +386,14 @@ bool JobPackage::SendJobPackage(TcpSocket* socket) // package the whole object i
 
     // first - send how many bytes it is..
 
-    if ( WriteToSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( WriteToSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] transfer_buffer;
         return false;
     }
 
     // now send the whole buffer..
 
-    if ( WriteToSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( WriteToSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] transfer_buffer;
         return false;
     }
@@ -445,19 +443,16 @@ bool JobPackage::ReceiveJobPackage(TcpSocket* socket) {
     unsigned char* char_pointer;
 
     RunProfile temp_run_profile;
-    wxString   temp_wxstring;
-    wxString   executable_name;
-    wxString   gui_address;
-    wxString   controller_address;
+    std::string   temp_wxstring;
+    std::string   executable_name;
+    std::string   gui_address;
+    std::string   controller_address;
 
-    // disable events on the socket..
-    //	socket->SetNotify(wxSOCKET_LOST_FLAG);
-    //	socket->SetFlags(wxSOCKET_BLOCK);
     // Send a message saying we are ready to receive the package
 
     // receive how many bytes we need for the buffer..
 
-    if ( ReadFromSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( ReadFromSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
     //MyDebugPrint("Package is %li bytes long", transfer_size);
@@ -468,14 +463,12 @@ bool JobPackage::ReceiveJobPackage(TcpSocket* socket) {
 
     // now receive the package..
 
-    if ( ReadFromSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( ReadFromSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
-    //wxPrintf("We read %u bytes\n", socket->LastReadCount());
+    //Printf("We read %u bytes\n", socket->LastReadCount());
 
     //MyDebugPrint("Received package, decoding job...");
 
-    // restore socket events..
-    //    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
     // now we need to decode the buffer
 
@@ -779,21 +772,21 @@ long JobPackage::ReturnEncodedByteTransferSize( ) {
     // executable name
 
     byte_size += 4; // length of string
-    byte_size += my_profile.executable_name.Length( );
+    byte_size += my_profile.executable_name.length();
 
     // gui_address
 
     byte_size += 4;
-    byte_size += my_profile.gui_address.Length( );
+    byte_size += my_profile.gui_address.length();
 
     // controller address
 
     byte_size += 4;
-    byte_size += my_profile.controller_address.Length( );
+    byte_size += my_profile.controller_address.length();
 
     for ( counter = 0; counter < my_profile.number_of_run_commands; counter++ ) {
         byte_size += 4; // length_of_current_command;
-        byte_size += my_profile.run_commands[counter].command_to_run.Length( ); // actual text;
+        byte_size += my_profile.run_commands[counter].command_to_run.length(); // actual text;
         byte_size += 4; // number_of_copies;
         byte_size += 4; // number_of_threads
         byte_size += 4; // override_total_commands as int;
@@ -808,7 +801,7 @@ long JobPackage::ReturnEncodedByteTransferSize( ) {
     return byte_size;
 }
 
-JobPackage::JobPackage(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs) {
+JobPackage::JobPackage(RunProfile wanted_profile, std::string wanted_executable_name, int wanted_number_of_jobs) {
     Reset(wanted_profile, wanted_executable_name, wanted_number_of_jobs);
 }
 
@@ -835,7 +828,7 @@ JobPackage::~JobPackage( ) {
     }
 }
 
-void JobPackage::Reset(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs) {
+void JobPackage::Reset(RunProfile wanted_profile, std::string wanted_executable_name, int wanted_number_of_jobs) {
     if ( number_of_jobs > 0 ) {
         if ( number_of_jobs == 1 )
             delete jobs;
@@ -1092,12 +1085,10 @@ bool RunJob::SendJob(TcpSocket* socket) {
     }
 
     // now we should everything encoded, so send the information to the socket..
-    // disable events on the socket..
 
-    //	 socket->SetNotify(wxSOCKET_LOST_FLAG);
 
     // inform what we want to do..
-    if ( WriteToSocket(socket, socket_ready_to_send_single_job, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( WriteToSocket(socket, socket_ready_to_send_single_job, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] transfer_buffer;
         return false;
     }
@@ -1108,14 +1099,14 @@ bool RunJob::SendJob(TcpSocket* socket) {
 
     // first - send how many bytes it is..
 
-    if ( WriteToSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( WriteToSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] transfer_buffer;
         return false;
     }
 
     // now send the whole buffer..
 
-    if ( WriteToSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( WriteToSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] transfer_buffer;
         return false;
     }
@@ -1127,9 +1118,7 @@ bool RunJob::SendJob(TcpSocket* socket) {
     //		 DEBUG_ABORT;
     //	 }
 
-    // restore socket events..
 
-    //    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
     delete[] transfer_buffer;
     return true;
 }
@@ -1162,14 +1151,12 @@ bool RunJob::RecieveJob(TcpSocket* socket) {
 
     unsigned char* char_pointer;
 
-    // disable events on the socket..
-    //	socket->SetNotify(wxSOCKET_LOST_FLAG);
 
     // Send a message saying we are ready to receive the package
 
     // receive how many bytes we need for the buffer..
 
-    if ( ReadFromSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( ReadFromSocket(socket, &transfer_size, sizeof(long), true, "SendTransferSize", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
     // allocate an array..
@@ -1178,13 +1165,11 @@ bool RunJob::RecieveJob(TcpSocket* socket) {
 
     // now receive the package..
 
-    if ( ReadFromSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( ReadFromSocket(socket, transfer_buffer, transfer_size, true, "SendTransferBuffer", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] transfer_buffer;
         return false;
     }
 
-    // restore socket events..
-    //    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
     // now we need to decode the buffer
 
@@ -1375,28 +1360,28 @@ void RunJob::Reset(int wanted_number_of_arguments) {
     has_been_run = false;
 }
 
-wxString RunJob::PrintAllArgumentsTowxString( ) {
+std::string RunJob::PrintAllArgumentsToString( ) {
     using c_ft = cistem::fundamental_type::Enum;
 
-    wxString string_to_return = "\n";
+    std::string string_to_return = "\n";
 
     for ( int counter = 0; counter < number_of_arguments; counter++ ) {
         if ( arguments[counter].type_of_argument == c_ft::text_t ) {
-            string_to_return += wxString::Format("Argument %3i is a string   : %s\n", counter, arguments[counter].ReturnStringArgument( ));
+            string_to_return += Format("Argument %3i is a string   : %s\n", counter, arguments[counter].ReturnStringArgument( ));
         }
         else if ( arguments[counter].type_of_argument == c_ft::integer_t ) {
-            string_to_return += wxString::Format("Argument %3i is an integer : %i\n", counter, arguments[counter].ReturnIntegerArgument( ));
+            string_to_return += Format("Argument %3i is an integer : %i\n", counter, arguments[counter].ReturnIntegerArgument( ));
         }
         else if ( arguments[counter].type_of_argument == c_ft::float_t ) {
-            string_to_return += wxString::Format("Argument %3i is a float    : %f\n", counter, arguments[counter].ReturnFloatArgument( ));
+            string_to_return += Format("Argument %3i is a float    : %f\n", counter, arguments[counter].ReturnFloatArgument( ));
         }
         else if ( arguments[counter].type_of_argument == c_ft::bool_t ) {
-            string_to_return += wxString::Format("Argument %3i is a bool     : ", counter);
+            string_to_return += Format("Argument %3i is a bool     : ", counter);
 
             if ( arguments[counter].ReturnBoolArgument( ) == true )
-                string_to_return += wxString::Format("TRUE\n");
+                string_to_return += Format("TRUE\n");
             else
-                string_to_return += wxString::Format("FALSE\n");
+                string_to_return += Format("FALSE\n");
         }
     }
 
@@ -1404,7 +1389,7 @@ wxString RunJob::PrintAllArgumentsTowxString( ) {
 }
 
 void RunJob::PrintAllArguments( ) {
-    wxPrintf(PrintAllArgumentsTowxString( ));
+    Printf(PrintAllArgumentsToString( ));
 }
 
 long RunJob::ReturnEncodedByteTransferSize( ) {
@@ -1651,11 +1636,11 @@ bool JobResult::SendToSocket(TcpSocket* wanted_socket) {
     job_number_and_result_size[6] = byte_pointer[2];
     job_number_and_result_size[7] = byte_pointer[3];
 
-    if ( WriteToSocket(wanted_socket, &job_number_and_result_size, 8, true, "SendJobNumberAndResultSize", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( WriteToSocket(wanted_socket, &job_number_and_result_size, 8, true, "SendJobNumberAndResultSize", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
     if ( result_size > 0 ) {
-        if ( WriteToSocket(wanted_socket, result_data, result_size * 4, true, "SendResultData", FUNCTION_DETAILS_AS_WXSTRING) == false )
+        if ( WriteToSocket(wanted_socket, result_data, result_size * 4, true, "SendResultData", FUNCTION_DETAILS_AS_STRING) == false )
             return false;
     }
 
@@ -1676,7 +1661,7 @@ bool JobResult::ReceiveFromSocket(TcpSocket* wanted_socket) {
     int            new_result_size;
     unsigned char* byte_pointer;
 
-    if ( ReadFromSocket(wanted_socket, job_number_and_result_size, 8, true, "SendJobNumberAndResultSize", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( ReadFromSocket(wanted_socket, job_number_and_result_size, 8, true, "SendJobNumberAndResultSize", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
     byte_pointer    = (unsigned char*)&job_number;
@@ -1707,7 +1692,7 @@ bool JobResult::ReceiveFromSocket(TcpSocket* wanted_socket) {
     }
 
     if ( result_size > 0 ) {
-        if ( ReadFromSocket(wanted_socket, result_data, result_size * 4, true, "SendResultData", FUNCTION_DETAILS_AS_WXSTRING) == false )
+        if ( ReadFromSocket(wanted_socket, result_data, result_size * 4, true, "SendResultData", FUNCTION_DETAILS_AS_STRING) == false )
             return false;
     }
 
@@ -1739,16 +1724,16 @@ bool ReceiveResultQueueFromSocket(TcpSocket* socket, ArrayofJobResults& my_array
 
     // recieve the total number of bytes..
 
-    if ( ReadFromSocket(socket, &total_number_of_bytes, sizeof(int), true, "SendResultQueueTotalBytes", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( ReadFromSocket(socket, &total_number_of_bytes, sizeof(int), true, "SendResultQueueTotalBytes", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
-    //wxPrintf("(Recieve) Total Size is %i bytes\n", total_number_of_bytes);
+    //Printf("(Recieve) Total Size is %i bytes\n", total_number_of_bytes);
     // make the array..
 
     unsigned char* buffer_array = new unsigned char[total_number_of_bytes];
 
     // receieve
 
-    if ( ReadFromSocket(socket, buffer_array, total_number_of_bytes, true, "SendResultQueueData", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( ReadFromSocket(socket, buffer_array, total_number_of_bytes, true, "SendResultQueueData", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] buffer_array;
         return false;
     }
@@ -1803,7 +1788,7 @@ bool ReceiveResultQueueFromSocket(TcpSocket* socket, ArrayofJobResults& my_array
             byte_pointer = (unsigned char*)&temp_result.result_data[result_byte_counter];
 
             if ( byte_counter >= total_number_of_bytes )
-                wxPrintf("byte_counter = %i/%i\n", byte_counter, total_number_of_bytes);
+                Printf("byte_counter = %i/%i\n", byte_counter, total_number_of_bytes);
             byte_pointer[0] = buffer_array[byte_counter];
             byte_counter++;
             byte_pointer[1] = buffer_array[byte_counter];
@@ -1863,15 +1848,15 @@ bool SendResultQueueToSocket(TcpSocket* socket, ArrayofJobResults& my_array) {
     int            job_counter;
     int            result_byte_counter;
 
-    //wxPrintf("there are %i jobs\n", number_of_jobs);
+    //Printf("there are %i jobs\n", number_of_jobs);
 
     for ( job_counter = 0; job_counter < number_of_jobs; job_counter++ ) {
         total_number_of_bytes += 8; // job_number, result_size
         total_number_of_bytes += my_array[job_counter].result_size * 4; // actual result
-        //	wxPrintf("result size for job %i = %i\n", job_counter, my_array[job_counter].result_size);
+        //	Printf("result size for job %i = %i\n", job_counter, my_array[job_counter].result_size);
     }
 
-    //wxPrintf("(Write) Total Size is %i bytes\n", total_number_of_bytes);
+    //Printf("(Write) Total Size is %i bytes\n", total_number_of_bytes);
 
     unsigned char* buffer_array = new unsigned char[total_number_of_bytes];
 
@@ -1907,7 +1892,7 @@ bool SendResultQueueToSocket(TcpSocket* socket, ArrayofJobResults& my_array) {
 
         for ( result_byte_counter = 0; result_byte_counter < my_array[job_counter].result_size; result_byte_counter++ ) {
             byte_pointer = (unsigned char*)&my_array[job_counter].result_data[result_byte_counter];
-            //	wxPrintf("byte_counter = %i\n", byte_counter);
+            //	Printf("byte_counter = %i\n", byte_counter);
             buffer_array[byte_counter] = byte_pointer[0];
             byte_counter++;
             buffer_array[byte_counter] = byte_pointer[1];
@@ -1920,13 +1905,13 @@ bool SendResultQueueToSocket(TcpSocket* socket, ArrayofJobResults& my_array) {
     }
 
     // send the number of bytes
-    if ( WriteToSocket(socket, &total_number_of_bytes, sizeof(int), true, "SendResultQueueTotalBytes", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( WriteToSocket(socket, &total_number_of_bytes, sizeof(int), true, "SendResultQueueTotalBytes", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] buffer_array;
         return false;
     }
     // send the array..
 
-    if ( WriteToSocket(socket, buffer_array, total_number_of_bytes, true, "SendResultQueueData", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( WriteToSocket(socket, buffer_array, total_number_of_bytes, true, "SendResultQueueData", FUNCTION_DETAILS_AS_STRING) == false ) {
         delete[] buffer_array;
         return false;
     }

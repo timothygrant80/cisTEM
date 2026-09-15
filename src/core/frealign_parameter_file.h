@@ -4,7 +4,7 @@ class FrealignParameterFile {
 
   public:
     FILE*    parameter_file;
-    wxString filename;
+    std::string filename;
     int      access_type;
     int      records_per_line;
     int      number_of_lines;
@@ -17,10 +17,10 @@ class FrealignParameterFile {
     FrealignParameterFile( );
     ~FrealignParameterFile( );
 
-    FrealignParameterFile(wxString wanted_filename, int wanted_access_type, int wanted_records_per_line = 17);
-    void   Open(wxString wanted_filename, int wanted_access_type, int wanted_records_per_line = 17);
+    FrealignParameterFile(std::string wanted_filename, int wanted_access_type, int wanted_records_per_line = 17);
+    void   Open(std::string wanted_filename, int wanted_access_type, int wanted_records_per_line = 17);
     void   Close( );
-    void   WriteCommentLine(wxString comment_string);
+    void   WriteCommentLine(std::string comment_string);
     void   WriteLine(float* parameters, bool comment = false);
     int    ReadFile(bool exclude_negative_film_numbers = false, int particles_in_stack = -1);
     void   ReadLine(float* parameters, int wanted_line_number = -1);

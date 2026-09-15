@@ -20,13 +20,13 @@ void LocalResolution::DoInteractiveUserInput( ) {
 
     ImageFile input_image_file;
 
-    wxString input_volume_one  = my_input->GetFilenameFromUser("Input reconstruction 1", "The first input 3D reconstruction used for FSC calculation", "my_reconstruction_1.mrc", true);
-    wxString input_volume_two  = my_input->GetFilenameFromUser("Input reconstruction 2", "The second input 3D reconstruction used for FSC calculation", "my_reconstruction_2.mrc", true);
-    wxString input_volume_mask = my_input->GetFilenameFromUser("Input mask", "Positions where this mask volume has value 0.00 will be skipped during local resolution estimation", "my_mask.mrc", true);
-    wxString output_volume     = my_input->GetFilenameFromUser("Output local resolution volume", "This volume will be a local resolution estimate map", "local_resolution.mrc", false);
+    std::string input_volume_one  = my_input->GetFilenameFromUser("Input reconstruction 1", "The first input 3D reconstruction used for FSC calculation", "my_reconstruction_1.mrc", true);
+    std::string input_volume_two  = my_input->GetFilenameFromUser("Input reconstruction 2", "The second input 3D reconstruction used for FSC calculation", "my_reconstruction_2.mrc", true);
+    std::string input_volume_mask = my_input->GetFilenameFromUser("Input mask", "Positions where this mask volume has value 0.00 will be skipped during local resolution estimation", "my_mask.mrc", true);
+    std::string output_volume     = my_input->GetFilenameFromUser("Output local resolution volume", "This volume will be a local resolution estimate map", "local_resolution.mrc", false);
     float    pixel_size        = my_input->GetFloatFromUser("Pixel size (A)", "Pixel size of the map in Angstroms", "1.0", 0.000001);
-    wxString my_symmetry       = my_input->GetSymmetryFromUser("Particle symmetry", "The symmetry imposed on the input reconstructions", "C1");
-    input_image_file.OpenFile(input_volume_one.ToStdString( ), false, false);
+    std::string my_symmetry       = my_input->GetSymmetryFromUser("Particle symmetry", "The symmetry imposed on the input reconstructions", "C1");
+    input_image_file.OpenFile(input_volume_one, false, false);
     int   first_slice         = my_input->GetIntFromUser("First slice", "First slice within the volume to estimate local resolution", "1", 1, input_image_file.ReturnNumberOfSlices( ));
     int   last_slice          = my_input->GetIntFromUser("Last slice", "Last slice within the volume to estimate local resolution (0 = last slice of volume)", "0", 0, input_image_file.ReturnNumberOfSlices( ));
     int   sampling_step       = my_input->GetIntFromUser("Sampling step", "Estimate the local resolution every STEP pixels in each direction. Set to 1 to estimate the resolution at every voxel", "2", 1, 16);
@@ -67,16 +67,16 @@ void LocalResolution::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(18);
-    my_current_job.ManualSetArguments("ttttftiiiibfffbfbi", input_volume_one.ToUTF8( ).data( ), input_volume_two.ToUTF8( ).data( ), input_volume_mask.ToUTF8( ).data( ), output_volume.ToUTF8( ).data( ), pixel_size, my_symmetry.ToUTF8( ).data( ), first_slice, last_slice, sampling_step, box_size, use_fixed_threshold, fixed_threshold, threshold_snr, confidence_level, randomize_phases, resolution_for_phase_randomization, whiten_half_maps, padding_factor);
+    my_current_job.ManualSetArguments("ttttftiiiibfffbfbi", input_volume_one.c_str(), input_volume_two.c_str(), input_volume_mask.c_str(), output_volume.c_str(), pixel_size, my_symmetry.c_str(), first_slice, last_slice, sampling_step, box_size, use_fixed_threshold, fixed_threshold, threshold_snr, confidence_level, randomize_phases, resolution_for_phase_randomization, whiten_half_maps, padding_factor);
 }
 
 bool LocalResolution::DoCalculation( ) {
-    wxString input_volume_one_fn                = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_volume_two_fn                = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_volume_mask_fn               = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString output_volume_fn                   = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string input_volume_one_fn                = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_volume_two_fn                = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_volume_mask_fn               = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string output_volume_fn                   = my_current_job.arguments[3].ReturnStringArgument( );
     float    pixel_size                         = my_current_job.arguments[4].ReturnFloatArgument( );
-    wxString my_symmetry                        = my_current_job.arguments[5].ReturnStringArgument( );
+    std::string my_symmetry                        = my_current_job.arguments[5].ReturnStringArgument( );
     int      first_slice                        = my_current_job.arguments[6].ReturnIntegerArgument( );
     int      last_slice                         = my_current_job.arguments[7].ReturnIntegerArgument( );
     int      sampling_step                      = my_current_job.arguments[8].ReturnIntegerArgument( );
@@ -91,9 +91,9 @@ bool LocalResolution::DoCalculation( ) {
     int      padding_factor                     = my_current_job.arguments[17].ReturnIntegerArgument( );
 
     // Read volumes from disk
-    ImageFile input_file_one(input_volume_one_fn.ToStdString( ), false);
-    ImageFile input_file_two(input_volume_two_fn.ToStdString( ), false);
-    ImageFile input_file_mask(input_volume_mask_fn.ToStdString( ), false);
+    ImageFile input_file_one(input_volume_one_fn, false);
+    ImageFile input_file_two(input_volume_two_fn, false);
+    ImageFile input_file_mask(input_volume_mask_fn, false);
     Image     input_volume_one;
     Image     input_volume_two;
     Image     input_volume_mask;
@@ -108,7 +108,7 @@ bool LocalResolution::DoCalculation( ) {
 	 * when testing resolution criteria
 	 */
     if ( randomize_phases && resolution_for_phase_randomization > 0.0 ) {
-        wxPrintf("Randomizing phases beyond %0.2f A\n", resolution_for_phase_randomization);
+        Printf("Randomizing phases beyond %0.2f A\n", resolution_for_phase_randomization);
         input_volume_one.ForwardFFT( );
         input_volume_two.ForwardFFT( );
         input_volume_one.RandomisePhases(pixel_size / resolution_for_phase_randomization);
@@ -127,7 +127,7 @@ bool LocalResolution::DoCalculation( ) {
     estimator->EstimateLocalResolution(&local_resolution_volume);
 
     // Write output volume to disk
-    local_resolution_volume.WriteSlicesAndFillHeader(output_volume_fn.ToStdString( ), pixel_size);
+    local_resolution_volume.WriteSlicesAndFillHeader(output_volume_fn, pixel_size);
 
     // Cleanup
     delete estimator;

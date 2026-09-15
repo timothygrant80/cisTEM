@@ -6,24 +6,24 @@ class Asset {
   public:
     int        asset_id;
     int        parent_id;
-    wxFileName filename;
+    std::filesystem::path filename;
     bool       is_valid;
-    wxString   asset_name;
+    std::string   asset_name;
 
     Asset( );
     virtual ~Asset( );
 
     // pure virtual
 
-    wxString ReturnFullPathString( );
-    wxString ReturnShortNameString( );
+    std::string ReturnFullPathString( );
+    std::string ReturnShortNameString( );
 };
 
 class MovieAsset : public Asset {
 
   public:
     MovieAsset( );
-    MovieAsset(wxString wanted_filename);
+    MovieAsset(std::string wanted_filename);
     ~MovieAsset( );
 
     int position_in_stack;
@@ -40,8 +40,8 @@ class MovieAsset : public Asset {
     double dose_per_frame;
     double total_dose;
 
-    wxString gain_filename;
-    wxString dark_filename;
+    std::string gain_filename;
+    std::string dark_filename;
 
     double output_binning_factor; // If this is a super-resolution movie, but we never intend to use the "super resolution" part of the spectrum, this factor should be > 1
 
@@ -52,7 +52,7 @@ class MovieAsset : public Asset {
 
     bool protein_is_white;
 
-    void Update(wxString wanted_filename, int assume_number_of_frames = 0);
+    void Update(std::string wanted_filename, int assume_number_of_frames = 0);
     //void Recheck_if_valid();
     void CopyFrom(Asset* other_asset);
     //long FindMember(long member_to_find);
@@ -65,8 +65,8 @@ class MovieMetadataAsset : public Asset {
     ~MovieMetadataAsset( );
 
     long       movie_asset_id;
-    wxString   metadata_source;
-    wxString   content_json;
+    std::string   metadata_source;
+    std::string   content_json;
     double     tilt_angle;
     double     stage_position_x;
     double     stage_position_y;
@@ -74,14 +74,14 @@ class MovieMetadataAsset : public Asset {
     double     image_shift_x;
     double     image_shift_y;
     double     exposure_dose;
-    wxDateTime acquisition_time;
+    DateTime acquisition_time;
 };
 
 class ImageAsset : public Asset {
 
   public:
     ImageAsset( );
-    ImageAsset(wxString wanted_filename);
+    ImageAsset(std::string wanted_filename);
     ~ImageAsset( );
 
     int position_in_stack;
@@ -97,7 +97,7 @@ class ImageAsset : public Asset {
 
     bool protein_is_white;
 
-    void Update(wxString wanted_filename);
+    void Update(std::string wanted_filename);
     void CopyFrom(Asset* other_asset);
 };
 
@@ -124,19 +124,19 @@ class ParticlePositionAsset : public Asset {
     void CopyFrom(Asset* other_asset);
 };
 
-WX_DECLARE_OBJARRAY(ParticlePositionAsset, ArrayOfParticlePositionAssets);
+typedef std::vector<ParticlePositionAsset> ArrayOfParticlePositionAssets;
 
 class VolumeAsset : public Asset {
 
   public:
     VolumeAsset( );
-    VolumeAsset(wxString wanted_filename);
+    VolumeAsset(std::string wanted_filename);
     ~VolumeAsset( );
 
     long reconstruction_job_id;
 
-    wxFileName half_map_1_filename;
-    wxFileName half_map_2_filename;
+    std::filesystem::path half_map_1_filename;
+    std::filesystem::path half_map_2_filename;
 
     int x_size;
     int y_size;
@@ -144,7 +144,7 @@ class VolumeAsset : public Asset {
 
     double pixel_size;
 
-    void Update(wxString wanted_filename);
+    void Update(std::string wanted_filename);
     void CopyFrom(Asset* other_asset);
 };
 
@@ -152,7 +152,7 @@ class AtomicCoordinatesAsset : public Asset {
 
   public:
     AtomicCoordinatesAsset( );
-    AtomicCoordinatesAsset(wxString wanted_filename);
+    AtomicCoordinatesAsset(std::string wanted_filename);
     ~AtomicCoordinatesAsset( );
 
     long simulation_3d_job_id;
@@ -161,12 +161,12 @@ class AtomicCoordinatesAsset : public Asset {
     int y_size;
     int z_size;
 
-    wxString pdb_id;
+    std::string pdb_id;
     float    pdb_avg_bfactor;
     float    pdb_std_bfactor;
     float    effective_weight;
 
-    void Update(wxString wanted_filename);
+    void Update(std::string wanted_filename);
     void CopyFrom(Asset* other_asset);
 };
 
@@ -200,7 +200,7 @@ class AssetList {
     virtual void AddAsset(Asset* asset_to_add)      = 0;
     virtual void RemoveAsset(long number_to_remove) = 0;
     virtual void RemoveAll( )                       = 0;
-    //	virtual long FindFile(wxFileName file_to_find) = 0;
+    //	virtual long FindFile(std::filesystem::path file_to_find) = 0;
     virtual void CheckMemory( ) = 0;
 
     virtual Asset*                  ReturnAssetPointer(long wanted_asset) = 0;
@@ -211,10 +211,10 @@ class AssetList {
     virtual AtomicCoordinatesAsset* ReturnAtomicCoordinatesAssetPointer(long wanted_asset);
     virtual int                     ReturnAssetID(long wanted_asset)                                      = 0;
     virtual long                    ReturnParentAssetID(long wanted_asset)                                = 0;
-    virtual wxString                ReturnAssetName(long wanted_asset)                                    = 0;
+    virtual std::string                ReturnAssetName(long wanted_asset)                                    = 0;
     virtual int                     ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0) = 0;
     virtual int                     ReturnArrayPositionFromParentID(int wanted_id)                        = 0;
-    virtual wxString                ReturnAssetFullFilename(long wanted_asst)                             = 0;
+    virtual std::string                ReturnAssetFullFilename(long wanted_asst)                             = 0;
 
     long ReturnNumberOfAssets( ) { return number_of_assets; }
 };
@@ -230,15 +230,15 @@ class MovieAssetList : public AssetList {
 
     int      ReturnAssetID(long wanted_asset);
     long     ReturnParentAssetID(long wanted_asset);
-    wxString ReturnAssetName(long wanted_asset);
+    std::string ReturnAssetName(long wanted_asset);
     int      ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0);
     int      ReturnArrayPositionFromParentID(int wanted_id);
-    wxString ReturnAssetFullFilename(long wanted_asst);
+    std::string ReturnAssetFullFilename(long wanted_asst);
 
     void AddAsset(Asset* asset_to_add);
     void RemoveAsset(long number_to_remove);
     void RemoveAll( );
-    long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
+    long FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
     void CheckMemory( );
 };
 
@@ -253,15 +253,15 @@ class ImageAssetList : public AssetList {
 
     int      ReturnAssetID(long wanted_asset);
     long     ReturnParentAssetID(long wanted_asset);
-    wxString ReturnAssetName(long wanted_asset);
+    std::string ReturnAssetName(long wanted_asset);
     int      ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0);
     int      ReturnArrayPositionFromParentID(int wanted_id);
-    wxString ReturnAssetFullFilename(long wanted_asst);
+    std::string ReturnAssetFullFilename(long wanted_asst);
 
     void AddAsset(Asset* asset_to_add);
     void RemoveAsset(long number_to_remove);
     void RemoveAll( );
-    long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
+    long FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
     void CheckMemory( );
 };
 
@@ -277,9 +277,9 @@ class ParticlePositionAssetList : public AssetList {
     int  ReturnAssetID(long wanted_asset);
     long ReturnParentAssetID(long wanted_asset);
 
-    wxString ReturnAssetName(long wanted_asset) { return wxEmptyString; };
+    std::string ReturnAssetName(long wanted_asset) { return std::string(); };
 
-    wxString ReturnAssetFullFilename(long wanted_asst) { return wxEmptyString; };
+    std::string ReturnAssetFullFilename(long wanted_asst) { return std::string(); };
 
     int ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0);
     int ReturnArrayPositionFromParentID(int wanted_id);
@@ -302,15 +302,15 @@ class VolumeAssetList : public AssetList {
 
     int      ReturnAssetID(long wanted_asset);
     long     ReturnParentAssetID(long wanted_asset);
-    wxString ReturnAssetName(long wanted_asset);
+    std::string ReturnAssetName(long wanted_asset);
     int      ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0);
     int      ReturnArrayPositionFromParentID(int wanted_id);
-    wxString ReturnAssetFullFilename(long wanted_asst);
+    std::string ReturnAssetFullFilename(long wanted_asst);
 
     void AddAsset(Asset* asset_to_add);
     void RemoveAsset(long number_to_remove);
     void RemoveAll( );
-    long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
+    long FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
     void CheckMemory( );
 };
 
@@ -325,15 +325,15 @@ class AtomicCoordinatesAssetList : public AssetList {
 
     int      ReturnAssetID(long wanted_asset);
     long     ReturnParentAssetID(long wanted_asset);
-    wxString ReturnAssetName(long wanted_asset);
+    std::string ReturnAssetName(long wanted_asset);
     int      ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0);
     int      ReturnArrayPositionFromParentID(int wanted_id);
-    wxString ReturnAssetFullFilename(long wanted_asst);
+    std::string ReturnAssetFullFilename(long wanted_asst);
 
     void AddAsset(Asset* asset_to_add);
     void RemoveAsset(long number_to_remove);
     void RemoveAll( );
-    long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
+    long FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
     void CheckMemory( );
 };
 

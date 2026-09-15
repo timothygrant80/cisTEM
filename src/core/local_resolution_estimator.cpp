@@ -37,7 +37,7 @@ LocalResolutionEstimator::~LocalResolutionEstimator( ) {
     box_two_no_padding.Deallocate( );
 }
 
-void LocalResolutionEstimator::SetAllUserParameters(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol, bool wanted_whiten_half_maps, int wanted_padding_factor) {
+void LocalResolutionEstimator::SetAllUserParameters(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, std::string wanted_symmetry_symbol, bool wanted_whiten_half_maps, int wanted_padding_factor) {
     MyDebugAssertTrue(IsEven(box_size), "Box size should be even");
     SetInputVolumes(wanted_input_volume_one, wanted_input_volume_two, wanted_mask_volume);
     first_slice   = wanted_first_slice;
@@ -207,7 +207,7 @@ void LocalResolutionEstimator::ComputeFSCThresholdBasedOnUnbiasedSNREstimator(fl
         fsc_threshold[shell_counter] = 0.0;
     }
 
-    wxPrintf("\n\nFSC threshold\n");
+    Printf("\n\nFSC threshold\n");
 
     for ( int shell_counter = 0; shell_counter < number_of_fsc_shells; shell_counter++ ) {
         if ( use_fixed_fsc_threshold ) {
@@ -218,9 +218,9 @@ void LocalResolutionEstimator::ComputeFSCThresholdBasedOnUnbiasedSNREstimator(fl
         }
         if ( fsc_threshold[shell_counter] > nearly_one )
             fsc_threshold[shell_counter] = nearly_one;
-        wxPrintf("%i %f %f\n", shell_counter, number_of_independent_voxels[shell_counter], fsc_threshold[shell_counter]);
+        Printf("%i %f %f\n", shell_counter, number_of_independent_voxels[shell_counter], fsc_threshold[shell_counter]);
     }
-    wxPrintf("\n\n");
+    Printf("\n\n");
 }
 
 void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_threshold[], Image* local_resolution_volume, Image box_mask) {
@@ -303,7 +303,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
         else
             fsc_threshold[shell_counter] = 0.2f;
 
-        wxPrintf("Setting Threshold to %.2f for %.2f A\n", fsc_threshold[shell_counter], current_resolution);
+        Printf("Setting Threshold to %.2f for %.2f A\n", fsc_threshold[shell_counter], current_resolution);
     }
 
 #ifdef DEBUG
@@ -318,7 +318,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 #ifdef DEBUG
                         on_dbg_point = i == dbg_i && j == dbg_j && k == dbg_k;
                         if ( on_dbg_point )
-                            wxPrintf("On the debug point\n");
+                            Printf("On the debug point\n");
 #endif
 
                         if ( i % sampling_step == 0 ) {
@@ -328,7 +328,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                             if ( input_volume_mask->real_values[pixel_counter] == 0.0 || i < center_of_first_box || i > center_of_last_box || j < center_of_first_box || j > center_of_last_box || k < center_of_first_box || k > center_of_last_box ) {
 #ifdef DEBUG
                                 if ( i == dbg_i && j == dbg_j && k == dbg_k )
-                                    wxPrintf("At debug point, but mask was 0.0\n");
+                                    Printf("At debug point, but mask was 0.0\n");
 #endif
                                 local_resolution_volume->real_values[pixel_counter] = resolution_value_where_wont_estimate;
                             }
@@ -366,12 +366,12 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 #ifdef DEBUG
                                 // Debug: printout FSC curve
                                 if ( on_dbg_point ) {
-                                    wxPrintf("\n\n");
+                                    Printf("\n\n");
                                     for ( int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter++ ) {
                                         current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1) / float(shell_counter);
-                                        wxPrintf("%i %.2f %.4f %.4f\n", shell_counter, current_resolution, fsc_threshold[shell_counter], computed_fsc[shell_counter]);
+                                        Printf("%i %.2f %.4f %.4f\n", shell_counter, current_resolution, fsc_threshold[shell_counter], computed_fsc[shell_counter]);
                                     }
-                                    wxPrintf("\n\n");
+                                    Printf("\n\n");
                                 }
 #endif
 
@@ -418,7 +418,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                         }
 #ifdef DEBUG
                                         if ( on_dbg_point ) {
-                                            wxPrintf("Estimated local resolution: %f Å. Previous resolution: %f Å. Current_resolution: %f Å\n", local_resolution_volume->real_values[pixel_counter], previous_resolution, current_resolution);
+                                            Printf("Estimated local resolution: %f Å. Previous resolution: %f Å. Current_resolution: %f Å\n", local_resolution_volume->real_values[pixel_counter], previous_resolution, current_resolution);
                                         }
 #endif
                                         break;
@@ -427,14 +427,14 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                         local_resolution_volume->real_values[pixel_counter] = current_resolution;
 #ifdef DEBUG
                                         if ( on_dbg_point )
-                                            wxPrintf("At debug point, but got to last shell\n");
+                                            Printf("At debug point, but got to last shell\n");
 #endif
                                     }
                                     previous_resolution = current_resolution;
                                 }
 #ifdef DEBUG
                                 if ( on_dbg_point ) {
-                                    wxPrintf("Estimated local resolution: %f Å\n", local_resolution_volume->real_values[pixel_counter]);
+                                    Printf("Estimated local resolution: %f Å\n", local_resolution_volume->real_values[pixel_counter]);
                                 }
 #endif
                             }
@@ -444,7 +444,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                             local_resolution_volume->real_values[pixel_counter] = resolution_value_between_estimation_points;
 #ifdef DEBUG
                             if ( on_dbg_point )
-                                wxPrintf("At debug point, but between estimation points\n");
+                                Printf("At debug point, but between estimation points\n");
 #endif
                         }
 
@@ -454,7 +454,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                 else {
 #ifdef DEBUG
                     if ( on_dbg_point )
-                        wxPrintf("At debug point, but not estimating this line\n");
+                        Printf("At debug point, but not estimating this line\n");
 #endif
                     // We are not estimating this line
                     for ( int i = 0; i < input_volume_one->logical_x_dimension; i++ ) {
@@ -482,7 +482,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
             }
 #ifdef DEBUG
             if ( on_dbg_point )
-                wxPrintf("At debug point, but not estimating this slice\n");
+                Printf("At debug point, but not estimating this slice\n");
 #endif
         }
     }

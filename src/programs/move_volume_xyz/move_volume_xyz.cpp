@@ -14,8 +14,8 @@ IMPLEMENT_APP(MoveVolumeXYZApp)
 // override the DoInteractiveUserInput
 
 void MoveVolumeXYZApp::DoInteractiveUserInput( ) {
-    wxString input_volume_file;
-    wxString output_volume_file;
+    std::string input_volume_file;
+    std::string output_volume_file;
 
     float x_rot;
     float y_rot;
@@ -39,8 +39,8 @@ void MoveVolumeXYZApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(8);
-    my_current_job.ManualSetArguments("ttffffff", input_volume_file.ToUTF8( ).data( ),
-                                      output_volume_file.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttffffff", input_volume_file.c_str(),
+                                      output_volume_file.c_str(),
                                       x_rot,
                                       y_rot,
                                       z_rot,
@@ -53,8 +53,8 @@ void MoveVolumeXYZApp::DoInteractiveUserInput( ) {
 
 bool MoveVolumeXYZApp::DoCalculation( ) {
 
-    wxString input_volume_file  = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_volume_file = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_volume_file  = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_volume_file = my_current_job.arguments[1].ReturnStringArgument( );
     float    x_rot              = my_current_job.arguments[2].ReturnFloatArgument( );
     float    y_rot              = my_current_job.arguments[3].ReturnFloatArgument( );
     float    z_rot              = my_current_job.arguments[4].ReturnFloatArgument( );
@@ -70,7 +70,7 @@ bool MoveVolumeXYZApp::DoCalculation( ) {
     RotationMatrix current_matrix;
     RotationMatrix inverse_matrix;
 
-    MRCFile* input_file       = new MRCFile(input_volume_file.ToStdString( ));
+    MRCFile* input_file       = new MRCFile(input_volume_file);
     float    input_pixel_size = input_file->ReturnPixelSize( );
 
     input_volume.ReadSlices(input_file, 1, input_file->ReturnNumberOfSlices( ));
@@ -87,7 +87,7 @@ bool MoveVolumeXYZApp::DoCalculation( ) {
     input_volume.AddConstant(average_value_at_edge);
 
     MRCFile* output_file;
-    output_file = new MRCFile(output_volume_file.ToStdString( ), true);
+    output_file = new MRCFile(output_volume_file, true);
     input_volume.WriteSlices(output_file, 1, input_volume.logical_z_dimension);
     output_file->SetPixelSize(input_pixel_size);
     delete output_file;

@@ -120,7 +120,7 @@ void EulerSearch::Init(float wanted_resolution_limit, ParameterMap& wanted_param
     //Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
 }
 
-void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, ParameterMap& wanted_parameter_map, int wanted_parameters_to_keep) {
+void EulerSearch::InitGrid(std::string wanted_symmetry_symbol, float wanted_angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, ParameterMap& wanted_parameter_map, int wanted_parameters_to_keep) {
     if ( number_of_search_positions == 0 )
         Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
 
@@ -146,7 +146,7 @@ void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular
 }
 
 // This method has not been tested
-void EulerSearch::InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_step, int wanted_number_of_search_positions, float wanted_resolution_limit, ParameterMap& wanted_parameter_map, int wanted_parameters_to_keep) {
+void EulerSearch::InitRandom(std::string wanted_symmetry_symbol, float wanted_psi_step, int wanted_number_of_search_positions, float wanted_resolution_limit, ParameterMap& wanted_parameter_map, int wanted_parameters_to_keep) {
     int i;
 
     if ( number_of_search_positions == 0 )
@@ -264,7 +264,7 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle) {
     if ( ! parameter_map.psi ) {
         test_mirror = false;
     }
-    //	wxPrintf("\nNumber of global search views = %i\n", number_of_search_positions);
+    //	Printf("\nNumber of global search views = %i\n", number_of_search_positions);
 }
 
 void EulerSearch::CalculateRandomSearchPositions( ) {
@@ -334,19 +334,19 @@ void EulerSearch::SetSymmetryLimits( ) {
     //    DATA  PHISTORE/360.0,  360.0, 180.0,  90.0, 180.0/
     //    DATA  JSTORE/2,1,1,1,1/
 
-    wxChar symmetry_type;
+    char symmetry_type;
     long   symmetry_number;
 
-    if ( symmetry_symbol.Length( ) < 1 ) {
+    if ( symmetry_symbol.length() < 1 ) {
         MyPrintWithDetails("Error: Must specify symmetry symbol\n");
         DEBUG_ABORT;
     }
-    symmetry_type = symmetry_symbol.Capitalize( )[0];
-    if ( symmetry_symbol.Length( ) == 1 ) {
+    symmetry_type = char(toupper(symmetry_symbol[0]));
+    if ( symmetry_symbol.length() == 1 ) {
         symmetry_number = 0;
     }
     else {
-        if ( ! symmetry_symbol.Mid(1).ToLong(&symmetry_number) ) {
+        if ( ! StringToLong(symmetry_symbol.substr(1), symmetry_number) ) {
             MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
             DEBUG_ABORT;
         }
@@ -501,7 +501,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
 
     psi_m = 0;
     for ( psi_i = 0; psi_i < number_of_psi_positions; psi_i++ ) {
-        //		wxPrintf("rotation_cache[psi_m].logical_z_dimension = %i\n", rotation_cache[psi_m].logical_z_dimension);
+        //		Printf("rotation_cache[psi_m].logical_z_dimension = %i\n", rotation_cache[psi_m].logical_z_dimension);
         if ( parameter_map.psi ) {
             //			flipped_image->RotateFourier2DFromIndex(rotation_cache[psi_m], kernel_index[psi_i]);
             angles.GenerateRotationMatrix2D(psi_i * psi_step + psi_start);
@@ -523,7 +523,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
 
     for ( i = 0; i < number_of_search_positions; i++ ) {
         if ( projections == NULL ) {
-            //			wxPrintf("i, phi, theta = %i, %f, %f\n", i, list_of_search_parameters[i][0], list_of_search_parameters[i][1]);
+            //			Printf("i, phi, theta = %i, %f, %f\n", i, list_of_search_parameters[i][0], list_of_search_parameters[i][1]);
             angles.Init(list_of_search_parameters[i][0], list_of_search_parameters[i][1], 0.0, 0.0, 0.0);
             input_3d.ExtractSlice(*projection_image, angles, resolution_limit);
             projection_image->Whiten(resolution_limit);
@@ -577,7 +577,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
             //				rotation_cache[psi_m].QuickAndDirtyWriteSlice("part.mrc", sample_rate);
             //				projection_image->SwapRealSpaceQuadrants();
             //				rotation_cache[psi_m].SwapRealSpaceQuadrants();
-            //				wxPrintf("peak  = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
+            //				Printf("peak  = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
             //						list_of_search_parameters[i][1], list_of_search_parameters[i][0], found_peak.x, found_peak.y);
             if ( found_peak.value > best_inplane_score ) {
                 best_inplane_score     = found_peak.value;
@@ -617,7 +617,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
                 //					rotation_cache[psi_m].QuickAndDirtyWriteSlice("part.mrc", sample_rate);
                 //					projection_image->SwapRealSpaceQuadrants();
                 //					rotation_cache[psi_m].SwapRealSpaceQuadrants();
-                //					wxPrintf("peakm = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
+                //					Printf("peakm = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
                 //							list_of_search_parameters[i][1] + 180.0, list_of_search_parameters[i][0], found_peak.x, found_peak.y);
                 if ( found_peak.value > best_inplane_score ) {
                     best_inplane_score     = found_peak.value;
@@ -658,7 +658,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
                 for ( k = 0; k < 6; k++ ) {
                     list_of_best_parameters[j][k] = temp_float[k];
                 }
-                //				wxPrintf("best_inplane_score = %i %g\n", j - 1, list_of_best_parameters[j - 1][5]);
+                //				Printf("best_inplane_score = %i %g\n", j - 1, list_of_best_parameters[j - 1][5]);
             }
             else {
                 break;
@@ -670,7 +670,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
 	particle.origin_micrograph++;
 	particle.particle_image->QuickAndDirtyWriteSlice("part.mrc", particle.origin_micrograph);
 	angles.Init(list_of_best_parameters[1][0], list_of_best_parameters[1][1], list_of_best_parameters[1][2], list_of_best_parameters[1][3], list_of_best_parameters[1][4]);
-	wxPrintf("params, score = %i %g %g %g %g %g %g\n", particle.origin_micrograph, list_of_best_parameters[1][0], list_of_best_parameters[1][1], list_of_best_parameters[1][2], list_of_best_parameters[1][3], list_of_best_parameters[1][4], list_of_best_parameters[1][5]);
+	Printf("params, score = %i %g %g %g %g %g %g\n", particle.origin_micrograph, list_of_best_parameters[1][0], list_of_best_parameters[1][1], list_of_best_parameters[1][2], list_of_best_parameters[1][3], list_of_best_parameters[1][4], list_of_best_parameters[1][5]);
 	input_3d.ExtractSlice(*projection_image, angles, resolution_limit);
 	projection_image->PhaseShift(angles.ReturnShiftX() / particle.pixel_size, angles.ReturnShiftY() / particle.pixel_size);
 	projection_image->SwapRealSpaceQuadrants();

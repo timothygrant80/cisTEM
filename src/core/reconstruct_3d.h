@@ -28,8 +28,8 @@ class Reconstruct3D {
     int images_processed;
 
     Reconstruct3D(float wanted_pixel_size = 0.0, float wanted_average_occupancy = 0.0, float wanted_average_score = 0.0, float wanted_score_weights_conversion = 0.0, int wanted_correct_ewald_sphere = 0);
-    Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere = 0);
-    Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere = 0); // constructor with size
+    Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, std::string wanted_symmetry, int wanted_correct_ewald_sphere = 0);
+    Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, std::string wanted_symmetry, int wanted_correct_ewald_sphere = 0); // constructor with size
     ~Reconstruct3D( ); // destructor
 
     void           FreeMemory( );
@@ -39,11 +39,11 @@ class Reconstruct3D {
     void           AddByLinearInterpolation(float& wanted_x_coordinate, float& wanted_y_coordinate, float& wanted_z_coordinate, std::complex<float>& wanted_value, std::complex<float>& ctf_value, float wanted_weight, bool complex_ctf = false);
     void           CompleteEdges( );
     float          Correct3DCTF(Image& buffer3d);
-    void           DumpArrays(wxString filename, bool insert_even);
-    void           ReadArrayHeader(wxString filename, int& logical_x_dimension, int& logical_y_dimension, int& logical_z_dimension,
+    void           DumpArrays(std::string filename, bool insert_even);
+    void           ReadArrayHeader(std::string filename, int& logical_x_dimension, int& logical_y_dimension, int& logical_z_dimension,
                                    int& original_x_dimension, int& original_y_dimension, int& original_z_dimension, int& images_processed, float& pixel_size, float& original_pixel_size,
-                                   float& average_occupancy, float& average_score, float& score_weights_conversion, wxString& symmetry_symbol, bool& insert_even, bool& center_mass);
-    void           ReadArrays(wxString filename);
+                                   float& average_occupancy, float& average_score, float& score_weights_conversion, std::string& symmetry_symbol, bool& insert_even, bool& center_mass);
+    void           ReadArrays(std::string filename);
     Reconstruct3D  operator+(const Reconstruct3D& other);
     Reconstruct3D& operator=(const Reconstruct3D& other);
     Reconstruct3D& operator=(const Reconstruct3D* other);

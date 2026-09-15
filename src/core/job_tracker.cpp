@@ -12,9 +12,9 @@ JobTracker::JobTracker( ) {
     last_update_time_total_running_processes = 0;
     last_update_seconds_per_job_per_process  = 0;
 
-    time_remaining = wxTimeSpan(99, 99, 99);
+    time_remaining = TimeSpan(99, 99, 99);
 
-    old_time_remaining = wxTimeSpan(-1, -1, -1);
+    old_time_remaining = TimeSpan(-1, -1, -1);
 
     old_percent_complete = -1;
 }
@@ -32,9 +32,9 @@ void JobTracker::StartTracking(int wanted_total_number_of_jobs) {
     last_update_seconds_per_job_per_process  = -1;
     last_update_time_total_running_processes = 0;
 
-    time_remaining = wxTimeSpan(99, 99, 99);
+    time_remaining = TimeSpan(99, 99, 99);
 
-    old_time_remaining = wxTimeSpan(-1, -1, -1);
+    old_time_remaining = TimeSpan(-1, -1, -1);
 }
 
 void JobTracker::AddConnection( ) {
@@ -63,7 +63,7 @@ void JobTracker::MarkJobFinished( ) {
 		last_update_seconds_per_job_per_process /= float(total_number_of_finished_jobs + 1);
 	}
 
-	//wxPrintf("Job finished new process time = %f seconds\nnaive time = %f seconds\n", last_update_seconds_per_job_per_process, naive_time_per_process);
+	//Printf("Job finished new process time = %f seconds\nnaive time = %f seconds\n", last_update_seconds_per_job_per_process, naive_time_per_process);
 	total_number_of_finished_jobs++;
 
 	last_update_time_total_running_processes = total_running_processes;
@@ -73,11 +73,11 @@ void JobTracker::MarkJobFinished( ) {
     last_update_seconds_per_job_per_process = naive_time_per_process;
 }
 
-wxTimeSpan JobTracker::ReturnRemainingTime( ) {
+TimeSpan JobTracker::ReturnRemainingTime( ) {
     long current_time = time(NULL);
 
     if ( current_time - time_of_last_remaining_time_call >= 1 ) {
-        time_remaining = wxTimeSpan(0, 0, (total_number_of_jobs - total_number_of_finished_jobs) * last_update_seconds_per_job_per_process);
+        time_remaining = TimeSpan(0, 0, (total_number_of_jobs - total_number_of_finished_jobs) * last_update_seconds_per_job_per_process);
 
         time_of_last_remaining_time_call = current_time;
     }
@@ -85,12 +85,12 @@ wxTimeSpan JobTracker::ReturnRemainingTime( ) {
     return time_remaining;
 }
 
-wxTimeSpan JobTracker::ReturnTimeSinceStart( ) {
-    return wxTimeSpan(0, 0, time(NULL) - start_time);
+TimeSpan JobTracker::ReturnTimeSinceStart( ) {
+    return TimeSpan(0, 0, time(NULL) - start_time);
 }
 
 bool JobTracker::ShouldUpdate( ) {
-    wxTimeSpan new_time_remaining      = ReturnRemainingTime( );
+    TimeSpan new_time_remaining      = ReturnRemainingTime( );
     int        new_percentage_complete = ReturnPercentCompleted( );
 
     bool should_update = false;
@@ -100,7 +100,7 @@ bool JobTracker::ShouldUpdate( ) {
         should_update        = true;
     }
 
-    if ( ! new_time_remaining.IsEqualTo(old_time_remaining) ) {
+    if ( new_time_remaining != old_time_remaining ) {
         old_time_remaining = new_time_remaining;
         should_update      = true;
     }

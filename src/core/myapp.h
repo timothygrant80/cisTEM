@@ -17,7 +17,7 @@ typedef std::unordered_map<TcpSocket*, RunJob*> SocketJobPointerHash;
 #define PrintIfLocal(...)                \
     {                                    \
         if ( is_running_lcally == true ) \
-            wxPrintf(__VA_ARGS__);       \
+            Printf(__VA_ARGS__);       \
     }
 
 class MyApp; // So CalculateThread class knows about it
@@ -43,10 +43,10 @@ class CalculateThread {
 
     MyApp* main_thread_pointer;
     float  job_wait_time;
-    void   QueueError(wxString error_to_queue);
-    void   QueueInfo(wxString info_to_queue);
+    void   QueueError(std::string error_to_queue);
+    void   QueueInfo(std::string info_to_queue);
     void   MarkIntermediateResultAvailable( );
-    void   SendProcessedImageResult(Image* image_to_send, int position_in_stack, wxString filename_to_save);
+    void   SendProcessedImageResult(Image* image_to_send, int position_in_stack, std::string filename_to_save);
     void   SendProgramDefinedResultToMaster(float* result_to_send, long size_of_result, int result_number, int number_of_expected_results);
 
   protected:
@@ -107,14 +107,14 @@ class MyApp : public EventLoop,
 
     void HandleNewSocketConnection(TcpSocket* new_connection, unsigned char* identification_code) override;
     void HandleSocketYouAreTheMaster(TcpSocket* connected_socket, JobPackage* received_package) override;
-    void HandleSocketYouAreAWorker(TcpSocket* connected_socket, wxString master_ip_address, wxString master_port_string) override;
+    void HandleSocketYouAreAWorker(TcpSocket* connected_socket, std::string master_ip_address, std::string master_port_string) override;
     void HandleSocketTimeToDie(TcpSocket* connected_socket) override;
     void HandleSocketJobResult(TcpSocket* connected_socket, JobResult* received_result) override;
-    void HandleSocketIHaveAnError(TcpSocket* connected_socket, wxString error_message) override;
-    void HandleSocketIHaveInfo(TcpSocket* connected_socket, wxString info_message) override;
+    void HandleSocketIHaveAnError(TcpSocket* connected_socket, std::string error_message) override;
+    void HandleSocketIHaveInfo(TcpSocket* connected_socket, std::string info_message) override;
     void HandleSocketSendNextJob(TcpSocket* connected_socket, JobResult* received_result) override;
     void HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue) override;
-    void HandleSocketResultWithImageToWrite(TcpSocket* connected_socket, wxString filename_to_write_to, int position_in_stack) override;
+    void HandleSocketResultWithImageToWrite(TcpSocket* connected_socket, std::string filename_to_write_to, int position_in_stack) override;
     void HandleSocketProgramDefinedResult(TcpSocket* connected_socket, float* data_array, int size_of_data_array, int result_number, int number_of_expected_results) override;
     void HandleSocketSendThreadTiming(TcpSocket* connected_socket, long received_timing_in_milliseconds) override;
     void HandleSocketYouAreConnected(TcpSocket* connected_socket) override;
@@ -148,8 +148,8 @@ class MyApp : public EventLoop,
     MessageQueue<char> inter_thread_message_queue;
 
     short int my_port;
-    wxString  my_ip_address;
-    wxString  my_port_string;
+    std::string  my_ip_address;
+    std::string  my_port_string;
 
     bool is_running_locally;
     int  number_of_threads_requested_on_command_line;
@@ -163,8 +163,8 @@ class MyApp : public EventLoop,
     RunJob my_current_job;
     RunJob global_job_parameters;
 
-    wxString  master_ip_address;
-    wxString  master_port_string;
+    std::string  master_ip_address;
+    std::string  master_port_string;
     short int master_port;
 
     long max_number_of_connected_workers; // for the master...
@@ -181,15 +181,15 @@ class MyApp : public EventLoop,
     virtual bool DoCalculation( ) = 0;
 
     virtual void DoInteractiveUserInput( ) {
-        wxPrintf("\n Error: This program cannot be run interactively..\n\n");
+        Printf("\n Error: This program cannot be run interactively..\n\n");
         exit(0);
     }
 
     virtual void AddCommandLineOptions( );
 
-    void SendError(wxString error_message);
-    void SendErrorAndCrash(wxString error_message);
-    void SendInfo(wxString error_message);
+    void SendError(std::string error_message);
+    void SendErrorAndCrash(std::string error_message);
+    void SendInfo(std::string error_message);
     void SendIntermediateResultQueue(ArrayofJobResults& queue_to_send);
 
     CalculateThread* work_thread;
@@ -202,16 +202,16 @@ class MyApp : public EventLoop,
     void       AddJobToResultQueue(JobResult*);
     JobResult* PopJobFromResultQueue( );
     void       SendAllResultsFromResultQueue( );
-    void       SendProcessedImageResult(Image* image_to_send, int position_in_stack, wxString filename_to_save);
+    void       SendProcessedImageResult(Image* image_to_send, int position_in_stack, std::string filename_to_save);
     void       SendProgramDefinedResultToMaster(float* result_to_send, long size_of_result, int result_number, int number_of_expected_results); // can override MasterHandleSpecialResult to do something with this
 
     // Called on the main thread by the calculation thread (through CallAfter)
     void OnThreadComplete(bool success);
     void OnThreadEnding( );
-    void OnThreadSendError(wxString error_message);
-    void OnThreadSendInfo(wxString info_message);
+    void OnThreadSendError(std::string error_message);
+    void OnThreadSendInfo(std::string info_message);
     void OnThreadIntermediateResultAvailable( );
-    void OnThreadSendImageResult(std::shared_ptr<Image> image_to_send, int position_in_stack, wxString filename_to_write);
+    void OnThreadSendImageResult(std::shared_ptr<Image> image_to_send, int position_in_stack, std::string filename_to_write);
     void OnThreadSendProgramDefinedResult(float* array_to_send, long size_of_array, int result_number, int number_of_expected_results);
 
   private:
@@ -221,10 +221,10 @@ class MyApp : public EventLoop,
     void MasterSendIntenalQueue( );
     void SendAllJobsFinished( );
 
-    virtual void MasterHandleProgramDefinedResult(float* result_array, long array_size, int result_number, int number_of_expected_results) { wxPrintf("warning parent MasterHandleProgramDefinedResult called, you should probably be overriding this!\n"); } // can use this for program specific results by overiding in combination with SendSpecialResultForMaster in the program
+    virtual void MasterHandleProgramDefinedResult(float* result_array, long array_size, int result_number, int number_of_expected_results) { Printf("warning parent MasterHandleProgramDefinedResult called, you should probably be overriding this!\n"); } // can use this for program specific results by overiding in combination with SendSpecialResultForMaster in the program
 
-    void SocketSendError(wxString error_message);
-    void SocketSendInfo(wxString info_message);
+    void SocketSendError(std::string error_message);
+    void SocketSendInfo(std::string info_message);
 
     void SendNextJobTo(TcpSocket* socket);
 

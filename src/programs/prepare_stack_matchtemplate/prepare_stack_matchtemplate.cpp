@@ -15,15 +15,15 @@ IMPLEMENT_APP(MakeParticleStack)
 
 void MakeParticleStack::DoInteractiveUserInput( ) {
 
-    wxString input_mip_filename;
-    wxString input_image_filename;
-    wxString input_best_psi_filename;
-    wxString input_best_theta_filename;
-    wxString input_best_phi_filename;
-    wxString input_best_defocus_filename;
-    wxString output_star_filename;
-    wxString output_particle_stack_filename;
-    wxString xyz_coords_filename;
+    std::string input_mip_filename;
+    std::string input_image_filename;
+    std::string input_best_psi_filename;
+    std::string input_best_theta_filename;
+    std::string input_best_phi_filename;
+    std::string input_best_defocus_filename;
+    std::string output_star_filename;
+    std::string output_particle_stack_filename;
+    std::string xyz_coords_filename;
 
     float wanted_threshold;
     float min_peak_radius;
@@ -75,15 +75,15 @@ void MakeParticleStack::DoInteractiveUserInput( ) {
 
     //	my_current_job.Reset(14);
     my_current_job.ManualSetArguments("tttttttttifffffffffbiii",
-                                      input_mip_filename.ToUTF8( ).data( ),
-                                      input_best_psi_filename.ToUTF8( ).data( ),
-                                      input_best_theta_filename.ToUTF8( ).data( ),
-                                      input_best_phi_filename.ToUTF8( ).data( ),
-                                      input_best_defocus_filename.ToUTF8( ).data( ),
-                                      xyz_coords_filename.ToUTF8( ).data( ),
-                                      input_image_filename.ToUTF8( ).data( ),
-                                      output_star_filename.ToUTF8( ).data( ),
-                                      output_particle_stack_filename.ToUTF8( ).data( ),
+                                      input_mip_filename.c_str(),
+                                      input_best_psi_filename.c_str(),
+                                      input_best_theta_filename.c_str(),
+                                      input_best_phi_filename.c_str(),
+                                      input_best_defocus_filename.c_str(),
+                                      xyz_coords_filename.c_str(),
+                                      input_image_filename.c_str(),
+                                      output_star_filename.c_str(),
+                                      output_particle_stack_filename.c_str(),
                                       box_size,
                                       pixel_size,
                                       average_defocus_1,
@@ -103,17 +103,17 @@ void MakeParticleStack::DoInteractiveUserInput( ) {
 
 bool MakeParticleStack::DoCalculation( ) {
 
-    wxDateTime start_time = wxDateTime::Now( );
+    DateTime start_time = DateTime::Now( );
 
-    wxString input_mip_filename             = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_best_psi_filename        = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_best_theta_filename      = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString input_best_phi_filename        = my_current_job.arguments[3].ReturnStringArgument( );
-    wxString input_best_defocus_filename    = my_current_job.arguments[4].ReturnStringArgument( );
-    wxString xyz_coords_filename            = my_current_job.arguments[5].ReturnStringArgument( );
-    wxString input_image_filename           = my_current_job.arguments[6].ReturnStringArgument( );
-    wxString output_star_filename           = my_current_job.arguments[7].ReturnStringArgument( );
-    wxString output_particle_stack_filename = my_current_job.arguments[8].ReturnStringArgument( );
+    std::string input_mip_filename             = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_best_psi_filename        = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_best_theta_filename      = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string input_best_phi_filename        = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string input_best_defocus_filename    = my_current_job.arguments[4].ReturnStringArgument( );
+    std::string xyz_coords_filename            = my_current_job.arguments[5].ReturnStringArgument( );
+    std::string input_image_filename           = my_current_job.arguments[6].ReturnStringArgument( );
+    std::string output_star_filename           = my_current_job.arguments[7].ReturnStringArgument( );
+    std::string output_particle_stack_filename = my_current_job.arguments[8].ReturnStringArgument( );
     int      box_size                       = my_current_job.arguments[9].ReturnIntegerArgument( );
     float    pixel_size                     = my_current_job.arguments[10].ReturnFloatArgument( );
     float    average_defocus_1              = my_current_job.arguments[11].ReturnFloatArgument( );
@@ -168,18 +168,18 @@ bool MakeParticleStack::DoCalculation( ) {
     if ( ! read_coordinates ) {
         coordinate_file.WriteCommentLine("         Psi          Theta            Phi              X              Y              Z      PixelSize           Peak");
 
-        mip_image.QuickAndDirtyReadSlice(input_mip_filename.ToStdString( ), result_number);
-        psi_image.QuickAndDirtyReadSlice(input_best_psi_filename.ToStdString( ), result_number);
-        theta_image.QuickAndDirtyReadSlice(input_best_theta_filename.ToStdString( ), result_number);
-        phi_image.QuickAndDirtyReadSlice(input_best_phi_filename.ToStdString( ), result_number);
-        defocus_image.QuickAndDirtyReadSlice(input_best_defocus_filename.ToStdString( ), result_number);
+        mip_image.QuickAndDirtyReadSlice(input_mip_filename, result_number);
+        psi_image.QuickAndDirtyReadSlice(input_best_psi_filename, result_number);
+        theta_image.QuickAndDirtyReadSlice(input_best_theta_filename, result_number);
+        phi_image.QuickAndDirtyReadSlice(input_best_phi_filename, result_number);
+        defocus_image.QuickAndDirtyReadSlice(input_best_defocus_filename, result_number);
         mip_x_dimension = mip_image.logical_x_dimension;
         mip_y_dimension = mip_image.logical_y_dimension;
 
         min_peak_radius = powf(min_peak_radius, 2);
     }
 
-    micrograph.QuickAndDirtyReadSlice(input_image_filename.ToStdString( ), 1);
+    micrograph.QuickAndDirtyReadSlice(input_image_filename, 1);
     micrograph_mean = micrograph.ReturnAverageOfRealValues( );
     //	address = 0;
     //	for (j = 0; j < micrograph.logical_y_dimension; j++)
@@ -198,7 +198,7 @@ bool MakeParticleStack::DoCalculation( ) {
 
     // loop until the found peak is below the threshold
 
-    wxPrintf("\n");
+    Printf("\n");
     while ( 1 == 1 ) {
         if ( ! read_coordinates ) {
             // look for a peak..
@@ -218,7 +218,7 @@ bool MakeParticleStack::DoCalculation( ) {
             current_peak.x = current_peak.x + mip_image.physical_address_of_box_center_x;
             current_peak.y = current_peak.y + mip_image.physical_address_of_box_center_y;
 
-            //			wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
+            //			Printf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
 
             for ( j = 0; j < mip_y_dimension; j++ ) {
                 sq_dist_y = float(pow(j - current_peak.y, 2));
@@ -286,7 +286,7 @@ bool MakeParticleStack::DoCalculation( ) {
 
         output_star_file.all_parameters[number_of_peaks_found] = output_parameters;
 
-        wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x * pixel_size, current_peak.y * pixel_size, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
+        Printf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x * pixel_size, current_peak.y * pixel_size, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
 
         micrograph.ClipInto(&current_particle, micrograph_mean, false, 1.0,
                             int(current_peak.x - micrograph.physical_address_of_box_center_x),
@@ -298,9 +298,9 @@ bool MakeParticleStack::DoCalculation( ) {
             variance = 1.0f;
         current_particle.AddMultiplyConstant(-current_particle.ReturnAverageOfRealValuesOnEdges( ), 1.0f / sqrtf(variance));
         if ( number_of_peaks_found == 1 )
-            current_particle.QuickAndDirtyWriteSlice(output_particle_stack_filename.ToStdString( ), number_of_peaks_found, true, pixel_size);
+            current_particle.QuickAndDirtyWriteSlice(output_particle_stack_filename, number_of_peaks_found, true, pixel_size);
         else
-            current_particle.QuickAndDirtyWriteSlice(output_particle_stack_filename.ToStdString( ), number_of_peaks_found);
+            current_particle.QuickAndDirtyWriteSlice(output_particle_stack_filename, number_of_peaks_found);
 
         if ( read_coordinates && coordinate_file.number_of_lines == number_of_peaks_found )
             break;
@@ -309,10 +309,10 @@ bool MakeParticleStack::DoCalculation( ) {
     output_star_file.WriteTocisTEMStarFile(output_star_filename, -1, -1, 1, number_of_peaks_found);
 
     if ( is_running_locally == true ) {
-        wxPrintf("\nFound %i peaks.\n\n", number_of_peaks_found);
-        wxPrintf("\nMake Particle Stack: Normal termination\n");
-        wxDateTime finish_time = wxDateTime::Now( );
-        wxPrintf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
+        Printf("\nFound %i peaks.\n\n", number_of_peaks_found);
+        Printf("\nMake Particle Stack: Normal termination\n");
+        DateTime finish_time = DateTime::Now( );
+        Printf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
     }
 
     return true;

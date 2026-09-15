@@ -446,9 +446,9 @@ void Particle::WeightBySSNR(Curve& SSNR, int include_reference_weighting, bool n
     float particle_area_in_pixels = PI * powf(3.0 * (kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size, 3)) / 4.0 / PI, 2.0 / 3.0);
     //	float ssnr_scale_factor = particle_area_in_pixels / mask_volume;
     float ssnr_scale_factor = particle_area_in_pixels / particle_image->logical_x_dimension / particle_image->logical_y_dimension;
-    //	wxPrintf("particle_area_in_pixels = %g, mask_volume = %g\n", particle_area_in_pixels, mask_volume);
+    //	Printf("particle_area_in_pixels = %g, mask_volume = %g\n", particle_area_in_pixels, mask_volume);
     //	float ssnr_scale_factor_old = kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3) / (4.0 * PI / 3.0 * powf(mask_volume / PI, 1.5));
-    //	wxPrintf("old = %g, new = %g\n", ssnr_scale_factor_old, ssnr_scale_factor);
+    //	Printf("old = %g, new = %g\n", ssnr_scale_factor_old, ssnr_scale_factor);
     //	float ssnr_scale_factor = PI * powf( powf(3.0 * kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3) ,1.0 / 3.0) ,2) / mask_volume;
     //	float ssnr_scale_factor = particle_image->logical_x_dimension * particle_image->logical_y_dimension / mask_volume;
 
@@ -796,7 +796,7 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
             input_3d.CalculateProjection(*temp_image2, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / filter_radius_high, false, true, false, true, true, false);
 
         *frealign_score = -particle_image->GetWeightedCorrelationWithImage(*temp_image2, bin_index, pixel_size / signed_CC_limit) - ReturnParameterPenalty(current_parameters);
-        //		wxPrintf("pixel_size, signed_CC_limit, filter_radius_high, frealign_score = %g %g %g\n", pixel_size, signed_CC_limit, filter_radius_high, *frealign_score);
+        //		Printf("pixel_size, signed_CC_limit, filter_radius_high, frealign_score = %g %g %g\n", pixel_size, signed_CC_limit, filter_radius_high, *frealign_score);
     }
 
     temp_image1->SwapRealSpaceQuadrants( );
@@ -867,14 +867,14 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
 
     // Calculate LogP
     //	variance_masked = temp_particle->ReturnVarianceOfRealValues(mask_radius / pixel_size, 0.0, 0.0, 0.0, true);
-    //	wxPrintf("variance_masked = %g\n", variance_masked);
+    //	Printf("variance_masked = %g\n", variance_masked);
     //	temp_particle->MultiplyByConstant(1.0 / sqrtf(variance_masked));
     //	alpha = temp_particle->ReturnImageScale(*temp_projection, mask_radius / pixel_size);
     //	temp_projection->MultiplyByConstant(alpha);
     // This scaling according to the average sqrtf(SNR) should take care of variable signal strength in the images
     // However, it seems to lead to some oscillatory behavior of the occupancies (from cycle to cycle)
     //	if (current_parameters[7] >= 0 && current_parameters[14] > 0.0) temp_projection->MultiplyByConstant(parameter_average[14] / current_parameters[14]);
-    //	wxPrintf("alpha for logp, scaling factor = %g %g\n", alpha, parameter_average[14] / current_parameters[14]);
+    //	Printf("alpha for logp, scaling factor = %g %g\n", alpha, parameter_average[14] / current_parameters[14]);
 
     if ( apply_2D_masking ) {
         AnglesAndShifts reverse_alignment_parameters;
@@ -929,7 +929,7 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
     //	alpha = input_image.ReturnImageScale(*projection_image);
     //	variance_masked = projection_image->ReturnVarianceOfRealValues(mask_radius / original_pixel_size);
     //	projection_image->MultiplyByConstant(1.0 / sqrtf(variance_masked));
-    //	wxPrintf("var = %g\n", variance_masked);
+    //	Printf("var = %g\n", variance_masked);
     //	alpha = input_image.ReturnImageScale(*projection_image, mask_radius / original_pixel_size);
     alpha = input_image.ReturnImageScale(*projection_image);
     projection_image->MultiplyByConstant(alpha);
@@ -949,7 +949,7 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
     variance_difference = input_image.ReturnVarianceOfRealValues( );
     sigma               = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues( ));
     //	sigma = sqrtf(variance_difference / powf(alpha, 2));
-    //	wxPrintf("variance_difference, alpha for sigma, sigma = %g %g %g\n", variance_difference, alpha, sigma);
+    //	Printf("variance_difference, alpha for sigma, sigma = %g %g %g\n", variance_difference, alpha, sigma);
     // Prevent rare occurrences of unrealistically high sigmas
     if ( sigma > 100.0 )
         sigma = 100.0;
@@ -958,7 +958,7 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
     else
         snr = 0.0;
 
-    //	wxPrintf("number_of_independent_pixels = %g, variance_difference = %g, variance_masked = %g, logp = %g\n", number_of_independent_pixels,
+    //	Printf("number_of_independent_pixels = %g, variance_difference = %g, variance_masked = %g, logp = %g\n", number_of_independent_pixels,
     //			variance_difference, variance_masked, -number_of_independent_pixels * variance_difference / variance_masked / 2.0);
     //	exit(0);
     //	return 	- number_of_independent_pixels * variance_difference / variance_masked / 2.0
@@ -1001,7 +1001,7 @@ void Particle::CalculateMaskedLogLikelihood(Image& projection_image, Reconstruct
 
     particle_image->PhaseShift(-current_parameters.x_shift / pixel_size, -current_parameters.y_shift / pixel_size);
     particle_image->BackwardFFT( );
-    //	wxPrintf("ssq part = %g var part = %g\n", particle_image->ReturnSumOfSquares(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
+    //	Printf("ssq part = %g var part = %g\n", particle_image->ReturnSumOfSquares(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
     //			rotated_center_y + particle_image->physical_address_of_box_center_y, 0.0), particle_image->ReturnVarianceOfRealValues());
 
     projection_image.SwapRealSpaceQuadrants( );
@@ -1022,7 +1022,7 @@ void Particle::CalculateMaskedLogLikelihood(Image& projection_image, Reconstruct
     //		particle_image->SubtractImage(&projection_image);
     //		sigma_signal = sqrtf(projection_image.ReturnVarianceOfRealValues(mask_radius / pixel_size));
     //		sigma_noise = sqrtf(particle_image->ReturnVarianceOfRealValues(mask_radius / pixel_size));
-    //		if (sigma_noise < min) {min = sigma_noise; wxPrintf("i, sigma_noise = %i %g\n", i, sigma_noise);}
+    //		if (sigma_noise < min) {min = sigma_noise; Printf("i, sigma_noise = %i %g\n", i, sigma_noise);}
     //	}
     //	ssq_XA = particle_image->ReturnPixelWiseProduct(projection_image);
     //	ssq_A2 = projection_image.ReturnPixelWiseProduct(projection_image);
@@ -1036,13 +1036,13 @@ void Particle::CalculateMaskedLogLikelihood(Image& projection_image, Reconstruct
         snr = powf(sigma_signal / sigma_noise, 2);
     else
         snr = 0.0;
-    //	wxPrintf("mask_radius, pixel_size, alpha, sigma_noise = %g %g %g %g\n", mask_radius, pixel_size, alpha, sigma_noise);
+    //	Printf("mask_radius, pixel_size, alpha, sigma_noise = %g %g %g %g\n", mask_radius, pixel_size, alpha, sigma_noise);
     //	particle_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
     //	exit(0);
 
-    //	wxPrintf("number_of_independent_pixels = %g, variance_difference = %g, variance_masked = %g, logp = %g\n", number_of_independent_pixels,
+    //	Printf("number_of_independent_pixels = %g, variance_difference = %g, variance_masked = %g, logp = %g\n", number_of_independent_pixels,
     //			variance_difference, variance_masked, -number_of_independent_pixels * variance_difference / variance_masked / 2.0);
-    //	wxPrintf("sum = %g pix = %li penalty = %g indep = %g\n", particle_image->ReturnSumOfSquares(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
+    //	Printf("sum = %g pix = %li penalty = %g indep = %g\n", particle_image->ReturnSumOfSquares(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
     //			rotated_center_y + particle_image->physical_address_of_box_center_y, 0.0), particle_image->number_of_real_space_pixels,
     //			ReturnParameterLogP(current_parameters), mask_volume);
     //	exit(0);
@@ -1104,7 +1104,7 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
     Image* sum_image = new Image;
     sum_image->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, true);
 
-    //	wxPrintf("Max shift in angstoms = %f\n", max_shift_in_angstroms);
+    //	Printf("Max shift in angstoms = %f\n", max_shift_in_angstroms);
     float max_radius_squared = powf(max_shift_in_angstroms / pixel_size, 2);
     float current_squared_radius;
 
@@ -1166,8 +1166,8 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
         mid_y /= pixel_size;
         rotation_angle.GenerateRotationMatrix2D(-psi);
 
-//		wxPrintf("current_rotation = %i ssq_X = %g ssq_A = %g\n", current_rotation, rotation_cache[current_rotation].ReturnSumOfSquares(), input_classes_cache[current_class].ReturnSumOfSquares());
-//		wxPrintf("number_of_pixels = %g, ssq_X = %g ssq_A = %g\n", number_of_pixels, ssq_X, ssq_A);
+//		Printf("current_rotation = %i ssq_X = %g ssq_A = %g\n", current_rotation, rotation_cache[current_rotation].ReturnSumOfSquares(), input_classes_cache[current_class].ReturnSumOfSquares());
+//		Printf("number_of_pixels = %g, ssq_X = %g ssq_A = %g\n", number_of_pixels, ssq_X, ssq_A);
 // Calculate X.A
 #ifdef MKL
         vmcMulByConj(particle_image->real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(input_classes_cache[current_class].complex_values), reinterpret_cast<MKL_Complex8*>(rotation_cache[current_rotation].complex_values), reinterpret_cast<MKL_Complex8*>(correlation_map->complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
@@ -1259,7 +1259,7 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
         //		// To get normalized correlation coefficient, need to divide by sigmas of particle and reference
         // To get sigma^2, need to calculate ssq_X - 2XA + ssq_A
         if ( new_max_found ) {
-            //			wxPrintf("ssq_X, snr_psi, ssq_A, number_of_real_space_pixels,  number_of_independent_pixels, var_A = %g %g %g %li %g %g\n",
+            //			Printf("ssq_X, snr_psi, ssq_A, number_of_real_space_pixels,  number_of_independent_pixels, var_A = %g %g %g %li %g %g\n",
             //					ssq_X, snr_psi, ssq_A, particle_image->number_of_real_space_pixels,  number_of_independent_pixels, var_A);
             snr_psi = (ssq_X - 2.0 * snr_psi + ssq_A) * particle_image->number_of_real_space_pixels / number_of_independent_pixels / var_A;
             // Update SIGMA (SNR)
@@ -1477,7 +1477,7 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
             blurred_image.AddImage(temp_image);
         }
 
-        //		wxPrintf("log sump_class = %g old_max_logp = %g number_of_independent_pixels = %g ssq_X = %g\n", logf(sump_class), old_max_logp, number_of_independent_pixels, ssq_X);
+        //		Printf("log sump_class = %g old_max_logp = %g number_of_independent_pixels = %g ssq_X = %g\n", logf(sump_class), old_max_logp, number_of_independent_pixels, ssq_X);
         logp                    = logf(sump_class) + old_max_logp - 0.5 * (number_of_independent_pixels * logf(2.0 * PI) + number_of_pixels * ssq_X);
         current_parameters.logp = logp;
     }
@@ -1488,7 +1488,7 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
         logp = -std::numeric_limits<float>::max( );
     }
 
-    //	wxPrintf("log_sum = %g, old = %g, n = %g, var = %g\n", logf(sump_class), old_max_log,  number_of_independent_pixels, norm_A);
+    //	Printf("log_sum = %g, old = %g, n = %g, var = %g\n", logf(sump_class), old_max_log,  number_of_independent_pixels, norm_A);
     delete correlation_map;
     delete temp_image;
     delete sum_image;

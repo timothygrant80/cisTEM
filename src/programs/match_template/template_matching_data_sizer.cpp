@@ -324,18 +324,18 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
     template_search_size.w = (template_search_size.x + 2) / 2;
 
 #ifdef DEBUG_TM_SIZER_PRINT
-    wxPrintf("The input image will be padded by %d,%d, cropped to %d,%d and then padded again to %d,%d\n",
+    Printf("The input image will be padded by %d,%d, cropped to %d,%d and then padded again to %d,%d\n",
              image_pre_scaling_size.x - image_size.x, image_pre_scaling_size.y - image_size.y,
              image_cropped_size.x, image_cropped_size.y,
              image_search_size.x, image_search_size.y);
-    wxPrintf("template_size = %i\n", template_size.x);
-    wxPrintf("closest 2d binning factor = %f\n", closest_2d_binning_factor);
-    wxPrintf("closest 2d binning factor * pixel_size = %f\n", closest_2d_binning_factor * pixel_size);
-    wxPrintf("original image size = %i\n", int(image_size.x));
-    wxPrintf("wanted_binned_size = %i,%i\n", image_cropped_size.x, image_cropped_size.y);
-    wxPrintf("input  pixel size: %3.6f\n", pixel_size);
-    wxPrintf("target pixel size: %3.6f\n", target_binning_factor * pixel_size);
-    wxPrintf("search pixel size: %3.6f\n", search_pixel_size);
+    Printf("template_size = %i\n", template_size.x);
+    Printf("closest 2d binning factor = %f\n", closest_2d_binning_factor);
+    Printf("closest 2d binning factor * pixel_size = %f\n", closest_2d_binning_factor * pixel_size);
+    Printf("original image size = %i\n", int(image_size.x));
+    Printf("wanted_binned_size = %i,%i\n", image_cropped_size.x, image_cropped_size.y);
+    Printf("input  pixel size: %3.6f\n", pixel_size);
+    Printf("target pixel size: %3.6f\n", target_binning_factor * pixel_size);
+    Printf("search pixel size: %3.6f\n", search_pixel_size);
 #endif
     // Now try to increase the padding of the input image to match the 3d
     CheckSizing( );
@@ -351,10 +351,10 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
     // This is the first padding, if resampling it will be to an even and square size, otherwise it will be to a nice fourier size and the final step.
     GetInputImageToEvenAndSquareOrPrimeFactoredSizePadding(pre_binning_padding_x, pre_binning_padding_y, post_binning_padding_x, post_binning_padding_y);
 #ifdef DEBUG_TM_SIZER_PRINT
-    wxPrintf("pre_binning_padding_x = %i\n", pre_binning_padding_x);
-    wxPrintf("pre_binning_padding_y = %i\n", pre_binning_padding_y);
-    wxPrintf("post_binning_padding_x = %i\n", post_binning_padding_x);
-    wxPrintf("post_binning_padding_y = %i\n", post_binning_padding_y);
+    Printf("pre_binning_padding_x = %i\n", pre_binning_padding_x);
+    Printf("pre_binning_padding_y = %i\n", pre_binning_padding_y);
+    Printf("post_binning_padding_x = %i\n", post_binning_padding_x);
+    Printf("post_binning_padding_y = %i\n", post_binning_padding_y);
 #endif
 
     if ( resampling_is_needed ) {
@@ -366,11 +366,11 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
         post_binning_padding_y = myroundint(ceilf(float(post_binning_padding_y) / GetFullBinningFactor( )));
 
 #ifdef DEBUG_TM_SIZER_PRINT
-        wxPrintf("binning factor = %f\n", GetFullBinningFactor( ));
-        wxPrintf("pre_binning_padding_x = %i\n", pre_binning_padding_x);
-        wxPrintf("pre_binning_padding_y = %i\n", pre_binning_padding_y);
-        wxPrintf("post_binning_padding_x = %i\n", post_binning_padding_x);
-        wxPrintf("post_binning_padding_y = %i\n", post_binning_padding_y);
+        Printf("binning factor = %f\n", GetFullBinningFactor( ));
+        Printf("pre_binning_padding_x = %i\n", pre_binning_padding_x);
+        Printf("pre_binning_padding_y = %i\n", pre_binning_padding_y);
+        Printf("post_binning_padding_x = %i\n", post_binning_padding_x);
+        Printf("post_binning_padding_y = %i\n", post_binning_padding_y);
 #endif
         // Now add on any padding needed to make the image a power of two
         // These are both even dimensions, so we can just use the symmetric padding.
@@ -380,10 +380,10 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
         post_binning_padding_y += (image_search_size.y - image_cropped_size.y) / 2;
 #ifdef DEBUG_TM_SIZER_PRINT
 
-        wxPrintf("+= pre_binning_padding_x = %i\n", pre_binning_padding_x);
-        wxPrintf("+= pre_binning_padding_y = %i\n", pre_binning_padding_y);
-        wxPrintf("+= post_binning_padding_x = %i\n", post_binning_padding_x);
-        wxPrintf("+= post_binning_padding_y = %i\n", post_binning_padding_y);
+        Printf("+= pre_binning_padding_x = %i\n", pre_binning_padding_x);
+        Printf("+= pre_binning_padding_y = %i\n", pre_binning_padding_y);
+        Printf("+= post_binning_padding_x = %i\n", post_binning_padding_x);
+        Printf("+= post_binning_padding_y = %i\n", post_binning_padding_y);
 #endif
     }
     SetValidSearchImageIndiciesFromPadding(pre_binning_padding_x, pre_binning_padding_y, post_binning_padding_x, post_binning_padding_y);
@@ -430,8 +430,8 @@ void TemplateMatchingDataSizer::SetValidSearchImageIndiciesFromPadding(const int
     MyDebugAssertTrue(number_of_valid_search_pixels > 0, "The number of valid search pixels is less than 1");
 
 #ifdef DEBUG_TM_SIZER_PRINT
-    wxPrintf("The valid search area is %i %i %i %i\n", search_image_valid_area_lower_bound_x, search_image_valid_area_lower_bound_y, search_image_valid_area_upper_bound_x, search_image_valid_area_upper_bound_y);
-    wxPrintf("The number of valid search pixels is %li\n", number_of_valid_search_pixels);
+    Printf("The valid search area is %i %i %i %i\n", search_image_valid_area_lower_bound_x, search_image_valid_area_lower_bound_y, search_image_valid_area_upper_bound_x, search_image_valid_area_upper_bound_y);
+    Printf("The number of valid search pixels is %li\n", number_of_valid_search_pixels);
 #endif
     valid_bounds_are_set = true;
 };
@@ -460,11 +460,11 @@ void TemplateMatchingDataSizer::GetInputImageToEvenAndSquareOrPrimeFactoredSizeP
     }
 
 #ifdef DEBUG_TM_SIZER_PRINT
-    wxPrintf("in get input image to even and square or prime factored size padding\n");
-    wxPrintf("image_size = %i %i %i\n", image_size.x, image_size.y, image_size.z);
-    wxPrintf("image_pre_scaling_size = %i %i %i\n", image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z);
-    wxPrintf("image_cropped_size = %i %i %i\n", image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
-    wxPrintf("image_search_size = %i %i %i\n", image_search_size.x, image_search_size.y, image_search_size.z);
+    Printf("in get input image to even and square or prime factored size padding\n");
+    Printf("image_size = %i %i %i\n", image_size.x, image_size.y, image_size.z);
+    Printf("image_pre_scaling_size = %i %i %i\n", image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z);
+    Printf("image_cropped_size = %i %i %i\n", image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
+    Printf("image_search_size = %i %i %i\n", image_search_size.x, image_search_size.y, image_search_size.z);
 #endif
 
     // An odd sized image has an equal number of pixels left/right of the origin
@@ -526,10 +526,10 @@ void TemplateMatchingDataSizer::ResizeTemplate_preSearch(Image& template_image, 
 #ifdef DEBUG_TM_SIZER_PRINT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
             // Print out the size of each step
-            wxPrintf("template_size = %i %i %i\n", template_size.x, template_size.y, template_size.z);
-            wxPrintf("template_pre_scaling_size = %i %i %i\n", template_pre_scaling_size.x, template_pre_scaling_size.y, template_pre_scaling_size.z);
-            wxPrintf("template_cropped_size = %i %i %i\n", template_cropped_size.x, template_cropped_size.y, template_cropped_size.z);
-            wxPrintf("template_search_size = %i %i %i\n", template_search_size.x, template_search_size.y, template_search_size.z);
+            Printf("template_size = %i %i %i\n", template_size.x, template_size.y, template_size.z);
+            Printf("template_pre_scaling_size = %i %i %i\n", template_pre_scaling_size.x, template_pre_scaling_size.y, template_pre_scaling_size.z);
+            Printf("template_cropped_size = %i %i %i\n", template_cropped_size.x, template_cropped_size.y, template_cropped_size.z);
+            Printf("template_search_size = %i %i %i\n", template_search_size.x, template_search_size.y, template_search_size.z);
         }
 #endif
         template_image.Resize(template_pre_scaling_size.x, template_pre_scaling_size.y, template_pre_scaling_size.z, template_image.ReturnAverageOfRealValuesOnEdges( ));
@@ -568,7 +568,7 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
 #endif
 
     if ( resampling_is_needed ) {
-        wxPrintf("Resampling the input image\n");
+        Printf("Resampling the input image\n");
 
         tmp_sq.Allocate(image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z, true);
 #ifdef DEBUG_NOISE_WITH_CONSTANT_SEED
@@ -604,11 +604,11 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
 #endif
     }
     else if ( resizing_is_needed ) {
-        wxPrintf("Resizing the input image\n");
+        Printf("Resizing the input image\n");
         tmp_sq = input_image;
     }
     else {
-        wxPrintf("not resampling or resizing.\n");
+        Printf("not resampling or resizing.\n");
     }
 
     if ( resampling_is_needed || resizing_is_needed ) {
@@ -645,7 +645,7 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
         // The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.
         // TODO figure out how to check the case where there is no factor of two, but one dimension is still faster. Probably getting around to writing an explicit planning tool would be useful.
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
-            wxPrintf("Rotating the search image for speed\n");
+            Printf("Rotating the search image for speed\n");
         }
         input_image.RotateInPlaceAboutZBy90Degrees(true);
         // bool preserve_origin = true;
@@ -659,7 +659,7 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
     }
     else {
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
-            wxPrintf("Not rotating the search image for speed even though it is enabled\n");
+            Printf("Not rotating the search image for speed even though it is enabled\n");
         }
         is_rotated_by_90 = false;
     }
@@ -871,15 +871,15 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_
                         max_intensity_projection size = 4096 4096
                      */
                     // FIXME: This print block needs to be removed after initial debugging.
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("i: %d, j: %d\n", i, j));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("padding offset x: %d, y: %d\n", offset_ox, offset_oy));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("x_physical_coord_input = %d, y_physical_coord_input = %d\n", x_physical_coord_input, y_physical_coord_input));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("%f actual_image_binning = %f\n", search_pixel_size, actual_image_binning));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("tmp mip size = %d %d\n", tmp_phi.logical_x_dimension, tmp_phi.logical_y_dimension));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("i offset = %d, j offset = %d\n", x_offset_from_origin, y_offset_from_origin));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("box center = %d %d\n", tmp_phi.physical_address_of_box_center_x, tmp_phi.physical_address_of_box_center_y));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("tmp size = %d %d\n", tmp_phi.logical_x_dimension, tmp_phi.logical_y_dimension));
-                    parent_match_template_app_ptr->SendInfo(wxString::Format("max_intensity_projection size = %d %d\n", max_intensity_projection.logical_x_dimension, max_intensity_projection.logical_y_dimension));
+                    parent_match_template_app_ptr->SendInfo(Format("i: %d, j: %d\n", i, j));
+                    parent_match_template_app_ptr->SendInfo(Format("padding offset x: %d, y: %d\n", offset_ox, offset_oy));
+                    parent_match_template_app_ptr->SendInfo(Format("x_physical_coord_input = %d, y_physical_coord_input = %d\n", x_physical_coord_input, y_physical_coord_input));
+                    parent_match_template_app_ptr->SendInfo(Format("%f actual_image_binning = %f\n", search_pixel_size, actual_image_binning));
+                    parent_match_template_app_ptr->SendInfo(Format("tmp mip size = %d %d\n", tmp_phi.logical_x_dimension, tmp_phi.logical_y_dimension));
+                    parent_match_template_app_ptr->SendInfo(Format("i offset = %d, j offset = %d\n", x_offset_from_origin, y_offset_from_origin));
+                    parent_match_template_app_ptr->SendInfo(Format("box center = %d %d\n", tmp_phi.physical_address_of_box_center_x, tmp_phi.physical_address_of_box_center_y));
+                    parent_match_template_app_ptr->SendInfo(Format("tmp size = %d %d\n", tmp_phi.logical_x_dimension, tmp_phi.logical_y_dimension));
+                    parent_match_template_app_ptr->SendInfo(Format("max_intensity_projection size = %d %d\n", max_intensity_projection.logical_x_dimension, max_intensity_projection.logical_y_dimension));
                     address = -1;
                     parent_match_template_app_ptr->SendErrorAndCrash("There is an out of bounds value in calculating the NN interpolation of the max intensity projection");
                 }

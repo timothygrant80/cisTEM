@@ -193,7 +193,7 @@ float MTFFit(void* scoring_parameters, float* array_of_values) {
     average_background_image /= pixels_background;
     //	average_background_image = comparison_object->average_background;
     //	average_shadow_image = comparison_object->average_shadow;
-    //	wxPrintf("back, shad model, back, shad image = %g %g %g %g\n", average_background_model, average_shadow_model, average_background_image, average_shadow_image);
+    //	Printf("back, shad model, back, shad image = %g %g %g %g\n", average_background_model, average_shadow_model, average_background_image, average_shadow_image);
     comparison_object->difference_image->AddMultiplyAddConstant(-average_shadow_model, (average_background_image - average_shadow_image) / (average_background_model - average_shadow_model), average_shadow_image);
 
     if ( debug ) {
@@ -210,22 +210,22 @@ float MTFFit(void* scoring_parameters, float* array_of_values) {
     //	exit(0);
     if ( debug ) {
         if ( comparison_object->parameters_to_fit < 2 )
-            wxPrintf("a0, residual = %g %20.10f\n", fabsf(array_of_values[0]), residual);
+            Printf("a0, residual = %g %20.10f\n", fabsf(array_of_values[0]), residual);
         else if ( comparison_object->parameters_to_fit < 3 )
-            wxPrintf("a0-1, residual = %g %g %20.10f\n", fabsf(array_of_values[0]), fabsf(array_of_values[1]), residual);
+            Printf("a0-1, residual = %g %g %20.10f\n", fabsf(array_of_values[0]), fabsf(array_of_values[1]), residual);
         else if ( comparison_object->parameters_to_fit < 5 )
-            wxPrintf("a0-3, residual = %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
+            Printf("a0-3, residual = %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
                      fabsf(array_of_values[1]), fabsf(array_of_values[2]), fabsf(array_of_values[3]), residual);
         else if ( comparison_object->parameters_to_fit < 7 )
-            wxPrintf("a0-5, residual = %g %g %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
+            Printf("a0-5, residual = %g %g %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
                      fabsf(array_of_values[1]), fabsf(array_of_values[2]), fabsf(array_of_values[3]), fabsf(array_of_values[4]), fabsf(array_of_values[5]),
                      residual);
         else if ( comparison_object->parameters_to_fit < 9 )
-            wxPrintf("a0-7, residual = %g %g %g %g %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
+            Printf("a0-7, residual = %g %g %g %g %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
                      fabsf(array_of_values[1]), fabsf(array_of_values[2]), fabsf(array_of_values[3]), fabsf(array_of_values[4]), fabsf(array_of_values[5]),
                      fabsf(array_of_values[6]), fabsf(array_of_values[7]), residual);
         else
-            wxPrintf("a0-9, residual = %g %g %g %g %g %g %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
+            Printf("a0-9, residual = %g %g %g %g %g %g %g %g %g %g %20.10f\n", fabsf(array_of_values[0]),
                      fabsf(array_of_values[1]), fabsf(array_of_values[2]), fabsf(array_of_values[3]), fabsf(array_of_values[4]), fabsf(array_of_values[5]),
                      fabsf(array_of_values[6]), fabsf(array_of_values[7]), fabsf(array_of_values[8]), fabsf(array_of_values[9]), residual);
     }
@@ -234,21 +234,21 @@ float MTFFit(void* scoring_parameters, float* array_of_values) {
         comparison_object->best_score = residual;
         scale                         = 1.0f / function_max;
         if ( padding > 1 )
-            wxPrintf("  MTF at 0.25x, 0.5x, 1x Nyquist, residual = %10.6f %10.6f %10.6f %18.9f\r", mtf_curve.ReturnLinearInterpolationFromX(0.125f / padding) * sinc(0.125f * PI) * scale,
+            Printf("  MTF at 0.25x, 0.5x, 1x Nyquist, residual = %10.6f %10.6f %10.6f %18.9f\r", mtf_curve.ReturnLinearInterpolationFromX(0.125f / padding) * sinc(0.125f * PI) * scale,
                      mtf_curve.ReturnLinearInterpolationFromX(0.25f / padding) * sinc(0.25f * PI) * scale, mtf_curve.ReturnLinearInterpolationFromX(0.5f / padding) * sinc(0.5f * PI) * scale, residual);
         else
-            wxPrintf("  MTF at 0.25x, 0.5x, 1x Nyquist, residual = %10.6f %10.6f %10.6f %18.9f\r", mtf_curve.ReturnLinearInterpolationFromX(0.125f / padding) * scale,
+            Printf("  MTF at 0.25x, 0.5x, 1x Nyquist, residual = %10.6f %10.6f %10.6f %18.9f\r", mtf_curve.ReturnLinearInterpolationFromX(0.125f / padding) * scale,
                      mtf_curve.ReturnLinearInterpolationFromX(0.25f / padding) * scale, mtf_curve.ReturnLinearInterpolationFromX(0.5f / padding) * scale, residual);
         if ( debug )
-            wxPrintf("\n");
+            Printf("\n");
     }
     if ( ! debug ) {
         if ( comparison_object->busy_state == 0 )
-            wxPrintf("-\r");
+            Printf("-\r");
         if ( comparison_object->busy_state == 1 )
-            wxPrintf("\\\r");
+            Printf("\\\r");
         if ( comparison_object->busy_state == 2 )
-            wxPrintf("/\r");
+            Printf("/\r");
         comparison_object->busy_state++;
         if ( comparison_object->busy_state > 2 )
             comparison_object->busy_state = 0;
@@ -288,16 +288,16 @@ float RampFit(void* scoring_parameters, float* array_of_values) {
 
     if ( residual < comparison_object->best_score ) {
         comparison_object->best_score = residual;
-        wxPrintf("  Residual = %15.6f\r", residual);
-        //		wxPrintf("  a0-6, residual = %g %g %g %g %g %g %g %15.6f\r", array_of_values[0], array_of_values[1], array_of_values[2], array_of_values[3], \
+        Printf("  Residual = %15.6f\r", residual);
+        //		Printf("  a0-6, residual = %g %g %g %g %g %g %g %15.6f\r", array_of_values[0], array_of_values[1], array_of_values[2], array_of_values[3], \
 //				array_of_values[4], array_of_values[5], array_of_values[6], residual);
     }
     if ( comparison_object->busy_state == 0 )
-        wxPrintf("-\r");
+        Printf("-\r");
     if ( comparison_object->busy_state == 1 )
-        wxPrintf("\\\r");
+        Printf("\\\r");
     if ( comparison_object->busy_state == 2 )
-        wxPrintf("/\r");
+        Printf("/\r");
     comparison_object->busy_state++;
     if ( comparison_object->busy_state > 2 )
         comparison_object->busy_state = 0;
@@ -454,16 +454,16 @@ bool FindDQE::DoCalculation( ) {
 
     ImageFile input_file(input_pointer_image, false);
     if ( input_file.ReturnZSize( ) > 1 ) {
-        wxPrintf("\nERROR: Input image must be 2D image. Aborting...\n");
+        Printf("\nERROR: Input image must be 2D image. Aborting...\n");
         exit(1);
     }
     if ( input_file.ReturnXSize( ) < 5 * margin || input_file.ReturnYSize( ) < 5 * margin ) {
-        wxPrintf("\nERROR: Input image too small. Aborting...\n");
+        Printf("\nERROR: Input image too small. Aborting...\n");
         exit(1);
     }
     if ( use_both_images ) {
         if ( ! DoesFileExist(input_pointer_image2) ) {
-            wxPrintf("\nERROR: Input image 2 does not exist. Aborting...\n");
+            Printf("\nERROR: Input image 2 does not exist. Aborting...\n");
             exit(1);
         }
     }
@@ -503,24 +503,24 @@ bool FindDQE::DoCalculation( ) {
 
     table_file = fopen(output_table.c_str( ), "w");
     if ( table_file == NULL ) {
-        wxPrintf("\nERROR: Cannot open output DQE table (%s) for write\n", output_table);
+        Printf("\nERROR: Cannot open output DQE table (%s) for write\n", output_table);
         exit(1);
     }
 
-    wxPrintf("\nReading input image 1...  ");
+    Printf("\nReading input image 1...  ");
     input_image.ReadSlice(&input_file, 1);
-    wxPrintf("Dimensions (x,y) = %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension);
+    Printf("Dimensions (x,y) = %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension);
     // Remove crazy outliers
     input_image.SetMaximumValue(5.0f * sqrtf(input_image.ReturnVarianceOfRealValues( )) + input_image.ReturnAverageOfMaxN(10000));
 
     background_image.CopyFrom(&input_image);
 
     if ( use_both_images ) {
-        wxPrintf("Reading input image 2...  ");
+        Printf("Reading input image 2...  ");
         ImageFile input_file2(input_pointer_image2, false);
-        wxPrintf("Dimensions (x,y) = %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension);
+        Printf("Dimensions (x,y) = %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension);
         if ( input_file.ReturnXSize( ) != input_file2.ReturnXSize( ) || input_file.ReturnYSize( ) != input_file2.ReturnYSize( ) || input_file.ReturnZSize( ) != input_file2.ReturnZSize( ) ) {
-            wxPrintf("\nERROR: Image 2 size must match Image 1. Aborting...\n");
+            Printf("\nERROR: Image 2 size must match Image 1. Aborting...\n");
             exit(1);
         }
         input_image2.ReadSlice(&input_file2, 1);
@@ -530,7 +530,7 @@ bool FindDQE::DoCalculation( ) {
         FindThreshold(input_image2, threshold2, average_background2, sigma_background2, pixels_background2, average_shadow2, sigma_shadow2, pixels_shadow2);
         if ( (fabsf(threshold1 - threshold2) / threshold1 > allowed_discrepancy) ||
              (fabs(average_background - average_background2) / average_background > allowed_discrepancy) ) {
-            wxPrintf("\nERROR: Image 2 exposure differs from Image 1. Aborting...\n");
+            Printf("\nERROR: Image 2 exposure differs from Image 1. Aborting...\n");
             exit(1);
         }
 
@@ -539,21 +539,21 @@ bool FindDQE::DoCalculation( ) {
         input_image1.CopyFrom(&input_image);
     }
 
-    wxPrintf("\nThresholding image...  ");
+    Printf("\nThresholding image...  ");
     FindThreshold(input_image, threshold, average_background, sigma_background, pixels_background, average_shadow, sigma_shadow, pixels_shadow);
     if ( sigma_background <= 0.0f ) {
-        wxPrintf("\nERROR: Background in input image is zero. Aborting...\n");
+        Printf("\nERROR: Background in input image is zero. Aborting...\n");
         exit(1);
     }
     if ( pixels_shadow <= 0.0f ) {
-        wxPrintf("\nERROR: Shadow area in input image is zero. Aborting...\n");
+        Printf("\nERROR: Shadow area in input image is zero. Aborting...\n");
         exit(1);
     }
     sigma_background = sqrtf(sigma_background);
     sigma_shadow     = sqrtf(sigma_shadow);
-    wxPrintf("Threshold = %g\n\n", threshold / two_image_factor);
-    wxPrintf("No of pixels, average, sigma shadow     = %12i %12.4f %12.4f\n", pixels_shadow, average_shadow / two_image_factor, sigma_shadow / sqrtf(two_image_factor));
-    wxPrintf("No of pixels, average, sigma background = %12i %12.4f %12.4f\n", pixels_background, average_background / two_image_factor, sigma_background / sqrtf(two_image_factor));
+    Printf("Threshold = %g\n\n", threshold / two_image_factor);
+    Printf("No of pixels, average, sigma shadow     = %12i %12.4f %12.4f\n", pixels_shadow, average_shadow / two_image_factor, sigma_shadow / sqrtf(two_image_factor));
+    Printf("No of pixels, average, sigma background = %12i %12.4f %12.4f\n", pixels_background, average_background / two_image_factor, sigma_background / sqrtf(two_image_factor));
     gain_conversion_factor = average_background / exposure;
 
     input_image.SetMaximumValue(average_background + 5.0f * sigma_background);
@@ -564,7 +564,7 @@ bool FindDQE::DoCalculation( ) {
         if ( input_image.real_values[i] > threshold )
             threshold_image_small.real_values[i] = average_background_float;
 
-    wxPrintf("\nDetecting pixel outliers...  ");
+    Printf("\nDetecting pixel outliers...  ");
     threshold_image.CopyFrom(&input_image);
     threshold_image.Binarise(threshold);
     runlenth3d.EncodeFrom(threshold_image);
@@ -597,11 +597,11 @@ bool FindDQE::DoCalculation( ) {
     }
     threshold_image_small.CopyFrom(&threshold_image);
 
-    wxPrintf("Number of pixel outliers = %9i\n", outliers);
+    Printf("Number of pixel outliers = %9i\n", outliers);
     if ( outliers > 0.02f * threshold_image.number_of_real_space_pixels )
-        wxPrintf("Try a higher exposure to reduce outliers\n");
+        Printf("Try a higher exposure to reduce outliers\n");
 
-    wxPrintf("\nDetecting edge...  ");
+    Printf("\nDetecting edge...  ");
     temp_image.CopyFrom(&threshold_image_small);
     temp_image.ForwardFFT( );
     temp_image.CalculateDerivative( );
@@ -630,9 +630,9 @@ bool FindDQE::DoCalculation( ) {
         }
         pointer += temp_image.padding_jump_value;
     }
-    wxPrintf("Number of usable pixels along edge = %9i\n", edge_pixels);
+    Printf("Number of usable pixels along edge = %9i\n", edge_pixels);
     if ( edge_pixels == 0 ) {
-        wxPrintf("\nERROR: No edge detected. Aborting...\n");
+        Printf("\nERROR: No edge detected. Aborting...\n");
         exit(1);
     }
     threshold3 /= edge_pixels;
@@ -654,7 +654,7 @@ bool FindDQE::DoCalculation( ) {
     }
 
     mask_image.CosineRectangularMask(mask_image.physical_address_of_box_center_x - 0.5f * margin, mask_image.physical_address_of_box_center_y - 0.5f * margin, 0.0f, margin, false, true, 0.0f);
-    wxPrintf("Pixels inside edge mask = %li\n", counter1);
+    Printf("Pixels inside edge mask = %li\n", counter1);
 
     // Finding min, max x,y coordinates of shadow to cut image
     y_min = input_image.logical_y_dimension;
@@ -811,7 +811,7 @@ bool FindDQE::DoCalculation( ) {
         }
         if ( counter1 > 0 )
             average_background2 /= counter1;
-        wxPrintf("counter1, average_background2 = %li, %g\n", counter1, average_background2);
+        Printf("counter1, average_background2 = %li, %g\n", counter1, average_background2);
         background_image.AddConstant(-average_background2);
         average_background_float = 0.0f;
     }
@@ -888,16 +888,16 @@ bool FindDQE::DoCalculation( ) {
         nps_fit.AddPoint(nps.data_x[i], temp_float);
     }
 
-    wxPrintf("\nGain (counts/e) from exposure and background average = %10.4f\n", gain_conversion_factor);
+    Printf("\nGain (counts/e) from exposure and background average = %10.4f\n", gain_conversion_factor);
     if ( is_a_counting_detector ) {
         dqe0 = pow(average_background, 2) / exposure / nps1;
-        wxPrintf("Sqrt of noise power at Nyquist frequency (NPS1)      = %10.4f\n", sqrtf(nps1 / two_image_factor));
-        wxPrintf("DQE0 based on gain and NPS1                          = %10.4f\n", dqe0);
+        Printf("Sqrt of noise power at Nyquist frequency (NPS1)      = %10.4f\n", sqrtf(nps1 / two_image_factor));
+        Printf("DQE0 based on gain and NPS1                          = %10.4f\n", dqe0);
     }
     else {
         dqe0 = pow(average_background, 2) / exposure / nps0;
-        wxPrintf("Sqrt of noise power at 0 frequency (NPS0)            = %10.4f\n", sqrtf(nps0 / two_image_factor));
-        wxPrintf("DQE0 based on gain and NPS0                          = %10.4f\n", dqe0);
+        Printf("Sqrt of noise power at 0 frequency (NPS0)            = %10.4f\n", sqrtf(nps0 / two_image_factor));
+        Printf("DQE0 based on gain and NPS0                          = %10.4f\n", dqe0);
     }
 
     nps.MultiplyByConstant(1.0f / nps_fit.data_y[0]);
@@ -916,7 +916,7 @@ bool FindDQE::DoCalculation( ) {
     nps.FlattenBeforeIndex(5);
 
     if ( padding > 1 )
-        wxPrintf("\nCreating %ix super-sampled model image...\n", padding);
+        Printf("\nCreating %ix super-sampled model image...\n", padding);
     threshold_image.CopyFrom(&input_image);
     threshold_image.ForwardFFT( );
     threshold_image.Resize(padding * input_image.logical_x_dimension, padding * input_image.logical_y_dimension, 1);
@@ -950,8 +950,8 @@ bool FindDQE::DoCalculation( ) {
     if ( padding != 1 )
         threshold_image.RealSpaceBinning(padding, padding, 1, true);
 
-    wxPrintf("\nMin,max x,y coordinates for shadow   = %8i %8i %8i %8i\n", x_min + 1, x_max + 1, y_min + 1, y_max + 1);
-    wxPrintf("Using box size %8i x %8i\n\n", box_size_x, box_size_y);
+    Printf("\nMin,max x,y coordinates for shadow   = %8i %8i %8i %8i\n", x_min + 1, x_max + 1, y_min + 1, y_max + 1);
+    Printf("Using box size %8i x %8i\n\n", box_size_x, box_size_y);
     fflush(stdout);
 
     comparison_object.model_image        = &threshold_image;
@@ -965,17 +965,17 @@ bool FindDQE::DoCalculation( ) {
 
     for ( cycle = 0; cycle < 2; cycle++ ) {
         if ( ! two_sided_mtf ) {
-            wxPrintf("Fitting MTF...\n\n");
+            Printf("Fitting MTF...\n\n");
             comparison_object.reset_shadow     = false;
             comparison_object.reset_background = false;
         }
         else if ( cycle == 0 ) {
-            wxPrintf("Fitting MTF inside shadow...\n\n");
+            Printf("Fitting MTF inside shadow...\n\n");
             comparison_object.reset_shadow     = false;
             comparison_object.reset_background = true;
         }
         else {
-            wxPrintf("\n\nFitting MTF outside shadow...\n\n");
+            Printf("\n\nFitting MTF outside shadow...\n\n");
             comparison_object.reset_shadow     = true;
             comparison_object.reset_background = false;
         }
@@ -1035,10 +1035,10 @@ bool FindDQE::DoCalculation( ) {
                 cg_starting_point[i + 2] = best_parameters[i];
 
             if ( debug ) {
-                wxPrintf("\nIteration %i\n", j);
+                Printf("\nIteration %i\n", j);
                 for ( i = 0; i < comparison_object.parameters_to_fit; i++ )
-                    wxPrintf("fitted_parameters[%1i] = %g;\n", i, fabsf(fitted_parameters[i]));
-                wxPrintf("\n");
+                    Printf("fitted_parameters[%1i] = %g;\n", i, fabsf(fitted_parameters[i]));
+                Printf("\n");
             }
         }
 
@@ -1054,8 +1054,8 @@ bool FindDQE::DoCalculation( ) {
             //	MTFFitSinc(&comparison_object, fitted_parameters);
             score = MTFFit(&comparison_object, best_parameters);
             if ( two_sided_mtf )
-                wxPrintf("\n\nUsing the MTF outside the shadow for DQE calculation.\n");
-            //			if (two_sided_mtf) wxPrintf("\n\nUsing the average MTF for DQE calculation.\n");
+                Printf("\n\nUsing the MTF outside the shadow for DQE calculation.\n");
+            //			if (two_sided_mtf) Printf("\n\nUsing the average MTF for DQE calculation.\n");
         }
         if ( ! two_sided_mtf )
             break;
@@ -1105,19 +1105,19 @@ bool FindDQE::DoCalculation( ) {
     nps.MultiplyXByConstant(2.0f);
     nps_fit.MultiplyXByConstant(2.0f);
 
-    wxPrintf("\n\nWriting diagnostic output image...\n\n");
+    Printf("\n\nWriting diagnostic output image...\n\n");
     difference_image.WriteSlice(&output_file, 1);
 
     printf(" Frequency         MTF        √NPS    √NPS_Fit         DQE\n");
     fprintf(table_file, " Frequency         MTF        √NPS    √NPS_Fit         DQE\n");
     for ( i = 0; i < mtf_number_of_points; i++ ) {
         dqe = dqe0 * powf(mtf.data_y[i], 2) / nps_fit.data_y[i];
-        wxPrintf("%10.6f %11.7f %11.7f %11.7f %11.7f\n", mtf.data_x[i], mtf.data_y[i], sqrtf(nps.data_y[i]), sqrtf(nps_fit.data_y[i]), dqe);
+        Printf("%10.6f %11.7f %11.7f %11.7f %11.7f\n", mtf.data_x[i], mtf.data_y[i], sqrtf(nps.data_y[i]), sqrtf(nps_fit.data_y[i]), dqe);
         fprintf(table_file, "%10.6f %11.7f %11.7f %11.7f %11.7f\n", mtf.data_x[i], mtf.data_y[i], sqrtf(nps.data_y[i]), sqrtf(nps_fit.data_y[i]), dqe);
     }
     fclose(table_file);
 
-    wxPrintf("\nFindDQE finished cleanly!\n\n");
+    Printf("\nFindDQE finished cleanly!\n\n");
 
     return true;
 }

@@ -78,7 +78,7 @@ enum DataType {
 class DMFile : public AbstractImageFile {
 
   private:
-    wxString     filename;
+    std::string     filename;
     int          version;
     int          show;
     int          level;
@@ -205,7 +205,7 @@ class DMFile : public AbstractImageFile {
   public:
     // Constructors, destructors
     DMFile( );
-    DMFile(wxString wanted_filename);
+    DMFile(std::string wanted_filename);
     DMFile(std::string filename, bool overwrite = false);
     ~DMFile( );
 
@@ -229,23 +229,23 @@ class DMFile : public AbstractImageFile {
     void ReadSlicesFromDisk(int start_slice, int end_slice, float* output_array);
 
     void WriteSliceToDisk(int slice_number, float* input_array) {
-        wxPrintf("WriteSliceToDisk not yet implemented for DM files\n");
+        Printf("WriteSliceToDisk not yet implemented for DM files\n");
         DEBUG_ABORT;
     };
 
     void WriteSlicesToDisk(int start_slice, int end_slice, float* input_array) {
-        wxPrintf("WriteSlicesToDisk not yet implemented for DM files\n");
+        Printf("WriteSlicesToDisk not yet implemented for DM files\n");
         DEBUG_ABORT;
     };
 
     void PrintInfo( ) {
-        wxPrintf("PrintInfo not yet implemented for DM files\n");
+        Printf("PrintInfo not yet implemented for DM files\n");
         DEBUG_ABORT;
     };
 
   private:
     //
-    int readDM(wxString wanted_filename, unsigned char* p, bool readdata = true, int img_select = -1);
+    int readDM(std::string wanted_filename, unsigned char* p, bool readdata = true, int img_select = -1);
 
     //
     size_t sizeX( ) const {

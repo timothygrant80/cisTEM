@@ -1,6 +1,4 @@
 #include "core_headers.h"
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayofAngularDistributionHistograms);
 
 AngularDistributionHistogram::AngularDistributionHistogram( ) {
     number_of_theta_steps = 0;
@@ -11,9 +9,9 @@ AngularDistributionHistogram::~AngularDistributionHistogram( ) {
 }
 
 void AngularDistributionHistogram::Clear( ) {
-    histogram_data.Clear( );
-    phi_boundaries.Clear( );
-    theta_boundaries.Clear( );
+    histogram_data.clear( );
+    phi_boundaries.clear( );
+    theta_boundaries.clear( );
 }
 
 void AngularDistributionHistogram::Init(int wanted_number_of_theta_steps, int wanted_number_of_phi_steps) {
@@ -27,19 +25,19 @@ void AngularDistributionHistogram::Init(int wanted_number_of_theta_steps, int wa
     theta_step = 90.0 / number_of_theta_steps;
     phi_step   = 360.0 / number_of_phi_steps;
 
-    histogram_data.Clear( );
-    histogram_data.Add(0, number_of_theta_steps * number_of_phi_steps);
+    histogram_data.clear( );
+    histogram_data.insert(histogram_data.end( ), number_of_theta_steps * number_of_phi_steps, 0);
 
-    theta_boundaries.Clear( );
-    phi_boundaries.Clear( );
+    theta_boundaries.clear( );
+    phi_boundaries.clear( );
 
     for ( float current_theta = 90.0f - theta_step; current_theta > 0.0; current_theta -= theta_step ) {
         cosine_angle = rad_2_deg(acos(current_theta / 90.0f));
-        theta_boundaries.Add(cosine_angle);
+        theta_boundaries.push_back(cosine_angle);
     }
 
     for ( float current_phi = phi_step; current_phi < 360.0; current_phi += phi_step ) {
-        phi_boundaries.Add(current_phi);
+        phi_boundaries.push_back(current_phi);
     }
 }
 
@@ -61,19 +59,19 @@ float AngularDistributionHistogram::GetHistogramValue(float theta, float phi) {
 }
 
 void AngularDistributionHistogram::GetMinMaxValues(float& min_value, float& max_value) {
-    MyDebugAssertTrue(histogram_data.GetCount( ) > 0, "No DATA!");
+    MyDebugAssertTrue(histogram_data.size() > 0, "No DATA!");
 
     min_value = FLT_MAX;
     max_value = -FLT_MAX;
 
-    for ( int location_counter = 0; location_counter < histogram_data.GetCount( ); location_counter++ ) {
+    for ( int location_counter = 0; location_counter < histogram_data.size(); location_counter++ ) {
         min_value = std::min(min_value, histogram_data[location_counter]);
         max_value = std::max(max_value, histogram_data[location_counter]);
     }
 }
 
 void AngularDistributionHistogram::GetDistributionStatistics(float& min_value, float& max_value, float& average_value, float& std_dev) {
-    MyDebugAssertTrue(histogram_data.GetCount( ) > 0, "No DATA!");
+    MyDebugAssertTrue(histogram_data.size() > 0, "No DATA!");
 
     float total         = 0.0f;
     float total_squared = 0.0f;
@@ -83,7 +81,7 @@ void AngularDistributionHistogram::GetDistributionStatistics(float& min_value, f
     average_value = 0.0f;
     std_dev       = 0.0f;
 
-    for ( int location_counter = 0; location_counter < histogram_data.GetCount( ); location_counter++ ) {
+    for ( int location_counter = 0; location_counter < histogram_data.size(); location_counter++ ) {
         min_value = std::min(min_value, histogram_data[location_counter]);
         max_value = std::max(max_value, histogram_data[location_counter]);
 
@@ -92,20 +90,20 @@ void AngularDistributionHistogram::GetDistributionStatistics(float& min_value, f
     }
 
     if ( total != 0.0f ) {
-        average_value = total / float(histogram_data.GetCount( ));
+        average_value = total / float(histogram_data.size());
     }
 
     if ( total_squared != 0.0f ) {
-        std_dev = sqrtf((total_squared / float(histogram_data.GetCount( ))) - pow(average_value, 2));
+        std_dev = sqrtf((total_squared / float(histogram_data.size())) - pow(average_value, 2));
     }
 }
 
 void AngularDistributionHistogram::PrintToTerminal( ) {
-    wxPrintf("\n\nThere are %li Bins.\n\n", histogram_data.GetCount( ));
+    Printf("\n\nThere are %li Bins.\n\n", histogram_data.size());
 
-    for ( int counter = 0; counter < histogram_data.GetCount( ); counter++ ) {
-        wxPrintf("Bin %i = %f\n", counter + 1, histogram_data[counter]);
+    for ( int counter = 0; counter < histogram_data.size(); counter++ ) {
+        Printf("Bin %i = %f\n", counter + 1, histogram_data[counter]);
     }
 
-    wxPrintf("\n\n");
+    Printf("\n\n");
 }

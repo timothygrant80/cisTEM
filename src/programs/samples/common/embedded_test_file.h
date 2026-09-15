@@ -3,7 +3,7 @@
 
 class EmbeddedTestFile : public TestFile {
   public:
-    EmbeddedTestFile(wxString path, const unsigned char* dataArray, long length);
+    EmbeddedTestFile(std::string path, const unsigned char* dataArray, long length);
 
   private:
     void WriteEmbeddedArray(const char* filename, const unsigned char* array, long length);

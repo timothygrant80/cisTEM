@@ -73,11 +73,11 @@ void EerFile::CloseFile( ) {
 }
 
 void EerFile::PrintInfo( ) {
-    wxPrintf("Filename  : %s\n", filename.GetFullName( ));
-    wxPrintf("Dimensions: %i %i %i\n", ReturnXSize( ) * super_res_factor, ReturnYSize( ) * super_res_factor, ReturnZSize( ));
-    wxPrintf("Number of EER frames: %i\n", number_of_eer_frames);
-    wxPrintf("Super resolution factor: %i\n", super_res_factor);
-    wxPrintf("Bits per RLE: %i\n", bits_per_rle);
+    Printf("Filename  : %s\n", filename.filename().string());
+    Printf("Dimensions: %i %i %i\n", ReturnXSize( ) * super_res_factor, ReturnYSize( ) * super_res_factor, ReturnZSize( ));
+    Printf("Number of EER frames: %i\n", number_of_eer_frames);
+    Printf("Super resolution factor: %i\n", super_res_factor);
+    Printf("Bits per RLE: %i\n", bits_per_rle);
 }
 
 /*
@@ -89,7 +89,7 @@ void EerFile::PrintInfo( ) {
  */
 bool EerFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image) {
     MyDebugAssertTrue(tif != NULL, "File must be open");
-    MyDebugAssertTrue(fh != NULL, "File must be open: %s", filename.GetFullPath( ));
+    MyDebugAssertTrue(fh != NULL, "File must be open: %s", filename.string());
     MyDebugAssertFalse(number_of_eer_frames_per_image == 0, "Number of EER frames per image has not yet been set. Cannot work out logical dimensions.");
     /*
 	 * Since the file was already open, EerOpen has already read in the first dictionary
@@ -225,7 +225,7 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
     /*
 	 * Decode into a list of events
 	 */
-    // wxPrintf("max electrons = %llu\n", max_electrons);
+    // Printf("max electrons = %llu\n", max_electrons);
     unsigned int*  positions = new unsigned int[max_electrons]( );
     unsigned char* symbols   = new unsigned char[max_electrons]( );
     for ( int iframe = start_eer_frame; iframe < finish_eer_frame; iframe++ ) {
@@ -256,7 +256,7 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
                 chunk                    = *(unsigned int*)(buf + first_byte);
                 subpixel                 = (unsigned char)((chunk >> bit_offset_in_first_byte) & 15) ^ 0x0A; // 15 = 00001111; 0x0A = 00001010
                 bit_pos += 4;
-                //          wxPrintf("nelectrons = %u / %llu\n", nelectrons, max_electrons);
+                //          Printf("nelectrons = %u / %llu\n", nelectrons, max_electrons);
                 positions[nelectrons] = npixels;
                 symbols[nelectrons]   = subpixel;
                 nelectrons++;

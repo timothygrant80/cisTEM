@@ -19,7 +19,7 @@ private:
     // Program-specific parameters
     float pixel_size;
     int box_size;
-    wxString input_filename;
+    std::string input_filename;
 };
 
 IMPLEMENT_APP(MyProgram)
@@ -85,7 +85,7 @@ for (int step = 0; step < number_of_steps; step++) {
 ```
 
 ### Console Output Guidelines
-- Use `wxPrintf()` for normal output
+- Use `Printf()` for normal output (printf-style; `std::string` arguments work with `%s`)
 - Use `SendInfo()` for important status messages
 - Use `SendError()` for error conditions
 - Avoid excessive output in loops
@@ -96,11 +96,11 @@ for (int step = 0; step < number_of_steps; step++) {
 Always validate input files before processing:
 ```cpp
 if (!DoesFileExist(input_filename)) {
-    SendError(wxString::Format("Input file %s does not exist", input_filename));
+    SendError(Format("Input file %s does not exist", input_filename));
     return false;
 }
 
-MRCFile input_file(input_filename.ToStdString(), false);
+MRCFile input_file(input_filename, false);
 if (!input_file.is_valid) {
     SendError("Invalid MRC file");
     return false;
@@ -111,7 +111,7 @@ if (!input_file.is_valid) {
 Check for existing files and handle appropriately:
 ```cpp
 if (DoesFileExist(output_filename) && !overwrite) {
-    SendError(wxString::Format("Output file %s already exists", output_filename));
+    SendError(Format("Output file %s already exists", output_filename));
     return false;
 }
 ```
@@ -120,7 +120,7 @@ if (DoesFileExist(output_filename) && !overwrite) {
 Programs output results directly to files, not databases:
 ```cpp
 // Write results to MRC files
-MRCFile output_file(output_filename.ToStdString(), true);
+MRCFile output_file(output_filename, true);
 result_image.WriteSlices(&output_file, 1, result_image.logical_z_dimension);
 
 // Write metadata to text files
@@ -165,7 +165,7 @@ if (test_type == "my_new_test") {
     MyNewAlgorithm(test_image);
 
     // Verify results
-    wxPrintf("Test completed successfully\n");
+    Printf("Test completed successfully\n");
 }
 ```
 
@@ -204,7 +204,7 @@ try {
         return false;
     }
 } catch (std::exception& e) {
-    SendError(wxString::Format("Fatal error: %s", e.what()));
+    SendError(Format("Fatal error: %s", e.what()));
     return false;
 }
 ```

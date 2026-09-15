@@ -17,12 +17,12 @@ Asset::Asset( ) {
 Asset::~Asset( ) {
 }
 
-wxString Asset::ReturnFullPathString( ) {
-    return filename.GetFullPath( );
+std::string Asset::ReturnFullPathString( ) {
+    return filename.string();
 }
 
-wxString Asset::ReturnShortNameString( ) {
-    return filename.GetFullName( );
+std::string Asset::ReturnShortNameString( ) {
+    return filename.filename().string();
 }
 
 MovieAsset::MovieAsset( ) {
@@ -40,11 +40,11 @@ MovieAsset::MovieAsset( ) {
     dose_per_frame       = 0;
     total_dose           = 0;
 
-    filename   = wxEmptyString;
-    asset_name = wxEmptyString;
+    filename   = std::string();
+    asset_name = std::string();
 
-    gain_filename = wxEmptyString;
-    dark_filename = wxEmptyString;
+    gain_filename = std::string();
+    dark_filename = std::string();
 
     output_binning_factor = 1;
 
@@ -62,7 +62,7 @@ MovieAsset::~MovieAsset( ) {
     //Don't have to do anything for now
 }
 
-MovieAsset::MovieAsset(wxString wanted_filename) {
+MovieAsset::MovieAsset(std::string wanted_filename) {
     filename          = wanted_filename;
     asset_name        = wanted_filename;
     asset_id          = -1;
@@ -79,8 +79,8 @@ MovieAsset::MovieAsset(wxString wanted_filename) {
     spherical_aberration = 0;
     total_dose           = 0;
 
-    gain_filename = wxEmptyString;
-    dark_filename = wxEmptyString;
+    gain_filename = std::string();
+    dark_filename = std::string();
 
     output_binning_factor = 1;
 
@@ -97,9 +97,9 @@ MovieAsset::MovieAsset(wxString wanted_filename) {
 /*
 void MovieAsset::Recheck_if_valid()
 {	
-	if (filename.IsOk() == true && filename.FileExists() == true)
+	if (! filename.empty( ) && FileExists(filename.string()) == true)
 	{
-		movie_is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, number_of_frames);
+		movie_is_valid = GetMRCDetails(filename.c_str( ), x_size, y_size, number_of_frames);
 	}
 
 }*/
@@ -111,25 +111,25 @@ void MovieAsset::Recheck_if_valid()
  * we may not notice that the file is corrupt or has unusual dimensions.
  * If not, just don't give assume_number_of_images, or set it to 0.
  */
-void MovieAsset::Update(wxString wanted_filename, int assume_number_of_frames) {
+void MovieAsset::Update(std::string wanted_filename, int assume_number_of_frames) {
     filename = wanted_filename;
     is_valid = false;
 
-    if ( filename.IsOk( ) == true && filename.FileExists( ) == true ) {
-        if ( filename.GetExt( ).IsSameAs("mrc", false) || filename.GetExt( ).IsSameAs("mrcs", false) ) {
-            is_valid = GetMRCDetails(filename.GetFullPath( ).fn_str( ), x_size, y_size, number_of_frames);
+    if ( ! filename.empty( ) && FileExists(filename.string()) == true ) {
+        if ( EqualsNoCase(ReturnFileExtension(filename.string( )), "mrc") || EqualsNoCase(ReturnFileExtension(filename.string( )), "mrcs") ) {
+            is_valid = GetMRCDetails(filename.c_str( ), x_size, y_size, number_of_frames);
         }
-        else if ( filename.GetExt( ).IsSameAs("tif", false) || filename.GetExt( ).IsSameAs("tiff", false) ) {
+        else if ( EqualsNoCase(ReturnFileExtension(filename.string( )), "tif") || EqualsNoCase(ReturnFileExtension(filename.string( )), "tiff") ) {
             TiffFile temp_tif;
-            is_valid         = temp_tif.OpenFile(filename.GetFullPath( ).ToStdString( ), false, false, assume_number_of_frames);
+            is_valid         = temp_tif.OpenFile(filename.string(), false, false, assume_number_of_frames);
             x_size           = temp_tif.ReturnXSize( );
             y_size           = temp_tif.ReturnYSize( );
             number_of_frames = temp_tif.ReturnNumberOfSlices( );
             temp_tif.CloseFile( );
         }
-        else if ( filename.GetExt( ).IsSameAs("eer", false) ) {
+        else if ( EqualsNoCase(ReturnFileExtension(filename.string( )), "eer") ) {
             EerFile temp_eer;
-            is_valid         = temp_eer.OpenFile(filename.GetFullPath( ).ToStdString( ), false, false, assume_number_of_frames, eer_super_res_factor, eer_frames_per_image);
+            is_valid         = temp_eer.OpenFile(filename.string(), false, false, assume_number_of_frames, eer_super_res_factor, eer_frames_per_image);
             x_size           = temp_eer.ReturnXSize( );
             y_size           = temp_eer.ReturnYSize( );
             number_of_frames = temp_eer.ReturnNumberOfSlices( );
@@ -172,8 +172,8 @@ void MovieAsset::CopyFrom(Asset* other_asset) {
 
 MovieMetadataAsset::MovieMetadataAsset( ) {
     movie_asset_id   = -1;
-    metadata_source  = wxEmptyString;
-    content_json     = wxEmptyString;
+    metadata_source  = std::string();
+    content_json     = std::string();
     tilt_angle       = NAN;
     stage_position_x = NAN;
     stage_position_y = NAN;
@@ -181,7 +181,7 @@ MovieMetadataAsset::MovieMetadataAsset( ) {
     image_shift_x    = NAN;
     image_shift_y    = NAN;
     exposure_dose    = NAN;
-    acquisition_time = wxInvalidDateTime;
+    acquisition_time = DateTime();
 }
 
 MovieMetadataAsset::~MovieMetadataAsset( ) {
@@ -204,15 +204,15 @@ ImageAsset::ImageAsset( ) {
     is_valid             = false;
     protein_is_white     = false;
 
-    filename   = wxEmptyString;
-    asset_name = wxEmptyString;
+    filename   = std::string();
+    asset_name = std::string();
 }
 
 ImageAsset::~ImageAsset( ) {
     //Don't have to do anything for now
 }
 
-ImageAsset::ImageAsset(wxString wanted_filename) {
+ImageAsset::ImageAsset(std::string wanted_filename) {
     filename          = wanted_filename;
     asset_name        = wanted_filename;
     asset_id          = -1;
@@ -232,18 +232,18 @@ ImageAsset::ImageAsset(wxString wanted_filename) {
 
     int number_in_stack;
 
-    if ( filename.IsOk( ) == true && filename.FileExists( ) == true ) {
-        is_valid = GetMRCDetails(filename.GetFullPath( ).fn_str( ), x_size, y_size, number_in_stack);
+    if ( ! filename.empty( ) && FileExists(filename.string()) == true ) {
+        is_valid = GetMRCDetails(filename.c_str( ), x_size, y_size, number_in_stack);
     }
 }
 
-void ImageAsset::Update(wxString wanted_filename) {
+void ImageAsset::Update(std::string wanted_filename) {
     filename = wanted_filename;
     is_valid = false;
     int number_in_stack;
 
-    if ( filename.IsOk( ) == true && filename.FileExists( ) == true ) {
-        is_valid = GetMRCDetails(filename.GetFullPath( ).fn_str( ), x_size, y_size, number_in_stack);
+    if ( ! filename.empty( ) && FileExists(filename.string()) == true ) {
+        is_valid = GetMRCDetails(filename.c_str( ), x_size, y_size, number_in_stack);
     }
 }
 
@@ -295,8 +295,8 @@ void ParticlePositionAsset::Reset( ) {
     template_phi       = 0.0;
     template_theta     = 0.0;
     template_psi       = 0.0;
-    asset_name         = wxEmptyString;
-    filename           = wxEmptyString;
+    asset_name         = std::string();
+    filename           = std::string();
 }
 
 void ParticlePositionAsset::CopyFrom(Asset* other_asset) {
@@ -315,8 +315,6 @@ void ParticlePositionAsset::CopyFrom(Asset* other_asset) {
     asset_name                          = casted_asset->asset_name;
 }
 
-#include <wx/arrimpl.cpp>
-WX_DEFINE_OBJARRAY(ArrayOfParticlePositionAssets);
 
 // Volume asset///
 
@@ -330,15 +328,15 @@ VolumeAsset::VolumeAsset( ) {
     pixel_size            = 0;
 
     is_valid   = false;
-    filename   = wxEmptyString;
-    asset_name = wxEmptyString;
+    filename   = std::string();
+    asset_name = std::string();
 }
 
 VolumeAsset::~VolumeAsset( ) {
     //Don't have to do anything for now
 }
 
-VolumeAsset::VolumeAsset(wxString wanted_filename) {
+VolumeAsset::VolumeAsset(std::string wanted_filename) {
     filename              = wanted_filename;
     asset_name            = wanted_filename;
     asset_id              = -1;
@@ -353,17 +351,17 @@ VolumeAsset::VolumeAsset(wxString wanted_filename) {
 
     int number_in_stack;
 
-    if ( filename.IsOk( ) == true && filename.FileExists( ) == true ) {
-        is_valid = GetMRCDetails(filename.GetFullPath( ).fn_str( ), x_size, y_size, z_size);
+    if ( ! filename.empty( ) && FileExists(filename.string()) == true ) {
+        is_valid = GetMRCDetails(filename.c_str( ), x_size, y_size, z_size);
     }
 }
 
-void VolumeAsset::Update(wxString wanted_filename) {
+void VolumeAsset::Update(std::string wanted_filename) {
     filename = wanted_filename;
     is_valid = false;
 
-    if ( filename.IsOk( ) == true && filename.FileExists( ) == true ) {
-        is_valid = GetMRCDetails(filename.GetFullPath( ).fn_str( ), x_size, y_size, z_size);
+    if ( ! filename.empty( ) && FileExists(filename.string()) == true ) {
+        is_valid = GetMRCDetails(filename.c_str( ), x_size, y_size, z_size);
     }
 }
 
@@ -396,10 +394,10 @@ AtomicCoordinatesAsset::AtomicCoordinatesAsset( ) {
     z_size               = 0;
 
     is_valid   = false;
-    filename   = wxEmptyString;
-    asset_name = wxEmptyString;
+    filename   = std::string();
+    asset_name = std::string();
 
-    pdb_id           = wxEmptyString;
+    pdb_id           = std::string();
     pdb_avg_bfactor  = 0.0f;
     pdb_std_bfactor  = 0.0f;
     effective_weight = 0.0f;
@@ -409,7 +407,7 @@ AtomicCoordinatesAsset::~AtomicCoordinatesAsset( ) {
     //Don't have to do anything for now
 }
 
-AtomicCoordinatesAsset::AtomicCoordinatesAsset(wxString wanted_filename) {
+AtomicCoordinatesAsset::AtomicCoordinatesAsset(std::string wanted_filename) {
     filename             = wanted_filename;
     asset_name           = wanted_filename;
     asset_id             = -1;
@@ -421,19 +419,19 @@ AtomicCoordinatesAsset::AtomicCoordinatesAsset(wxString wanted_filename) {
     z_size   = 0;
     is_valid = false;
 
-    pdb_id           = wxEmptyString;
+    pdb_id           = std::string();
     pdb_avg_bfactor  = 0.0f;
     pdb_std_bfactor  = 0.0f;
     effective_weight = 0.0f;
 
     int number_in_stack;
 
-    if ( filename.IsOk( ) == true && filename.FileExists( ) == true ) {
+    if ( ! filename.empty( ) && FileExists(filename.string()) == true ) {
         Update(wanted_filename);
     }
 }
 
-void AtomicCoordinatesAsset::Update(wxString wanted_filename) {
+void AtomicCoordinatesAsset::Update(std::string wanted_filename) {
     filename = wanted_filename;
     is_valid = false;
 
@@ -441,7 +439,7 @@ void AtomicCoordinatesAsset::Update(wxString wanted_filename) {
     try {
         // Note that gemmi will fail for "bad" extension names, which I should check into. It wouldn't be so hard to add a check on file names (pdb1 for example)
         // but this would be more appropriate to patch and apply upstream in their repo. TODO
-        auto st = gemmi::read_structure(gemmi::MaybeGzipped(filename.GetFullPath( ).ToStdString( )));
+        auto st = gemmi::read_structure(gemmi::MaybeGzipped(filename.string()));
         pdb_id  = st.name;
 
         // This loop should be part of some atomic coordinates utiltity class later on. For now, we want to get the x,y,z extents
@@ -498,10 +496,10 @@ void AtomicCoordinatesAsset::Update(wxString wanted_filename) {
         }
 
         size_t n_hydrogens = gemmi::count_hydrogen_sites(st.models[0]);
-        wxPrintf("There are N: \n");
-        wxPrintf("Hydrogens : %ld\n", long(n_hydrogens));
-        wxPrintf("Atoms     : %ld\n", long(n_atoms));
-        wxPrintf("HetAtoms  : %ld\n", long(n_hetatms));
+        Printf("There are N: \n");
+        Printf("Hydrogens : %ld\n", long(n_hydrogens));
+        Printf("Atoms     : %ld\n", long(n_atoms));
+        Printf("HetAtoms  : %ld\n", long(n_hetatms));
 
         b /= n;
         bb              = sqrt(bb / n - b * b);
@@ -603,7 +601,7 @@ void MovieAssetList::CheckMemory( ) {
     }
 }
 
-long MovieAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
+long MovieAssetList::FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
     long found_position = -1;
 
     if ( max_asset_number_to_check == -1 )
@@ -616,7 +614,7 @@ long MovieAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortn
         }
 
         if ( also_check_vs_shortname == true ) {
-            if ( reinterpret_cast<MovieAsset*>(assets)[counter].filename.GetFullName( ) == file_to_find.GetFullName( ) ) {
+            if ( reinterpret_cast<MovieAsset*>(assets)[counter].filename.filename().string() == file_to_find.filename().string() ) {
                 found_position = counter;
                 break;
             }
@@ -644,12 +642,12 @@ long MovieAssetList::ReturnParentAssetID(long wanted_asset) {
     return reinterpret_cast<MovieAsset*>(assets)[wanted_asset].parent_id;
 }
 
-wxString MovieAssetList::ReturnAssetName(long wanted_asset) {
+std::string MovieAssetList::ReturnAssetName(long wanted_asset) {
     return reinterpret_cast<MovieAsset*>(assets)[wanted_asset].asset_name;
 }
 
-wxString MovieAssetList::ReturnAssetFullFilename(long wanted_asset) {
-    return reinterpret_cast<MovieAsset*>(assets)[wanted_asset].filename.GetFullPath( );
+std::string MovieAssetList::ReturnAssetFullFilename(long wanted_asset) {
+    return reinterpret_cast<MovieAsset*>(assets)[wanted_asset].filename.string();
 }
 
 int MovieAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position) {
@@ -690,7 +688,7 @@ void MovieAssetList::AddAsset(Asset* asset_to_add) {
 
 void MovieAssetList::RemoveAsset(long number_to_remove) {
     if ( number_to_remove < 0 || number_to_remove >= number_of_assets ) {
-        wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+        Printf("Error! Trying to remove a movie that does not exist\n\n");
         exit(-1);
     }
 
@@ -747,7 +745,7 @@ void ImageAssetList::CheckMemory( ) {
     }
 }
 
-long ImageAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
+long ImageAssetList::FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
     long found_position = -1;
 
     if ( max_asset_number_to_check == -1 )
@@ -760,7 +758,7 @@ long ImageAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortn
         }
 
         if ( also_check_vs_shortname == true ) {
-            if ( reinterpret_cast<ImageAsset*>(assets)[counter].filename.GetFullName( ) == file_to_find.GetFullName( ) ) {
+            if ( reinterpret_cast<ImageAsset*>(assets)[counter].filename.filename().string() == file_to_find.filename().string() ) {
                 found_position = counter;
                 break;
             }
@@ -792,12 +790,12 @@ long ImageAssetList::ReturnParentAssetID(long wanted_asset) {
     return reinterpret_cast<ImageAsset*>(assets)[wanted_asset].parent_id;
 }
 
-wxString ImageAssetList::ReturnAssetName(long wanted_asset) {
+std::string ImageAssetList::ReturnAssetName(long wanted_asset) {
     return reinterpret_cast<ImageAsset*>(assets)[wanted_asset].asset_name;
 }
 
-wxString ImageAssetList::ReturnAssetFullFilename(long wanted_asset) {
-    return reinterpret_cast<ImageAsset*>(assets)[wanted_asset].filename.GetFullPath( );
+std::string ImageAssetList::ReturnAssetFullFilename(long wanted_asset) {
+    return reinterpret_cast<ImageAsset*>(assets)[wanted_asset].filename.string();
 }
 
 int ImageAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position) {
@@ -836,7 +834,7 @@ void ImageAssetList::AddAsset(Asset* asset_to_add) {
 
 void ImageAssetList::RemoveAsset(long number_to_remove) {
     if ( number_to_remove < 0 || number_to_remove >= number_of_assets ) {
-        wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+        Printf("Error! Trying to remove a movie that does not exist\n\n");
         exit(-1);
     }
 
@@ -978,7 +976,7 @@ void ParticlePositionAssetList::RemoveAssetsWithGivenParentImageID(long parent_i
 
 void ParticlePositionAssetList::RemoveAsset(long number_to_remove) {
     if ( number_to_remove < 0 || number_to_remove >= number_of_assets ) {
-        wxPrintf("Error! Trying to remove a particle position that does not exist\n\n");
+        Printf("Error! Trying to remove a particle position that does not exist\n\n");
         exit(-1);
     }
 
@@ -1035,7 +1033,7 @@ void VolumeAssetList::CheckMemory( ) {
     }
 }
 
-long VolumeAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
+long VolumeAssetList::FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
     long found_position = -1;
 
     if ( max_asset_number_to_check == -1 )
@@ -1048,7 +1046,7 @@ long VolumeAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_short
         }
 
         if ( also_check_vs_shortname == true ) {
-            if ( reinterpret_cast<VolumeAsset*>(assets)[counter].filename.GetFullName( ) == file_to_find.GetFullName( ) ) {
+            if ( reinterpret_cast<VolumeAsset*>(assets)[counter].filename.filename().string() == file_to_find.filename().string() ) {
                 found_position = counter;
                 break;
             }
@@ -1076,12 +1074,12 @@ int VolumeAssetList::ReturnAssetID(long wanted_asset) {
     return reinterpret_cast<VolumeAsset*>(assets)[wanted_asset].asset_id;
 }
 
-wxString VolumeAssetList::ReturnAssetName(long wanted_asset) {
+std::string VolumeAssetList::ReturnAssetName(long wanted_asset) {
     return reinterpret_cast<VolumeAsset*>(assets)[wanted_asset].asset_name;
 }
 
-wxString VolumeAssetList::ReturnAssetFullFilename(long wanted_asset) {
-    return reinterpret_cast<VolumeAsset*>(assets)[wanted_asset].filename.GetFullPath( );
+std::string VolumeAssetList::ReturnAssetFullFilename(long wanted_asset) {
+    return reinterpret_cast<VolumeAsset*>(assets)[wanted_asset].filename.string();
 }
 
 int VolumeAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position) {
@@ -1120,7 +1118,7 @@ void VolumeAssetList::AddAsset(Asset* asset_to_add) {
 
 void VolumeAssetList::RemoveAsset(long number_to_remove) {
     if ( number_to_remove < 0 || number_to_remove >= number_of_assets ) {
-        wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+        Printf("Error! Trying to remove a movie that does not exist\n\n");
         exit(-1);
     }
 
@@ -1178,7 +1176,7 @@ void AtomicCoordinatesAssetList::CheckMemory( ) {
     }
 }
 
-long AtomicCoordinatesAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
+long AtomicCoordinatesAssetList::FindFile(std::filesystem::path file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check) {
     long found_position = -1;
 
     if ( max_asset_number_to_check == -1 )
@@ -1191,7 +1189,7 @@ long AtomicCoordinatesAssetList::FindFile(wxFileName file_to_find, bool also_che
         }
 
         if ( also_check_vs_shortname == true ) {
-            if ( reinterpret_cast<AtomicCoordinatesAsset*>(assets)[counter].filename.GetFullName( ) == file_to_find.GetFullName( ) ) {
+            if ( reinterpret_cast<AtomicCoordinatesAsset*>(assets)[counter].filename.filename().string() == file_to_find.filename().string() ) {
                 found_position = counter;
                 break;
             }
@@ -1219,12 +1217,12 @@ int AtomicCoordinatesAssetList::ReturnAssetID(long wanted_asset) {
     return reinterpret_cast<AtomicCoordinatesAsset*>(assets)[wanted_asset].asset_id;
 }
 
-wxString AtomicCoordinatesAssetList::ReturnAssetName(long wanted_asset) {
+std::string AtomicCoordinatesAssetList::ReturnAssetName(long wanted_asset) {
     return reinterpret_cast<AtomicCoordinatesAsset*>(assets)[wanted_asset].asset_name;
 }
 
-wxString AtomicCoordinatesAssetList::ReturnAssetFullFilename(long wanted_asset) {
-    return reinterpret_cast<AtomicCoordinatesAsset*>(assets)[wanted_asset].filename.GetFullPath( );
+std::string AtomicCoordinatesAssetList::ReturnAssetFullFilename(long wanted_asset) {
+    return reinterpret_cast<AtomicCoordinatesAsset*>(assets)[wanted_asset].filename.string();
 }
 
 int AtomicCoordinatesAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position) {
@@ -1263,7 +1261,7 @@ void AtomicCoordinatesAssetList::AddAsset(Asset* asset_to_add) {
 
 void AtomicCoordinatesAssetList::RemoveAsset(long number_to_remove) {
     if ( number_to_remove < 0 || number_to_remove >= number_of_assets ) {
-        wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+        Printf("Error! Trying to remove a movie that does not exist\n\n");
         exit(-1);
     }
 

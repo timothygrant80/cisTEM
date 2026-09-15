@@ -49,7 +49,7 @@ bool AppendStacks::DoCalculation( ) {
 
     float input_pixel_size = my_input_file_one.ReturnPixelSize( );
 
-    wxPrintf("\nAdding Images...\n\n");
+    Printf("\nAdding Images...\n\n");
     ProgressBar* my_progress = new ProgressBar(my_input_file_two.ReturnNumberOfSlices( ));
 
     for ( long image_counter = 0; image_counter < my_input_file_two.ReturnNumberOfSlices( ); image_counter++ ) {
@@ -59,7 +59,7 @@ bool AppendStacks::DoCalculation( ) {
     }
 
     delete my_progress;
-    wxPrintf("\n\n");
+    Printf("\n\n");
 
     return true;
 }

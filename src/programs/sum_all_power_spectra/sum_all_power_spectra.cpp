@@ -6,7 +6,6 @@
  */
 
 #include "../../core/core_headers.h"
-#include <wx/dir.h>
 
 class
         SumAllPowerSpectra : public MyApp {
@@ -57,33 +56,33 @@ bool SumAllPowerSpectra::DoCalculation( ) {
     int         max_threads     = my_current_job.arguments[1].ReturnIntegerArgument( );
     bool        is_mrc          = false;
 
-    wxArrayString all_files;
-    wxPrintf("first checking for .tif\n");
+    std::vector<std::string> all_files;
+    Printf("first checking for .tif\n");
 
-    wxDir::GetAllFiles(".", &all_files, "*.tif", wxDIR_FILES);
-    if ( all_files.GetCount( ) > 0 ) {
-        wxPrintf("\nThere are %li TIF files in this directory.\n", all_files.GetCount( ));
+    all_files = ReturnAllFilesInDirectory(".", "*.tif");
+    if ( all_files.size() > 0 ) {
+        Printf("\nThere are %li TIF files in this directory.\n", all_files.size());
     }
     else {
-        wxPrintf("no tif, checking for .tiff\n");
-        wxDir::GetAllFiles(".", &all_files, "*.tiff", wxDIR_FILES);
-        if ( all_files.GetCount( ) > 0 ) {
-            wxPrintf("\nThere are %li TIF files in this directory.\n", all_files.GetCount( ));
+        Printf("no tif, checking for .tiff\n");
+        all_files = ReturnAllFilesInDirectory(".", "*.tiff");
+        if ( all_files.size() > 0 ) {
+            Printf("\nThere are %li TIF files in this directory.\n", all_files.size());
         }
         else {
-            wxPrintf("no tif or tiff, checking for .mrc\n");
-            wxDir::GetAllFiles(".", &all_files, "*.mrc", wxDIR_FILES);
-            if ( all_files.GetCount( ) > 0 ) {
+            Printf("no tif or tiff, checking for .mrc\n");
+            all_files = ReturnAllFilesInDirectory(".", "*.mrc");
+            if ( all_files.size() > 0 ) {
                 is_mrc = true;
-                wxPrintf("\nThere are %li MRC files in this directory.\n", all_files.GetCount( ));
+                Printf("\nThere are %li MRC files in this directory.\n", all_files.size());
             }
             else {
-                wxPrintf("\n\tError : did not find any files of tif, tiff, or mrc extension.\n\n");
+                Printf("\n\tError : did not find any files of tif, tiff, or mrc extension.\n\n");
                 exit(-1);
             }
         }
     }
-    all_files.Sort( );
+    std::sort(all_files.begin( ), all_files.end( ));
 
     MRCFile*   current_mrc_file;
     ImageFile* current_tif_file;
@@ -95,13 +94,13 @@ bool SumAllPowerSpectra::DoCalculation( ) {
     // find all the mrc files in the current directory..
 
     if ( is_mrc ) {
-        current_mrc_file = new MRCFile(all_files.Item(0).ToStdString( ), false);
+        current_mrc_file = new MRCFile(all_files[0], false);
         file_x_size      = current_mrc_file->ReturnXSize( );
         file_y_size      = current_mrc_file->ReturnYSize( );
         delete current_mrc_file;
     }
     else {
-        current_tif_file = new ImageFile(all_files.Item(0).ToStdString( ), false);
+        current_tif_file = new ImageFile(all_files[0], false);
         file_x_size      = current_tif_file->ReturnXSize( );
         file_y_size      = current_tif_file->ReturnYSize( );
         delete current_tif_file;
@@ -109,7 +108,7 @@ bool SumAllPowerSpectra::DoCalculation( ) {
 
     int wanted_sq_size = 3456;
 
-    wxPrintf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n\n", all_files.Item(0), file_x_size, file_y_size);
+    Printf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n\n", all_files[0], file_x_size, file_y_size);
 
     //	output_PS.Allocate(file_x_size, file_y_size, 1);
     output_PS.Allocate(wanted_sq_size, wanted_sq_size, 1);
@@ -123,8 +122,8 @@ bool SumAllPowerSpectra::DoCalculation( ) {
 
     // loop over all files, and do summing..
 
-    wxPrintf("Summing All Files...\n\n");
-    ProgressBar* my_progress = new ProgressBar(all_files.GetCount( ));
+    Printf("Summing All Files...\n\n");
+    ProgressBar* my_progress = new ProgressBar(all_files.size());
 
     int number_processed = 0;
 // thread if available
@@ -135,17 +134,17 @@ bool SumAllPowerSpectra::DoCalculation( ) {
         int my_total_summed = 0;
 
 #pragma omp for
-        for ( file_counter = 0; file_counter < all_files.GetCount( ); file_counter++ ) {
-            //wxPrintf("Summing file %s...\n", all_files.Item(file_counter));
+        for ( file_counter = 0; file_counter < all_files.size(); file_counter++ ) {
+            //Printf("Summing file %s...\n", all_files[file_counter]);
             Image buffer_image;
             int   threadIDX = ReturnThreadNumberOfCurrentThread( );
 
             if ( is_mrc ) {
-                current_mrc_file = new MRCFile(all_files.Item(file_counter).ToStdString( ), false);
+                current_mrc_file = new MRCFile(all_files[file_counter], false);
                 file_z_size      = current_mrc_file->ReturnNumberOfSlices( );
             }
             else {
-                current_tif_file = new ImageFile(all_files.Item(file_counter).ToStdString( ), false);
+                current_tif_file = new ImageFile(all_files[file_counter], false);
                 file_z_size      = current_tif_file->ReturnNumberOfSlices( );
             }
 
@@ -223,7 +222,7 @@ bool SumAllPowerSpectra::DoCalculation( ) {
 
     delete my_progress;
 
-    wxPrintf("\n\nSum All MRC File finished Cleanly!\n\n");
+    Printf("\n\nSum All MRC File finished Cleanly!\n\n");
 
     return true;
 }

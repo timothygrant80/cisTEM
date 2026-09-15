@@ -3,7 +3,7 @@
 
 class NumericTestFile : public TestFile {
   public:
-    NumericTestFile(wxString path);
+    NumericTestFile(std::string path);
 };
 
 #endif

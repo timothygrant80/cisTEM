@@ -40,9 +40,9 @@ void AlignCoordinatesApp::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool AlignCoordinatesApp::DoCalculation( ) {
-    wxString input_ref_coordinates   = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_align_coordinates = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString outut_chimera_cmd       = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string input_ref_coordinates   = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_align_coordinates = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string outut_chimera_cmd       = my_current_job.arguments[2].ReturnStringArgument( );
     float    tolerance               = my_current_job.arguments[3].ReturnFloatArgument( );
     float    margin                  = my_current_job.arguments[4].ReturnFloatArgument( );
     float    x_dimension             = my_current_job.arguments[5].ReturnFloatArgument( );
@@ -123,24 +123,24 @@ bool AlignCoordinatesApp::DoCalculation( ) {
 
     for ( i = 0; i < input_ref_file.number_of_lines; i++ )
         input_ref_file.ReadLine(ref_coordinates[i]);
-    wxPrintf("\nRead %3i reference coordinates\n\n", input_ref_file.number_of_lines);
+    Printf("\nRead %3i reference coordinates\n\n", input_ref_file.number_of_lines);
     ii = 0;
     for ( i = 0; i < input_align_file.number_of_lines; i++ ) {
         input_align_file.ReadLine(align_coordinates[ii]);
         align_coordinates[ii][4] = i;
         if ( align_coordinates[ii][0] < margin || align_coordinates[ii][0] > x_dimension - margin || align_coordinates[ii][1] < margin || align_coordinates[ii][1] > y_dimension - margin ) {
-            wxPrintf("Align coordinates %3i excluded\n", i + 1);
-            //			wxPrintf("%g %g %g %g %g\n", margin, align_coordinates[ii][0], align_coordinates[ii][1], x_dimension, y_dimension);
+            Printf("Align coordinates %3i excluded\n", i + 1);
+            //			Printf("%g %g %g %g %g\n", margin, align_coordinates[ii][0], align_coordinates[ii][1], x_dimension, y_dimension);
         }
         else {
             ii++;
         }
     }
     input_align_file.number_of_lines = ii;
-    wxPrintf("\nRead %3i align coordinates\n", input_align_file.number_of_lines);
+    Printf("\nRead %3i align coordinates\n", input_align_file.number_of_lines);
 
-    //	for (i = 0; i < input_ref_file.number_of_lines; i++) wxPrintf("ref   x,y,z = %10.2f %10.2f %10.2f\n", ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2]);
-    //	for (i = 0; i < input_align_file.number_of_lines; i++) wxPrintf("align x,y,z = %10.2f %10.2f %10.2f\n", align_coordinates[i][0], align_coordinates[i][1], align_coordinates[i][2]);
+    //	for (i = 0; i < input_ref_file.number_of_lines; i++) Printf("ref   x,y,z = %10.2f %10.2f %10.2f\n", ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2]);
+    //	for (i = 0; i < input_align_file.number_of_lines; i++) Printf("align x,y,z = %10.2f %10.2f %10.2f\n", align_coordinates[i][0], align_coordinates[i][1], align_coordinates[i][2]);
 
     ZeroFloatArray(ref_center_of_mass, 3);
     ZeroFloatArray(align_center_of_mass, 3);
@@ -162,14 +162,14 @@ bool AlignCoordinatesApp::DoCalculation( ) {
     align_center_of_mass[1] = y_dimension / 2.0f;
 
     FILE* cmd_file;
-    cmd_file = fopen(outut_chimera_cmd, "w");
+    cmd_file = fopen(outut_chimera_cmd.c_str( ), "w");
     if ( cmd_file == NULL ) {
         MyPrintWithDetails("Error: Cannot open Chimera cmd file (%s) for write\n", outut_chimera_cmd);
         DEBUG_ABORT;
     }
 
     if ( perform_search ) {
-        wxPrintf("\nSearching...\n\n");
+        Printf("\nSearching...\n\n");
 
         number_of_angles             = myroundint(360.0f / angular_step);
         ProgressBar* search_progress = new ProgressBar(number_of_angles);
@@ -206,7 +206,7 @@ bool AlignCoordinatesApp::DoCalculation( ) {
                         best_i            = i;
                         best_ii           = ii;
                         best_search_angle = angle;
-                        //					wxPrintf("Score, angle = %g %g\n", sqrtf(best_score), best_angle);
+                        //					Printf("Score, angle = %g %g\n", sqrtf(best_score), best_angle);
                     }
                 }
             }
@@ -234,17 +234,17 @@ bool AlignCoordinatesApp::DoCalculation( ) {
     //	xyz_offset[0] = anchor_ref_x;
     //	xyz_offset[1] = anchor_ref_y;
 
-    //	wxPrintf("\nIn-plane angle (deg) = %g\n", best_angle);
+    //	Printf("\nIn-plane angle (deg) = %g\n", best_angle);
 
-    wxPrintf("\nMatching coordinates (A)\n\n");
+    Printf("\nMatching coordinates (A)\n\n");
 
     if ( perform_search ) {
         number_of_matches++;
-        wxPrintf("%3i ref %3i xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, best_i + 1, anchor_ref_x, anchor_ref_y, best_ii + 1, anchor_ref_x, anchor_ref_y, smallest_diff);
+        Printf("%3i ref %3i xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, best_i + 1, anchor_ref_x, anchor_ref_y, best_ii + 1, anchor_ref_x, anchor_ref_y, smallest_diff);
         align_pairs[best_ii] = best_i;
         ref_pairs[best_i]    = best_ii;
     }
-    //	wxPrintf("best_i = %i\n", best_i);
+    //	Printf("best_i = %i\n", best_i);
     coordinate_transformation.GenerateRotationMatrix2D(best_search_angle);
     for ( jj = 0; jj < input_align_file.number_of_lines; jj++ ) {
         if ( best_ii != jj ) {
@@ -268,7 +268,7 @@ bool AlignCoordinatesApp::DoCalculation( ) {
             if ( smallest_diff < tolerance ) {
                 if ( ref_pairs[best_j] >= 0 ) {
                     if ( ref_distance[best_j] > smallest_diff ) {
-                        wxPrintf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   updated\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
+                        Printf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   updated\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
                         ref_distance[best_j] = smallest_diff;
                         for ( ii = 0; ii < input_align_file.number_of_lines; ii++ )
                             if ( align_pairs[ii] == best_j )
@@ -276,20 +276,20 @@ bool AlignCoordinatesApp::DoCalculation( ) {
                         align_pairs[jj] = best_j;
                     }
                     else {
-                        wxPrintf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   discarded\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
+                        Printf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   discarded\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
                         //						align_pairs[jj] = -1;
                     }
                 }
                 else {
                     number_of_matches++;
                     ref_distance[best_j] = smallest_diff;
-                    wxPrintf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
+                    Printf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
                     align_pairs[jj]   = best_j;
                     ref_pairs[best_j] = jj;
                 }
-                //				wxPrintf("ref xyz = %8.2f %8.2f %8.2f   align xyz = %8.2f %8.2f %8.2f   distance = %8.2f\n", ref_coordinates[best_j][0], ref_coordinates[best_j][1], ref_coordinates[best_j][2], x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, 1300.0f + align_coordinates[jj][2], smallest_diff);
-                //				wxPrintf("%3i ref xy = %8.2f %8.2f   align xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, ref_coordinates[best_j][0], ref_coordinates[best_j][1], x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
-                //				wxPrintf("best_j = %i\n", best_j);
+                //				Printf("ref xyz = %8.2f %8.2f %8.2f   align xyz = %8.2f %8.2f %8.2f   distance = %8.2f\n", ref_coordinates[best_j][0], ref_coordinates[best_j][1], ref_coordinates[best_j][2], x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, 1300.0f + align_coordinates[jj][2], smallest_diff);
+                //				Printf("%3i ref xy = %8.2f %8.2f   align xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, ref_coordinates[best_j][0], ref_coordinates[best_j][1], x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
+                //				Printf("best_j = %i\n", best_j);
             }
         }
     }
@@ -310,10 +310,10 @@ bool AlignCoordinatesApp::DoCalculation( ) {
         if ( score > best_score ) {
             best_score    = score;
             xyz_offset[2] = z;
-            //			wxPrintf("Score, z offset = %g %g\n", sqrtf(best_score), xyz_offset[2]);
+            //			Printf("Score, z offset = %g %g\n", sqrtf(best_score), xyz_offset[2]);
         }
     }
-    //	for (i = 0; i < input_align_file.number_of_lines; i++) if (align_pairs[i] >= 0) wxPrintf("%g %g\n", align_coordinates[i][2] + z, ref_coordinates[align_pairs[i]][2]);
+    //	for (i = 0; i < input_align_file.number_of_lines; i++) if (align_pairs[i] >= 0) Printf("%g %g\n", align_coordinates[i][2] + z, ref_coordinates[align_pairs[i]][2]);
 
     //	for (i = 0; i < input_align_file.number_of_lines; i++) if (align_pairs[i] >= 0) {align_center_of_mass[0] += align_coordinates[i][0]; align_center_of_mass[1] += align_coordinates[i][1]; align_center_of_mass[2] += align_coordinates[i][2];}
     //	for (i = 0; i < input_align_file.number_of_lines; i++) if (align_pairs[i] >= 0) {ref_center_of_mass[0] += ref_coordinates[align_pairs[i]][0]; ref_center_of_mass[1] += ref_coordinates[align_pairs[i]][1]; ref_center_of_mass[2] += ref_coordinates[align_pairs[i]][2];}
@@ -325,16 +325,16 @@ bool AlignCoordinatesApp::DoCalculation( ) {
         coordinate_transformation.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
         best_x = -x_coordinate_3d - ref_center_of_mass[0] + anchor_ref_x;
         best_y = -y_coordinate_3d - ref_center_of_mass[1] + anchor_ref_y;
-        //	wxPrintf("\nalign_center    = %8.2f %8.2f\n", align_center_of_mass[0], align_center_of_mass[1]);
-        //	wxPrintf("\nref_center      = %8.2f %8.2f\n", ref_center_of_mass[0], ref_center_of_mass[1]);
-        //	wxPrintf("\nref_coordinates = %8.2f %8.2f\n", anchor_ref_x, anchor_ref_y);
-        //	wxPrintf("\ncoordinate_3d   = %8.2f %8.2f\n", x_coordinate_3d, y_coordinate_3d);
+        //	Printf("\nalign_center    = %8.2f %8.2f\n", align_center_of_mass[0], align_center_of_mass[1]);
+        //	Printf("\nref_center      = %8.2f %8.2f\n", ref_center_of_mass[0], ref_center_of_mass[1]);
+        //	Printf("\nref_coordinates = %8.2f %8.2f\n", anchor_ref_x, anchor_ref_y);
+        //	Printf("\ncoordinate_3d   = %8.2f %8.2f\n", x_coordinate_3d, y_coordinate_3d);
         //	best_x = ref_center_of_mass[0] - anchor_ref_x + align_center_of_mass[0];
         //	best_y = ref_center_of_mass[1] - anchor_ref_y + align_center_of_mass[1];
 
-        wxPrintf("\nRough xyz offset (A), in-plane rotation (deg) = %8.2f %8.2f %8.2f %8.2f\n", ref_center_of_mass[0] - align_center_of_mass[0] + best_x, ref_center_of_mass[1] - align_center_of_mass[1] + best_y, xyz_offset[2], best_search_angle);
+        Printf("\nRough xyz offset (A), in-plane rotation (deg) = %8.2f %8.2f %8.2f %8.2f\n", ref_center_of_mass[0] - align_center_of_mass[0] + best_x, ref_center_of_mass[1] - align_center_of_mass[1] + best_y, xyz_offset[2], best_search_angle);
 
-        wxPrintf("\nRefining parameters...\n\n");
+        Printf("\nRefining parameters...\n\n");
 
         number_of_x_steps = myroundint(xy_search_range / x_step);
         number_of_y_steps = myroundint(xy_search_range / y_step);
@@ -367,7 +367,7 @@ bool AlignCoordinatesApp::DoCalculation( ) {
                         xyz_offset[0]     = ref_center_of_mass[0] - align_center_of_mass[0] + best_x + x;
                         xyz_offset[1]     = ref_center_of_mass[1] - align_center_of_mass[1] + best_y + y;
                         best_refine_angle = angle;
-                        //				wxPrintf("Score, x,y offset = %g %g %g\n", sqrtf(best_score), x, y);
+                        //				Printf("Score, x,y offset = %g %g %g\n", sqrtf(best_score), x, y);
                     }
                 }
             }
@@ -382,7 +382,7 @@ bool AlignCoordinatesApp::DoCalculation( ) {
         best_refine_angle = initial_angle;
     }
 
-    wxPrintf("\nxyz offset (A), in-plane rotation (deg) = %8.2f %8.2f %8.2f %8.2f\n", xyz_offset[0], xyz_offset[1], xyz_offset[2], best_refine_angle);
+    Printf("\nxyz offset (A), in-plane rotation (deg) = %8.2f %8.2f %8.2f %8.2f\n", xyz_offset[0], xyz_offset[1], xyz_offset[2], best_refine_angle);
 
     fprintf(cmd_file, "turn z %g center %g,%g,%g coord #0 model #1\n", best_refine_angle, align_center_of_mass[0], align_center_of_mass[1], align_center_of_mass[2]);
     fprintf(cmd_file, "move x %g coord #0 model #1\n", xyz_offset[0]);
@@ -390,8 +390,8 @@ bool AlignCoordinatesApp::DoCalculation( ) {
     fprintf(cmd_file, "move z %g coord #0 model #1\n", xyz_offset[2]);
     fclose(cmd_file);
 
-    //	wxPrintf("\nReference coordinates in HRTM field of view, x min /max, y min /max (A) = %8.2f/%8.2f %8.2f/%8.2f\n\n", xyz_offset[0], xyz_offset[0] + x_dimension, xyz_offset[1], xyz_offset[1] + y_dimension);
-    wxPrintf("\nReference coordinates in HRTM field of view\n\n");
+    //	Printf("\nReference coordinates in HRTM field of view, x min /max, y min /max (A) = %8.2f/%8.2f %8.2f/%8.2f\n\n", xyz_offset[0], xyz_offset[0] + x_dimension, xyz_offset[1], xyz_offset[1] + y_dimension);
+    Printf("\nReference coordinates in HRTM field of view\n\n");
 
     tp = 0;
     //	fp = 0;
@@ -406,13 +406,13 @@ bool AlignCoordinatesApp::DoCalculation( ) {
         if ( x_coordinate_3d >= margin && x_coordinate_3d <= x_dimension - margin && y_coordinate_3d >= margin && y_coordinate_3d <= y_dimension - margin ) {
             number_ref_in_view++;
             if ( ref_pairs[i] >= 0 ) {
-                //				wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   xy_rotated = %8.2f %8.2f %8.2f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], x_coordinate_3d, y_coordinate_3d, ref_pairs[i] + 1);
-                wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref peak = %8.4f   xy_rotated = %8.2f %8.2f   align peak = %8.4f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2],
+                //				Printf("%3i  xyz (A) = %8.2f %8.2f %8.2f   xy_rotated = %8.2f %8.2f %8.2f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], x_coordinate_3d, y_coordinate_3d, ref_pairs[i] + 1);
+                Printf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref peak = %8.4f   xy_rotated = %8.2f %8.2f   align peak = %8.4f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2],
                          ref_coordinates[i][3], x_coordinate_3d, y_coordinate_3d, align_coordinates[ref_pairs[i]][3], myroundint(align_coordinates[ref_pairs[i]][4]) + 1);
                 tp++;
             }
             else {
-                wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref peak = %8.4f   xy_rotated = %8.2f %8.2f\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], ref_coordinates[i][3], x_coordinate_3d, y_coordinate_3d);
+                Printf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref peak = %8.4f   xy_rotated = %8.2f %8.2f\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], ref_coordinates[i][3], x_coordinate_3d, y_coordinate_3d);
                 //				fp++;
             }
         }
@@ -425,11 +425,11 @@ bool AlignCoordinatesApp::DoCalculation( ) {
     }
     precision_align = float(tp) / number_ref_in_view;
     recall_align    = float(tp) / input_align_file.number_of_lines;
-    //	wxPrintf("\nTotal, matched = %3i  %3i\n", number_ref_in_view, number_of_matches);
-    wxPrintf("\nTotal, matched = %3i  %3i\n", number_ref_in_view, tp);
-    wxPrintf("\nPrecision, recall, F1 score = %8.4f %8.4f %8.4f\n", precision_align, recall_align, 2.0f * precision_align * recall_align / (precision_align + recall_align));
+    //	Printf("\nTotal, matched = %3i  %3i\n", number_ref_in_view, number_of_matches);
+    Printf("\nTotal, matched = %3i  %3i\n", number_ref_in_view, tp);
+    Printf("\nPrecision, recall, F1 score = %8.4f %8.4f %8.4f\n", precision_align, recall_align, 2.0f * precision_align * recall_align / (precision_align + recall_align));
 
-    wxPrintf("\nAligned coordinates\n\n");
+    Printf("\nAligned coordinates\n\n");
 
     tp = 0;
     //	fp = 0;
@@ -439,28 +439,28 @@ bool AlignCoordinatesApp::DoCalculation( ) {
         y_coordinate_2d = align_coordinates[ii][1] - align_center_of_mass[1];
         coordinate_transformation.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
         if ( align_pairs[ii] >= 0 && ref_pairs[align_pairs[ii]] >= 0 ) {
-            wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   align peak = %8.4f   xyz_rotated = %8.2f %8.2f %8.2f   ref peak = %8.4f   ref pair %3i\n", myroundint(align_coordinates[ii][4]) + 1, align_coordinates[ii][0], align_coordinates[ii][1], align_coordinates[ii][2], align_coordinates[ii][3],
+            Printf("%3i  xyz (A) = %8.2f %8.2f %8.2f   align peak = %8.4f   xyz_rotated = %8.2f %8.2f %8.2f   ref peak = %8.4f   ref pair %3i\n", myroundint(align_coordinates[ii][4]) + 1, align_coordinates[ii][0], align_coordinates[ii][1], align_coordinates[ii][2], align_coordinates[ii][3],
                      x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2], ref_coordinates[align_pairs[ii]][3], align_pairs[ii] + 1);
-            //			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref pair  %3i\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2], align_pairs[ii] + 1);
+            //			Printf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref pair  %3i\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2], align_pairs[ii] + 1);
             std_x += powf(x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0] - ref_coordinates[align_pairs[ii]][0], 2);
             std_y += powf(y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1] - ref_coordinates[align_pairs[ii]][1], 2);
             std_z += powf(align_coordinates[ii][2] + xyz_offset[2] - ref_coordinates[align_pairs[ii]][2], 2);
             tp++;
         }
         else {
-            wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   align peak = %8.4f   xyz_rotated = %8.2f %8.2f %8.2f\n", myroundint(align_coordinates[ii][4]) + 1, align_coordinates[ii][0], align_coordinates[ii][1], align_coordinates[ii][2], align_coordinates[ii][3],
+            Printf("%3i  xyz (A) = %8.2f %8.2f %8.2f   align peak = %8.4f   xyz_rotated = %8.2f %8.2f %8.2f\n", myroundint(align_coordinates[ii][4]) + 1, align_coordinates[ii][0], align_coordinates[ii][1], align_coordinates[ii][2], align_coordinates[ii][3],
                      x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2]);
-            //			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2]);
+            //			Printf("%3i  xyz (A) = %8.2f %8.2f %8.2f\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2]);
             //			fp++;
         }
     }
     precision_ref = float(tp) / input_align_file.number_of_lines;
     recall_ref    = float(tp) / number_ref_in_view;
-    //	wxPrintf("\nTotal, matched = %3i  %3i\n", input_align_file.number_of_lines, number_of_matches);
-    wxPrintf("\nTotal, matched = %3i  %3i\n", input_align_file.number_of_lines, tp);
-    wxPrintf("\nPrecision, recall, F1 score = %8.4f %8.4f %8.4f\n", precision_ref, recall_ref, 2.0f * precision_ref * recall_ref / (precision_ref + recall_ref));
+    //	Printf("\nTotal, matched = %3i  %3i\n", input_align_file.number_of_lines, number_of_matches);
+    Printf("\nTotal, matched = %3i  %3i\n", input_align_file.number_of_lines, tp);
+    Printf("\nPrecision, recall, F1 score = %8.4f %8.4f %8.4f\n", precision_ref, recall_ref, 2.0f * precision_ref * recall_ref / (precision_ref + recall_ref));
 
-    wxPrintf("\nSTD xy, z = %8.2f %8.2f\n\n", sqrtf((std_x + std_y) / number_of_matches), sqrtf(std_z / number_of_matches));
+    Printf("\nSTD xy, z = %8.2f %8.2f\n\n", sqrtf((std_x + std_y) / number_of_matches), sqrtf(std_z / number_of_matches));
     /*
 	number_of_psi_angles = myroundint(10.0f * angular_step/psi_step);
 	number_of_theta_angles = myroundint(euler_range/theta_step);
@@ -495,7 +495,7 @@ bool AlignCoordinatesApp::DoCalculation( ) {
 						best_psi = best_angle + psi;
 						best_theta = theta;
 						best_phi = phi;
-			//			wxPrintf("Score, z offset = %g %g\n", sqrtf(best_score), best_z);
+			//			Printf("Score, z offset = %g %g\n", sqrtf(best_score), best_z);
 					}
 				}
 			}
@@ -530,14 +530,14 @@ bool AlignCoordinatesApp::DoCalculation( ) {
 				{
 					difference = fabsf(align_distances[jj] - ref_distances[j]);
 					if (difference < smallest_diff) smallest_diff = difference;
-//					wxPrintf("diff = %g\n", difference);
+//					Printf("diff = %g\n", difference);
 				}
 				if (smallest_diff < tolerance) score += powf(tolerance - smallest_diff, 2);
 			}
 			if (score > best_score)
 			{
 				best_score = score;
-				wxPrintf("Score = %g\n", best_score);
+				Printf("Score = %g\n", best_score);
 				best_i = i;
 				best_ii = ii;
 			}
@@ -572,7 +572,7 @@ bool AlignCoordinatesApp::DoCalculation( ) {
 		if (score > best_score)
 		{
 			best_score = score;
-//			wxPrintf("Score = %i\n", best_score);
+//			Printf("Score = %i\n", best_score);
 			best_angle = angle;
 		}
 	}

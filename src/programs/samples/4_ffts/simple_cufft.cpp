@@ -19,7 +19,7 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-void SimpleCuFFTRunner(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+void SimpleCuFFTRunner(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting GPU FFT tests:", false);
 
@@ -32,7 +32,7 @@ void SimpleCuFFTRunner(const wxString& hiv_image_80x80x1_filename, wxString& tem
     return;
 }
 
-bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+bool DoInPlaceR2CandC2R(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;
@@ -139,7 +139,7 @@ bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& te
     return all_passed;
 }
 
-bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory) {
+bool DoInPlaceR2CandC2RBatched(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory) {
 
     bool passed     = true;
     bool all_passed = true;
@@ -223,7 +223,7 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
     }
 
     float ratio_seq_to_batched = timer.get_ratio_of_times("GPU 2d", "Gpu 2d batched");
-    // wxPrintf("Ratio of tims is %f\n", ratio_seq_to_batched);
+    // Printf("Ratio of tims is %f\n", ratio_seq_to_batched);
     // timer.print_times( );
 
     all_passed = passed ? all_passed : false;
@@ -233,7 +233,7 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
 
     passed = passed && ratio_seq_to_batched > 2.5f;
     if ( ! passed )
-        wxPrintf("\n Ratio seq to batched %f\n", ratio_seq_to_batched);
+        Printf("\n Ratio seq to batched %f\n", ratio_seq_to_batched);
 
     all_passed = passed ? all_passed : false;
     SamplesTestResult(passed);

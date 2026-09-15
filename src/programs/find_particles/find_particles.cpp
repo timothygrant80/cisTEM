@@ -16,7 +16,7 @@ void FindParticlesApp::DoInteractiveUserInput( ) {
 
     UserInput* my_input = new UserInput("FindParticles", 0.0);
 
-    wxString micrograph_filename               = my_input->GetFilenameFromUser("Input micrograph filename", "The input micrograph, in which we will look for particles", "micrograph.mrc", true);
+    std::string micrograph_filename               = my_input->GetFilenameFromUser("Input micrograph filename", "The input micrograph, in which we will look for particles", "micrograph.mrc", true);
     float    pixel_size                        = my_input->GetFloatFromUser("Micrograph pixel size", "In Angstroms", "1.0", 0.0);
     float    acceleration_voltage_in_keV       = my_input->GetFloatFromUser("Acceleration voltage", "In keV", "300.0", 0.0);
     float    spherical_aberration_in_mm        = my_input->GetFloatFromUser("Spherical aberration", "In mm", "2.7", 0.0);
@@ -26,7 +26,7 @@ void FindParticlesApp::DoInteractiveUserInput( ) {
     float    defocus_2_in_angstroms            = my_input->GetFloatFromUser("Micrograph defocus 2", "In Angstroms. For underfocus, give a positive value.", "15000.0");
     float    astigmatism_angle_in_degrees      = my_input->GetFloatFromUser("Micrograph astigmatism angle", "In degrees, following CTFFIND convention", "0.0");
     bool     already_have_templates            = my_input->GetYesNoFromUser("Would you like to supply templates?", "Say yes here if you already have a template or templates to use as references for picking, for example projections from an existing 3D reconstruction", "no");
-    wxString templates_filename                = "templates.mrc";
+    std::string templates_filename                = "templates.mrc";
     bool     rotate_templates                  = false;
     int      number_of_template_rotations      = 1;
     bool     average_templates_radially        = false;
@@ -49,7 +49,7 @@ void FindParticlesApp::DoInteractiveUserInput( ) {
     }
     float    maximum_radius                  = my_input->GetFloatFromUser("Maximum radius of the particle (in Angstroms)", "The maximum radius of the templates, in angstroms", "32.0", 0.0);
     float    highest_resolution_to_use       = my_input->GetFloatFromUser("Highest resolution to use for picking", "In Angstroms. Data at higher resolutions will be ignored in the picking process", "15.0", pixel_size * 2.0);
-    wxString output_stack_filename           = my_input->GetFilenameFromUser("Filename for output stack of candidate particles.", "A stack of candidate particles will be written to disk", "candidate_particles.mrc", false);
+    std::string output_stack_filename           = my_input->GetFilenameFromUser("Filename for output stack of candidate particles.", "A stack of candidate particles will be written to disk", "candidate_particles.mrc", false);
     int      output_stack_box_size           = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
     int      minimum_distance_from_edges     = my_input->GetIntFromUser("Minimum distance from edge (pixels)", "In pixels, the minimum distance between the center of a box and the edge of the micrograph", "129", 0);
     float    picking_threshold               = my_input->GetFloatFromUser("Picking threshold", "The minimum peak height for candidate particles. In numbers of background noise standard deviations. Typically in the 3.0 to 15.0 range. For micrographs with good contrast, give higher values to avoid spurious peaks.", "8.0", 0.0);
@@ -65,7 +65,7 @@ void FindParticlesApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(28);
-    my_current_job.ManualSetArguments("tffffffffbtbiffftiifbbffbiib", micrograph_filename.ToStdString( ).c_str( ),
+    my_current_job.ManualSetArguments("tffffffffbtbiffftiifbbffbiib", micrograph_filename.c_str( ),
                                       pixel_size,
                                       acceleration_voltage_in_keV,
                                       spherical_aberration_in_mm,
@@ -75,13 +75,13 @@ void FindParticlesApp::DoInteractiveUserInput( ) {
                                       defocus_2_in_angstroms,
                                       astigmatism_angle_in_degrees,
                                       already_have_templates,
-                                      templates_filename.ToStdString( ).c_str( ),
+                                      templates_filename.c_str( ),
                                       average_templates_radially,
                                       number_of_template_rotations,
                                       typical_radius,
                                       maximum_radius,
                                       highest_resolution_to_use,
-                                      output_stack_filename.ToStdString( ).c_str( ),
+                                      output_stack_filename.c_str( ),
                                       output_stack_box_size,
                                       minimum_distance_from_edges,
                                       picking_threshold,
@@ -101,7 +101,7 @@ bool FindParticlesApp::DoCalculation( ) {
     ParticleFinder particle_finder;
 
     // Get the arguments for this job..
-    wxString micrograph_filename                         = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string micrograph_filename                         = my_current_job.arguments[0].ReturnStringArgument( );
     float    original_micrograph_pixel_size              = my_current_job.arguments[1].ReturnFloatArgument( );
     float    acceleration_voltage_in_keV                 = my_current_job.arguments[2].ReturnFloatArgument( );
     float    spherical_aberration_in_mm                  = my_current_job.arguments[3].ReturnFloatArgument( );
@@ -111,13 +111,13 @@ bool FindParticlesApp::DoCalculation( ) {
     float    defocus_2_in_angstroms                      = my_current_job.arguments[7].ReturnFloatArgument( );
     float    astigmatism_angle_in_degrees                = my_current_job.arguments[8].ReturnFloatArgument( );
     bool     already_have_templates                      = my_current_job.arguments[9].ReturnBoolArgument( );
-    wxString templates_filename                          = my_current_job.arguments[10].ReturnStringArgument( );
+    std::string templates_filename                          = my_current_job.arguments[10].ReturnStringArgument( );
     bool     average_templates_radially                  = my_current_job.arguments[11].ReturnBoolArgument( );
     int      number_of_template_rotations                = my_current_job.arguments[12].ReturnIntegerArgument( );
     float    typical_radius_in_angstroms                 = my_current_job.arguments[13].ReturnFloatArgument( );
     float    maximum_radius_in_angstroms                 = my_current_job.arguments[14].ReturnFloatArgument( );
     float    highest_resolution_to_use                   = my_current_job.arguments[15].ReturnFloatArgument( );
-    wxString output_stack_filename                       = my_current_job.arguments[16].ReturnStringArgument( );
+    std::string output_stack_filename                       = my_current_job.arguments[16].ReturnStringArgument( );
     int      output_stack_box_size                       = my_current_job.arguments[17].ReturnIntegerArgument( );
     int      minimum_distance_from_edges_in_pixels       = my_current_job.arguments[18].ReturnIntegerArgument( );
     float    minimum_peak_height_for_candidate_particles = my_current_job.arguments[19].ReturnFloatArgument( );
@@ -161,7 +161,7 @@ bool FindParticlesApp::DoCalculation( ) {
 
     particle_finder.write_out_plt = is_running_locally;
     if ( is_running_locally )
-        wxPrintf("Running locally. Should write PLT out.\n");
+        Printf("Running locally. Should write PLT out.\n");
 
     particle_finder.DoItAll( );
 

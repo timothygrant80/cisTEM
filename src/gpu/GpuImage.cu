@@ -422,27 +422,27 @@ void GpuImage::printVal(std::string msg, int idx) {
     cudaErr(cudaMemcpy(&h_printVal, &real_values[idx], sizeof(float), cudaMemcpyDeviceToHost));
     cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
     MyDebugAssertFalse(h_printVal == -9999.0f, "Error: printVal failed");
-    wxPrintf("%s %6.6e\n", msg, h_printVal);
+    Printf("%s %6.6e\n", msg, h_printVal);
 };
 
 void GpuImage::PrintNppStreamContext( ) {
     MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
 
-    wxPrintf("NPP stream context:\n");
-    wxPrintf("  npp device id %d\n", nppStream.nCudaDeviceId);
-    wxPrintf("  npp multi processor count %d\n", nppStream.nMultiProcessorCount);
-    wxPrintf("  npp max threads per multi processor %d\n", nppStream.nMaxThreadsPerMultiProcessor);
-    wxPrintf("  npp max threads per block %d\n", nppStream.nMaxThreadsPerBlock);
-    wxPrintf("  npp max shared memory per block %ld\n", nppStream.nSharedMemPerBlock);
-    wxPrintf("  npp compute capability %d.%d\n", nppStream.nCudaDevAttrComputeCapabilityMajor, nppStream.nCudaDevAttrComputeCapabilityMinor);
+    Printf("NPP stream context:\n");
+    Printf("  npp device id %d\n", nppStream.nCudaDeviceId);
+    Printf("  npp multi processor count %d\n", nppStream.nMultiProcessorCount);
+    Printf("  npp max threads per multi processor %d\n", nppStream.nMaxThreadsPerMultiProcessor);
+    Printf("  npp max threads per block %d\n", nppStream.nMaxThreadsPerBlock);
+    Printf("  npp max shared memory per block %ld\n", nppStream.nSharedMemPerBlock);
+    Printf("  npp compute capability %d.%d\n", nppStream.nCudaDevAttrComputeCapabilityMajor, nppStream.nCudaDevAttrComputeCapabilityMinor);
 
-    wxPrintf("\n NPP ROI:\n");
+    Printf("\n NPP ROI:\n");
 
-    wxPrintf("  npp_ROI: %d %d\n", npp_ROI_real_space.width, npp_ROI_real_space.height);
+    Printf("  npp_ROI: %d %d\n", npp_ROI_real_space.width, npp_ROI_real_space.height);
 
-    wxPrintf("  npp_ROI_real_space: %d %d\n", npp_ROI_real_space.width, npp_ROI_real_space.height);
-    wxPrintf("  npp_ROI_fourier_space: %d %d\n", npp_ROI_fourier_space.width, npp_ROI_fourier_space.height);
-    wxPrintf("  GpuImage.pitch bytes/ elements %ld/ %ld\n", pitch, pitch / sizeof(float));
+    Printf("  npp_ROI_real_space: %d %d\n", npp_ROI_real_space.width, npp_ROI_real_space.height);
+    Printf("  npp_ROI_fourier_space: %d %d\n", npp_ROI_fourier_space.width, npp_ROI_fourier_space.height);
+    Printf("  GpuImage.pitch bytes/ elements %ld/ %ld\n", pitch, pitch / sizeof(float));
 }
 
 bool GpuImage::HasSameDimensionsAs(Image* other_image) {
@@ -752,7 +752,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
                 weighted_correlation_buffer_size         = n_elements;
                 is_allocated_weighted_correlation_buffer = true;
             }
-            wxPrintf("\n");
+            Printf("\n");
             break;
         }
 
@@ -1217,13 +1217,13 @@ float GpuImage::ReturnSumSquareModulusComplexValues( ) {
 
     if ( ! is_allocated_mask_CSOS ) {
 
-        wxPrintf("is mask allocated %d\n", is_allocated_mask_CSOS);
+        Printf("is mask allocated %d\n", is_allocated_mask_CSOS);
         mask_CSOS              = new GpuImage;
         is_allocated_mask_CSOS = true;
-        wxPrintf("is mask allocated %d\n", is_allocated_mask_CSOS);
+        Printf("is mask allocated %d\n", is_allocated_mask_CSOS);
         // create a mask that can be reproduce the correct weighting from Image::ReturnSumOfSquares on complex images
 
-        wxPrintf("\n\tMaking mask_CSOS\n");
+        Printf("\n\tMaking mask_CSOS\n");
         mask_CSOS->Allocate(dims.x, dims.y, dims.z, true);
         // The mask should always be in real_space, and starts out not centered
         mask_CSOS->is_in_real_space         = false;
@@ -1829,9 +1829,9 @@ float GpuImage::GetWeightedCorrelationWithImage(GpuImage& projection_image, GpuI
     final_sum = sum3;
 #endif
 
-    // wxPrintf("sums %f %f %f\n", sum1, sum2, sum3);
-    // wxPrintf("sums %f %f %f atomic\n", *s1, *s2, *s3);
-    // wxPrintf("sum3 %f\n", sum3);
+    // Printf("sums %f %f %f\n", sum1, sum2, sum3);
+    // Printf("sums %f %f %f atomic\n", *s1, *s2, *s3);
+    // Printf("sum3 %f\n", sum3);
 
     // cudaErr(cudaFree(s1));
     // cudaErr(cudaFree(s2));
@@ -1885,7 +1885,7 @@ Peak GpuImage::FindPeakWithParabolaFit(float inner_radius_for_peak_search, float
     std::cerr << "Size x,y,z is : " << dims.x << ", " << dims.y << ", " << dims.z << std::endl;
     Image cpu_buffer = CopyDeviceToNewHost(should_block_until_complete, free_gpu_memory);
     Peak  my_peak    = cpu_buffer.FindPeakWithParabolaFit(inner_radius_for_peak_search, outer_radius_for_peak_search);
-    wxPrintf("Peak found at %f, %f\n", my_peak.x, my_peak.y);
+    Printf("Peak found at %f, %f\n", my_peak.x, my_peak.y);
 
     return my_peak;
 }
@@ -2247,7 +2247,7 @@ void GpuImage::Mean( ) {
 
     NppInit( );
     BufferInit(b_mean);
-    // // wxPrintf("Pitch, roi: %d, %d, %d\n", pitch, npp_ROI.width, npp_ROI.height);
+    // // Printf("Pitch, roi: %d, %d, %d\n", pitch, npp_ROI.width, npp_ROI.height);
 
     PrintNppStreamContext( );
 
@@ -3451,7 +3451,7 @@ void GpuImage::PhaseShift<StorageTypeBase>(float wanted_x_shift, float wanted_y_
 
     bool need_to_fft = false;
     if ( is_in_real_space == true ) {
-        wxPrintf("Doing forward fft in phase shift function\n\n");
+        Printf("Doing forward fft in phase shift function\n\n");
         ForwardFFT(true);
         need_to_fft = true;
     }
@@ -4232,7 +4232,7 @@ bool GpuImage::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size,
     // TODO consider option to add host mem here. For now, just do gpu mem.
     //////    real_values = (float *) fftwf_malloc(sizeof(float) * real_memory_allocated);
     //////    complex_values = (std::complex<float>*) real_values;  // Set the complex_values to point at the newly allocated real values;
-    //    wxPrintf("\n\n\tAllocating mem\t\n\n");
+    //    Printf("\n\n\tAllocating mem\t\n\n");
     if ( allocate_fp16_buffer ) {
         BufferInit(b_16f);
     }
@@ -4663,7 +4663,7 @@ void GpuImage::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted
     MyDebugAssertFalse(zero_central_pixel && is_in_real_space, "Zero central pixel only works in Fourier space");
 
     if ( dims.x == wanted_x_dimension && dims.y == wanted_y_dimension && dims.z == wanted_z_dimension ) {
-        wxPrintf("Wanted dimensions are the same as current dimensions.\n");
+        Printf("Wanted dimensions are the same as current dimensions.\n");
         return;
     }
 
@@ -4678,7 +4678,7 @@ void GpuImage::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted
         ClipIntoFourierSpace(&temp_image, wanted_padding_value, zero_central_pixel);
     }
 
-    // wxPrintf("Consuming temp image\n");
+    // Printf("Consuming temp image\n");
     Consume(&temp_image);
 }
 

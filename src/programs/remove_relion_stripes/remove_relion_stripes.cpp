@@ -1,5 +1,4 @@
 #include "../../core/core_headers.h"
-#include <wx/dir.h>
 
 class
         RemoveRelionStripes : public MyApp {
@@ -63,7 +62,7 @@ bool RemoveRelionStripes::DoCalculation( ) {
     mask_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), 1);
     buffer_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), 1);
 
-    wxPrintf("\nRemoving Stripes...\n\n");
+    Printf("\nRemoving Stripes...\n\n");
 
     ProgressBar* my_progress = new ProgressBar(input_file.ReturnNumberOfSlices( ));
 
@@ -89,7 +88,7 @@ bool RemoveRelionStripes::DoCalculation( ) {
 		for (line_counter = 2; line_counter < input_image.logical_y_dimension; line_counter++)
 		{
 			current_correlation = ReturnCorrelationBetweenTwoHorizontalLines(buffer_image, 1, line_counter);
-			wxPrintf("line %i = %f\n", line_counter, current_correlation);
+			Printf("line %i = %f\n", line_counter, current_correlation);
 
 			if (current_correlation > dot_product_threshold)
 			{
@@ -114,7 +113,7 @@ bool RemoveRelionStripes::DoCalculation( ) {
 		for (line_counter = input_image.logical_y_dimension - 3; line_counter >= 0; line_counter--)
 		{
 			current_correlation = ReturnCorrelationBetweenTwoHorizontalLines(buffer_image, input_image.logical_y_dimension - 2, line_counter);
-			wxPrintf("line %i = %f\n", line_counter, current_correlation);
+			Printf("line %i = %f\n", line_counter, current_correlation);
 
 			if (current_correlation > dot_product_threshold)
 			{
@@ -139,7 +138,7 @@ bool RemoveRelionStripes::DoCalculation( ) {
 		for (line_counter = 2; line_counter < input_image.logical_x_dimension; line_counter++)
 		{
 			current_correlation = ReturnCorrelationBetweenTwoVerticalLines(buffer_image, 1, line_counter);
-			wxPrintf("line %i = %f\n", line_counter, current_correlation);
+			Printf("line %i = %f\n", line_counter, current_correlation);
 
 			if (current_correlation > dot_product_threshold)
 			{
@@ -166,7 +165,7 @@ bool RemoveRelionStripes::DoCalculation( ) {
 		for (line_counter = input_image.logical_x_dimension - 3; line_counter >= 0; line_counter--)
 		{
 			current_correlation = ReturnCorrelationBetweenTwoVerticalLines(buffer_image, input_image.logical_x_dimension - 2, line_counter);
-			wxPrintf("line %i = %f\n", line_counter, current_correlation);
+			Printf("line %i = %f\n", line_counter, current_correlation);
 
 			if (current_correlation > dot_product_threshold)
 			{

@@ -100,10 +100,10 @@ float CtffindCurveObjectiveFunction(void* scoring_parameters, float array_of_val
     // change much with defocus. At least I hope so.
     //	if (! std::isfinite(- cross_product / sqrtf(norm_ctf * norm_curve)))
     //	{
-    //		wxPrintf("param 1, 2, v1, v2, v3 = %g %g %g %g %g\n", array_of_values[0], array_of_values[1], cross_product, norm_ctf, norm_curve);
+    //		Printf("param 1, 2, v1, v2, v3 = %g %g %g %g %g\n", array_of_values[0], array_of_values[1], cross_product, norm_ctf, norm_curve);
     //		for ( bin_counter = 0 ; bin_counter < comparison_object->number_of_bins; bin_counter ++ )
     //		{
-    //			wxPrintf("bin, val = %i, %g\n", bin_counter, comparison_object->curve[bin_counter]);
+    //			Printf("bin, val = %i, %g\n", bin_counter, comparison_object->curve[bin_counter]);
     //		}
     //		exit(0);
     //	}

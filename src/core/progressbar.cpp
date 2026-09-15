@@ -24,24 +24,24 @@ ProgressBar::~ProgressBar(void) {
     // Set to 100% and end the line..
 
     if ( total_number_of_ticks > 1 ) {
-        wxPrintf("   100% [=================] done! ");
+        Printf("   100% [=================] done! ");
     }
 
     // Print out how long it took
 
     if ( total_hours > 999 ) {
-        wxPrintf("(999h:99m:99s)             \n");
+        Printf("(999h:99m:99s)             \n");
     }
     else {
-        wxPrintf("(%lih:", total_hours);
+        Printf("(%lih:", total_hours);
 
         // minutes, if less than ten do a preceding 0
 
-        wxPrintf("%02lim", total_minutes);
+        Printf("%02lim", total_minutes);
 
         // similiar for the seconds
 
-        wxPrintf("%02lis)                \n", total_seconds);
+        Printf("%02lis)                \n", total_seconds);
         fflush(stdout);
 
         // we are done so flush and CR!
@@ -61,7 +61,7 @@ ProgressBar::ProgressBar(long wanted_total_number_of_ticks, bool wanted_limit_to
 
         // draw the start state...
 
-        wxPrintf("     0% [                              ] ???h:??m:??s   \r");
+        Printf("     0% [                              ] ???h:??m:??s   \r");
         fflush(stdout);
     }
 }
@@ -122,32 +122,32 @@ void ProgressBar::Update(long current_tick) {
 
             // draw out the bar.. starting with percent complete.
 
-            wxPrintf("   %3li% [", percent_complete);
+            Printf("   %3li% [", percent_complete);
 
             for ( long position = 0; position < 30; position++ ) {
                 if ( position < filled_bar_size )
-                    wxPrintf("=");
+                    Printf("=");
                 else
-                    wxPrintf(" ");
+                    Printf(" ");
             }
 
-            wxPrintf("] ");
+            Printf("] ");
 
             // print out ETA..
 
             if ( hours_remaining > 999 ) {
-                wxPrintf("999h:99m:99s               \r");
+                Printf("999h:99m:99s               \r");
             }
             else {
-                wxPrintf("%lih:", hours_remaining);
+                Printf("%lih:", hours_remaining);
 
                 // minutes, if less than ten do a preceding 0
 
-                wxPrintf("%02lim", minutes_remaining);
+                Printf("%02lim", minutes_remaining);
 
                 // similiar for the seconds
 
-                wxPrintf("%02lis                 \r", seconds_remaining);
+                Printf("%02lis                 \r", seconds_remaining);
                 fflush(stdout);
 
                 // we are done so flush and CR!

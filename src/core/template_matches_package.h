@@ -20,7 +20,7 @@
     int   assigned_subset;
 };
 
-WX_DECLARE_OBJARRAY(RefinementPackageParticleInfo, ArrayOfRefinmentPackageParticleInfos); */
+typedef std::vector<RefinementPackageParticleInfo> ArrayOfRefinmentPackageParticleInfos; */
 
 class TemplateMatchesPackage {
 
@@ -29,11 +29,11 @@ class TemplateMatchesPackage {
     ~TemplateMatchesPackage( );
 
     long     asset_id;
-    wxString starfile_filename;
-    wxString name;
+    std::string starfile_filename;
+    std::string name;
     long     contained_match_count;
 
-    wxArrayLong match_template_result_ids;
+    std::vector<long> match_template_result_ids;
 };
 
-WX_DECLARE_OBJARRAY(TemplateMatchesPackage, ArrayOfTemplateMatchesPackages);
+typedef std::vector<TemplateMatchesPackage> ArrayOfTemplateMatchesPackages;

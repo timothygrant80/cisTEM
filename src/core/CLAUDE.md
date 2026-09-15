@@ -229,7 +229,7 @@ void MyFunction() {
 When using function-scoped `using` declarations for type aliases, add static assertions to verify critical type properties:
 ```cpp
 // ✅ BEST: Function-scoped using with compile-time safety check
-bool JobPackage::SendJobPackage(wxSocketBase* socket) {
+bool JobPackage::SendJobPackage(TcpSocket* socket) {
     using c_ft = cistem::fundamental_type::Enum;
     static_assert(sizeof(c_ft) == sizeof(uint8_t),
                   "fundamental_type::Enum must match uint8_t size for safe casting in wire protocol");

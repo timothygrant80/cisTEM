@@ -17,7 +17,7 @@ class LocalResolutionEstimator {
                               float    wanted_threshold_confidence_n_sigma, // confidence - number of sigmas above estimate we want to be
                               bool     wanted_use_fixed_fsc_threshold,
                               float    wanted_fixed_fsc_threshold,
-                              wxString wanted_symmetry_symbol,
+                              std::string wanted_symmetry_symbol,
                               bool     wanted_whiten_half_maps,
                               int      wanted_padding_factor);
 

@@ -1,5 +1,4 @@
 #include "../../core/core_headers.h"
-#include <wx/dir.h>
 
 class
         RemoveINFandNAN : public MyApp {
@@ -47,7 +46,7 @@ bool RemoveINFandNAN::DoCalculation( ) {
     input_file.OpenFile(input_filename, false);
     output_file.OpenFile(output_filename, true);
 
-    wxPrintf("Checking File...\n\n");
+    Printf("Checking File...\n\n");
 
     ProgressBar* my_progress = new ProgressBar(input_file.ReturnNumberOfSlices( ));
 
@@ -71,7 +70,7 @@ bool RemoveINFandNAN::DoCalculation( ) {
 
     delete my_progress;
 
-    wxPrintf("\n\n%li Images contained inf or nan\n\n", images_with_inf_or_nan);
+    Printf("\n\n%li Images contained inf or nan\n\n", images_with_inf_or_nan);
 
     return true;
 }

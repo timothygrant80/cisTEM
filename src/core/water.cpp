@@ -50,7 +50,7 @@ void Water::Init(const PDB* current_specimen, int wanted_size_neighborhood, floa
         int padZ = 0;
         vol_nZ   = current_specimen->vol_nZ;
 
-        wxPrintf("size pre rot padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
+        Printf("size pre rot padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
 
         // The padding function should be renamed to something that reflects that it adds padding based on that needed for rotation.
         // The boolean param should be renamed to reflect this as well.
@@ -62,13 +62,13 @@ void Water::Init(const PDB* current_specimen, int wanted_size_neighborhood, floa
         vol_nY = current_specimen->vol_nY + (*padY);
         vol_nZ = current_specimen->vol_nZ; // + 2*padZ;
 
-        //		wxPrintf("size post rot 1 padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
-        wxPrintf("size post rot 1 padding %d %d %f rot\n", vol_nX, vol_nY, in_plane_rotation);
+        //		Printf("size post rot 1 padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
+        Printf("size post rot 1 padding %d %d %f rot\n", vol_nX, vol_nY, in_plane_rotation);
 
         //		if (check_min_paddingX > 0)
         //		{
         //			int x_diff = vol_nX - check_min_paddingX;
-        //			wxPrintf("Xdiff is %d\n",x_diff);
+        //			Printf("Xdiff is %d\n",x_diff);
         //			if (x_diff < 0)
         //			{
         //				vol_nX = check_min_paddingX;
@@ -84,7 +84,7 @@ void Water::Init(const PDB* current_specimen, int wanted_size_neighborhood, floa
         //		if  (check_min_paddingY > 0)
         //		{
         //			int y_diff = vol_nY - check_min_paddingY;
-        //			wxPrintf("yiff is %d\n",y_diff);
+        //			Printf("yiff is %d\n",y_diff);
         //
         //			if (y_diff < 0)
         //			{
@@ -98,7 +98,7 @@ void Water::Init(const PDB* current_specimen, int wanted_size_neighborhood, floa
         //			}
         //		}
 
-        wxPrintf("size post rot 2 padding %d %d padX %d padY %d padZ %d rot\n", vol_nX, vol_nY, *padX, *padY, padZ);
+        Printf("size post rot 2 padding %d %d padX %d padY %d padZ %d rot\n", vol_nX, vol_nY, *padX, *padY, padZ);
         MyAssertTrue(current_specimen->pixel_size > 0.0f, "The pixel size for your PDB object is not yet set.");
         // Copy over some values from the current specimen - Do these need to be updated for tilts and rotations?
         this->vol_angX = vol_nX * current_specimen->pixel_size; //current_specimen->vol_angX;
@@ -106,7 +106,7 @@ void Water::Init(const PDB* current_specimen, int wanted_size_neighborhood, floa
         this->vol_angZ = vol_nZ * current_specimen->pixel_size;
     }
 
-    // wxPrintf("vol dimension in Ang %2.2f x %2.2f y  %2.2f z\n", this->vol_angX , this->vol_angY , this->vol_angZ);
+    // Printf("vol dimension in Ang %2.2f x %2.2f y  %2.2f z\n", this->vol_angX , this->vol_angY , this->vol_angZ);
 
     this->vol_oX = floor(this->vol_nX / 2);
     this->vol_oY = floor(this->vol_nY / 2);
@@ -134,11 +134,11 @@ void Water::SeedWaters3d( ) {
         waters_per_angstrom_cubed = SOLVENT_DENSITY * 0.6022140857 / MW_WATER;
     }
 
-    wxPrintf("Atoms per nm^3 %3.3f, vol (in Ang^3) %2.2f %2.2f %2.2f\n", waters_per_angstrom_cubed * 1000, this->vol_angX, this->vol_angY, this->vol_angZ);
+    Printf("Atoms per nm^3 %3.3f, vol (in Ang^3) %2.2f %2.2f %2.2f\n", waters_per_angstrom_cubed * 1000, this->vol_angX, this->vol_angY, this->vol_angZ);
     const float n_waters_lower_bound = waters_per_angstrom_cubed * (this->vol_angX * this->vol_angY * this->vol_angZ);
     // FIXME:: this estimate should be more accurate
     long n_waters_possible = (long)floor(1.05 * n_waters_lower_bound); // maybe make this a real vector so it is extensible.
-    wxPrintf("specimen volume is %3.3e nm expecting %3.3e waters\n", (this->vol_angX * this->vol_angY * this->vol_angZ) / 1000, n_waters_lower_bound);
+    Printf("specimen volume is %3.3e nm expecting %3.3e waters\n", (this->vol_angX * this->vol_angY * this->vol_angZ) / 1000, n_waters_lower_bound);
 
     RandomNumberGenerator my_rand(pi_v<float>);
 
@@ -202,7 +202,7 @@ void Water::SeedWaters3d( ) {
     water_coords.shrink_to_fit( );
     number_of_waters = water_coords.size( );
 
-    wxPrintf("waters added %3.3e (%2.2f%)\n", (float)this->number_of_waters, 100.0f * (float)this->number_of_waters / n_waters_lower_bound);
+    Printf("waters added %3.3e (%2.2f%)\n", (float)this->number_of_waters, 100.0f * (float)this->number_of_waters / n_waters_lower_bound);
 }
 
 void Water::ShakeWaters3d(int number_of_threads) {
@@ -217,7 +217,7 @@ void Water::ShakeWaters3d(int number_of_threads) {
     //    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
     //    std::normal_distribution<float>  norm_dist_mag(0.0,random_sigma*1.5);
 
-    // wxPrintf("Using a rmsd of %f for water perturbation\n", random_sigma);
+    // Printf("Using a rmsd of %f for water perturbation\n", random_sigma);
 
     // Private variables for parfor loop
     float dr, dx, dy, dz;
@@ -343,7 +343,7 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
 
                     max_rotation.RotateCoords(x_in, y_in, z_in, x_out, y_out, z_out);
 
-                    // wxPrintf("Coords before %f %f %f\nRotated %f %f %f\n",x_in, y_in, z_in, x_out, y_out, z_out);
+                    // Printf("Coords before %f %f %f\nRotated %f %f %f\n",x_in, y_in, z_in, x_out, y_out, z_out);
                     // Both x & y must be in bounds for padding to be required
                     if ( x_out >= -origin.x && x_out <= origin.x && y_out >= -origin.y && y_out <= origin.y ) {
                         // Find the smallest value to get us to an edge
@@ -368,7 +368,7 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
                         // Rotate back into the original frame
                         max_rotation.RotateCoords(x_out, y_out, z_out, x_back, y_back, z_back);
 
-                        // wxPrintf("Coords out %f %f %f\nRotated back %f %f %f\n",x_out, y_out, z_out, x_back, y_back, z_back);
+                        // Printf("Coords out %f %f %f\nRotated back %f %f %f\n",x_out, y_out, z_out, x_back, y_back, z_back);
 
                         // Now check to see if the padded vector is larger than our current largest
                         if ( x_back - x_in > max_padding.x ) {
@@ -385,7 +385,7 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
             }
         }
 
-        wxPrintf("Original dims = %d %d %d\nPadding = %f %f %f\n", current_nX, current_nY, current_nZ, max_padding.x, max_padding.y, max_padding.z);
+        Printf("Original dims = %d %d %d\nPadding = %f %f %f\n", current_nX, current_nY, current_nZ, max_padding.x, max_padding.y, max_padding.z);
         *padX = 2 * (int)ceil(max_padding.x);
         *padY = 2 * (int)ceil(max_padding.y);
         *padZ = (int)ceil(max_padding.z);
@@ -401,7 +401,7 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
         float max_ip_ang = 45.0f;
 
         if ( in_plane_rotation > max_ip_ang + .01 ) {
-            wxPrintf("\n\n\t\tWarning, you have requested a tilt-axis rotation of %3.3f degrees, which is greater than the recommended max of %2.2f\n\t\tthis will add a lot of waters\n\n", in_plane_rotation, max_ip_ang);
+            Printf("\n\n\t\tWarning, you have requested a tilt-axis rotation of %3.3f degrees, which is greater than the recommended max of %2.2f\n\t\tthis will add a lot of waters\n\n", in_plane_rotation, max_ip_ang);
         }
 
         // Set the 0 position to be the radius

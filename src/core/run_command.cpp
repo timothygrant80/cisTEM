@@ -39,7 +39,7 @@ bool RunCommand::operator!=(const RunCommand& other) const {
     return ! (*this == other);
 }
 
-void RunCommand::SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms) {
+void RunCommand::SetCommand(std::string wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms) {
     command_to_run             = wanted_command;
     number_of_copies           = wanted_number_of_copies;
     number_of_threads_per_copy = wanted_number_of_threads_per_copy;

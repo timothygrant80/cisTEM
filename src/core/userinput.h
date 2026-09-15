@@ -3,7 +3,7 @@
 class UserInput {
 
   private:
-    void Init(const char* program_name, wxString program_version);
+    void Init(const char* program_name, std::string program_version);
 
     FILE* defaults_file;
     FILE* new_defaults_file;
@@ -24,7 +24,7 @@ class UserInput {
     // Constructors
     UserInput( );
     UserInput(const char* program_name, float program_version);
-    UserInput(const char* program_name, wxString program_version);
+    UserInput(const char* program_name, std::string program_version);
     ~UserInput( );
 
     // Methods

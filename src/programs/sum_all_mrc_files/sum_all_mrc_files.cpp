@@ -1,5 +1,4 @@
 #include "../../core/core_headers.h"
-#include <wx/dir.h>
 
 class
         SumAllMRC : public MyApp {
@@ -59,9 +58,9 @@ bool SumAllMRC::DoCalculation( ) {
     std::string output_gain_filename = my_current_job.arguments[3].ReturnStringArgument( );
     int         max_threads          = my_current_job.arguments[4].ReturnIntegerArgument( );
 
-    wxArrayString all_files;
-    wxDir::GetAllFiles(".", &all_files, "*.mrc", wxDIR_FILES);
-    all_files.Sort( );
+    std::vector<std::string> all_files;
+    all_files = ReturnAllFilesInDirectory(".", "*.mrc");
+    std::sort(all_files.begin( ), all_files.end( ));
 
     MRCFile* current_input_file;
 
@@ -79,14 +78,14 @@ bool SumAllMRC::DoCalculation( ) {
 
     // find all the mrc files in the current directory..
 
-    wxPrintf("\nThere are %li MRC files in this directory.\n", all_files.GetCount( ));
+    Printf("\nThere are %li MRC files in this directory.\n", all_files.size());
 
-    current_input_file = new MRCFile(all_files.Item(0).ToStdString( ), false);
+    current_input_file = new MRCFile(all_files[0], false);
 
     file_x_size = current_input_file->ReturnXSize( );
     file_y_size = current_input_file->ReturnYSize( );
 
-    wxPrintf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n\n", all_files.Item(0), current_input_file->ReturnXSize( ), current_input_file->ReturnYSize( ));
+    Printf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n\n", all_files[0], current_input_file->ReturnXSize( ), current_input_file->ReturnYSize( ));
 
     delete current_input_file;
 
@@ -108,8 +107,8 @@ bool SumAllMRC::DoCalculation( ) {
 
     // loop over all files, and do summing..
 
-    wxPrintf("Summing All Files...\n\n");
-    ProgressBar* my_progress = new ProgressBar(all_files.GetCount( ));
+    Printf("Summing All Files...\n\n");
+    ProgressBar* my_progress = new ProgressBar(all_files.size());
 
     int number_processed = 0;
     // thread if available
@@ -127,10 +126,10 @@ bool SumAllMRC::DoCalculation( ) {
         }
 
 #pragma omp for
-        for ( file_counter = 0; file_counter < all_files.GetCount( ); file_counter++ ) {
-            //wxPrintf("Summing file %s...\n", all_files.Item(file_counter));
+        for ( file_counter = 0; file_counter < all_files.size(); file_counter++ ) {
+            //Printf("Summing file %s...\n", all_files[file_counter]);
 
-            current_input_file = new MRCFile(all_files.Item(file_counter).ToStdString( ), false);
+            current_input_file = new MRCFile(all_files[file_counter], false);
 
             for ( frame_counter = 0; frame_counter < current_input_file->ReturnNumberOfSlices( ); frame_counter++ ) {
                 buffer_image.ReadSlice(current_input_file, frame_counter + 1);
@@ -201,7 +200,7 @@ bool SumAllMRC::DoCalculation( ) {
 
     delete my_progress;
 
-    wxPrintf("\n\nSum All MRC File finished Cleanly!\n\n");
+    Printf("\n\nSum All MRC File finished Cleanly!\n\n");
 
     return true;
 }

@@ -230,9 +230,9 @@ class Image {
     void                MirrorXFourier2D(Image& mirrored_image);
     void                MirrorYFourier2D(Image& mirrored_image);
     void                RotateQuadrants(Image& rotated_image, int quad_i);
-    void                Rotate3DByRotationMatrixAndOrApplySymmetry(RotationMatrix& wanted_matrix, float wanted_max_radius_in_pixels = 0.0, wxString wanted_symmetry = "C1"); // use identiy matrix to just impose sym
-    void                Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, wxString wanted_symmetry = "C1"); // like above but with shift
-    void                Rotate3DThenShiftThenApplySymmetry(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, wxString wanted_symmetry = "C1");
+    void                Rotate3DByRotationMatrixAndOrApplySymmetry(RotationMatrix& wanted_matrix, float wanted_max_radius_in_pixels = 0.0, std::string wanted_symmetry = "C1"); // use identiy matrix to just impose sym
+    void                Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, std::string wanted_symmetry = "C1"); // like above but with shift
+    void                Rotate3DThenShiftThenApplySymmetry(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, std::string wanted_symmetry = "C1");
     void                GenerateReferenceProjections(Image* projections, EulerSearch& parameters, float resolution);
     void                RotateFourier2DGenerateIndex(Kernel2D**& kernel_index, float psi_max, float psi_step, float psi_start, bool invert_angle = false);
     void                RotateFourier2DDeleteIndex(Kernel2D**& kernel_index, float psi_max, float psi_step);

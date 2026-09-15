@@ -83,14 +83,14 @@ float FrealignObjectiveFunction(void* scoring_parameters, float* array_of_values
     //	float score =  	- comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
     //			  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
     //			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float);
-    //	wxPrintf("psi, theta, phi, x, y, = %g, %g, %g, %g, %g, score = %g\n",
+    //	Printf("psi, theta, phi, x, y, = %g, %g, %g, %g, %g, score = %g\n",
     //			comparison_object->particle->alignment_parameters.ReturnPsiAngle(),
     //			comparison_object->particle->alignment_parameters.ReturnThetaAngle(),
     //			comparison_object->particle->alignment_parameters.ReturnPhiAngle(),
     //			comparison_object->particle->alignment_parameters.ReturnShiftX(),
     //			comparison_object->particle->alignment_parameters.ReturnShiftY(), score);
     //	return score;
-    //	wxPrintf("sigma_noise, mask_volume, penalty = %g %g %g\n", comparison_object->particle->sigma_noise, comparison_object->particle->mask_volume,
+    //	Printf("sigma_noise, mask_volume, penalty = %g %g %g\n", comparison_object->particle->sigma_noise, comparison_object->particle->mask_volume,
     //			comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float));
 
     //****************
@@ -152,10 +152,10 @@ float FrealignObjectiveFunction(void* scoring_parameters, float* array_of_values
     //	float temp_float = - comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
     //			  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
     //			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_parameters);
-    //	wxPrintf("score, params = %g %g %g %g %g %g\n", temp_float, \
+    //	Printf("score, params = %g %g %g %g %g %g\n", temp_float, \
 //			comparison_object->particle->temp_parameters.phi, comparison_object->particle->temp_parameters.theta, comparison_object->particle->temp_parameters.psi, \
 //			comparison_object->particle->temp_parameters.x_shift, comparison_object->particle->temp_parameters.y_shift);
-    //	wxPrintf("index = %i %i %i\n", comparison_object->particle->bin_index[0], comparison_object->particle->bin_index[25], comparison_object->particle->bin_index[50]);
+    //	Printf("index = %i %i %i\n", comparison_object->particle->bin_index[0], comparison_object->particle->bin_index[25], comparison_object->particle->bin_index[50]);
     //	exit(0);
     //	if (temp_float > -0.05f)
     //	{
@@ -169,7 +169,7 @@ float FrealignObjectiveFunction(void* scoring_parameters, float* array_of_values
     //		float temp_float = - comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
     //				  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
     //				- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_parameters);
-    //		wxPrintf("score, params = %g %g %g %g %g %g\n", temp_float, \
+    //		Printf("score, params = %g %g %g %g %g %g\n", temp_float, \
 //				comparison_object->particle->alignment_parameters.ReturnPhiAngle(), comparison_object->particle->alignment_parameters.ReturnThetaAngle(), comparison_object->particle->alignment_parameters.ReturnPsiAngle(), \
 //				comparison_object->particle->alignment_parameters.ReturnShiftX(), comparison_object->particle->alignment_parameters.ReturnShiftY());
     //
@@ -207,7 +207,7 @@ float FrealignObjectiveFunction(void* scoring_parameters, float* array_of_values
 #ifdef DEBUG
     if ( isnan(tmp_corr) || isnan(tmp_penalty) ) {
         MyPrintWithDetails("FrealignObjectiveFunction about to return NaN. Details to follow.\n");
-        wxPrintf("shift x = %f\nshift y = %f\npsi   = %f\nphi   = %f\ntheta = %f\n",
+        Printf("shift x = %f\nshift y = %f\npsi   = %f\nphi   = %f\ntheta = %f\n",
                  comparison_object->particle->alignment_parameters.ReturnShiftX( ),
                  comparison_object->particle->alignment_parameters.ReturnShiftY( ),
                  comparison_object->particle->alignment_parameters.ReturnPsiAngle( ),
@@ -227,15 +227,15 @@ IMPLEMENT_APP(Refine3DApp)
 // override the DoInteractiveUserInput
 
 void Refine3DApp::DoInteractiveUserInput( ) {
-    wxString input_particle_images;
-    wxString input_star_filename;
-    wxString input_reconstruction;
-    wxString input_reconstruction_statistics;
+    std::string input_particle_images;
+    std::string input_star_filename;
+    std::string input_reconstruction;
+    std::string input_reconstruction_statistics;
     bool     use_statistics;
-    wxString ouput_matching_projections;
-    wxString ouput_star_filename;
-    wxString ouput_shift_filename;
-    wxString my_symmetry    = "C1";
+    std::string ouput_matching_projections;
+    std::string ouput_star_filename;
+    std::string ouput_shift_filename;
+    std::string my_symmetry    = "C1";
     int      first_particle = 1;
     int      last_particle  = 0;
     float    percent_used   = 1.0;
@@ -352,14 +352,14 @@ void Refine3DApp::DoInteractiveUserInput( ) {
     bool ignore_input_angles = false;
     bool defocus_bias        = false;
     //	my_current_job.Reset(53);
-    my_current_job.ManualSetArguments("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb", input_particle_images.ToUTF8( ).data( ),
-                                      input_star_filename.ToUTF8( ).data( ),
-                                      input_reconstruction.ToUTF8( ).data( ),
-                                      input_reconstruction_statistics.ToUTF8( ).data( ), use_statistics,
-                                      ouput_matching_projections.ToUTF8( ).data( ),
-                                      ouput_star_filename.ToUTF8( ).data( ),
-                                      ouput_shift_filename.ToUTF8( ).data( ),
-                                      my_symmetry.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb", input_particle_images.c_str(),
+                                      input_star_filename.c_str(),
+                                      input_reconstruction.c_str(),
+                                      input_reconstruction_statistics.c_str(), use_statistics,
+                                      ouput_matching_projections.c_str(),
+                                      ouput_star_filename.c_str(),
+                                      ouput_shift_filename.c_str(),
+                                      my_symmetry.c_str(),
                                       first_particle, last_particle, percent_used, pixel_size,
                                       molecular_mass_kDa, inner_mask_radius, outer_mask_radius, low_resolution_limit,
                                       high_resolution_limit, signed_CC_limit, classification_resolution_limit,
@@ -382,15 +382,15 @@ bool Refine3DApp::DoCalculation( ) {
     Particle search_particle;
     Particle search_particle_local;
 
-    wxString input_particle_images           = my_current_job.arguments[0].ReturnStringArgument( ); // global
-    wxString input_star_filename             = my_current_job.arguments[1].ReturnStringArgument( ); // not sure
-    wxString input_reconstruction            = my_current_job.arguments[2].ReturnStringArgument( ); // global
-    wxString input_reconstruction_statistics = my_current_job.arguments[3].ReturnStringArgument( ); // global
+    std::string input_particle_images           = my_current_job.arguments[0].ReturnStringArgument( ); // global
+    std::string input_star_filename             = my_current_job.arguments[1].ReturnStringArgument( ); // not sure
+    std::string input_reconstruction            = my_current_job.arguments[2].ReturnStringArgument( ); // global
+    std::string input_reconstruction_statistics = my_current_job.arguments[3].ReturnStringArgument( ); // global
     bool     use_statistics                  = my_current_job.arguments[4].ReturnBoolArgument( ); // global
-    wxString output_matching_projections     = my_current_job.arguments[5].ReturnStringArgument( ); // ignore (always false)
-    wxString output_star_filename            = my_current_job.arguments[6].ReturnStringArgument( ); // not sure par file
-    wxString output_shift_filename           = my_current_job.arguments[7].ReturnStringArgument( ); // not sure output
-    wxString my_symmetry                     = my_current_job.arguments[8].ReturnStringArgument( ); // global
+    std::string output_matching_projections     = my_current_job.arguments[5].ReturnStringArgument( ); // ignore (always false)
+    std::string output_star_filename            = my_current_job.arguments[6].ReturnStringArgument( ); // not sure par file
+    std::string output_shift_filename           = my_current_job.arguments[7].ReturnStringArgument( ); // not sure output
+    std::string my_symmetry                     = my_current_job.arguments[8].ReturnStringArgument( ); // global
     int      first_particle                  = my_current_job.arguments[9].ReturnIntegerArgument( ); // local (effectively ignore)
     int      last_particle                   = my_current_job.arguments[10].ReturnIntegerArgument( ); // local (effectively ignore)
     float    percent_used                    = my_current_job.arguments[11].ReturnFloatArgument( );
@@ -544,21 +544,21 @@ bool Refine3DApp::DoCalculation( ) {
         take_random_best_parameter = false;
     }
 
-    wxDateTime my_time_in;
+    DateTime my_time_in;
 
     ZeroFloatArray(cg_starting_point, 17);
     ZeroFloatArray(cg_accuracy, 17);
 
     if ( (is_running_locally && ! DoesFileExist(input_star_filename)) || (! is_running_locally && ! DoesFileExistWithWait(input_star_filename, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
+        SendErrorAndCrash(Format("Error: Input star file %s not found\n", input_star_filename));
     }
     if ( (is_running_locally && ! DoesFileExist(input_particle_images)) || (! is_running_locally && ! DoesFileExistWithWait(input_particle_images, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
+        SendErrorAndCrash(Format("Error: Input particle stack %s not found\n", input_particle_images));
     }
     if ( (is_running_locally && ! DoesFileExist(input_reconstruction)) || (! is_running_locally && ! DoesFileExistWithWait(input_reconstruction, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
+        SendErrorAndCrash(Format("Error: Input reconstruction %s not found\n", input_reconstruction));
     }
-    //	wxPrintf("\nOpening input file %s.\n", input_parameter_file);
+    //	Printf("\nOpening input file %s.\n", input_parameter_file);
 
     //FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
     cisTEMParameters input_star_file;
@@ -575,7 +575,7 @@ bool Refine3DApp::DoCalculation( ) {
     defocus_range_mean2 = defocus_upper_limit + defocus_lower_limit;
     defocus_range_std   = 0.5 * (defocus_upper_limit - defocus_lower_limit);
 
-    MRCFile input_stack(input_particle_images.ToStdString( ), false);
+    MRCFile input_stack(input_particle_images, false);
 
     if ( last_particle == 0 )
         last_particle = input_stack.ReturnZSize( );
@@ -596,27 +596,27 @@ bool Refine3DApp::DoCalculation( ) {
         for ( current_line = 0; current_line < input_star_file.ReturnNumberofLines( ); current_line++ ) {
             buffer_array[current_line] = expf(-powf(0.25 * (fabsf(input_star_file.ReturnDefocus1(current_line)) + fabsf(input_star_file.ReturnDefocus2(current_line)) - defocus_range_mean2) / defocus_range_std, 2.0));
             //			defocus_mean_score += expf(- powf(0.25 * (fabsf(input_par_file.ReadParameter(current_line, 8)) + fabsf(input_par_file.ReadParameter(current_line, 9)) - defocus_range_mean2) / defocus_range_std, 2.0));
-            //			wxPrintf("df, score = %i %g %g\n", current_line, input_par_file.ReadParameter(current_line, 8), buffer_array[current_line]);
+            //			Printf("df, score = %i %g %g\n", current_line, input_par_file.ReadParameter(current_line, 8), buffer_array[current_line]);
         }
         std::sort(buffer_array, buffer_array + input_star_file.ReturnNumberofLines( ) - 1);
         defocus_mean_score = buffer_array[input_star_file.ReturnNumberofLines( ) / 2];
-        //		wxPrintf("median = %g\n", defocus_mean_score);
+        //		Printf("median = %g\n", defocus_mean_score);
         //		defocus_mean_score /= current_line;
         delete[] buffer_array;
     }
 
-    MRCFile  input_file(input_reconstruction.ToStdString( ), false, true);
+    MRCFile  input_file(input_reconstruction, false, true);
     MRCFile* output_file;
     if ( percent_used < 1.0 && calculate_matching_projections ) {
         calculate_matching_projections = false;
-        wxPrintf("\nPercent of particles used < 1, matching projections not calculated.\n");
+        Printf("\nPercent of particles used < 1, matching projections not calculated.\n");
     }
     if ( max_threads > 1 && calculate_matching_projections ) {
         calculate_matching_projections = false;
-        wxPrintf("\nMatching projections not calculated when multi-threading.\n");
+        Printf("\nMatching projections not calculated when multi-threading.\n");
     }
     if ( calculate_matching_projections )
-        output_file = new MRCFile(output_matching_projections.ToStdString( ), true);
+        output_file = new MRCFile(output_matching_projections, true);
 
     //FrealignParameterFile my_output_par_file(ouput_parameter_file, OPEN_TO_WRITE);
     //FrealignParameterFile my_output_par_shifts_file(ouput_shift_file, OPEN_TO_WRITE, 16);
@@ -651,7 +651,7 @@ bool Refine3DApp::DoCalculation( ) {
     if ( max_search_y == 0.0 )
         max_search_y = mask_radius_search;
 
-    my_time_in = wxDateTime::Now( );
+    my_time_in = DateTime::Now( );
 
     output_star_file.AddCommentToHeader("# Refine3D run date and time:              " + my_time_in.FormatISOCombined(' '));
     output_star_file.AddCommentToHeader("# Input particle images:                   " + input_particle_images);
@@ -663,36 +663,36 @@ bool Refine3DApp::DoCalculation( ) {
     output_star_file.AddCommentToHeader("# Output cisTEM parameter file:            " + output_star_filename);
     output_star_file.AddCommentToHeader("# Output cisTEM parameter changes:         " + output_shift_filename);
     output_star_file.AddCommentToHeader("# Particle symmetry:                       " + my_symmetry);
-    output_star_file.AddCommentToHeader("# First particle to refine:                " + wxString::Format("%i", first_particle));
-    output_star_file.AddCommentToHeader("# Last particle to refine:                 " + wxString::Format("%i", last_particle));
-    output_star_file.AddCommentToHeader("# Percent of particles to refine:          " + wxString::Format("%f", percent_used));
-    output_star_file.AddCommentToHeader("# Pixel size of reconstruction (A):        " + wxString::Format("%f", pixel_size));
-    //	output_star_file.AddCommentToHeader("# Beam energy (keV):                       " + wxString::Format("%f", voltage_kV));
-    //	output_star_file.AddCommentToHeader("# Spherical aberration (mm):               " + wxString::Format("%f", spherical_aberration_mm));
-    //	output_star_file.AddCommentToHeader("# Amplitude contrast:                      " + wxString::Format("%f", amplitude_contrast));
-    //	output_star_file.AddCommentToHeader("# Beam tilt in x (mrad):                   " + wxString::Format("%f", beam_tilt_x));
-    //	output_star_file.AddCommentToHeader("# Beam tilt in y (mrad):                   " + wxString::Format("%f", beam_tilt_y));
-    output_star_file.AddCommentToHeader("# Molecular mass of particle (kDa):        " + wxString::Format("%f", molecular_mass_kDa));
-    output_star_file.AddCommentToHeader("# Inner mask radius for refinement (A):    " + wxString::Format("%f", inner_mask_radius));
-    output_star_file.AddCommentToHeader("# Outer mask radius for refinement (A):    " + wxString::Format("%f", outer_mask_radius));
-    output_star_file.AddCommentToHeader("# Low resolution limit (A):                " + wxString::Format("%f", low_resolution_limit));
-    output_star_file.AddCommentToHeader("# High resolution limit (A):               " + wxString::Format("%f", high_resolution_limit));
-    output_star_file.AddCommentToHeader("# Resolution limit for signed CC (A):      " + wxString::Format("%f", signed_CC_limit));
-    output_star_file.AddCommentToHeader("# Res limit for classification (A):        " + wxString::Format("%f", classification_resolution_limit));
-    output_star_file.AddCommentToHeader("# Mask radius for global search (A):       " + wxString::Format("%f", mask_radius_search));
-    output_star_file.AddCommentToHeader("# Approx. resolution limit for search (A): " + wxString::Format("%f", high_resolution_limit_search));
-    output_star_file.AddCommentToHeader("# Angular step:                            " + wxString::Format("%f", angular_step));
-    output_star_file.AddCommentToHeader("# Number of top hits to refine:            " + wxString::Format("%i", best_parameters_to_keep));
-    output_star_file.AddCommentToHeader("# Search range in X (A):                   " + wxString::Format("%f", max_search_x));
-    output_star_file.AddCommentToHeader("# Search range in Y (A):                   " + wxString::Format("%f", max_search_y));
-    output_star_file.AddCommentToHeader("# 2D mask X coordinate (A):                " + wxString::Format("%f", refine_particle.mask_center_2d_x));
-    output_star_file.AddCommentToHeader("# 2D mask Y coordinate (A):                " + wxString::Format("%f", refine_particle.mask_center_2d_y));
-    output_star_file.AddCommentToHeader("# 2D mask Z coordinate (A):                " + wxString::Format("%f", refine_particle.mask_center_2d_z));
-    output_star_file.AddCommentToHeader("# 2D mask radius (A):                      " + wxString::Format("%f", refine_particle.mask_radius_2d));
-    output_star_file.AddCommentToHeader("# Defocus search range (A):                " + wxString::Format("%f", defocus_search_range));
-    output_star_file.AddCommentToHeader("# Defocus step (A):                        " + wxString::Format("%f", defocus_step));
-    output_star_file.AddCommentToHeader("# Padding factor:                          " + wxString::Format("%f", padding));
-    //	output_star_file.AddCommentToHeader("# Filter constant:                         " + wxString::Format("%f", filter_constant));
+    output_star_file.AddCommentToHeader("# First particle to refine:                " + Format("%i", first_particle));
+    output_star_file.AddCommentToHeader("# Last particle to refine:                 " + Format("%i", last_particle));
+    output_star_file.AddCommentToHeader("# Percent of particles to refine:          " + Format("%f", percent_used));
+    output_star_file.AddCommentToHeader("# Pixel size of reconstruction (A):        " + Format("%f", pixel_size));
+    //	output_star_file.AddCommentToHeader("# Beam energy (keV):                       " + Format("%f", voltage_kV));
+    //	output_star_file.AddCommentToHeader("# Spherical aberration (mm):               " + Format("%f", spherical_aberration_mm));
+    //	output_star_file.AddCommentToHeader("# Amplitude contrast:                      " + Format("%f", amplitude_contrast));
+    //	output_star_file.AddCommentToHeader("# Beam tilt in x (mrad):                   " + Format("%f", beam_tilt_x));
+    //	output_star_file.AddCommentToHeader("# Beam tilt in y (mrad):                   " + Format("%f", beam_tilt_y));
+    output_star_file.AddCommentToHeader("# Molecular mass of particle (kDa):        " + Format("%f", molecular_mass_kDa));
+    output_star_file.AddCommentToHeader("# Inner mask radius for refinement (A):    " + Format("%f", inner_mask_radius));
+    output_star_file.AddCommentToHeader("# Outer mask radius for refinement (A):    " + Format("%f", outer_mask_radius));
+    output_star_file.AddCommentToHeader("# Low resolution limit (A):                " + Format("%f", low_resolution_limit));
+    output_star_file.AddCommentToHeader("# High resolution limit (A):               " + Format("%f", high_resolution_limit));
+    output_star_file.AddCommentToHeader("# Resolution limit for signed CC (A):      " + Format("%f", signed_CC_limit));
+    output_star_file.AddCommentToHeader("# Res limit for classification (A):        " + Format("%f", classification_resolution_limit));
+    output_star_file.AddCommentToHeader("# Mask radius for global search (A):       " + Format("%f", mask_radius_search));
+    output_star_file.AddCommentToHeader("# Approx. resolution limit for search (A): " + Format("%f", high_resolution_limit_search));
+    output_star_file.AddCommentToHeader("# Angular step:                            " + Format("%f", angular_step));
+    output_star_file.AddCommentToHeader("# Number of top hits to refine:            " + Format("%i", best_parameters_to_keep));
+    output_star_file.AddCommentToHeader("# Search range in X (A):                   " + Format("%f", max_search_x));
+    output_star_file.AddCommentToHeader("# Search range in Y (A):                   " + Format("%f", max_search_y));
+    output_star_file.AddCommentToHeader("# 2D mask X coordinate (A):                " + Format("%f", refine_particle.mask_center_2d_x));
+    output_star_file.AddCommentToHeader("# 2D mask Y coordinate (A):                " + Format("%f", refine_particle.mask_center_2d_y));
+    output_star_file.AddCommentToHeader("# 2D mask Z coordinate (A):                " + Format("%f", refine_particle.mask_center_2d_z));
+    output_star_file.AddCommentToHeader("# 2D mask radius (A):                      " + Format("%f", refine_particle.mask_radius_2d));
+    output_star_file.AddCommentToHeader("# Defocus search range (A):                " + Format("%f", defocus_search_range));
+    output_star_file.AddCommentToHeader("# Defocus step (A):                        " + Format("%f", defocus_step));
+    output_star_file.AddCommentToHeader("# Padding factor:                          " + Format("%f", padding));
+    //	output_star_file.AddCommentToHeader("# Filter constant:                         " + Format("%f", filter_constant));
     output_star_file.AddCommentToHeader("# Global search:                           " + BoolToYesNo(global_search));
     output_star_file.AddCommentToHeader("# Local refinement:                        " + BoolToYesNo(local_refinement));
     output_star_file.AddCommentToHeader("# Refine Psi:                              " + BoolToYesNo(refine_particle.parameter_map.psi));
@@ -746,7 +746,7 @@ bool Refine3DApp::DoCalculation( ) {
     ResolutionStatistics refine_statistics;
     if ( use_statistics ) {
         if ( ! DoesFileExist(input_reconstruction_statistics) ) {
-            SendError(wxString::Format("Error: Input statistics %s not found\n", input_reconstruction_statistics));
+            SendError(Format("Error: Input statistics %s not found\n", input_reconstruction_statistics));
             exit(-1);
         }
         input_statistics.ReadStatisticsFromFile(input_reconstruction_statistics);
@@ -756,7 +756,7 @@ bool Refine3DApp::DoCalculation( ) {
         //		exit(0);
     }
     else {
-        wxPrintf("\nUsing default statistics\n");
+        Printf("\nUsing default statistics\n");
         input_statistics.GenerateDefaultStatistics(molecular_mass_kDa);
     }
     refine_statistics = input_statistics;
@@ -814,7 +814,7 @@ bool Refine3DApp::DoCalculation( ) {
         psi_max   = 0.0;
         if ( refine_particle.parameter_map.psi )
             psi_max = 360.0;
-        wxPrintf("\nBox size for search = %i, binning factor = %f, new pixel size = %f, resolution limit = %f\nAngular step size = %f, in-plane = %f\n", search_reference_3d.density_map->logical_x_dimension, binning_factor_search, search_reference_3d.pixel_size, search_reference_3d.pixel_size * 2.0, angular_step, psi_step);
+        Printf("\nBox size for search = %i, binning factor = %f, new pixel size = %f, resolution limit = %f\nAngular step size = %f, in-plane = %f\n", search_reference_3d.density_map->logical_x_dimension, binning_factor_search, search_reference_3d.pixel_size, search_reference_3d.pixel_size * 2.0, angular_step, psi_step);
     }
 
     if ( padding != 1.0 ) {
@@ -829,7 +829,7 @@ bool Refine3DApp::DoCalculation( ) {
     //Scale to make projections compatible with images for ML calculation
     //	input_3d.density_map->MultiplyByConstant(binning_factor_refine);
     //	input_3d.density_map->MultiplyByConstant(powf(powf(binning_factor_refine, 1.0 / 3.0), 2));
-    wxPrintf("\nBinning factor for refinement = %f, new pixel size = %f\n", binning_factor_refine, input_3d.pixel_size);
+    Printf("\nBinning factor for refinement = %f, new pixel size = %f\n", binning_factor_refine, input_3d.pixel_size);
 
     //	temp_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
     sum_power.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
@@ -854,7 +854,7 @@ bool Refine3DApp::DoCalculation( ) {
     refine_particle.SetParameterStatistics(parameter_average, parameter_variance);
 
     if ( normalize_particles ) {
-        wxPrintf("Calculating noise power spectrum...\n\n");
+        Printf("Calculating noise power spectrum...\n\n");
         random_reset_count = std::max(random_reset_count, max_threads);
         percentage         = float(max_samples) / float(images_to_process) / random_reset_count;
         sum_power.SetToConstant(0.0f);
@@ -897,7 +897,7 @@ bool Refine3DApp::DoCalculation( ) {
                             random_reset_counter++;
                             if ( random_reset_counter == random_reset_count )
                                 random_reset_counter = 0;
-                            //						wxPrintf("reading %i\n", int(input_parameters[0] + 0.5f));
+                            //						Printf("reading %i\n", int(input_parameters[0] + 0.5f));
                             input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
                             file_read = true;
                         }
@@ -951,7 +951,7 @@ bool Refine3DApp::DoCalculation( ) {
         noise_power_spectrum.Reciprocal( );
 
         if ( exclude_blank_edges ) {
-            wxPrintf("\nImages with blank edges excluded from noise power calculation = %i\n", number_of_blank_edges);
+            Printf("\nImages with blank edges excluded from noise power calculation = %i\n", number_of_blank_edges);
         }
     }
 
@@ -976,7 +976,7 @@ bool Refine3DApp::DoCalculation( ) {
                 projection_cache[i].Allocate(binned_search_image_box_size, binned_search_image_box_size, false);
             }
             search_reference_3d.density_map->GenerateReferenceProjections(projection_cache, global_euler_search, search_reference_3d.pixel_size / high_resolution_limit_search);
-            wxPrintf("\nNumber of global search views = %i (best_parameters to keep = %i)\n", global_euler_search.number_of_search_positions, global_euler_search.best_parameters_to_keep);
+            Printf("\nNumber of global search views = %i (best_parameters to keep = %i)\n", global_euler_search.number_of_search_positions, global_euler_search.best_parameters_to_keep);
         }
         //		search_projection_image.RotateFourier2DGenerateIndex(kernel_index, psi_max, psi_step, psi_start);
 
@@ -990,7 +990,7 @@ bool Refine3DApp::DoCalculation( ) {
             global_euler_search.max_search_y = 0.0;
     }
 
-    wxPrintf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n\n",
+    Printf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n\n",
              parameter_average.sigma, parameter_average.score, parameter_average.x_shift, parameter_average.y_shift, sqrtf(parameter_variance.x_shift), sqrtf(parameter_variance.y_shift), images_to_process);
 
     if ( is_running_locally == true )
@@ -1218,7 +1218,7 @@ bool Refine3DApp::DoCalculation( ) {
             refine_particle_local.PhaseShiftInverse( );
 
             if ( ctf_refinement && high_resolution_limit <= 20.0 ) {
-                //			wxPrintf("\nRefining defocus for parameter line %i\n", current_line);
+                //			Printf("\nRefining defocus for parameter line %i\n", current_line);
                 refine_particle_local.filter_radius_low = 30.0;
                 refine_particle_local.SetIndexForWeightedCorrelation( );
                 binned_image.CopyFrom(refine_particle_local.particle_image);
@@ -1244,7 +1244,7 @@ bool Refine3DApp::DoCalculation( ) {
                     if ( score > best_score ) {
                         best_score     = score;
                         best_defocus_i = defocus_i;
-                        //					wxPrintf("Parameter line = %i, Defocus = %f, score = %g\n", current_line, defocus_i * defocus_step, score);
+                        //					Printf("Parameter line = %i, Defocus = %f, score = %g\n", current_line, defocus_i * defocus_step, score);
                     }
                     refine_particle_local.particle_image->CopyFrom(&binned_image);
                     refine_particle_local.is_ssnr_filtered   = false;
@@ -1258,7 +1258,7 @@ bool Refine3DApp::DoCalculation( ) {
                 refine_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, output_parameters.defocus_1, output_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, image_shift_x, image_shift_y);
             }
             else {
-                //			wxPrintf("tx, ty, sx, sy = %g %g %g %g\n", input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, image_shift_x, image_shift_y);
+                //			Printf("tx, ty, sx, sy = %g %g %g %g\n", input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, image_shift_x, image_shift_y);
                 refine_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, image_shift_x, image_shift_y);
             }
             //		refine_particle_local.SetLowResolutionContrast(low_resolution_contrast);
@@ -1283,7 +1283,7 @@ bool Refine3DApp::DoCalculation( ) {
             if ( (refine_particle_local.number_of_search_dimensions > 0) && (global_search_local || local_refinement_local) ) {
                 input_parameters.score = -100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
                 if ( global_search_local ) {
-                    //				my_time_in = wxDateTime::UNow();
+                    //				my_time_in = DateTime::UNow();
                     search_particle_local.ResetImageFlags( );
                     search_particle_local.pixel_size = search_reference_3d_local.pixel_size;
                     if ( mask_radius_search == 0.0 ) {
@@ -1410,7 +1410,7 @@ bool Refine3DApp::DoCalculation( ) {
                         }
 
                         parameter_to_keep = myroundint(((global_random_number_generator.GetUniformRandom( ) + 1.0) / 2.0) * float(number_to_keep - 1)) + 1;
-                        //wxPrintf("best_value = %f, worst_value = %f, top 10%% = %f, number_above = %i, number to take = %i\n", best_value, worst_value, top_percent, number_to_keep, parameter_to_keep);
+                        //Printf("best_value = %f, worst_value = %f, top 10%% = %f, number_above = %i, number to take = %i\n", best_value, worst_value, top_percent, number_to_keep, parameter_to_keep);
 
                         /*for (j = 1; j < 6; j++)
 					{
@@ -1448,7 +1448,7 @@ bool Refine3DApp::DoCalculation( ) {
                             search_parameters.x_shift = euler_search_local.list_of_best_parameters[i][3];
                             search_parameters.y_shift = euler_search_local.list_of_best_parameters[i][4];
 
-                            //					wxPrintf("parameters in  = %i %g, %g, %g, %g, %g %g\n", i, search_parameters[3], search_parameters[2],
+                            //					Printf("parameters in  = %i %g, %g, %g, %g, %g %g\n", i, search_parameters[3], search_parameters[2],
                             //							search_parameters[1], search_parameters[4], search_parameters[5], euler_search_local.list_of_best_parameters[i][5]);
                             if ( ! search_particle_local.parameter_map.x_shift )
                                 search_parameters.x_shift = input_parameters.x_shift;
@@ -1468,7 +1468,7 @@ bool Refine3DApp::DoCalculation( ) {
                                 temp_float = -100.0 * conjugate_gradient_minimizer.Run(50);
                             // Uncomment the following line to skip local refinement.
                             //					temp_float = search_parameters[15];
-                            //					wxPrintf("best, refine in, out, diff = %i %g %g %g %g\n", i, output_parameters[15], search_parameters[15], temp_float, temp_float - output_parameters[15]);
+                            //					Printf("best, refine in, out, diff = %i %g %g %g %g\n", i, output_parameters[15], search_parameters[15], temp_float, temp_float - output_parameters[15]);
                             //					log_diff = output_parameters[15] - temp_float;
                             //					if (log_diff > log_range) log_diff = log_range;
                             //					if (log_diff < - log_range) log_diff = - log_range;
@@ -1478,25 +1478,25 @@ bool Refine3DApp::DoCalculation( ) {
                             // (worse) parameters will not be kept.
                             //					if ((global_random_number_generator.GetUniformRandom() + 1.0) / 2.0 < 1.0 / (1.0 + exp(log_diff)))
                             {
-                                //						if (log_diff < 0.0) wxPrintf("log_diff = %g\n", log_diff);
-                                //						wxPrintf("image_counter = %i, i = %i, score = %g\n", image_counter, i, temp_float);
+                                //						if (log_diff < 0.0) Printf("log_diff = %g\n", log_diff);
+                                //						Printf("image_counter = %i, i = %i, score = %g\n", image_counter, i, temp_float);
                                 search_particle_local.UnmapParametersToExternal(output_parameters, conjugate_gradient_minimizer.GetPointerToBestValues( ));
                                 output_parameters.score = temp_float;
-                                //						wxPrintf("parameters out = %g, %g, %g, %g, %g\n", output_parameters[3], output_parameters[2],
+                                //						Printf("parameters out = %g, %g, %g, %g, %g\n", output_parameters[3], output_parameters[2],
                                 //								output_parameters[1], output_parameters[4], output_parameters[5]);
                             }
-                            //					wxPrintf("refine in, out, keep = %i %g %g %g\n", i, search_parameters[15], temp_float, output_parameters[15]);
-                            //					wxPrintf("parameters out = %g, %g, %g, %g, %g\n", output_parameters[3], output_parameters[2],
+                            //					Printf("refine in, out, keep = %i %g %g %g\n", i, search_parameters[15], temp_float, output_parameters[15]);
+                            //					Printf("parameters out = %g, %g, %g, %g, %g\n", output_parameters[3], output_parameters[2],
                             //							output_parameters[1], output_parameters[4], output_parameters[5]);
                         }
                     }
                     refine_particle_local.SetParameters(output_parameters, true);
                     output_parameters.score_change = output_parameters.score - input_parameters.score;
-                    //				my_time_out = wxDateTime::UNow(); wxPrintf("global search done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
+                    //				my_time_out = DateTime::UNow(); Printf("global search done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
                 }
 
                 if ( local_refinement_local ) {
-                    //				my_time_in = wxDateTime::UNow();
+                    //				my_time_in = DateTime::UNow();
                     comparison_object.reference_volume = &input_3d_local;
                     comparison_object.projection_image = &projection_image_local;
                     comparison_object.particle         = &refine_particle_local;
@@ -1508,10 +1508,10 @@ bool Refine3DApp::DoCalculation( ) {
 
                     refine_particle_local.UnmapParametersToExternal(output_parameters, conjugate_gradient_minimizer.GetPointerToBestValues( ));
 
-                    //				my_time_out = wxDateTime::UNow(); wxPrintf("local refinement done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
+                    //				my_time_out = DateTime::UNow(); Printf("local refinement done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
                 }
                 //			log_diff = input_parameters[15] - output_parameters[15];
-                //			wxPrintf("in = %g out = %g log_diff = %g ratio = %g\n", input_parameters[15], output_parameters[15], log_diff, 1.0 / (1.0 + exp(log_diff)));
+                //			Printf("in = %g out = %g log_diff = %g ratio = %g\n", input_parameters[15], output_parameters[15], log_diff, 1.0 / (1.0 + exp(log_diff)));
                 //			if (log_diff > log_range) log_diff = log_range;
                 //			if (log_diff < - log_range) log_diff = - log_range;
                 // If log_diff >= 0, exp(log_diff) will never be smaller than the random number and the new parameters will be kept.
@@ -1519,7 +1519,7 @@ bool Refine3DApp::DoCalculation( ) {
                 //			if ((global_random_number_generator.GetUniformRandom() + 1.0) / 2.0 >= 1.0 / (1.0 + exp(log_diff))) for (i = 0; i < refine_particle_local.number_of_parameters; i++) {output_parameters[i] = input_parameters[i];}
                 //			else output_parameters[16] = output_parameters[15] - input_parameters[15];
                 output_parameters.score_change = output_parameters.score - input_parameters.score;
-                //			wxPrintf("in, out, diff = %g %g %g\n", input_parameters.score, output_parameters.score, output_parameters.score_change);
+                //			Printf("in, out, diff = %g %g %g\n", input_parameters.score, output_parameters.score, output_parameters.score_change);
                 if ( output_parameters.score_change < 0.0f )
                     output_parameters = input_parameters;
             }
@@ -1563,10 +1563,10 @@ bool Refine3DApp::DoCalculation( ) {
                 output_parameters.sigma = sqrtf(1.0 / refine_particle_local.snr);
 
             //		output_parameters[14] = refine_particle_local.sigma_noise * binning_factor_refine;
-            //		wxPrintf("logp, sigma, score = %g %g %g\n", output_parameters[13], output_parameters[14], output_parameters[15]);
+            //		Printf("logp, sigma, score = %g %g %g\n", output_parameters[13], output_parameters[14], output_parameters[15]);
             //		refine_particle_local.CalculateProjection(projection_image_local, input_3d_local);
             //		projection_image_local.BackwardFFT();
-            //		wxPrintf("snr = %g mask = %g var_A = %g\n", refine_particle_local.snr, refine_particle_local.mask_volume, projection_image_local.ReturnVarianceOfRealValues());
+            //		Printf("snr = %g mask = %g var_A = %g\n", refine_particle_local.snr, refine_particle_local.mask_volume, projection_image_local.ReturnVarianceOfRealValues());
             //		output_parameters[14] = sqrtf(refine_particle_local.snr * refine_particle_local.particle_image->number_of_real_space_pixels
             //				/ refine_particle_local.mask_volume / projection_image_local.ReturnVarianceOfRealValues()) * binning_factor_refine;
 
@@ -1608,7 +1608,7 @@ bool Refine3DApp::DoCalculation( ) {
                 intermediate_result             = new JobResult;
                 intermediate_result->job_number = my_current_job.job_number;
 
-                //			if (output_parameters.position_in_stack == 0) wxPrintf("HELP IT IS 0\n");
+                //			if (output_parameters.position_in_stack == 0) Printf("HELP IT IS 0\n");
                 gui_result_parameters[0]  = current_class;
                 gui_result_parameters[1]  = output_parameters.position_in_stack;
                 gui_result_parameters[2]  = output_parameters.image_is_active;
@@ -1651,7 +1651,7 @@ bool Refine3DApp::DoCalculation( ) {
             //fflush(my_output_par_file.parameter_file);
             //fflush(my_output_par_shifts_file.parameter_file);
 
-            //		wxPrintf("thread = %i, line = %i\n", ReturnThreadNumberOfCurrentThread(), current_line_local);
+            //		Printf("thread = %i, line = %i\n", ReturnThreadNumberOfCurrentThread(), current_line_local);
             if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )
                 my_progress->Update(image_counter);
         }
@@ -1687,7 +1687,7 @@ bool Refine3DApp::DoCalculation( ) {
     if ( calculate_matching_projections )
         delete output_file;
 
-    wxPrintf("\nRefine3D: Normal termination\n\n");
+    Printf("\nRefine3D: Normal termination\n\n");
 
     return true;
 }

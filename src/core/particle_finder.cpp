@@ -152,7 +152,7 @@ void ParticleFinder::RedoWithNewAvoidAbnormalLocalMeanAreas( ) {
 
 void ParticleFinder::RedoWithNewNumberOfBackgroundBoxes( ) {
     /*
-	wxPrintf("Warning: doing it all\n");
+	Printf("Warning: doing it all\n");
 	OpenMicrographAndUpdateDimensions();
 
 	UpdatePixelSizeFromMicrographDimensions();
@@ -392,13 +392,13 @@ ArrayOfParticlePositionAssets ParticleFinder::ReturnArrayOfParticlePositionAsset
         temp_asset.parent_template_id = myroundint(results_height_template.data_y[particle_counter]);
 
         //
-        array_of_assets.Add(temp_asset);
+        array_of_assets.push_back(temp_asset);
     }
 
     return array_of_assets;
 }
 
-void ParticleFinder::SetAllUserParameters(wxString wanted_micrograph_filename,
+void ParticleFinder::SetAllUserParameters(std::string wanted_micrograph_filename,
                                           float    wanted_original_micrograph_pixel_size,
                                           float    wanted_acceleration_voltage_in_keV,
                                           float    wanted_spherical_aberration_in_mm,
@@ -408,13 +408,13 @@ void ParticleFinder::SetAllUserParameters(wxString wanted_micrograph_filename,
                                           float    wanted_defocus_2_in_angstroms,
                                           float    wanted_astigmatism_angle_in_degrees,
                                           bool     wanted_already_have_templates,
-                                          wxString wanted_templates_filename,
+                                          std::string wanted_templates_filename,
                                           bool     wanted_average_templates_radially,
                                           int      wanted_number_of_template_rotations,
                                           float    wanted_typical_radius_in_angstroms,
                                           float    wanted_maximum_radius_in_angstroms,
                                           float    wanted_highest_resolution_to_use,
-                                          wxString wanted_output_stack_filename,
+                                          std::string wanted_output_stack_filename,
                                           int      wanted_output_stack_box_size,
                                           int      wanted_minimum_distance_from_edges_in_pixels,
                                           float    wanted_minimum_peak_height_for_candidate_particles,
@@ -486,7 +486,7 @@ void ParticleFinder::FindPeaksAndExtractParticles( ) {
     results_x_y.ClearData( );
     results_height_template.ClearData( );
     results_rotation.ClearData( );
-    wxPrintf("\nFinding peaks & extracting particle images...\n");
+    Printf("\nFinding peaks & extracting particle images...\n");
     float temp_float[6];
     my_progress_bar = new ProgressBar(100);
 
@@ -514,17 +514,17 @@ void ParticleFinder::FindPeaksAndExtractParticles( ) {
             number_of_candidate_particles++;
             if ( number_of_candidate_particles == 1 ) {
                 if ( output_stack_box_size > 0 )
-                    output_stack.OpenFile(output_stack_filename.ToStdString( ), true);
+                    output_stack.OpenFile(output_stack_filename, true);
                 if ( write_out_plt ) {
-                    wxPrintf("about to open numeric text file with filename %s\n", FilenameReplaceExtension(output_stack_filename.ToStdString( ), "plt"));
-                    output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString( ), "plt"), OPEN_TO_WRITE, 6);
+                    Printf("about to open numeric text file with filename %s\n", FilenameReplaceExtension(output_stack_filename, "plt"));
+                    output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename, "plt"), OPEN_TO_WRITE, 6);
                 }
             }
             if ( output_stack_box_size > 0 )
                 micrograph.ClipInto(&box, micrograph_mean, false, 1.0, -int(my_peak.x * pixel_size / original_micrograph_pixel_size), -int(my_peak.y * pixel_size / original_micrograph_pixel_size), 0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
             if ( output_stack_box_size > 0 )
                 box.WriteSlice(&output_stack, number_of_candidate_particles);
-            //wxPrintf("Boxed out particle %i at %i, %i, peak height = %f, coo to ignore = %i, %i\n",number_of_candidate_particles,int(my_peak.x),int(my_peak.y),my_peak.value,coo_to_ignore_x,coo_to_ignore_y);
+            //Printf("Boxed out particle %i at %i, %i, peak height = %f, coo to ignore = %i, %i\n",number_of_candidate_particles,int(my_peak.x),int(my_peak.y),my_peak.value,coo_to_ignore_x,coo_to_ignore_y);
 
             // Find the matching template
             index_of_matching_template    = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
@@ -593,7 +593,7 @@ void ParticleFinder::FindPeaksAndExtractParticles( ) {
     delete my_progress_bar;
     if ( write_out_plt )
         delete output_coos_file;
-    wxPrintf("\nFound %i candidate particles\n", number_of_candidate_particles);
+    Printf("\nFound %i candidate particles\n", number_of_candidate_particles);
 }
 
 void ParticleFinder::RemoveHighLowMeanAreasFromTargetFunction( ) {
@@ -680,7 +680,7 @@ void ParticleFinder::DoTemplateMatching( ) {
     Image template_large;
 
     // Now we can look for the templates in the background-whitened micrograph
-    wxPrintf("\nTemplate matching...\n");
+    Printf("\nTemplate matching...\n");
     my_progress_bar = new ProgressBar(number_of_templates);
     float  template_b_value[number_of_templates];
     float  expected_density_of_false_positives[number_of_templates];
@@ -695,7 +695,7 @@ void ParticleFinder::DoTemplateMatching( ) {
     template_giving_maximum_score.SetToConstant(0.0);
     template_rotation_giving_maximum_score = template_giving_maximum_score;
     for ( int template_counter = 0; template_counter < number_of_templates; template_counter++ ) {
-        wxPrintf("Working on template %i\n", template_counter);
+        Printf("Working on template %i\n", template_counter);
 
         // Ideally, one would pad the template image to the micrograph dimensions before applying the CTF,
         // so that one wouldn't have to worry about PSF spread, or at least one would pad them large enough
@@ -726,14 +726,14 @@ void ParticleFinder::DoTemplateMatching( ) {
                     b_denominator += current_power_spectrum.data_y[curve_counter];
                 }
                 template_b_value[template_counter] = b_numerator / b_denominator;
-                //wxPrintf("B value for template %i = %f nm-2\n",template_counter+1,template_b_value[template_counter] / pixel_size / pixel_size * 100.0);
+                //Printf("B value for template %i = %f nm-2\n",template_counter+1,template_b_value[template_counter] / pixel_size / pixel_size * 100.0);
 
                 // Expected density of false positives (Eqn 4 of Sigworth 2004), per square micron
                 expected_density_of_false_positives[template_counter] = 100000000.0 * sqrtf(2.0 * PI) * template_b_value[template_counter] * minimum_peak_height_for_candidate_particles * expf(-powf(minimum_peak_height_for_candidate_particles, 2) * 0.5);
-                //wxPrintf("Expected density of spurious peaks (per squared micron) = %g\n",expected_density_of_false_positives[template_counter]);
+                //Printf("Expected density of spurious peaks (per squared micron) = %g\n",expected_density_of_false_positives[template_counter]);
             }
 
-            //wxPrintf("After clipping to large but before normalization, the template variance is %f, std %f (medium dim = %i; large dim = %i)\n",template_large.ReturnVarianceOfRealValues(),sqrtf(template_large.ReturnVarianceOfRealValues()),template_medium.logical_x_dimension,template_large.logical_x_dimension);
+            //Printf("After clipping to large but before normalization, the template variance is %f, std %f (medium dim = %i; large dim = %i)\n",template_large.ReturnVarianceOfRealValues(),sqrtf(template_large.ReturnVarianceOfRealValues()),template_medium.logical_x_dimension,template_large.logical_x_dimension);
 
             // Here are the conditions which should be met by the template according to
             // Sigworth (2004):
@@ -826,7 +826,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
     box.Allocate(maximum_radius_in_pixels * 2 + 2, maximum_radius_in_pixels * 2 + 2, 1);
     background_power_spectrum.ZeroYData( );
 
-    wxPrintf("\nEstimating background whitening filter...\n");
+    Printf("\nEstimating background whitening filter...\n");
     my_progress_bar = new ProgressBar(number_of_background_boxes);
     for ( int background_box_counter = 0; background_box_counter < number_of_background_boxes; background_box_counter++ ) {
         // Find the area to be boxed out
@@ -840,7 +840,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
             if ( ! micrograph.is_in_real_space )
                 micrograph.BackwardFFT( );
             micrograph.ClipInto(&box, 0.0, false, 1.0, int(my_peak.x), int(my_peak.y), 0);
-            //wxPrintf("Boxed out background at position %i, %i = %i, %i; peak value = %f\n",int(my_peak.x),int(my_peak.y),int(my_peak.x)+local_sigma.physical_address_of_box_center_x,int(my_peak.y)+local_sigma.physical_address_of_box_center_y,my_peak.value);
+            //Printf("Boxed out background at position %i, %i = %i, %i; peak value = %f\n",int(my_peak.x),int(my_peak.y),int(my_peak.x)+local_sigma.physical_address_of_box_center_x,int(my_peak.y)+local_sigma.physical_address_of_box_center_y,my_peak.value);
 #ifdef dump_intermediate_files
             float temp_float[3];
             box.QuickAndDirtyWriteSlice("dbg_background_box.mrc", background_box_counter + 1 - number_of_background_boxes_to_skip);
@@ -895,7 +895,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
     micrograph_whitened.ForwardFFT(false);
     micrograph_whitened.NormalizeFT( );
 #endif
-    //wxPrintf("DBG: micrograph var, std = %f, %f\n",micrograph.ReturnVarianceOfRealValues(),sqrt(micrograph.ReturnVarianceOfRealValues()));
+    //Printf("DBG: micrograph var, std = %f, %f\n",micrograph.ReturnVarianceOfRealValues(),sqrt(micrograph.ReturnVarianceOfRealValues()));
 
 #ifdef check_whitening_worked
     // Check the micrograph amplitude spectrum
@@ -907,7 +907,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
 #endif
 
     // Check the background boxes again, recompute their average amplitude spectrum
-    wxPrintf("\nChecking whitening worked correctly (debug)...\n");
+    Printf("\nChecking whitening worked correctly (debug)...\n");
     my_progress_bar = new ProgressBar(number_of_background_boxes);
     temp_curve.ZeroYData( );
     EmpiricalDistribution<double> dist;
@@ -915,7 +915,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
         if ( background_box_counter >= number_of_background_boxes_to_skip ) {
             box.QuickAndDirtyReadSlice("dbg_background_box.mrc", background_box_counter + 1 - number_of_background_boxes_to_skip);
             dist = box.ReturnDistributionOfRealValues( );
-            //wxPrintf("Background box %i of %i, mean = %f, std = %f\n",background_box_counter+1, number_of_background_boxes,dist.GetSampleMean(),sqrtf(dist.GetSampleVariance()));
+            //Printf("Background box %i of %i, mean = %f, std = %f\n",background_box_counter+1, number_of_background_boxes,dist.GetSampleMean(),sqrtf(dist.GetSampleVariance()));
             box.ForwardFFT(false);
             box.NormalizeFT( );
             box.ApplyCurveFilter(&background_whitening_filter);
@@ -1096,7 +1096,7 @@ void ParticleFinder::ReadTemplatesFromDisk( ) {
     Image temp_image;
 
     // TODO: check the template dimensions are sufficient to accomodate for CTF correction
-    wxPrintf("\nEstimating template power spectrum...\n");
+    Printf("\nEstimating template power spectrum...\n");
     my_progress_bar = new ProgressBar(number_of_templates);
     for ( int template_counter = 0; template_counter < number_of_templates; template_counter++ ) {
         temp_image.ReadSlice(&template_file, template_counter + 1);
@@ -1176,7 +1176,7 @@ void ParticleFinder::UpdateMinimumBoxSize( ) {
     const int minimum_box_size_for_picking_unbinned = int(float(minimum_box_size_for_picking) * pixel_size / original_micrograph_pixel_size) + 1;
 
     if ( output_stack_box_size < minimum_box_size_for_picking_unbinned && output_stack_box_size > 0 ) {
-        wxPrintf("Warning: user-supplied box size (%i) is smaller than minimum recommended box size given the max radius and the defocus (%i)\n", output_stack_box_size, minimum_box_size_for_picking_unbinned);
+        Printf("Warning: user-supplied box size (%i) is smaller than minimum recommended box size given the max radius and the defocus (%i)\n", output_stack_box_size, minimum_box_size_for_picking_unbinned);
     }
 }
 
@@ -1188,7 +1188,7 @@ void ParticleFinder::UpdateMinimumBoxSize( ) {
 void ParticleFinder::OpenTemplatesAndUpdateDimensions( ) {
 
     if ( already_have_templates ) {
-        template_file.OpenFile(templates_filename.ToStdString( ), false);
+        template_file.OpenFile(templates_filename, false);
         number_of_templates = template_file.ReturnNumberOfSlices( );
         MyDebugAssertTrue(template_file.ReturnXSize( ) == template_file.ReturnYSize( ), "Oops, template is not in a square box");
         new_template_dimension        = myroundint(float(template_file.ReturnXSize( )) / pixel_size * original_micrograph_pixel_size);
@@ -1197,7 +1197,7 @@ void ParticleFinder::OpenTemplatesAndUpdateDimensions( ) {
         // Check for any pixel size mismatches between the micrograph and the templates
         float pixel_size_mistmatch_due_to_rescaling = abs(pixel_size - new_template_pixel_size) / pixel_size * 100.0;
         if ( pixel_size_mistmatch_due_to_rescaling > 0.5 ) {
-            wxPrintf("Warning: internal image resampling led to significant scaling mistmatch between micrograph and template, of %f %\n", pixel_size_mistmatch_due_to_rescaling);
+            Printf("Warning: internal image resampling led to significant scaling mistmatch between micrograph and template, of %f %\n", pixel_size_mistmatch_due_to_rescaling);
             MyDebugAssertTrue(false, "Problematic resampling");
         }
     }
@@ -1236,7 +1236,7 @@ CTF ParticleFinder::ReturnMicrographCTFWithOriginalPixelSize( ) {
  */
 void ParticleFinder::OpenMicrographAndUpdateDimensions( ) {
     // Open input files so we know dimensions
-    micrograph_file.OpenFile(micrograph_filename.ToStdString( ), false);
+    micrograph_file.OpenFile(micrograph_filename, false);
     MyDebugAssertTrue(micrograph_file.ReturnNumberOfSlices( ) == 1, "Input micrograph file should only contain one image for now");
 
     // First we look for a nice factorizable micrograph dimension which gives approximately the desired pixel size
@@ -1258,7 +1258,7 @@ void ParticleFinder::OpenMicrographAndUpdateDimensions( ) {
     float new_micrograph_pixel_size_y            = original_micrograph_pixel_size * float(micrograph_file.ReturnYSize( )) / float(new_micrograph_dimension_y);
     float micrograph_distortion_due_to_rescaling = float(abs(new_micrograph_pixel_size_x - new_micrograph_pixel_size_y)) / float(new_micrograph_pixel_size_x) * 100.0;
     if ( micrograph_distortion_due_to_rescaling > 1.0 ) {
-        wxPrintf("Warning: internal resampling of the micrograph led to significant scaling distortion of %f %\n", micrograph_distortion_due_to_rescaling);
+        Printf("Warning: internal resampling of the micrograph led to significant scaling distortion of %f %\n", micrograph_distortion_due_to_rescaling);
     }
 }
 
@@ -1399,7 +1399,7 @@ void ComputeScheresPickingFunction(Image *micrograph, Image *micrograph_local_me
 	EmpiricalDistribution<double> template_values_inside_radius  = template_image->ReturnDistributionOfRealValues(mask_radius,false);
 	const float template_sum_inside_of_mask = template_values_inside_radius.GetSampleSum();
 	const float template_sum_of_squares_inside_of_mask = template_values_inside_radius.GetSampleSumOfSquares();
-	wxPrintf("Template sum of squares inside of mask = %e\n", template_sum_of_squares_inside_of_mask);
+	Printf("Template sum of squares inside of mask = %e\n", template_sum_of_squares_inside_of_mask);
 
 	Image template_image_large; // TODO: don't allocate this within this subroutine, pass the memory around
 

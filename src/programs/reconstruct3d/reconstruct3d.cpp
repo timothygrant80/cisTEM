@@ -19,14 +19,14 @@ IMPLEMENT_APP(Reconstruct3DApp)
 // override the DoInteractiveUserInput
 
 void Reconstruct3DApp::DoInteractiveUserInput( ) {
-    wxString input_particle_stack;
-    wxString input_star_filename;
-    wxString input_reconstruction;
-    wxString output_reconstruction_1;
-    wxString output_reconstruction_2;
-    wxString output_reconstruction_filtered;
-    wxString output_resolution_statistics;
-    wxString my_symmetry    = "C1";
+    std::string input_particle_stack;
+    std::string input_star_filename;
+    std::string input_reconstruction;
+    std::string output_reconstruction_1;
+    std::string output_reconstruction_2;
+    std::string output_reconstruction_filtered;
+    std::string output_resolution_statistics;
+    std::string my_symmetry    = "C1";
     int      first_particle = 1;
     int      last_particle  = 0;
     float    pixel_size     = 1;
@@ -53,8 +53,8 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
     bool     threshold_input_3d       = true;
     int      correct_ewald_sphere     = 0;
     bool     dump_arrays              = false;
-    wxString dump_file_1;
-    wxString dump_file_2;
+    std::string dump_file_1;
+    std::string dump_file_2;
     int      max_threads = 1;
 
     UserInput* my_input = new UserInput("Reconstruct3D", 1.05);
@@ -109,15 +109,15 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     //	my_current_job.Reset(33);
-    //	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.ToUTF8().data(),
-    my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbttii", input_particle_stack.ToUTF8( ).data( ),
-                                      input_star_filename.ToUTF8( ).data( ),
-                                      input_reconstruction.ToUTF8( ).data( ),
-                                      output_reconstruction_1.ToUTF8( ).data( ),
-                                      output_reconstruction_2.ToUTF8( ).data( ),
-                                      output_reconstruction_filtered.ToUTF8( ).data( ),
-                                      output_resolution_statistics.ToUTF8( ).data( ),
-                                      my_symmetry.ToUTF8( ).data( ),
+    //	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.c_str(),
+    my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbttii", input_particle_stack.c_str(),
+                                      input_star_filename.c_str(),
+                                      input_reconstruction.c_str(),
+                                      output_reconstruction_1.c_str(),
+                                      output_reconstruction_2.c_str(),
+                                      output_reconstruction_filtered.c_str(),
+                                      output_resolution_statistics.c_str(),
+                                      my_symmetry.c_str(),
                                       first_particle, last_particle,
                                       pixel_size, molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
                                       resolution_limit_rec, resolution_limit_ref, score_weight_conversion, score_threshold,
@@ -125,8 +125,8 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
                                       invert_contrast, exclude_blank_edges, crop_images, split_even_odd, center_mass,
                                       //																				use_input_reconstruction, threshold_input_3d, correct_ewald_sphere, dump_arrays,
                                       use_input_reconstruction, threshold_input_3d, dump_arrays,
-                                      dump_file_1.ToUTF8( ).data( ),
-                                      dump_file_2.ToUTF8( ).data( ),
+                                      dump_file_1.c_str(),
+                                      dump_file_2.c_str(),
                                       correct_ewald_sphere,
                                       max_threads);
 }
@@ -134,14 +134,14 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool Reconstruct3DApp::DoCalculation( ) {
-    wxString input_particle_stack           = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_star_filename            = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_reconstruction           = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString output_reconstruction_1        = my_current_job.arguments[3].ReturnStringArgument( );
-    wxString output_reconstruction_2        = my_current_job.arguments[4].ReturnStringArgument( );
-    wxString output_reconstruction_filtered = my_current_job.arguments[5].ReturnStringArgument( );
-    wxString output_resolution_statistics   = my_current_job.arguments[6].ReturnStringArgument( );
-    wxString my_symmetry                    = my_current_job.arguments[7].ReturnStringArgument( );
+    std::string input_particle_stack           = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_star_filename            = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_reconstruction           = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string output_reconstruction_1        = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string output_reconstruction_2        = my_current_job.arguments[4].ReturnStringArgument( );
+    std::string output_reconstruction_filtered = my_current_job.arguments[5].ReturnStringArgument( );
+    std::string output_resolution_statistics   = my_current_job.arguments[6].ReturnStringArgument( );
+    std::string my_symmetry                    = my_current_job.arguments[7].ReturnStringArgument( );
     int      first_particle                 = my_current_job.arguments[8].ReturnIntegerArgument( );
     int      last_particle                  = my_current_job.arguments[9].ReturnIntegerArgument( );
     float    pixel_size                     = my_current_job.arguments[10].ReturnFloatArgument( );
@@ -165,8 +165,8 @@ bool Reconstruct3DApp::DoCalculation( ) {
     bool     threshold_input_3d             = my_current_job.arguments[28].ReturnBoolArgument( );
     //	int		 correct_ewald_sphere				= my_current_job.arguments[32].ReturnIntegerArgument();
     bool     dump_arrays          = my_current_job.arguments[29].ReturnBoolArgument( );
-    wxString dump_file_1          = my_current_job.arguments[30].ReturnStringArgument( );
-    wxString dump_file_2          = my_current_job.arguments[31].ReturnStringArgument( );
+    std::string dump_file_1          = my_current_job.arguments[30].ReturnStringArgument( );
+    std::string dump_file_2          = my_current_job.arguments[31].ReturnStringArgument( );
     int      correct_ewald_sphere = my_current_job.arguments[32].ReturnIntegerArgument( );
     int      max_threads          = my_current_job.arguments[33].ReturnIntegerArgument( );
 
@@ -248,31 +248,31 @@ bool Reconstruct3DApp::DoCalculation( ) {
     bool       rotational_blurring   = true;
     bool       calculate_complex_ctf = false;
     bool       file_read;
-    wxDateTime my_time_in;
+    DateTime my_time_in;
 
     if ( ! DoesFileExist(input_star_filename) ) {
-        SendError(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
+        SendError(Format("Error: Input star file %s not found\n", input_star_filename));
         exit(-1);
     }
     if ( ! DoesFileExist(input_particle_stack) ) {
-        SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_stack));
+        SendError(Format("Error: Input particle stack %s not found\n", input_particle_stack));
         exit(-1);
     }
-    MRCFile  input_stack(input_particle_stack.ToStdString( ), false);
+    MRCFile  input_stack(input_particle_stack, false);
     MRCFile* input_3d_file;
     if ( use_input_reconstruction ) {
         if ( ! DoesFileExist(input_reconstruction) ) {
-            SendError(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
+            SendError(Format("Error: Input reconstruction %s not found\n", input_reconstruction));
             exit(-1);
         }
-        input_3d_file = new MRCFile(input_reconstruction.ToStdString( ), false);
+        input_3d_file = new MRCFile(input_reconstruction, false);
     }
 
     cisTEMParameters input_star_file;
 
     // Why is exclude_negative_film_values true for binary file and false for regular?
-    wxFileName star_filename(input_star_filename);
-    if ( star_filename.GetExt( ) == "cistem" )
+    std::filesystem::path star_filename(input_star_filename);
+    if ( ReturnFileExtension(star_filename.string()) == "cistem" )
         input_star_file.ReadFromcisTEMBinaryFile(input_star_filename, true);
     else
         input_star_file.ReadFromcisTEMStarFile(input_star_filename);
@@ -288,11 +288,11 @@ bool Reconstruct3DApp::DoCalculation( ) {
 	{
 		temp_float = input_par_file.ReturnDistributionMax(2, i);
 		sigma = input_par_file.ReturnDistributionSigma(2, temp_float, i);
-		if (temp_float != 0.0) wxPrintf("theta max, sigma, phi max, sigma = %i %g %g", i, temp_float, sigma);
+		if (temp_float != 0.0) Printf("theta max, sigma, phi max, sigma = %i %g %g", i, temp_float, sigma);
 		input_par_file.SetParameters(2, temp_float, sigma / 2.0, i);
 		temp_float = input_par_file.ReturnDistributionMax(3, i);
 		sigma = input_par_file.ReturnDistributionSigma(3, temp_float, i);
-		if (temp_float != 0.0) wxPrintf(" %g %g\n", temp_float, sigma);
+		if (temp_float != 0.0) Printf(" %g %g\n", temp_float, sigma);
 		input_par_file.SetParameters(3, temp_float, sigma / 2.0, i);
 	} */
 
@@ -345,47 +345,47 @@ bool Reconstruct3DApp::DoCalculation( ) {
 
     //	if (is_running_locally == false) max_threads = 1;
 
-    my_time_in = wxDateTime::Now( );
-    output_statistics_file.WriteCommentLine("C Refine3D run date and time:              " + my_time_in.FormatISOCombined(' '));
-    output_statistics_file.WriteCommentLine("C Input particle images:                   " + input_particle_stack);
-    output_statistics_file.WriteCommentLine("C Input cisTEM star filename:              " + input_star_filename);
-    output_statistics_file.WriteCommentLine("C Input reconstruction:                    " + input_reconstruction);
-    output_statistics_file.WriteCommentLine("C Output reconstruction 1:                 " + output_reconstruction_1);
-    output_statistics_file.WriteCommentLine("C Output reconstruction 2:                 " + output_reconstruction_2);
-    output_statistics_file.WriteCommentLine("C Output filtered reconstruction:          " + output_reconstruction_filtered);
-    output_statistics_file.WriteCommentLine("C Output resolution statistics:            " + output_resolution_statistics);
-    output_statistics_file.WriteCommentLine("C Particle symmetry:                       " + my_symmetry);
-    output_statistics_file.WriteCommentLine("C First particle to include:               " + wxString::Format("%i", first_particle));
-    output_statistics_file.WriteCommentLine("C Last particle to include:                " + wxString::Format("%i", last_particle));
-    output_statistics_file.WriteCommentLine("C Pixel size of reconstruction (A):        " + wxString::Format("%f", pixel_size));
-    //	output_statistics_file.WriteCommentLine("C Beam energy (keV):                       " + wxString::Format("%f", voltage_kV));
-    //	output_statistics_file.WriteCommentLine("C Spherical aberration (mm):               " + wxString::Format("%f", spherical_aberration_mm));
-    //	output_statistics_file.WriteCommentLine("C Amplitude contrast:                      " + wxString::Format("%f", amplitude_contrast));
-    //	output_statistics_file.WriteCommentLine("C Beam tilt in x (mrad):                   " + wxString::Format("%f", beam_tilt_x));
-    //	output_statistics_file.WriteCommentLine("C Beam tilt in y (mrad):                   " + wxString::Format("%f", beam_tilt_y));
-    //	output_statistics_file.WriteCommentLine("C Particle shift in x (A):                 " + wxString::Format("%f", particle_shift_x));
-    //	output_statistics_file.WriteCommentLine("C Particle shift in y (A):                 " + wxString::Format("%f", particle_shift_y));
-    output_statistics_file.WriteCommentLine("C Molecular mass of particle (kDa):        " + wxString::Format("%f", molecular_mass_kDa));
-    output_statistics_file.WriteCommentLine("C Inner mask radius (A):                   " + wxString::Format("%f", inner_mask_radius));
-    output_statistics_file.WriteCommentLine("C Outer mask radius (A):                   " + wxString::Format("%f", outer_mask_radius));
-    output_statistics_file.WriteCommentLine("C Rec. resolution limit (A):               " + wxString::Format("%f", resolution_limit_rec));
-    output_statistics_file.WriteCommentLine("C Ref. resolution limit (A):               " + wxString::Format("%f", resolution_limit_ref));
-    output_statistics_file.WriteCommentLine("C Particle weighting factor (A^2):         " + wxString::Format("%f", score_weight_conversion));
-    output_statistics_file.WriteCommentLine("C Score threshold:                         " + wxString::Format("%f", score_threshold));
-    output_statistics_file.WriteCommentLine("C Smoothing factor:                        " + wxString::Format("%f", smoothing_factor));
-    output_statistics_file.WriteCommentLine("C Padding factor:                          " + wxString::Format("%f", padding));
-    output_statistics_file.WriteCommentLine("C Normalize particles:                     " + BoolToYesNo(normalize_particles));
-    output_statistics_file.WriteCommentLine("C Adjust scores for defocus dependence:    " + BoolToYesNo(adjust_scores));
-    output_statistics_file.WriteCommentLine("C Invert particle contrast:                " + BoolToYesNo(invert_contrast));
-    output_statistics_file.WriteCommentLine("C Exclude images with blank edges:         " + BoolToYesNo(exclude_blank_edges));
-    output_statistics_file.WriteCommentLine("C Crop particle images:                    " + BoolToYesNo(crop_images));
-    output_statistics_file.WriteCommentLine("C FSC with even/odd particles:             " + BoolToYesNo(split_even_odd));
-    output_statistics_file.WriteCommentLine("C Apply likelihood blurring:               " + BoolToYesNo(use_input_reconstruction));
-    output_statistics_file.WriteCommentLine("C Threshold input reconstruction:          " + BoolToYesNo(threshold_input_3d));
-    output_statistics_file.WriteCommentLine("C Correct Ewald sphere curvature:          " + wxString::Format("%i", correct_ewald_sphere));
-    output_statistics_file.WriteCommentLine("C Dump intermediate arrays:                " + BoolToYesNo(dump_arrays));
-    output_statistics_file.WriteCommentLine("C Output dump filename for odd particles:  " + dump_file_1);
-    output_statistics_file.WriteCommentLine("C Output dump filename for even particles: " + dump_file_2);
+    my_time_in = DateTime::Now( );
+    output_statistics_file.WriteCommentLine(("C Refine3D run date and time:              " + my_time_in.FormatISOCombined(' ')).c_str());
+    output_statistics_file.WriteCommentLine(("C Input particle images:                   " + input_particle_stack).c_str());
+    output_statistics_file.WriteCommentLine(("C Input cisTEM star filename:              " + input_star_filename).c_str());
+    output_statistics_file.WriteCommentLine(("C Input reconstruction:                    " + input_reconstruction).c_str());
+    output_statistics_file.WriteCommentLine(("C Output reconstruction 1:                 " + output_reconstruction_1).c_str());
+    output_statistics_file.WriteCommentLine(("C Output reconstruction 2:                 " + output_reconstruction_2).c_str());
+    output_statistics_file.WriteCommentLine(("C Output filtered reconstruction:          " + output_reconstruction_filtered).c_str());
+    output_statistics_file.WriteCommentLine(("C Output resolution statistics:            " + output_resolution_statistics).c_str());
+    output_statistics_file.WriteCommentLine(("C Particle symmetry:                       " + my_symmetry).c_str());
+    output_statistics_file.WriteCommentLine(("C First particle to include:               " + Format("%i", first_particle)).c_str());
+    output_statistics_file.WriteCommentLine(("C Last particle to include:                " + Format("%i", last_particle)).c_str());
+    output_statistics_file.WriteCommentLine(("C Pixel size of reconstruction (A):        " + Format("%f", pixel_size)).c_str());
+    //	output_statistics_file.WriteCommentLine("C Beam energy (keV):                       " + Format("%f", voltage_kV));
+    //	output_statistics_file.WriteCommentLine("C Spherical aberration (mm):               " + Format("%f", spherical_aberration_mm));
+    //	output_statistics_file.WriteCommentLine("C Amplitude contrast:                      " + Format("%f", amplitude_contrast));
+    //	output_statistics_file.WriteCommentLine("C Beam tilt in x (mrad):                   " + Format("%f", beam_tilt_x));
+    //	output_statistics_file.WriteCommentLine("C Beam tilt in y (mrad):                   " + Format("%f", beam_tilt_y));
+    //	output_statistics_file.WriteCommentLine("C Particle shift in x (A):                 " + Format("%f", particle_shift_x));
+    //	output_statistics_file.WriteCommentLine("C Particle shift in y (A):                 " + Format("%f", particle_shift_y));
+    output_statistics_file.WriteCommentLine(("C Molecular mass of particle (kDa):        " + Format("%f", molecular_mass_kDa)).c_str());
+    output_statistics_file.WriteCommentLine(("C Inner mask radius (A):                   " + Format("%f", inner_mask_radius)).c_str());
+    output_statistics_file.WriteCommentLine(("C Outer mask radius (A):                   " + Format("%f", outer_mask_radius)).c_str());
+    output_statistics_file.WriteCommentLine(("C Rec. resolution limit (A):               " + Format("%f", resolution_limit_rec)).c_str());
+    output_statistics_file.WriteCommentLine(("C Ref. resolution limit (A):               " + Format("%f", resolution_limit_ref)).c_str());
+    output_statistics_file.WriteCommentLine(("C Particle weighting factor (A^2):         " + Format("%f", score_weight_conversion)).c_str());
+    output_statistics_file.WriteCommentLine(("C Score threshold:                         " + Format("%f", score_threshold)).c_str());
+    output_statistics_file.WriteCommentLine(("C Smoothing factor:                        " + Format("%f", smoothing_factor)).c_str());
+    output_statistics_file.WriteCommentLine(("C Padding factor:                          " + Format("%f", padding)).c_str());
+    output_statistics_file.WriteCommentLine(("C Normalize particles:                     " + BoolToYesNo(normalize_particles)).c_str());
+    output_statistics_file.WriteCommentLine(("C Adjust scores for defocus dependence:    " + BoolToYesNo(adjust_scores)).c_str());
+    output_statistics_file.WriteCommentLine(("C Invert particle contrast:                " + BoolToYesNo(invert_contrast)).c_str());
+    output_statistics_file.WriteCommentLine(("C Exclude images with blank edges:         " + BoolToYesNo(exclude_blank_edges)).c_str());
+    output_statistics_file.WriteCommentLine(("C Crop particle images:                    " + BoolToYesNo(crop_images)).c_str());
+    output_statistics_file.WriteCommentLine(("C FSC with even/odd particles:             " + BoolToYesNo(split_even_odd)).c_str());
+    output_statistics_file.WriteCommentLine(("C Apply likelihood blurring:               " + BoolToYesNo(use_input_reconstruction)).c_str());
+    output_statistics_file.WriteCommentLine(("C Threshold input reconstruction:          " + BoolToYesNo(threshold_input_3d)).c_str());
+    output_statistics_file.WriteCommentLine(("C Correct Ewald sphere curvature:          " + Format("%i", correct_ewald_sphere)).c_str());
+    output_statistics_file.WriteCommentLine(("C Dump intermediate arrays:                " + BoolToYesNo(dump_arrays)).c_str());
+    output_statistics_file.WriteCommentLine(("C Output dump filename for odd particles:  " + dump_file_1).c_str());
+    output_statistics_file.WriteCommentLine(("C Output dump filename for even particles: " + dump_file_2).c_str());
     output_statistics_file.WriteCommentLine("C");
 
     //	beam_tilt_x /= 1000.0f;
@@ -412,7 +412,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
         binning_factor = float(original_box_size) / float(intermediate_box_size);
         pixel_size *= binning_factor;
 
-        //		wxPrintf("After : binning_factor = %f, pixel_size = %f\n", binning_factor, pixel_size);
+        //		Printf("After : binning_factor = %f, pixel_size = %f\n", binning_factor, pixel_size);
         if ( crop_images ) {
             box_size = ReturnClosestFactorizedUpper(myroundint(3.0 * outer_mask_radius / pixel_size), 3, true);
             if ( box_size > intermediate_box_size )
@@ -507,22 +507,22 @@ bool Reconstruct3DApp::DoCalculation( ) {
     my_reconstruction_2.original_pixel_size  = original_pixel_size;
     my_reconstruction_2.center_mass          = center_mass;
 
-    wxPrintf("\nNumber of particles to reconstruct = %i\n\nAverage sigma noise = %f, average score = %f\n", images_to_process, parameter_averages.sigma, parameter_averages.score);
-    wxPrintf("Box size for reconstruction = %i, binning factor = %f\n", box_size, binning_factor);
+    Printf("\nNumber of particles to reconstruct = %i\n\nAverage sigma noise = %f, average score = %f\n", images_to_process, parameter_averages.sigma, parameter_averages.score);
+    Printf("Box size for reconstruction = %i, binning factor = %f\n", box_size, binning_factor);
     if ( rotational_blurring )
-        wxPrintf("Memory required for calculation = %g GB\n", ((3.0f * max_threads + 4.0f) * 4.0f * box_size * box_size * box_size + (12.0f + 360.0 / std::max(2.0f * rad_2_deg(pixel_size / outer_mask_radius), 5.0f)) * 4.0f * box_size * box_size) / 1024.0f / 1024.0f / 1024.0f);
+        Printf("Memory required for calculation = %g GB\n", ((3.0f * max_threads + 4.0f) * 4.0f * box_size * box_size * box_size + (12.0f + 360.0 / std::max(2.0f * rad_2_deg(pixel_size / outer_mask_radius), 5.0f)) * 4.0f * box_size * box_size) / 1024.0f / 1024.0f / 1024.0f);
     else
-        wxPrintf("Memory required for calculation = %g GB\n", ((3.0f * max_threads + 3.0f) * 4.0f * box_size * box_size * box_size + 12.0f * 4.0f * box_size * box_size) / 1024.0f / 1024.0f / 1024.0f);
+        Printf("Memory required for calculation = %g GB\n", ((3.0f * max_threads + 3.0f) * 4.0f * box_size * box_size * box_size + 12.0f * 4.0f * box_size * box_size) / 1024.0f / 1024.0f / 1024.0f);
 
     if ( images_to_process == 0 ) {
         if ( ! dump_arrays )
             MyPrintWithDetails("Error: No particles to process\n");
         if ( dump_arrays ) {
-            wxPrintf("\nDumping reconstruction arrays...\n");
+            Printf("\nDumping reconstruction arrays...\n");
             my_reconstruction_1.DumpArrays(dump_file_1, false);
             my_reconstruction_2.DumpArrays(dump_file_2, true);
 
-            wxPrintf("\nReconstruct3D: Normal termination\n\n");
+            Printf("\nReconstruct3D: Normal termination\n\n");
         }
         return true;
     }
@@ -537,7 +537,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
         fsc_particle_repeat++;
 
     if ( normalize_particles ) {
-        wxPrintf("\nCalculating noise power spectrum...\n\n");
+        Printf("\nCalculating noise power spectrum...\n\n");
         random_reset_count = std::max(random_reset_count, max_threads);
         percentage         = float(max_samples) / float(images_to_process) / random_reset_count;
         sum_power.SetToConstant(0.0);
@@ -634,7 +634,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
         noise_power_spectrum.Reciprocal( );
 
         if ( exclude_blank_edges ) {
-            wxPrintf("\nImages with blank edges excluded from noise power calculation = %i\n", number_of_blank_edges);
+            Printf("\nImages with blank edges excluded from noise power calculation = %i\n", number_of_blank_edges);
         }
     }
 
@@ -655,7 +655,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
         /*		if (average_density_max < 0.1 || average_density_max > 25)
 		{
 
-			SendInfo(wxString::Format("Input 3D densities out of range (average max = %g). Rescaling...", average_density_max));
+			SendInfo(Format("Input 3D densities out of range (average max = %g). Rescaling...", average_density_max));
 			input_3d.density_map->MultiplyByConstant(0.1 / average_density_max);
 			average_density_max = 0.1;
 		} */
@@ -696,11 +696,11 @@ bool Reconstruct3DApp::DoCalculation( ) {
             //			{
             //				rotation_cache[i].Allocate(box_size, box_size, false);
             //			}
-            wxPrintf("\nUsing %i rotations for image blurring with angular step %g\n", number_of_rotations, psi_step);
+            Printf("\nUsing %i rotations for image blurring with angular step %g\n", number_of_rotations, psi_step);
         }
     }
 
-    wxPrintf("\nCalculating reconstruction...\n\n");
+    Printf("\nCalculating reconstruction...\n\n");
     images_to_process_per_thread = std::max(images_to_process / max_threads, 4);
     if ( is_running_locally == true )
         my_progress = new ProgressBar(images_to_process_per_thread);
@@ -790,7 +790,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
                     JobResult* temp_result = new JobResult;
                     temp_result->SetResult(1, &temp_float);
                     AddJobToResultQueue(temp_result);
-                    //wxPrintf("Refine3D : Adding job to job queue..\n");
+                    //Printf("Refine3D : Adding job to job queue..\n");
                 }
 
                 continue;
@@ -1175,7 +1175,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
                 else if ( input_parameters.beam_tilt_group == 2 )
                     input_particle.insert_even = true;
                 else {
-                    wxPrintf("\nReconstruct subtomogram average is temporarily using the beam_tilt_group to specify odd/even (1/2) or ignore (0), found %d\n", input_parameters.beam_tilt_group);
+                    Printf("\nReconstruct subtomogram average is temporarily using the beam_tilt_group to specify odd/even (1/2) or ignore (0), found %d\n", input_parameters.beam_tilt_group);
                     exit(-1);
                 }
             }
@@ -1214,11 +1214,11 @@ bool Reconstruct3DApp::DoCalculation( ) {
             else {
                 //			for (i = 0; i < input_particle.particle_image->real_memory_allocated / 2; i++) input_particle.particle_image->complex_values[i] = 1.0f + I * 0.0f;
                 //			for (i = 0; i < input_particle.ctf_image->real_memory_allocated / 2; i++) input_particle.ctf_image->complex_values[i] = 1.0f + I * 0.0f;
-                //			wxPrintf("2D central pixel = %g\n", std::abs(input_particle.particle_image->complex_values[0]));
-                //			wxPrintf("2D central CTF   = %g\n", std::abs(input_particle.ctf_image->complex_values[0]));
+                //			Printf("2D central pixel = %g\n", std::abs(input_particle.particle_image->complex_values[0]));
+                //			Printf("2D central CTF   = %g\n", std::abs(input_particle.ctf_image->complex_values[0]));
                 my_reconstruction_1_local.InsertSliceWithCTF(input_particle, symmetry_weight);
-                //			wxPrintf("3D central pixel = %g ratio = %g\n", std::abs(my_reconstruction_1.image_reconstruction.complex_values[0]), std::abs(my_reconstruction_1.image_reconstruction.complex_values[0])/std::abs(input_particle.particle_image->complex_values[0]));
-                //			wxPrintf("3D central CTF   = %g\n", std::abs(my_reconstruction_1.ctf_reconstruction[0]));
+                //			Printf("3D central pixel = %g ratio = %g\n", std::abs(my_reconstruction_1.image_reconstruction.complex_values[0]), std::abs(my_reconstruction_1.image_reconstruction.complex_values[0])/std::abs(input_particle.particle_image->complex_values[0]));
+                //			Printf("3D central CTF   = %g\n", std::abs(my_reconstruction_1.ctf_reconstruction[0]));
             }
 
             if ( is_running_locally == false ) {
@@ -1226,7 +1226,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
                 JobResult* temp_result = new JobResult;
                 temp_result->SetResult(1, &temp_float);
                 AddJobToResultQueue(temp_result);
-                //wxPrintf("Refine3D : Adding job to job queue..\n");
+                //Printf("Refine3D : Adding job to job queue..\n");
             }
 
             if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )
@@ -1272,11 +1272,11 @@ bool Reconstruct3DApp::DoCalculation( ) {
     }
 
     if ( dump_arrays ) {
-        wxPrintf("\nDumping reconstruction arrays...\n");
+        Printf("\nDumping reconstruction arrays...\n");
         my_reconstruction_1.DumpArrays(dump_file_1, false);
         my_reconstruction_2.DumpArrays(dump_file_2, true);
 
-        wxPrintf("\nReconstruct3D: Normal termination\n\n");
+        Printf("\nReconstruct3D: Normal termination\n\n");
 
         return true;
     }
@@ -1294,7 +1294,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
                               original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
                               center_mass, output_reconstruction_filtered, output_statistics_file);
 
-    wxPrintf("\nReconstruct3D: Normal termination\n\n");
+    Printf("\nReconstruct3D: Normal termination\n\n");
 
     return true;
 }

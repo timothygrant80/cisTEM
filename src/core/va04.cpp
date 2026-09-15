@@ -9,7 +9,7 @@
 
 		http://www.netlib.org/f2c/libf2c.zip
 */
-#include <wx/wx.h>
+#include <math.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -231,7 +231,7 @@ L18:
     //s_wsfe(&io___32);
     //e_wsfe();
     // Removed this statement since it does not seem to be very informative
-    // wxPrintf("Warning(VA04): maximum change does not alter target function\n");
+    // Printf("Warning(VA04): maximum change does not alter target function\n");
     goto L20;
 L15:
     fb = *f;
@@ -630,7 +630,7 @@ L78:
     //s_wsfe(&io___45);
     //e_wsfe();
     // Removed this statement since it does not seem to be very informative
-    // wxPrintf("Warning(VA04): accuracy limited by errors in target function\n");
+    // Printf("Warning(VA04): accuracy limited by errors in target function\n");
     goto L20;
 L88:
     ind = 1;
@@ -723,7 +723,7 @@ L999:
     };
     *f = target_function(parameters, x + 1);
     // Removed this statement since it does not seem to be very informative
-    // wxPrintf("Warning(VA04): Endless loop safety catch, icnt = %i\n", icnt);
+    // Printf("Warning(VA04): Endless loop safety catch, icnt = %i\n", icnt);
     return 0;
 } /* va04a_ */
 

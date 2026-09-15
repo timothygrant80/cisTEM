@@ -132,7 +132,7 @@ class cisTEMStarFileReader {
         return true;
     }
 
-    inline bool SafelyReadFromBinaryBufferIntowxString(wxString& wxstring_to_read_into) {
+    inline bool SafelyReadFromBinaryBufferIntoString(std::string& string_to_read_into) {
         int length_of_string;
         if ( SafelyReadFromBinaryBufferIntoInteger(length_of_string) == false )
             return false;
@@ -153,15 +153,29 @@ class cisTEMStarFileReader {
         }
 
         string_buffer[length_of_string] = 0;
-        wxstring_to_read_into           = string_buffer;
+        string_to_read_into             = string_buffer;
 
         binary_buffer_position += sizeof(char) * length_of_string;
         return true;
     }
 
   public:
-    wxString    filename;
-    wxTextFile* input_text_file;
+    std::string filename;
+
+    // The whole text file, read into memory a line at a time, with the current position that
+    // GetNextLine()/Eof() used to keep for us.
+    std::vector<std::string> input_file_lines;
+    bool                     input_file_is_opened;
+    long                     current_line_number;
+
+    bool AtEndOfFile( ) const { return current_line_number == long(input_file_lines.size( )); }
+
+    std::string ReturnNextLine( ) {
+        current_line_number++;
+        if ( current_line_number == long(input_file_lines.size( )) )
+            return std::string( );
+        return input_file_lines[current_line_number];
+    }
 
     char* binary_file_read_buffer;
     long  binary_file_size;
@@ -174,82 +188,82 @@ class cisTEMStarFileReader {
     cisTEMStarFileReader( );
     ~cisTEMStarFileReader( );
 
-    cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
+    cisTEMStarFileReader(std::string wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
 
-    void Open(wxString wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool read_as_binary = false);
+    void Open(std::string wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool read_as_binary = false);
     void Close( );
-    bool ReadTextFile(wxString wanted_filename, wxString* error_string = NULL, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
-    bool ReadBinaryFile(wxString wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
+    bool ReadTextFile(std::string wanted_filename, std::string* error_string = NULL, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
+    bool ReadBinaryFile(std::string wanted_filename, ArrayOfcisTEMParameterLines* alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
 
-    bool ExtractParametersFromLine(wxString& wanted_line, wxString* error_string = NULL, bool exclude_negative_film_numbers = false);
+    bool ExtractParametersFromLine(std::string& wanted_line, std::string* error_string = NULL, bool exclude_negative_film_numbers = false);
     void Reset( );
     void ResetColumnPositions( );
 
-    inline int ReturnPositionInStack(int line_number) { return cached_parameters->Item(line_number).position_in_stack; }
+    inline int ReturnPositionInStack(int line_number) { return cached_parameters->at(line_number).position_in_stack; }
 
-    inline int ReturnImageIsActive(int line_number) { return cached_parameters->Item(line_number).image_is_active; }
+    inline int ReturnImageIsActive(int line_number) { return cached_parameters->at(line_number).image_is_active; }
 
-    inline float ReturnPhi(int line_number) { return cached_parameters->Item(line_number).phi; }
+    inline float ReturnPhi(int line_number) { return cached_parameters->at(line_number).phi; }
 
-    inline float ReturnTheta(int line_number) { return cached_parameters->Item(line_number).theta; }
+    inline float ReturnTheta(int line_number) { return cached_parameters->at(line_number).theta; }
 
-    inline float ReturnPsi(int line_number) { return cached_parameters->Item(line_number).psi; }
+    inline float ReturnPsi(int line_number) { return cached_parameters->at(line_number).psi; }
 
-    inline float ReturnXShift(int line_number) { return cached_parameters->Item(line_number).x_shift; }
+    inline float ReturnXShift(int line_number) { return cached_parameters->at(line_number).x_shift; }
 
-    inline float ReturnYShift(int line_number) { return cached_parameters->Item(line_number).y_shift; }
+    inline float ReturnYShift(int line_number) { return cached_parameters->at(line_number).y_shift; }
 
-    inline float ReturnDefocus1(int line_number) { return cached_parameters->Item(line_number).defocus_1; }
+    inline float ReturnDefocus1(int line_number) { return cached_parameters->at(line_number).defocus_1; }
 
-    inline float ReturnDefocus2(int line_number) { return cached_parameters->Item(line_number).defocus_2; }
+    inline float ReturnDefocus2(int line_number) { return cached_parameters->at(line_number).defocus_2; }
 
-    inline float ReturnDefocusAngle(int line_number) { return cached_parameters->Item(line_number).defocus_angle; }
+    inline float ReturnDefocusAngle(int line_number) { return cached_parameters->at(line_number).defocus_angle; }
 
-    inline float ReturnPhaseShift(int line_number) { return cached_parameters->Item(line_number).phase_shift; }
+    inline float ReturnPhaseShift(int line_number) { return cached_parameters->at(line_number).phase_shift; }
 
-    inline int ReturnLogP(int line_number) { return cached_parameters->Item(line_number).logp; }
+    inline int ReturnLogP(int line_number) { return cached_parameters->at(line_number).logp; }
 
-    inline float ReturnSigma(int line_number) { return cached_parameters->Item(line_number).sigma; }
+    inline float ReturnSigma(int line_number) { return cached_parameters->at(line_number).sigma; }
 
-    inline float ReturnScore(int line_number) { return cached_parameters->Item(line_number).score; }
+    inline float ReturnScore(int line_number) { return cached_parameters->at(line_number).score; }
 
-    inline float ReturnScoreChange(int line_number) { return cached_parameters->Item(line_number).score_change; }
+    inline float ReturnScoreChange(int line_number) { return cached_parameters->at(line_number).score_change; }
 
-    inline float ReturnPixelSize(int line_number) { return cached_parameters->Item(line_number).pixel_size; }
+    inline float ReturnPixelSize(int line_number) { return cached_parameters->at(line_number).pixel_size; }
 
-    inline float ReturnMicroscopekV(int line_number) { return cached_parameters->Item(line_number).microscope_voltage_kv; }
+    inline float ReturnMicroscopekV(int line_number) { return cached_parameters->at(line_number).microscope_voltage_kv; }
 
-    inline float ReturnMicroscopeCs(int line_number) { return cached_parameters->Item(line_number).microscope_spherical_aberration_mm; }
+    inline float ReturnMicroscopeCs(int line_number) { return cached_parameters->at(line_number).microscope_spherical_aberration_mm; }
 
-    inline float ReturnAmplitudeContrast(int line_number) { return cached_parameters->Item(line_number).amplitude_contrast; }
+    inline float ReturnAmplitudeContrast(int line_number) { return cached_parameters->at(line_number).amplitude_contrast; }
 
-    inline float ReturnBeamTiltX(int line_number) { return cached_parameters->Item(line_number).beam_tilt_x; }
+    inline float ReturnBeamTiltX(int line_number) { return cached_parameters->at(line_number).beam_tilt_x; }
 
-    inline float ReturnBeamTiltY(int line_number) { return cached_parameters->Item(line_number).beam_tilt_y; }
+    inline float ReturnBeamTiltY(int line_number) { return cached_parameters->at(line_number).beam_tilt_y; }
 
-    inline float ReturnImageShiftX(int line_number) { return cached_parameters->Item(line_number).image_shift_x; }
+    inline float ReturnImageShiftX(int line_number) { return cached_parameters->at(line_number).image_shift_x; }
 
-    inline float ReturnImageShiftY(int line_number) { return cached_parameters->Item(line_number).image_shift_y; }
+    inline float ReturnImageShiftY(int line_number) { return cached_parameters->at(line_number).image_shift_y; }
 
-    inline wxString ReturnStackFilename(int line_number) { return cached_parameters->Item(line_number).stack_filename; }
+    inline std::string ReturnStackFilename(int line_number) { return cached_parameters->at(line_number).stack_filename; }
 
-    inline wxString ReturnOriginalImageFilename(int line_number) { return cached_parameters->Item(line_number).original_image_filename; }
+    inline std::string ReturnOriginalImageFilename(int line_number) { return cached_parameters->at(line_number).original_image_filename; }
 
-    inline wxString ReturnReference3DFilename(int line_number) { return cached_parameters->Item(line_number).reference_3d_filename; }
+    inline std::string ReturnReference3DFilename(int line_number) { return cached_parameters->at(line_number).reference_3d_filename; }
 
-    inline int ReturnBest2DClass(int line_number) { return cached_parameters->Item(line_number).best_2d_class; }
+    inline int ReturnBest2DClass(int line_number) { return cached_parameters->at(line_number).best_2d_class; }
 
-    inline int ReturnBeamTiltGroup(int line_number) { return cached_parameters->Item(line_number).beam_tilt_group; }
+    inline int ReturnBeamTiltGroup(int line_number) { return cached_parameters->at(line_number).beam_tilt_group; }
 
-    inline int ReturnParticleGroup(int line_number) { return cached_parameters->Item(line_number).particle_group; }
+    inline int ReturnParticleGroup(int line_number) { return cached_parameters->at(line_number).particle_group; }
 
-    inline int ReturnAssignedSubset(int line_number) { return cached_parameters->Item(line_number).assigned_subset; }
+    inline int ReturnAssignedSubset(int line_number) { return cached_parameters->at(line_number).assigned_subset; }
 
-    inline int ReturnPreExposure(int line_number) { return cached_parameters->Item(line_number).pre_exposure; }
+    inline int ReturnPreExposure(int line_number) { return cached_parameters->at(line_number).pre_exposure; }
 
-    inline int ReturnTotalExpsosure(int line_number) { return cached_parameters->Item(line_number).total_exposure; }
+    inline int ReturnTotalExpsosure(int line_number) { return cached_parameters->at(line_number).total_exposure; }
 
-    inline int ReturnOriginalXPosition(int line_number) { return cached_parameters->Item(line_number).original_x_position; }
+    inline int ReturnOriginalXPosition(int line_number) { return cached_parameters->at(line_number).original_x_position; }
 
-    inline int ReturnOriginalYPosition(int line_number) { return cached_parameters->Item(line_number).original_y_position; }
+    inline int ReturnOriginalYPosition(int line_number) { return cached_parameters->at(line_number).original_y_position; }
 };

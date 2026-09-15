@@ -45,9 +45,9 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     float       acceleration_voltage               = 300.0;
     float       pre_exposure_amount                = 0.0;
     bool        movie_is_gain_corrected            = true;
-    wxString    gain_filename                      = "";
+    std::string    gain_filename                      = "";
     bool        movie_is_dark_corrected            = true;
-    wxString    dark_filename                      = "";
+    std::string    dark_filename                      = "";
     float       output_binning_factor              = 1;
 
     bool  set_expert_options;
@@ -200,9 +200,9 @@ void UnBlurApp::DoInteractiveUserInput( ) {
                                       exposure_per_frame,
                                       pre_exposure_amount,
                                       movie_is_gain_corrected,
-                                      gain_filename.ToStdString( ).c_str( ),
+                                      gain_filename.c_str( ),
                                       movie_is_dark_corrected,
-                                      dark_filename.ToStdString( ).c_str( ),
+                                      dark_filename.c_str( ),
                                       output_binning_factor,
                                       correct_mag_distortion,
                                       mag_distortion_angle,
@@ -259,9 +259,9 @@ bool UnBlurApp::DoCalculation( ) {
     float       exposure_per_frame                   = my_current_job.arguments[14].ReturnFloatArgument( );
     float       pre_exposure_amount                  = my_current_job.arguments[15].ReturnFloatArgument( );
     bool        movie_is_gain_corrected              = my_current_job.arguments[16].ReturnBoolArgument( );
-    wxString    gain_filename                        = my_current_job.arguments[17].ReturnStringArgument( );
+    std::string    gain_filename                        = my_current_job.arguments[17].ReturnStringArgument( );
     bool        movie_is_dark_corrected              = my_current_job.arguments[18].ReturnBoolArgument( );
-    wxString    dark_filename                        = my_current_job.arguments[19].ReturnStringArgument( );
+    std::string    dark_filename                        = my_current_job.arguments[19].ReturnStringArgument( );
     float       output_binning_factor                = my_current_job.arguments[20].ReturnFloatArgument( );
     bool        correct_mag_distortion               = my_current_job.arguments[21].ReturnBoolArgument( );
     float       mag_distortion_angle                 = my_current_job.arguments[22].ReturnFloatArgument( );
@@ -299,16 +299,16 @@ bool UnBlurApp::DoCalculation( ) {
     // The Files
 
     if ( ! DoesFileExist(input_filename) ) {
-        SendError(wxString::Format("Error: Input movie %s not found\n", input_filename));
+        SendError(Format("Error: Input movie %s not found\n", input_filename));
         exit(-1);
     }
     ImageFile input_file;
     bool      input_file_is_valid = input_file.OpenFile(input_filename, false, false, false, eer_super_res_factor, eer_frames_per_image);
     if ( ! input_file_is_valid ) {
-        SendInfo(wxString::Format("Input movie %s seems to be corrupt. Unblur results may not be meaningful.\n", input_filename));
+        SendInfo(Format("Input movie %s seems to be corrupt. Unblur results may not be meaningful.\n", input_filename));
     }
     else {
-        wxPrintf("Input file looks OK, proceeding\n");
+        Printf("Input file looks OK, proceeding\n");
     }
     //MRCFile output_file(output_filename, true); changed to quick and dirty write as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
 
@@ -316,11 +316,11 @@ bool UnBlurApp::DoCalculation( ) {
     ImageFile dark_file;
 
     if ( ! movie_is_gain_corrected ) {
-        gain_file.OpenFile(gain_filename.ToStdString( ), false);
+        gain_file.OpenFile(gain_filename, false);
     }
 
     if ( ! movie_is_dark_corrected ) {
-        dark_file.OpenFile(dark_filename.ToStdString( ), false);
+        dark_file.OpenFile(dark_filename, false);
     }
 
     long number_of_input_images = input_file.ReturnNumberOfSlices( );
@@ -329,12 +329,12 @@ bool UnBlurApp::DoCalculation( ) {
         last_frame = number_of_input_images;
 
     if ( first_frame > number_of_input_images ) {
-        SendError(wxString::Format("(%s) First frame is greater than total number of frames, using frame 1 instead.", input_filename));
+        SendError(Format("(%s) First frame is greater than total number of frames, using frame 1 instead.", input_filename));
         first_frame = 1;
     }
 
     if ( last_frame > number_of_input_images ) {
-        SendError(wxString::Format("(%s) Specified last frame is greater than total number of frames.. using last frame instead.", input_filename));
+        SendError(Format("(%s) Specified last frame is greater than total number of frames.. using last frame instead.", input_filename));
         last_frame = number_of_input_images;
     }
 
@@ -404,8 +404,8 @@ bool UnBlurApp::DoCalculation( ) {
     /*
 	if (number_of_input_images <= 2)
 	{
-		SendError(wxString::Format("Error: Movie (%s) contains less than 3 frames.. Terminating.", input_filename));
-		wxSleep(10);
+		SendError(Format("Error: Movie (%s) contains less than 3 frames.. Terminating.", input_filename));
+		SleepForSeconds(10);
 		exit(-1);
 	}
 	*/
@@ -445,11 +445,11 @@ bool UnBlurApp::DoCalculation( ) {
             if ( ! movie_is_dark_corrected ) {
                 profile_timing.start("dark correct");
                 if ( ! image_stack[image_counter - 1].HasSameDimensionsAs(&dark_image) ) {
-                    SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the dark image (%s)", image_counter, input_filename, dark_filename));
-                    wxSleep(10);
+                    SendError(Format("Error: location %li of input file (%s) does not have same dimensions as the dark image (%s)", image_counter, input_filename, dark_filename));
+                    SleepForSeconds(10);
                     exit(-1);
                 }
-                //if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
+                //if (image_counter == 0) SendInfo(Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename));
                 image_stack[image_counter - 1].SubtractImage(&dark_image);
                 profile_timing.lap("dark correct");
             }
@@ -458,11 +458,11 @@ bool UnBlurApp::DoCalculation( ) {
             if ( ! movie_is_gain_corrected ) {
                 profile_timing.start("gain correct");
                 if ( ! image_stack[image_counter - 1].HasSameDimensionsAs(&gain_image) ) {
-                    SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the gain image (%s)", image_counter, input_filename, gain_filename));
-                    wxSleep(10);
+                    SendError(Format("Error: location %li of input file (%s) does not have same dimensions as the gain image (%s)", image_counter, input_filename, gain_filename));
+                    SleepForSeconds(10);
                     exit(-1);
                 }
-                //if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
+                //if (image_counter == 0) SendInfo(Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename));
                 image_stack[image_counter - 1].MultiplyPixelWise(gain_image);
                 profile_timing.lap("gain correct");
             }
@@ -512,7 +512,7 @@ bool UnBlurApp::DoCalculation( ) {
     if ( pre_binning_factor < 1 )
         pre_binning_factor = 1;
 
-    //	wxPrintf("Prebinning factor = %i\n", pre_binning_factor);
+    //	Printf("Prebinning factor = %i\n", pre_binning_factor);
 
     // if we are going to be binning, we need to allocate the unbinned array..
 
@@ -556,7 +556,7 @@ bool UnBlurApp::DoCalculation( ) {
     // do the initial refinement (only 1 round - with the min shift)
     unblur_timing.start("initial refine");
     profile_timing.start("initial refine");
-    //SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
+    //SendInfo(Format("Doing first alignment on %s\n",input_filename));
     unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
     unblur_timing.lap("initial refine");
     profile_timing.lap("initial refine");
@@ -564,7 +564,7 @@ bool UnBlurApp::DoCalculation( ) {
     // now do the actual refinement..
     unblur_timing.start("main refine");
     profile_timing.start("main refine");
-    //SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
+    //SendInfo(Format("Doing main alignment on %s\n",input_filename));
     unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
     unblur_timing.lap("main refine");
     profile_timing.lap("main refine");
@@ -600,7 +600,7 @@ bool UnBlurApp::DoCalculation( ) {
         unitless_bfactor = bfactor_in_angstoms / pow(output_pixel_size, 2);
 
         // do the refinement..
-        //SendInfo(wxString::Format("Doing final unbinned alignment on %s\n",input_filename));
+        //SendInfo(Format("Doing final unbinned alignment on %s\n",input_filename));
         profile_timing.start("final refine");
         unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
         profile_timing.lap("final refine");
@@ -656,7 +656,7 @@ bool UnBlurApp::DoCalculation( ) {
                 for ( pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++ ) {
                     image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
                     thread_dose_filter_sum_of_squares[pixel_counter] += powf(dose_filter[pixel_counter], 2);
-                    //if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
+                    //if (image_counter == 65) Printf("%f\n", dose_filter[pixel_counter]);
                 }
                 shared_ptr->lap("apply dose filter");
             }
@@ -830,7 +830,7 @@ bool UnBlurApp::DoCalculation( ) {
             temp_float[1] = y_shifts[image_counter] * output_pixel_size;
             shifts_file.WriteLine(temp_float);
 #ifdef PRINT_VERBOSE
-            wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+            Printf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
 #endif
         }
     }
@@ -929,7 +929,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
     // perform the main alignment loop until we reach a max shift less than wanted, or max iterations
 
     for ( iteration_counter = 1; iteration_counter <= max_iterations; iteration_counter++ ) {
-        //	wxPrintf("Starting iteration number %li\n\n", iteration_counter);
+        //	Printf("Starting iteration number %li\n\n", iteration_counter);
         max_shift = -FLT_MAX;
 
         // make the current running average if necessary
@@ -1005,7 +1005,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
             y_shifts_curve.AddPoint(image_counter, y_shifts[image_counter] + current_y_shifts[image_counter]);
 
 #ifdef PRINT_VERBOSE
-            wxPrintf("Before = %li : %f, %f\n", image_counter, x_shifts[image_counter] + current_x_shifts[image_counter], y_shifts[image_counter] + current_y_shifts[image_counter]);
+            Printf("Before = %li : %f, %f\n", image_counter, x_shifts[image_counter] + current_x_shifts[image_counter], y_shifts[image_counter] + current_y_shifts[image_counter]);
 #endif
         }
 
@@ -1022,7 +1022,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
                     current_y_shifts[image_counter] = y_shifts_curve.polynomial_fit[image_counter] - y_shifts[image_counter];
 
 #ifdef PRINT_VERBOSE
-                    wxPrintf("After poly = %li : %f, %f\n", image_counter, x_shifts_curve.polynomial_fit[image_counter], y_shifts_curve.polynomial_fit[image_counter]);
+                    Printf("After poly = %li : %f, %f\n", image_counter, x_shifts_curve.polynomial_fit[image_counter], y_shifts_curve.polynomial_fit[image_counter]);
 #endif
                 }
             }
@@ -1040,7 +1040,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
                     current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
 
 #ifdef PRINT_VERBOSE
-                    wxPrintf("After SG = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+                    Printf("After SG = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
 #endif
                 }
             }
@@ -1076,7 +1076,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
 
         if ( iteration_counter >= max_iterations || max_shift <= max_shift_convergence_threshold ) {
             profile_timing_refinement_method.start("cleanup");
-            wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+            Printf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
             delete[] current_x_shifts;
             delete[] current_y_shifts;
 
@@ -1088,7 +1088,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
             return;
         }
         else {
-            wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+            Printf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
         }
 
         // going to be doing another round so we need to make the new sum..

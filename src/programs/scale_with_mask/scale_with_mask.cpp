@@ -94,7 +94,7 @@ bool ScaleWithMask::DoCalculation( ) {
 
     // setup curves
 
-    //wxPrintf("number of points = %i\n", number_of_points);
+    //Printf("number of points = %i\n", number_of_points);
 
     original_amp.SetupXAxis(0, 0.5 * sqrtf(3.0), number_of_points);
     ref_amp.SetupXAxis(0, 0.5 * sqrtf(3.0), number_of_points);
@@ -127,7 +127,7 @@ bool ScaleWithMask::DoCalculation( ) {
     else
         my_output_file.SetPixelSize(my_input_volume_file.my_header.ReturnPixelSize( ));
 
-    wxPrintf("\n\nScale with mask finished cleanly!\n\n");
+    Printf("\n\nScale with mask finished cleanly!\n\n");
 
     return true;
 }

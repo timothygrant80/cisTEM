@@ -55,7 +55,7 @@ bool Resample::DoCalculation( ) {
 
     if ( is_a_volume == true ) {
 
-        wxPrintf("\nResampling Volume...\n\n");
+        Printf("\nResampling Volume...\n\n");
         my_image.ReadSlices(&my_input_file, 1, my_input_file.ReturnNumberOfSlices( ));
         tmp_image = my_image;
 
@@ -64,7 +64,7 @@ bool Resample::DoCalculation( ) {
         my_image.WriteSlices(&my_output_file, 1, my_input_file.ReturnNumberOfSlices( ));
     }
     else {
-        wxPrintf("\nResampling Images...\n\n");
+        Printf("\nResampling Images...\n\n");
         ProgressBar* my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices( ));
 
         my_image.Allocate(my_input_file.ReturnXSize( ), my_input_file.ReturnYSize( ), 1);
@@ -79,11 +79,11 @@ bool Resample::DoCalculation( ) {
         }
 
         delete my_progress;
-        wxPrintf("\n\n");
+        Printf("\n\n");
     }
 
-    wxPrintf("Wanted scaling factor (output pixel size / input pixel size) %f\n", wanted_factor);
-    wxPrintf("Actual scaling factor %f\n", actual_factor);
+    Printf("Wanted scaling factor (output pixel size / input pixel size) %f\n", wanted_factor);
+    Printf("Actual scaling factor %f\n", actual_factor);
 
     float std = my_distribution.GetSampleVariance( );
     if ( std > 0.0 ) {

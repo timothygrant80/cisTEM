@@ -117,10 +117,10 @@ bool MagDistortionCorrectApp::DoCalculation( ) {
         // Gain correction
         if ( movie_is_gain_corrected == false ) {
             if ( ! input_image.HasSameDimensionsAs(&gain_image) ) {
-                SendError(wxString::Format("Error: location %i of input file does not have same dimensions as the gain image", image_counter + 1));
+                SendError(Format("Error: location %i of input file does not have same dimensions as the gain image", image_counter + 1));
                 ExitMainLoop( );
             }
-            //if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
+            //if (image_counter == 0) SendInfo(Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename));
             input_image.MultiplyPixelWise(gain_image);
         }
 

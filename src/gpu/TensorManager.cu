@@ -52,7 +52,7 @@
 
 //     for ( int i = 0; i < cistem::gpu::max_tensor_manager_tensors; i++ ) {
 //         if ( is_tensor_active[i] && ! is_property_set[i] ) {
-//             wxPrintf("\nTensor %c is active but not all properties are set.\n", cistem::gpu::tensor_id::tensor_names[i]);
+//             Printf("\nTensor %c is active but not all properties are set.\n", cistem::gpu::tensor_id::tensor_names[i]);
 //             return false;
 //             break;
 //         }
@@ -193,10 +193,10 @@
 //                                                               cutensor_op, my_types._compute_type, &workspace_size));
 //             }
 //             else {
-//                 wxPrintf("Active tensors expected to be A and B, or A and B and C.\n");
+//                 Printf("Active tensors expected to be A and B, or A and B and C.\n");
 //                 PrintActiveTensorNames( );
-//                 wxPrintf("Error: TensorManager::GetWorkSpaceSize: Unsupported operation.\n\n");
-//                 wxSleep(2);
+//                 Printf("Error: TensorManager::GetWorkSpaceSize: Unsupported operation.\n\n");
+//                 SleepForSeconds(2);
 //                 DEBUG_ABORT;
 //             }
 //             break;
@@ -214,8 +214,8 @@
 //             break;
 //         }
 //         default: {
-//             wxPrintf("Unknown operation type in TensorManager::GetWorkSpaceSize\n");
-//             wxSleep(2);
+//             Printf("Unknown operation type in TensorManager::GetWorkSpaceSize\n");
+//             SleepForSeconds(2);
 //             DEBUG_ABORT;
 //             break;
 //         }

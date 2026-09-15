@@ -16,12 +16,12 @@ class RunProfileManager {
     RunProfile* ReturnLastProfilePointer( );
     RunProfile* ReturnProfilePointer(int wanted_profile);
 
-    wxString ReturnProfileName(long wanted_profile);
+    std::string ReturnProfileName(long wanted_profile);
     long     ReturnProfileID(long wanted_profile);
     long     ReturnTotalJobs(long wanted_profile);
 
-    void WriteRunProfilesToDisk(wxString filename, wxArrayInt profiles_to_write);
-    bool ImportRunProfilesFromDisk(wxString filename);
+    void WriteRunProfilesToDisk(std::string filename, std::vector<int> profiles_to_write);
+    bool ImportRunProfilesFromDisk(std::string filename);
 
     void CheckNumberAndGrow( );
 

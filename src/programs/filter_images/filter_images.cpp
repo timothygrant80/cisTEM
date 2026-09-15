@@ -52,7 +52,7 @@ bool FilterImages::DoCalculation( ) {
     Image my_image;
 
     if ( filter_type == HIGHPASS ) {
-        wxPrintf("\nApplying Highpass filter...\n\n");
+        Printf("\nApplying Highpass filter...\n\n");
 
         my_image.ReadSlice(&my_input_file, 1);
         my_image.ForwardFFT( );
@@ -61,7 +61,7 @@ bool FilterImages::DoCalculation( ) {
         my_image.WriteSlice(&my_output_file, 1);
     }
     else if ( filter_type == LOWPASS ) {
-        wxPrintf("\nApplying Lowpass filter...\n\n");
+        Printf("\nApplying Lowpass filter...\n\n");
 
         my_image.ReadSlice(&my_input_file, 1);
         my_image.ForwardFFT( );
@@ -70,7 +70,7 @@ bool FilterImages::DoCalculation( ) {
         my_image.WriteSlice(&my_output_file, 1);
     }
     else if ( filter_type == BANDPASS ) {
-        wxPrintf("\nApplying Bandpass filter...\n\n");
+        Printf("\nApplying Bandpass filter...\n\n");
 
         my_image.ReadSlice(&my_input_file, 1);
         my_image.ForwardFFT( );
@@ -79,11 +79,11 @@ bool FilterImages::DoCalculation( ) {
         my_image.BackwardFFT( );
         my_image.WriteSlice(&my_output_file, 1);
 
-        wxPrintf("\n\n");
+        Printf("\n\n");
     }
 
     else {
-        wxPrintf("\nNot a valid filter number, try again\n\n");
+        Printf("\nNot a valid filter number, try again\n\n");
     }
     my_output_file.SetPixelSize(pixel_size);
     my_output_file.WriteHeader( );

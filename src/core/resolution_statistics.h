@@ -36,13 +36,13 @@ class ResolutionStatistics {
     void PrintStatistics( );
     void WriteStatisticsToFile(NumericTextFile& output_statistics_file, float pssnr_division_factor = 1.0f);
     void WriteStatisticsToFloatArray(float* float_array, int wanted_class);
-    void ReadStatisticsFromFile(wxString input_file);
+    void ReadStatisticsFromFile(std::string input_file);
     void GenerateDefaultStatistics(float molecular_mass_in_kDa);
 
     int   ReturnResolutionShellNumber(float wanted_resolution);
     float ReturnResolutionNShellsBefore(float wanted_resolution, int number_of_shells);
     float ReturnResolutionNShellsAfter(float wanted_resolution, int number_of_shells);
-    float ReturnEstimatedResolution(bool use_part_fsc = true);
+    float ReturnEstimatedResolution(bool use_part_fsc = true) const;
     float Return0p8Resolution(bool use_part_fsc = true);
     float Return0p5Resolution(bool use_part_fsc = true);
 

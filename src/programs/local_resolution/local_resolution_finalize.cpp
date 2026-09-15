@@ -1,5 +1,7 @@
 #include "../../core/core_headers.h"
 
+#include <regex>
+
 class
         LocalResolutionFinalize : public MyApp {
 
@@ -20,42 +22,42 @@ void LocalResolutionFinalize::DoInteractiveUserInput( ) {
 
     ImageFile input_image_file;
 
-    wxString input_volume_fn = my_input->GetFilenameFromUser("First input volume", "The first input 3D reconstruction used for FSC calculation. If more than one volumes are needed, make sure there is the suffix looks like _1.mrc", "my_reconstruction_1.mrc", true);
-    input_image_file.OpenFile(input_volume_fn.ToStdString( ), false, false);
+    std::string input_volume_fn = my_input->GetFilenameFromUser("First input volume", "The first input 3D reconstruction used for FSC calculation. If more than one volumes are needed, make sure there is the suffix looks like _1.mrc", "my_reconstruction_1.mrc", true);
+    input_image_file.OpenFile(input_volume_fn, false, false);
     int      num_slices_per_volume = my_input->GetIntFromUser("Number of local res slices per volume", "Number of slices of the local resolution map present in each volume", "1", 1, input_image_file.ReturnNumberOfSlices( ));
     int      sampling_step         = my_input->GetIntFromUser("Sampling step", "How frequently the local resolution was estimated", "2", 1, 9999);
-    wxString output_volume_fn      = my_input->GetFilenameFromUser("Output volume", "Local resolution map volume", "local_resolution.mrc", false);
+    std::string output_volume_fn      = my_input->GetFilenameFromUser("Output volume", "Local resolution map volume", "local_resolution.mrc", false);
 
     input_image_file.CloseFile( );
 
     delete my_input;
 
     my_current_job.Reset(4);
-    my_current_job.ManualSetArguments("tiit", input_volume_fn.ToUTF8( ).data( ), num_slices_per_volume, sampling_step, output_volume_fn.ToUTF8( ).data( ));
+    my_current_job.ManualSetArguments("tiit", input_volume_fn.c_str(), num_slices_per_volume, sampling_step, output_volume_fn.c_str());
 }
 
 bool LocalResolutionFinalize::DoCalculation( ) {
-    wxString input_volume_fn                     = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_volume_fn                     = my_current_job.arguments[0].ReturnStringArgument( );
     int      num_slices_to_read_from_each_volume = my_current_job.arguments[1].ReturnIntegerArgument( );
     int      sampling_step                       = my_current_job.arguments[2].ReturnIntegerArgument( );
-    wxString output_volume_fn                    = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string output_volume_fn                    = my_current_job.arguments[3].ReturnStringArgument( );
 
     // Local variables
-    wxFileName input_volume_wxfn = wxFileName(input_volume_fn);
-    wxFileName current_input_wxfn;
-    wxRegEx    reSuffix("_[[:digit:]]+$", wxRE_EXTENDED);
+    std::filesystem::path input_volume_wxfn = std::filesystem::path(input_volume_fn);
+    std::filesystem::path current_input_wxfn;
+    std::regex reSuffix("_[[:digit:]]+$", std::regex::extended);
     Image      combined_resolution_map;
     Image      final_resolution_map;
     Image      temp_image;
     ImageFile  current_input_imagefile;
-    wxString   wx_str;
+    std::string   wx_str;
     int        first_slice;
     int        last_slice;
     int        index_of_current_file;
     int        num_regex_matches;
 
     // Open the first file
-    current_input_imagefile.OpenFile(input_volume_fn.ToStdString( ), false, false);
+    current_input_imagefile.OpenFile(input_volume_fn, false, false);
     int number_of_slices = current_input_imagefile.ReturnNumberOfSlices( );
 
     // Set up the final map
@@ -69,12 +71,13 @@ bool LocalResolutionFinalize::DoCalculation( ) {
 
         // Work out filename
         current_input_wxfn = input_volume_wxfn;
-        current_input_wxfn.ClearExt( );
-        wx_str            = current_input_wxfn.GetFullName( );
-        num_regex_matches = reSuffix.Replace(&wx_str, wxString::Format("_%i.mrc", index_of_current_file));
+        current_input_wxfn.replace_extension( );
+        wx_str            = current_input_wxfn.filename().string();
+        num_regex_matches = std::regex_search(wx_str, reSuffix) ? 1 : 0;
+        wx_str            = std::regex_replace(wx_str, reSuffix, Format("_%i.mrc", index_of_current_file));
 
         // Open the file & read in the relevant sections
-        current_input_imagefile.OpenFile(wx_str.ToStdString( ), false);
+        current_input_imagefile.OpenFile(wx_str, false);
         temp_image.ReadSlices(&current_input_imagefile, long(first_slice), long(last_slice));
 
         MyDebugAssertTrue(temp_image.logical_x_dimension == combined_resolution_map.logical_x_dimension && temp_image.logical_y_dimension == combined_resolution_map.logical_y_dimension, "Oops... dimension mismatch");
@@ -168,7 +171,7 @@ bool LocalResolutionFinalize::DoCalculation( ) {
 						 */
                         is_an_outlier_hotspot = temp_combined_map.real_values[address_in] > neighborhood_second_worst_res * 3.0;
                         if ( is_an_outlier_hotspot ) {
-                            wxPrintf("Found an outlier hotspot: %i %i %i used to be %f, will be replaced by %f\n", i_in, j_in, k_in, temp_combined_map.real_values[address_in], neighborhood_second_worst_res);
+                            Printf("Found an outlier hotspot: %i %i %i used to be %f, will be replaced by %f\n", i_in, j_in, k_in, temp_combined_map.real_values[address_in], neighborhood_second_worst_res);
                             temp_combined_map.real_values[address_in] = neighborhood_second_worst_res;
                         }
                     }
@@ -256,17 +259,17 @@ bool LocalResolutionFinalize::DoCalculation( ) {
     }
 
     // Write out the volume
-    final_resolution_map.WriteSlicesAndFillHeader(output_volume_fn.ToStdString( ), current_input_imagefile.ReturnPixelSize( ));
+    final_resolution_map.WriteSlicesAndFillHeader(output_volume_fn, current_input_imagefile.ReturnPixelSize( ));
 
     /*
 	 * Compute a histogram and print it out
 	 */
     {
-        wxPrintf("\nHistogram of local resolution values\n");
+        Printf("\nHistogram of local resolution values\n");
         Curve hist;
         final_resolution_map.ComputeHistogramOfRealValuesCurve(&hist);
         hist.PrintToStandardOut( );
-        wxPrintf("\n\n");
+        Printf("\n\n");
     }
 
     return true;

@@ -39,7 +39,7 @@
 #include "../common/common.h"
 #include "disk_io_image.h"
 
-void DiskIOImageRunner(wxString hiv_images_80x80x10_filename, wxString temp_directory) {
+void DiskIOImageRunner(std::string hiv_images_80x80x10_filename, std::string temp_directory) {
 
     SamplesPrintTestStartMessage("Starting disk i/o tests: ", false);
 
@@ -50,17 +50,17 @@ void DiskIOImageRunner(wxString hiv_images_80x80x10_filename, wxString temp_dire
     return;
 }
 
-bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory) {
+bool DiskIOImageTests(std::string hiv_images_80x80x10_filename, std::string temp_directory) {
 
     bool passed = true, all_passed = true;
 
     SamplesPrintTestStartMessage("Starting disk I/O image tests", false);
-    //MRCFile input_file(std::string(hiv_image_80x80x1_filename.mb_str()), false);
-    MRCFile input_file(hiv_images_80x80x10_filename.ToStdString( ), false);
+    //MRCFile input_file(std::string(hiv_image_80x80x1_filename.c_str()), false);
+    MRCFile input_file(hiv_images_80x80x10_filename, false);
 
-    wxString temp_filename = temp_directory + "/tmp1.mrc";
+    std::string temp_filename = temp_directory + "/tmp1.mrc";
 
-    MRCFile output_file(temp_filename.ToStdString( ), false);
+    MRCFile output_file(temp_filename, false);
 
     Image test_image;
     test_image.ReadSlice(&input_file, 1);
@@ -75,7 +75,7 @@ bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_direc
 
     try {
 
-        quick_image.QuickAndDirtyReadSlice(input_file.filename.ToStdString( ), 1);
+        quick_image.QuickAndDirtyReadSlice(input_file.filename, 1);
     } catch ( ... ) {
 
         passed = false;
@@ -126,13 +126,13 @@ bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_direc
     //   SamplesTestResult("\ttest_image.logical_y_dimension == 80",  test_image.logical_y_dimension == 80);
     //   SamplesTestResult("\ttest_image.logical_z_dimension == 1);",  test_image.logical_z_dimension == 1);
     //   SamplesTestResult("\tDoublesAreAlmostTheSame(test_image.real_values[0], -0.340068) != false",  DoublesAreAlmostTheSame(test_image.real_values[0], -0.340068) != false);
-    //    //wxPrintf(test_image.real_values[0], " DoublesAreAlmostTheSame(test_image.real_values[0], -0.340068)\n");
-    //    wxString ffs = std::to_string(test_image.real_values[0]);
-    //   wxPrintf(ffs + "\n");
+    //    //Printf(test_image.real_values[0], " DoublesAreAlmostTheSame(test_image.real_values[0], -0.340068)\n");
+    //    std::string ffs = std::to_string(test_image.real_values[0]);
+    //   Printf(ffs + "\n");
     //   SamplesTestResult("\tDoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069) != false",  DoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069) != false);
     //   ffs = std::to_string(test_image.real_values[test_image.real_memory_allocated - 3]);
-    //     wxPrintf(ffs + "\n");
-    //   //wxPrintf(test_image.real_values[test_image.real_memory_allocated - 3], " DoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069)\n");
+    //     Printf(ffs + "\n");
+    //   //Printf(test_image.real_values[test_image.real_memory_allocated - 3], " DoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069)\n");
     // }
 
     // TODO Additionally add check on pixel size (should == 1) but use the
@@ -150,7 +150,7 @@ bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_direc
     // We'll skip the quick and dirty write slices, and now write a temporary file
     // with our modified pixel size.
     // TODO use mrc_file method write slice to disk, to write tmp1.mrc (in the
-    // temp directory above, you'll need a new wxString too
+    // temp directory above, you'll need a new std::string too
 
     // Alternatively, you can pass a pointer to your mrc_file object to the image
     // object method WriteSlices
@@ -180,7 +180,7 @@ bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_direc
 
     try {
         output_file.CloseFile( );
-        passed = remove(output_file.filename.mb_str( )) == 0;
+        passed = remove(output_file.filename.c_str()) == 0;
     } catch ( ... ) {
         passed = false;
     }
@@ -190,6 +190,6 @@ bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_direc
     // (disk_io_image) has pass/failed.
     SamplesBeginTest("disk I/O images overall", passed);
     SamplesPrintResult(all_passed, __LINE__);
-    wxPrintf("\n\n");
+    Printf("\n\n");
     return all_passed;
 }

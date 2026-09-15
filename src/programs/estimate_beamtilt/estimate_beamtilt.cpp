@@ -13,7 +13,7 @@ IMPLEMENT_APP(EstimateBeamTiltApp)
 
 bool EstimateBeamTiltApp::DoCalculation( ) {
 
-    wxString input_phase_difference_image = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_phase_difference_image = my_current_job.arguments[0].ReturnStringArgument( );
     float    pixel_size                   = my_current_job.arguments[1].ReturnFloatArgument( );
     float    voltage_kV                   = my_current_job.arguments[2].ReturnFloatArgument( );
     float    spherical_aberration_mm      = my_current_job.arguments[3].ReturnFloatArgument( );
@@ -34,7 +34,7 @@ bool EstimateBeamTiltApp::DoCalculation( ) {
     float phase_multiplier = 1.0f;
 
     input_ctf.Init(voltage_kV, spherical_aberration_mm, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, pixel_size, 0.0f);
-    phase_difference_sum.QuickAndDirtyReadSlice(input_phase_difference_image.ToStdString( ), 1);
+    phase_difference_sum.QuickAndDirtyReadSlice(input_phase_difference_image, 1);
     phase_difference_sum.ForwardFFT( );
 
     temp_image.Allocate(phase_difference_sum.logical_x_dimension, phase_difference_sum.logical_y_dimension, 1);

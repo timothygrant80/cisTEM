@@ -8,7 +8,7 @@ class MRCFile : public AbstractImageFile {
   public:
     std::fstream* my_file;
     MRCHeader     my_header;
-    wxString      filename;
+    std::string      filename;
 
     bool do_nothing; // under special circumstances (like when the file is /dev/null), let's not do anything at all
 

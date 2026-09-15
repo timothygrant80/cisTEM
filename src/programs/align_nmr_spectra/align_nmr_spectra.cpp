@@ -59,29 +59,29 @@ bool AlignNMR::DoCalculation( ) {
 
     // use NMRPipe to create txt and hdr file
 
-    wxPrintf("\nStarting NMRPipe conversion to text and header files, this process requires NMRPipe commands, may take some time with large spectra\n");
+    Printf("\nStarting NMRPipe conversion to text and header files, this process requires NMRPipe commands, may take some time with large spectra\n");
 
     std::string txt1_command = "tcsh -c \"pipe2txt.tcl " + input_spectrum1_filename + " > spectra1.txt\"";
     std::string txt2_command = "tcsh -c \"pipe2txt.tcl " + input_spectrum2_filename + " > spectra2.txt\"";
 
-    wxPrintf("\nConverting Spectra 1 to .txt...\n");
+    Printf("\nConverting Spectra 1 to .txt...\n");
 
     system(txt1_command.c_str( ));
 
-    wxPrintf("\nSpectra 1 converted successfully\n");
-    wxPrintf("\nConverting Spectra 2 to .txt...\n");
+    Printf("\nSpectra 1 converted successfully\n");
+    Printf("\nConverting Spectra 2 to .txt...\n");
 
     system(txt2_command.c_str( ));
-    wxPrintf("\nSpectra 2 converted successfully\n");
+    Printf("\nSpectra 2 converted successfully\n");
 
     std::string hdr1_command = "tcsh -c \"showhdr " + input_spectrum1_filename + " > spectra1.hdr\"";
     std::string hdr2_command = "tcsh -c \"showhdr " + input_spectrum2_filename + " > spectra2.hdr\"";
 
-    wxPrintf("\nCreating header files...\n");
+    Printf("\nCreating header files...\n");
     system(hdr1_command.c_str( ));
-    wxPrintf("\nheader file 1 complete\n");
+    Printf("\nheader file 1 complete\n");
     system(hdr2_command.c_str( ));
-    wxPrintf("\nheader file 2 complete\n");
+    Printf("\nheader file 2 complete\n");
 
     // first spectrum
 
@@ -120,7 +120,7 @@ bool AlignNMR::DoCalculation( ) {
     max_x_1 = *std::max_element(x_pos_1.begin( ), x_pos_1.end( ));
     max_y_1 = *std::max_element(y_pos_1.begin( ), y_pos_1.end( ));
 
-    wxPrintf("\nSpectrum #1 has a dimension of %i, %i\n", max_x_1, max_y_1);
+    Printf("\nSpectrum #1 has a dimension of %i, %i\n", max_x_1, max_y_1);
 
     spec1.Allocate(max_x_1, max_y_1, 1);
 
@@ -168,7 +168,7 @@ bool AlignNMR::DoCalculation( ) {
     max_x_2 = *std::max_element(x_pos_2.begin( ), x_pos_2.end( ));
     max_y_2 = *std::max_element(y_pos_2.begin( ), y_pos_2.end( ));
 
-    wxPrintf("Spectrum #2 has a dimension of %i, %i\n", max_x_2, max_y_2);
+    Printf("Spectrum #2 has a dimension of %i, %i\n", max_x_2, max_y_2);
 
     spec2.Allocate(max_x_2, max_y_2, 1);
 
@@ -253,12 +253,12 @@ bool AlignNMR::DoCalculation( ) {
     headerFile2.close( );
 
     // Output the extracted values
-    wxPrintf("SW Hz1:   X = %.4f Y = %.4f\n", spec1_sw_x, spec1_sw_y);
-    wxPrintf("OBS MHz1: X = %.4f Y = %.4f\n", spec1_obs_x, spec1_obs_y);
-    wxPrintf("ORIG Hz1: X = %.4f Y = %.4f\n", spec1_origin_x, spec1_origin_y);
-    wxPrintf("SW Hz2:   X = %.4f Y = %.4f\n", spec2_sw_x, spec2_sw_y);
-    wxPrintf("OBS MHz2: X = %.4f Y = %.4f\n", spec2_obs_x, spec2_obs_y);
-    wxPrintf("ORIG Hz2: X = %.4f Y = %.4f\n", spec2_origin_x, spec2_origin_y);
+    Printf("SW Hz1:   X = %.4f Y = %.4f\n", spec1_sw_x, spec1_sw_y);
+    Printf("OBS MHz1: X = %.4f Y = %.4f\n", spec1_obs_x, spec1_obs_y);
+    Printf("ORIG Hz1: X = %.4f Y = %.4f\n", spec1_origin_x, spec1_origin_y);
+    Printf("SW Hz2:   X = %.4f Y = %.4f\n", spec2_sw_x, spec2_sw_y);
+    Printf("OBS MHz2: X = %.4f Y = %.4f\n", spec2_obs_x, spec2_obs_y);
+    Printf("ORIG Hz2: X = %.4f Y = %.4f\n", spec2_origin_x, spec2_origin_y);
 
     // calculate sampling..
 
@@ -268,8 +268,8 @@ bool AlignNMR::DoCalculation( ) {
     float spectrum2_x_sampling = (spec2_sw_x / spec2_obs_x) / float(spec2.logical_x_dimension);
     float spectrum2_y_sampling = (spec2_sw_y / spec2_obs_y) / float(spec2.logical_y_dimension);
 
-    wxPrintf("Spectrum 1 sampling = X: %.7f PPM, Y: %.7f PPM\n", spectrum1_x_sampling, spectrum1_y_sampling);
-    wxPrintf("Spectrum 2 sampling = X: %.7f PPM, Y: %.7f PPM\n", spectrum2_x_sampling, spectrum2_y_sampling);
+    Printf("Spectrum 1 sampling = X: %.7f PPM, Y: %.7f PPM\n", spectrum1_x_sampling, spectrum1_y_sampling);
+    Printf("Spectrum 2 sampling = X: %.7f PPM, Y: %.7f PPM\n", spectrum2_x_sampling, spectrum2_y_sampling);
 
     int new_x_dimension = spec2.logical_x_dimension;
     int new_y_dimension = spec2.logical_y_dimension;
@@ -278,7 +278,7 @@ bool AlignNMR::DoCalculation( ) {
 
     if ( spectrum1_x_sampling != spectrum2_x_sampling ) {
         new_x_dimension = spec2.logical_x_dimension / (spectrum1_x_sampling / spectrum2_x_sampling);
-        wxPrintf("Resampling X spectrum 2\n");
+        Printf("Resampling X spectrum 2\n");
         if ( new_x_dimension % 2 ) {
             new_x_dimension--;
         }
@@ -290,7 +290,7 @@ bool AlignNMR::DoCalculation( ) {
 
     if ( spectrum1_y_sampling != spectrum2_y_sampling ) {
         new_y_dimension = spec2.logical_y_dimension / (spectrum1_y_sampling / spectrum2_y_sampling);
-        wxPrintf("Resampling Y spectrum 2\n");
+        Printf("Resampling Y spectrum 2\n");
         if ( new_y_dimension % 2 ) {
             new_y_dimension--;
         }
@@ -300,7 +300,7 @@ bool AlignNMR::DoCalculation( ) {
         spec2.BackwardFFT( );
     }
 
-    wxPrintf("New Spec 2 X dimension = %i, New Spec 2 Y dimension = %i\n", new_x_dimension, new_y_dimension);
+    Printf("New Spec 2 X dimension = %i, New Spec 2 Y dimension = %i\n", new_x_dimension, new_y_dimension);
 
     // find origin difference
     float spec1_x_origin_ppm = spec1_origin_x / spec1_obs_x;
@@ -319,14 +319,14 @@ bool AlignNMR::DoCalculation( ) {
     float center_x_origin_offset = (spec1_x_center - spec2_x_center);
     float center_y_origin_offset = (spec1_y_center - spec2_y_center);
 
-    wxPrintf("Spectrum 1 Origin : %.4f, %.4f PPM\n", spec1_x_origin_ppm, spec1_y_origin_ppm);
-    wxPrintf("Spectrum 2 Origin : %.4f, %.4f PPM\n", spec2_x_origin_ppm, spec2_y_origin_ppm);
-    wxPrintf("Spectrum 1 Center Origin : %.4f, %.4f PPM\n", spec1_x_center, spec1_y_center);
-    wxPrintf("Spectrum 2 Center Origin : %.4f, %.4f PPM\n", spec2_x_center, spec2_y_center);
-    wxPrintf("Center Origin Offset    : %.4f, %.4f PPM\n", center_x_origin_offset, center_y_origin_offset);
+    Printf("Spectrum 1 Origin : %.4f, %.4f PPM\n", spec1_x_origin_ppm, spec1_y_origin_ppm);
+    Printf("Spectrum 2 Origin : %.4f, %.4f PPM\n", spec2_x_origin_ppm, spec2_y_origin_ppm);
+    Printf("Spectrum 1 Center Origin : %.4f, %.4f PPM\n", spec1_x_center, spec1_y_center);
+    Printf("Spectrum 2 Center Origin : %.4f, %.4f PPM\n", spec2_x_center, spec2_y_center);
+    Printf("Center Origin Offset    : %.4f, %.4f PPM\n", center_x_origin_offset, center_y_origin_offset);
 
     if ( spec1.HasSameDimensionsAs(&spec2) == false ) {
-        wxPrintf("Sizes are different, resizing Spectrum 2 to %i, %i\n", spec1.logical_x_dimension, spec1.logical_y_dimension);
+        Printf("Sizes are different, resizing Spectrum 2 to %i, %i\n", spec1.logical_x_dimension, spec1.logical_y_dimension);
         spec2.Resize(spec1.logical_x_dimension, spec1.logical_y_dimension, spec2.logical_z_dimension);
     }
 
@@ -360,9 +360,9 @@ bool AlignNMR::DoCalculation( ) {
 
     float final_score = shift.ReturnCorrelationCoefficientUnnormalized(spec2_copy);
 
-    wxPrintf("\nShift =  %.2f, %.2f pixels (%.4f, %.4f PPM)", -my_peak.x, -my_peak.y, shift_x_ppm, shift_y_ppm, my_peak.value);
-    wxPrintf("\nStarting / Final CC Score : %.2f / %.2f", original_score, final_score);
-    wxPrintf("\nShift Corrected for Origin Offset = %.4f, %.4f PPM\n", corrected_shift_x_ppm, corrected_shift_y_ppm);
+    Printf("\nShift =  %.2f, %.2f pixels (%.4f, %.4f PPM)", -my_peak.x, -my_peak.y, shift_x_ppm, shift_y_ppm, my_peak.value);
+    Printf("\nStarting / Final CC Score : %.2f / %.2f", original_score, final_score);
+    Printf("\nShift Corrected for Origin Offset = %.4f, %.4f PPM\n", corrected_shift_x_ppm, corrected_shift_y_ppm);
 
     return true;
 }

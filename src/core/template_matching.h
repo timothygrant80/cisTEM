@@ -16,20 +16,20 @@ class TemplateMatchFoundPeakInfo {
     int   new_peak_number;
 };
 
-WX_DECLARE_OBJARRAY(TemplateMatchFoundPeakInfo, ArrayOfTemplateMatchFoundPeakInfos);
+typedef std::vector<TemplateMatchFoundPeakInfo> ArrayOfTemplateMatchFoundPeakInfos;
 
 class TemplateMatchJobResults {
   public:
     TemplateMatchJobResults( );
 
-    wxString job_name;
+    std::string job_name;
     int      job_type;
     long     input_job_id;
     long     job_id;
     long     datetime_of_run;
     long     image_asset_id;
     long     ref_volume_asset_id;
-    wxString symmetry;
+    std::string symmetry;
     float    pixel_size;
     float    voltage;
     float    spherical_aberration;
@@ -51,17 +51,17 @@ class TemplateMatchJobResults {
     float    xy_change_threshold;
     bool     exclude_above_xy_threshold;
 
-    wxString mip_filename;
-    wxString scaled_mip_filename;
-    wxString psi_filename;
-    wxString theta_filename;
-    wxString phi_filename;
-    wxString defocus_filename;
-    wxString pixel_size_filename;
-    wxString histogram_filename;
-    wxString projection_result_filename;
-    wxString avg_filename;
-    wxString std_filename;
+    std::string mip_filename;
+    std::string scaled_mip_filename;
+    std::string psi_filename;
+    std::string theta_filename;
+    std::string phi_filename;
+    std::string defocus_filename;
+    std::string pixel_size_filename;
+    std::string histogram_filename;
+    std::string projection_result_filename;
+    std::string avg_filename;
+    std::string std_filename;
 
     float refinement_threshold;
     float used_threshold;
@@ -71,4 +71,4 @@ class TemplateMatchJobResults {
     ArrayOfTemplateMatchFoundPeakInfos peak_changes;
 };
 
-WX_DECLARE_OBJARRAY(TemplateMatchJobResults, ArrayOfTemplateMatchJobResults);
+typedef std::vector<TemplateMatchJobResults> ArrayOfTemplateMatchJobResults;

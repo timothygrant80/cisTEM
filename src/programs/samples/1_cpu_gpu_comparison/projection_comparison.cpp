@@ -12,11 +12,11 @@
 #include "../common/common.h"
 #include "projection_comparison.h"
 
-void CPUvsGPUProjectionRunner(const wxString& temp_directory) {
+void CPUvsGPUProjectionRunner(const std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting CPU vs GPU projection tests:", false);
 
-    wxString cistem_ref_dir = CheckForReferenceImages( );
+    std::string cistem_ref_dir = CheckForReferenceImages( );
     // If we are in the dev container the CISTEM_REF_IMAGES variable should be defined, pointing to images we need.
     TEST(DoCPUvsGPUProjectionTest(cistem_ref_dir, temp_directory));
 
@@ -25,7 +25,7 @@ void CPUvsGPUProjectionRunner(const wxString& temp_directory) {
     return;
 }
 
-bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+bool DoCPUvsGPUProjectionTest(const std::string& cistem_ref_dir, const std::string& temp_directory) {
 
     MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
 
@@ -34,9 +34,9 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
 
     SamplesBeginTest("Extract slice CPU vs ground truth", passed);
 
-    std::string volume_filename          = cistem_ref_dir.ToStdString( ) + "/ribo_ref.mrc";
-    std::string prj_input_filename_base  = cistem_ref_dir.ToStdString( ) + "/ribo_ref_prj_";
-    std::string prj_output_filename_base = temp_directory.ToStdString( ) + "/ribo_ref_prj_";
+    std::string volume_filename          = cistem_ref_dir + "/ribo_ref.mrc";
+    std::string prj_input_filename_base  = cistem_ref_dir + "/ribo_ref_prj_";
+    std::string prj_output_filename_base = temp_directory + "/ribo_ref_prj_";
 
     bool      over_write_input = false;
     Image     cpu_volume;

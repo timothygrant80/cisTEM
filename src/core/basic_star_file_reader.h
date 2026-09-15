@@ -13,14 +13,14 @@ class StarFileParameters {
     float    defocus2;
     float    defocus_angle;
     float    phase_shift;
-    wxString micrograph_name;
-    wxString image_name;
+    std::string micrograph_name;
+    std::string image_name;
     int      random_subset;
 
     StarFileParameters( );
 };
 
-WX_DECLARE_OBJARRAY(StarFileParameters, ArrayofStarFileParameters);
+typedef std::vector<StarFileParameters> ArrayofStarFileParameters;
 
 class BasicStarFileReader {
 
@@ -43,11 +43,22 @@ class BasicStarFileReader {
     int random_subset_column;
 
   public:
-    wxString filename;
-    //  wxFileInputStream *input_file_stream;
-    //  wxTextInputStream *input_text_stream;
+    std::string filename;
 
-    wxTextFile* input_file;
+    // The whole file, read into memory a line at a time, with the current position that
+    // GetNextLine()/Eof() used to keep for us.
+    std::vector<std::string> input_file_lines;
+    bool                     input_file_is_opened;
+    long                     current_line_number;
+
+    bool AtEndOfFile( ) const { return current_line_number == long(input_file_lines.size( )); }
+
+    std::string ReturnNextLine( ) {
+        current_line_number++;
+        if ( current_line_number == long(input_file_lines.size( )) )
+            return std::string( );
+        return input_file_lines[current_line_number];
+    }
 
     ArrayofStarFileParameters cached_parameters;
 
@@ -57,12 +68,12 @@ class BasicStarFileReader {
     BasicStarFileReader( );
     ~BasicStarFileReader( );
 
-    BasicStarFileReader(wxString wanted_filename);
-    void Open(wxString wanted_filename);
+    BasicStarFileReader(std::string wanted_filename);
+    void Open(std::string wanted_filename);
     void Close( );
-    bool ReadFile(wxString wanted_filename, wxString* error_string = NULL);
+    bool ReadFile(std::string wanted_filename, std::string* error_string = NULL);
 
-    bool ExtractParametersFromLine(wxString& wanted_line, wxString* error_string = NULL);
+    bool ExtractParametersFromLine(std::string& wanted_line, std::string* error_string = NULL);
 
     inline int ReturnPositionInStack(int line_number) { return cached_parameters[line_number].position_in_stack; }
 
@@ -90,9 +101,9 @@ class BasicStarFileReader {
 
     inline float ReturnAssignedSubset(int line_number) { return cached_parameters[line_number].random_subset; }
 
-    inline wxString ReturnMicrographName(int line_number) { return cached_parameters[line_number].micrograph_name; }
+    inline std::string ReturnMicrographName(int line_number) { return cached_parameters[line_number].micrograph_name; }
 
-    inline wxString ReturnImageName(int line_number) { return cached_parameters[line_number].image_name; }
+    inline std::string ReturnImageName(int line_number) { return cached_parameters[line_number].image_name; }
 
-    inline int returnNumLines( ) { return cached_parameters.GetCount( ); }
+    inline int returnNumLines( ) { return cached_parameters.size(); }
 };

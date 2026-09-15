@@ -31,30 +31,30 @@ SymmetryMatrix& SymmetryMatrix::operator=(const SymmetryMatrix* other_matrix) {
     return *this;
 }
 
-SymmetryMatrix::SymmetryMatrix(wxString wanted_symmetry_symbol) {
+SymmetryMatrix::SymmetryMatrix(std::string wanted_symmetry_symbol) {
     rot_mat            = NULL;
     number_of_matrices = 0;
     Init(wanted_symmetry_symbol);
 }
 
-void SymmetryMatrix::Init(wxString wanted_symmetry_symbol) {
-    wxChar symmetry_type;
+void SymmetryMatrix::Init(std::string wanted_symmetry_symbol) {
+    char symmetry_type;
     long   symmetry_number;
 
-    wanted_symmetry_symbol = wanted_symmetry_symbol.Trim( );
-    wanted_symmetry_symbol = wanted_symmetry_symbol.Trim(false);
+    TrimRight(wanted_symmetry_symbol);
+    TrimLeft(wanted_symmetry_symbol);
 
-    if ( wanted_symmetry_symbol.Length( ) < 1 ) {
+    if ( wanted_symmetry_symbol.length() < 1 ) {
         MyPrintWithDetails("Error: Must specify symmetry symbol\n");
         DEBUG_ABORT;
     }
-    symmetry_type = wanted_symmetry_symbol.Capitalize( )[0];
-    if ( wanted_symmetry_symbol.Length( ) == 1 ) {
+    symmetry_type = char(toupper(wanted_symmetry_symbol[0]));
+    if ( wanted_symmetry_symbol.length() == 1 ) {
         symmetry_number = 0;
     }
     else {
-        if ( ! wanted_symmetry_symbol.Mid(1).ToLong(&symmetry_number) ) {
-            MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", wanted_symmetry_symbol.Mid(1));
+        if ( ! StringToLong(wanted_symmetry_symbol.substr(1), symmetry_number) ) {
+            MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", wanted_symmetry_symbol.substr(1));
             DEBUG_ABORT;
         }
     }
@@ -76,7 +76,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol) {
         }
         rot_mat = new RotationMatrix[number_of_matrices];
 
-        //		wxPrintf("Initializing Cn symmetry matrices with n = %i\n",number_of_matrices);
+        //		Printf("Initializing Cn symmetry matrices with n = %i\n",number_of_matrices);
 
         delta_angle = 2.0 * PI / number_of_matrices;
         for ( i = 0; i < number_of_matrices; i++ ) {
@@ -102,7 +102,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol) {
         }
         rot_mat = new RotationMatrix[2 * number_of_matrices];
 
-        //		wxPrintf("Initializing Dn symmetry matrices with n = %i\n",number_of_matrices);
+        //		Printf("Initializing Dn symmetry matrices with n = %i\n",number_of_matrices);
 
         delta_angle = 2.0 * PI / number_of_matrices;
         for ( i = 0; i < number_of_matrices; i++ ) {
@@ -117,7 +117,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol) {
     }
 
     if ( symmetry_type == 'T' ) {
-        //		wxPrintf("Initializing T symmetry matrices...\n");
+        //		Printf("Initializing T symmetry matrices...\n");
 
         number_of_matrices = 12;
         if ( rot_mat != NULL ) {
@@ -175,7 +175,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol) {
     }
 
     if ( symmetry_type == 'O' ) {
-        //		wxPrintf("Initializing O symmetry matrices...\n");
+        //		Printf("Initializing O symmetry matrices...\n");
 
         number_of_matrices = 24;
         if ( rot_mat != NULL ) {
@@ -237,7 +237,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol) {
     }
 
     if ( symmetry_type == 'I' ) {
-        //		wxPrintf("Initializing I symmetry matrices...\n");
+        //		Printf("Initializing I symmetry matrices...\n");
 
         number_of_matrices = 60;
         if ( rot_mat != NULL ) {
@@ -514,7 +514,7 @@ void SymmetryMatrix::PrintMatrices( ) {
     MyDebugAssertTrue(rot_mat != NULL, "Symmetry matrices have not been calculated");
 
     for ( int i = 0; i < number_of_matrices; i++ ) {
-        wxPrintf("\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n", rot_mat[i].m[0][0], rot_mat[i].m[1][0], rot_mat[i].m[2][0],
+        Printf("\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n", rot_mat[i].m[0][0], rot_mat[i].m[1][0], rot_mat[i].m[2][0],
                  rot_mat[i].m[0][1], rot_mat[i].m[1][1], rot_mat[i].m[2][1], rot_mat[i].m[0][2], rot_mat[i].m[1][2], rot_mat[i].m[2][2]);
     }
 }

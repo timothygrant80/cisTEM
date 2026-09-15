@@ -43,24 +43,24 @@ void MRCHeader::PrintInfo( ) {
     }
 
     // Start printing
-    wxPrintf("Number of columns, rows, sections: %i, %i, %i\n", nx[0], ny[0], nz[0]);
-    wxPrintf("MRC data mode: %i", mode[0]);
+    Printf("Number of columns, rows, sections: %i, %i, %i\n", nx[0], ny[0], nz[0]);
+    Printf("MRC data mode: %i", mode[0]);
     if ( mode[0] == 0 && PixelDataAreSigned( ) ) {
-        wxPrintf(" (bytes - signed in file)\n");
+        Printf(" (bytes - signed in file)\n");
     }
     else {
-        wxPrintf("\n");
+        Printf("\n");
     }
-    wxPrintf("Bit depth: %i\n", int(bytes_per_pixel * 8));
-    wxPrintf("Pixel size: %0.3f %0.3f %0.3f\n", pixel_size[0], pixel_size[1], pixel_size[2]);
-    wxPrintf("Column index: %i; Row index: %i; Section index: %i\n", map_c[0], map_r[0], map_s[0]);
-    wxPrintf("Bytes in symmetry header: %i\n", symmetry_data_bytes[0]);
+    Printf("Bit depth: %i\n", int(bytes_per_pixel * 8));
+    Printf("Pixel size: %0.3f %0.3f %0.3f\n", pixel_size[0], pixel_size[1], pixel_size[2]);
+    Printf("Column index: %i; Row index: %i; Section index: %i\n", map_c[0], map_r[0], map_s[0]);
+    Printf("Bytes in symmetry header: %i\n", symmetry_data_bytes[0]);
     for ( int label_counter = 0; label_counter < number_of_labels_used[0]; label_counter++ ) {
         for ( char_counter = 0; char_counter < 80; char_counter++ ) {
             current_label[char_counter] = labels[label_counter * 80 + char_counter];
         }
         current_label[80] = 0;
-        wxPrintf("Label %i : %s\n", label_counter + 1, current_label);
+        Printf("Label %i : %s\n", label_counter + 1, current_label);
     }
 
     delete[] current_label;

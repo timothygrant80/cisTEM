@@ -1,8 +1,5 @@
 #include "core_headers.h"
 
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayOfTemplateMatchFoundPeakInfos);
-WX_DEFINE_OBJARRAY(ArrayOfTemplateMatchJobResults);
 
 TemplateMatchJobResults::TemplateMatchJobResults( ) {
     job_name                   = "";

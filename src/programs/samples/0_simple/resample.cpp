@@ -14,11 +14,11 @@
 
 constexpr int logical_input_size = 384;
 
-void ResampleRunner(const wxString& temp_directory) {
+void ResampleRunner(const std::string& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting downsampling tests:", false);
 
-    wxString cistem_ref_dir = CheckForReferenceImages( );
+    std::string cistem_ref_dir = CheckForReferenceImages( );
 
     constexpr bool test_is_to_be_run = true;
     if constexpr ( test_is_to_be_run ) {
@@ -62,9 +62,9 @@ struct ResampleRunnerObjects {
 
     float real_space_binning_factor{1.f};
 
-    ResampleRunnerObjects(const wxString& cistem_ref_dir, const wxString& temp_directory, const int wanted_size = logical_input_size) {
+    ResampleRunnerObjects(const std::string& cistem_ref_dir, const std::string& temp_directory, const int wanted_size = logical_input_size) {
 
-        volume_filename = cistem_ref_dir.ToStdString( ) + "/ribo_ref.mrc";
+        volume_filename = cistem_ref_dir + "/ribo_ref.mrc";
         // Read in and normalize the 3d to use for projection
 
         const bool over_write_input = false;
@@ -107,7 +107,7 @@ struct ResampleRunnerObjects {
     }
 };
 
-bool DoCTFImageVsTexture(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+bool DoCTFImageVsTexture(const std::string& cistem_ref_dir, const std::string& temp_directory) {
     MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
 
     bool passed     = true;
@@ -160,7 +160,7 @@ bool DoCTFImageVsTexture(const wxString& cistem_ref_dir, const wxString& temp_di
     return all_passed;
 }
 
-bool DoFourierCropVsLerpResize(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+bool DoFourierCropVsLerpResize(const std::string& cistem_ref_dir, const std::string& temp_directory) {
     MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
 
     bool passed     = true;
@@ -228,7 +228,7 @@ bool DoFourierCropVsLerpResize(const wxString& cistem_ref_dir, const wxString& t
     return true;
 }
 
-bool DoFourierExpandVsLerpResize(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+bool DoFourierExpandVsLerpResize(const std::string& cistem_ref_dir, const std::string& temp_directory) {
     MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
 
     bool passed     = true;
@@ -322,7 +322,7 @@ bool DoFourierExpandVsLerpResize(const wxString& cistem_ref_dir, const wxString&
     return true;
 }
 
-bool DoLerpWithCTF(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+bool DoLerpWithCTF(const std::string& cistem_ref_dir, const std::string& temp_directory) {
     MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
 
     bool passed     = true;

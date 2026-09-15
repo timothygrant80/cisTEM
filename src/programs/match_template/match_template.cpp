@@ -71,6 +71,12 @@ class AggregatedTemplateResult {
 
     AggregatedTemplateResult( );
     ~AggregatedTemplateResult( );
+    // This used to be held in a wxObjArray, which stored pointers to its elements and so never
+    // copied or moved one. A std::vector moves its elements when it grows and when one is erased,
+    // so ownership of collated_data_array has to be handed over explicitly: the implicitly
+    // generated copy would leave two objects deleting the same block.
+    AggregatedTemplateResult(AggregatedTemplateResult&& other) noexcept;
+    AggregatedTemplateResult& operator=(AggregatedTemplateResult&& other) noexcept;
     /**
      * @brief Adds a partial result to the aggregated data.
      *
@@ -87,9 +93,7 @@ class AggregatedTemplateResult {
     void AddResult(float* result_array, long array_size, int result_number, int number_of_expected_results);
 };
 
-WX_DECLARE_OBJARRAY(AggregatedTemplateResult, ArrayOfAggregatedTemplateResults);
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayOfAggregatedTemplateResults);
+typedef std::vector<AggregatedTemplateResult> ArrayOfAggregatedTemplateResults;
 
 /**
  * @class MatchTemplateApp
@@ -223,20 +227,20 @@ void MatchTemplateApp::AddCommandLineOptions( ) {
 // override the DoInteractiveUserInput
 
 void MatchTemplateApp::DoInteractiveUserInput( ) {
-    wxString input_search_images;
-    wxString input_reconstruction;
+    std::string input_search_images;
+    std::string input_reconstruction;
 
-    wxString mip_output_file;
-    wxString best_psi_output_file;
-    wxString best_theta_output_file;
-    wxString best_phi_output_file;
-    wxString best_defocus_output_file;
-    wxString best_pixel_size_output_file;
+    std::string mip_output_file;
+    std::string best_psi_output_file;
+    std::string best_theta_output_file;
+    std::string best_phi_output_file;
+    std::string best_defocus_output_file;
+    std::string best_pixel_size_output_file;
 
-    wxString output_histogram_file;
-    wxString correlation_std_output_file;
-    wxString correlation_avg_output_file;
-    wxString scaled_mip_output_mrcfile;
+    std::string output_histogram_file;
+    std::string correlation_std_output_file;
+    std::string correlation_avg_output_file;
+    std::string scaled_mip_output_mrcfile;
 
     float input_pixel_size        = 1.0f;
     float voltage_kV              = 300.0f;
@@ -258,7 +262,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     float    padding                   = 1.0;
     bool     ctf_refinement            = false;
     float    particle_radius_angstroms = 0.0f;
-    wxString my_symmetry               = "C1";
+    std::string my_symmetry               = "C1";
     float    in_plane_angular_step     = 0;
     bool     use_gpu_input             = false;
     int      max_threads               = 1; // Only used for the GPU code
@@ -313,14 +317,14 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     int   number_of_jobs_per_image_in_gui = 0;
     float min_peak_radius                 = 10.0f;
 
-    wxString directory_for_results = "/dev/null"; // shouldn't be used in interactive
-    wxString result_filename       = "/dev/null"; // shouldn't be used in interactive
+    std::string directory_for_results = "/dev/null"; // shouldn't be used in interactive
+    std::string result_filename       = "/dev/null"; // shouldn't be used in interactive
 
     delete my_input;
 
     my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttfbbi",
-                                      input_search_images.ToUTF8( ).data( ),
-                                      input_reconstruction.ToUTF8( ).data( ),
+                                      input_search_images.c_str(),
+                                      input_reconstruction.c_str(),
                                       input_pixel_size,
                                       voltage_kV,
                                       spherical_aberration_mm,
@@ -340,24 +344,24 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       ctf_refinement,
                                       particle_radius_angstroms,
                                       phase_shift,
-                                      mip_output_file.ToUTF8( ).data( ),
-                                      best_psi_output_file.ToUTF8( ).data( ),
-                                      best_theta_output_file.ToUTF8( ).data( ),
-                                      best_phi_output_file.ToUTF8( ).data( ),
-                                      best_defocus_output_file.ToUTF8( ).data( ),
-                                      best_pixel_size_output_file.ToUTF8( ).data( ),
-                                      scaled_mip_output_mrcfile.ToUTF8( ).data( ),
-                                      correlation_avg_output_file.ToUTF8( ).data( ),
-                                      my_symmetry.ToUTF8( ).data( ),
+                                      mip_output_file.c_str(),
+                                      best_psi_output_file.c_str(),
+                                      best_theta_output_file.c_str(),
+                                      best_phi_output_file.c_str(),
+                                      best_defocus_output_file.c_str(),
+                                      best_pixel_size_output_file.c_str(),
+                                      scaled_mip_output_mrcfile.c_str(),
+                                      correlation_avg_output_file.c_str(),
+                                      my_symmetry.c_str(),
                                       in_plane_angular_step,
-                                      output_histogram_file.ToUTF8( ).data( ),
+                                      output_histogram_file.c_str(),
                                       first_search_position,
                                       last_search_position,
                                       image_number_for_gui,
                                       number_of_jobs_per_image_in_gui,
-                                      correlation_std_output_file.ToUTF8( ).data( ),
-                                      directory_for_results.ToUTF8( ).data( ),
-                                      result_filename.ToUTF8( ).data( ),
+                                      correlation_std_output_file.c_str(),
+                                      directory_for_results.c_str(),
+                                      result_filename.c_str(),
                                       min_peak_radius,
                                       use_gpu_input,
                                       use_fast_fft,
@@ -420,7 +424,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     using namespace cistem::match_template;
     StopWatch profile_timing;
 
-    wxDateTime start_time = wxDateTime::Now( );
+    DateTime start_time = DateTime::Now( );
 
     double temp_double;
     long   temp_long;
@@ -453,7 +457,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     }
 
     if ( command_line_parser.Found("n-expected-false-positives", &temp_double) ) {
-        SendInfo("Using n expected false positives: " + wxString::Format("%f", temp_double) + "\n");
+        SendInfo("Using n expected false positives: " + Format("%f", temp_double) + "\n");
         n_expected_false_positives = temp_double;
     }
     // This allows an override for the TEST_LOCAL_NORMALIZATION
@@ -480,15 +484,15 @@ bool MatchTemplateApp::DoCalculation( ) {
     }
 
     if ( use_local_normalization ) {
-        wxPrintf("Using local normalization bool: %d\n", use_local_normalization);
-        wxPrintf("Using min stats counter: %f\n", min_counter_val);
-        wxPrintf("Using threshold value: %f\n", threshold_val);
+        Printf("Using local normalization bool: %d\n", use_local_normalization);
+        Printf("Using min stats counter: %f\n", min_counter_val);
+        Printf("Using threshold value: %f\n", threshold_val);
     }
     // I guess this breaks the local normalization so provide an override for TM data sizer
 #endif
 
-    wxString input_search_images_filename    = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_reconstruction_filename   = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_search_images_filename    = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_reconstruction_filename   = my_current_job.arguments[1].ReturnStringArgument( );
     float    input_pixel_size                = my_current_job.arguments[2].ReturnFloatArgument( );
     float    voltage_kV                      = my_current_job.arguments[3].ReturnFloatArgument( );
     float    spherical_aberration_mm         = my_current_job.arguments[4].ReturnFloatArgument( );
@@ -508,24 +512,24 @@ bool MatchTemplateApp::DoCalculation( ) {
     bool     ctf_refinement                  = my_current_job.arguments[18].ReturnBoolArgument( );
     float    particle_radius_angstroms       = my_current_job.arguments[19].ReturnFloatArgument( );
     float    phase_shift                     = my_current_job.arguments[20].ReturnFloatArgument( );
-    wxString mip_output_file                 = my_current_job.arguments[21].ReturnStringArgument( );
-    wxString best_psi_output_file            = my_current_job.arguments[22].ReturnStringArgument( );
-    wxString best_theta_output_file          = my_current_job.arguments[23].ReturnStringArgument( );
-    wxString best_phi_output_file            = my_current_job.arguments[24].ReturnStringArgument( );
-    wxString best_defocus_output_file        = my_current_job.arguments[25].ReturnStringArgument( );
-    wxString best_pixel_size_output_file     = my_current_job.arguments[26].ReturnStringArgument( );
-    wxString scaled_mip_output_file          = my_current_job.arguments[27].ReturnStringArgument( );
-    wxString correlation_avg_output_file     = my_current_job.arguments[28].ReturnStringArgument( );
-    wxString my_symmetry                     = my_current_job.arguments[29].ReturnStringArgument( );
+    std::string mip_output_file                 = my_current_job.arguments[21].ReturnStringArgument( );
+    std::string best_psi_output_file            = my_current_job.arguments[22].ReturnStringArgument( );
+    std::string best_theta_output_file          = my_current_job.arguments[23].ReturnStringArgument( );
+    std::string best_phi_output_file            = my_current_job.arguments[24].ReturnStringArgument( );
+    std::string best_defocus_output_file        = my_current_job.arguments[25].ReturnStringArgument( );
+    std::string best_pixel_size_output_file     = my_current_job.arguments[26].ReturnStringArgument( );
+    std::string scaled_mip_output_file          = my_current_job.arguments[27].ReturnStringArgument( );
+    std::string correlation_avg_output_file     = my_current_job.arguments[28].ReturnStringArgument( );
+    std::string my_symmetry                     = my_current_job.arguments[29].ReturnStringArgument( );
     float    in_plane_angular_step           = my_current_job.arguments[30].ReturnFloatArgument( );
-    wxString output_histogram_file           = my_current_job.arguments[31].ReturnStringArgument( );
+    std::string output_histogram_file           = my_current_job.arguments[31].ReturnStringArgument( );
     int      first_search_position           = my_current_job.arguments[32].ReturnIntegerArgument( );
     int      last_search_position            = my_current_job.arguments[33].ReturnIntegerArgument( );
     int      image_number_for_gui            = my_current_job.arguments[34].ReturnIntegerArgument( );
     int      number_of_jobs_per_image_in_gui = my_current_job.arguments[35].ReturnIntegerArgument( );
-    wxString correlation_std_output_file     = my_current_job.arguments[36].ReturnStringArgument( );
-    wxString directory_for_results           = my_current_job.arguments[37].ReturnStringArgument( );
-    wxString result_output_filename          = my_current_job.arguments[38].ReturnStringArgument( );
+    std::string correlation_std_output_file     = my_current_job.arguments[36].ReturnStringArgument( );
+    std::string directory_for_results           = my_current_job.arguments[37].ReturnStringArgument( );
+    std::string result_output_filename          = my_current_job.arguments[38].ReturnStringArgument( );
     float    min_peak_radius                 = my_current_job.arguments[39].ReturnFloatArgument( );
     bool     use_gpu                         = my_current_job.arguments[40].ReturnBoolArgument( );
     bool     use_fast_fft                    = my_current_job.arguments[41].ReturnBoolArgument( );
@@ -598,8 +602,8 @@ bool MatchTemplateApp::DoCalculation( ) {
     ImageFile input_reconstruction_file;
 
     // Open input files for search images and template reconstruction
-    input_search_image_file.OpenFile(input_search_images_filename.ToStdString( ), false);
-    input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString( ), false);
+    input_search_image_file.OpenFile(input_search_images_filename, false);
+    input_reconstruction_file.OpenFile(input_reconstruction_filename, false);
 
     Image input_image;
     Image padded_reference;
@@ -645,7 +649,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         // Work out how much we have to change the high_resolution limit_search to make the image smaller
         float high_limit_x = data_sizer.GetRealizedHighResolutionLimitBasedOnWantedSize(input_pixel_size, input_image.logical_x_dimension, MAX_SEARCH_SIZE);
         float high_limit_y = data_sizer.GetRealizedHighResolutionLimitBasedOnWantedSize(input_pixel_size, input_image.logical_y_dimension, MAX_SEARCH_SIZE);
-        wxPrintf("Your input image is %i x %i pixels. To fit within the max search size of %i, the high resolution limit for the search has been changed from %3.2fA to %3.2fA\n",
+        Printf("Your input image is %i x %i pixels. To fit within the max search size of %i, the high resolution limit for the search has been changed from %3.2fA to %3.2fA\n",
                  input_image.logical_x_dimension, input_image.logical_y_dimension, MAX_SEARCH_SIZE, high_resolution_limit_search, std::max(high_limit_x, high_limit_y));
         high_resolution_limit_search = std::max(high_limit_x, high_limit_y);
     }
@@ -752,7 +756,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     wanted_pre_projection_template_size = data_sizer.GetTemplateSizeX( );
 
-    wxPrintf("values are %i %i %f %f %f\n", wanted_pre_projection_template_size, data_sizer.GetTemplateSearchSizeX( ), wanted_pre_projection_pixel_size, data_sizer.GetPixelSize( ), data_sizer.GetSearchPixelSize( ));
+    Printf("values are %i %i %f %f %f\n", wanted_pre_projection_template_size, data_sizer.GetTemplateSearchSizeX( ), wanted_pre_projection_pixel_size, data_sizer.GetPixelSize( ), data_sizer.GetSearchPixelSize( ));
 
     CTF input_ctf;
     input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus1, defocus2, defocus_angle, 0.0, 0.0, 0.0, wanted_pre_projection_pixel_size, deg_2_rad(phase_shift));
@@ -817,7 +821,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, data_sizer.GetSearchPixelSize( ) / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 
         // TODO 2x check me - w/o this O symm at least is broken
-        if ( my_symmetry.StartsWith("C") ) {
+        if ( StartsWith(my_symmetry, "C") ) {
             // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
             if ( global_euler_search.test_mirror ) {
                 global_euler_search.theta_max = 180.0f;
@@ -831,8 +835,8 @@ bool MatchTemplateApp::DoCalculation( ) {
     // for now, I am assuming the MTF has been applied already.
     // work out the filter to just whiten the image..
 
-    wxDateTime my_time_out;
-    wxDateTime my_time_in;
+    DateTime my_time_out;
+    DateTime my_time_in;
 
     profile_timing.start("PreProcessResizedInputImage");
     data_sizer.PreProcessResizedInputImage(input_image);
@@ -885,16 +889,16 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     //Loop over ever search position
 
-    wxPrintf("\n\tFor image id %i\n", image_number_for_gui);
-    wxPrintf("Searching %i positions on the Euler sphere (first-last: %i-%i)\n", last_search_position - first_search_position, first_search_position, last_search_position);
-    wxPrintf("Searching %i rotations per position.\n", number_of_rotations);
-    wxPrintf("There are %li correlation positions total.\n\n", number_of_search_positions);
+    Printf("\n\tFor image id %i\n", image_number_for_gui);
+    Printf("Searching %i positions on the Euler sphere (first-last: %i-%i)\n", last_search_position - first_search_position, first_search_position, last_search_position);
+    Printf("Searching %i rotations per position.\n", number_of_rotations);
+    Printf("There are %li correlation positions total.\n\n", number_of_search_positions);
 
-    wxPrintf("Performing Search...\n\n");
+    Printf("Performing Search...\n\n");
 
-    wxDateTime overall_start;
-    wxDateTime overall_finish;
-    overall_start = wxDateTime::Now( );
+    DateTime overall_start;
+    DateTime overall_finish;
+    overall_start = DateTime::Now( );
 
     // These vars are only needed in the GPU code, but also need to be set out here to compile.
     std::vector<bool> first_gpu_loop(max_threads, true);
@@ -903,7 +907,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     int nGPUs    = 1;
     int nJobs    = last_search_position - first_search_position + 1; // Number of primary Euler angles
     if ( use_gpu && max_threads > nJobs ) {
-        SendInfo(wxString::Format("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", max_threads, nJobs));
+        SendInfo(Format("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", max_threads, nJobs));
         max_threads = nJobs; // Cap threads to number of jobs if over-requested
     }
 
@@ -911,7 +915,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     int maxPos = last_search_position;
     int incPos = (nJobs) / (max_threads); // Increment for distributing jobs to threads
 
-    //    wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
+    //    Printf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 
 #ifdef ENABLEGPU
     profile_timing.start("Init GPU");
@@ -981,7 +985,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         GPU = new TemplateMatchingCore[max_threads];
         gpuDev.Init(nGPUs, this);
         profile_timing.lap("Init GPU");
-        //    wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
+        //    Printf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
 
         //    TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
 #endif
@@ -1089,7 +1093,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                     // Critical section for printing, ensuring orderly output from threads
 #pragma omp critical
                     {
-                        wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
+                        Printf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
                     }
                     first_gpu_loop.at(tIDX) = false;
 
@@ -1274,7 +1278,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                                     best_phi.real_values[address]                 = global_euler_search.list_of_search_parameters[current_search_position][0];
                                     best_defocus.real_values[address]             = float(defocus_i) * defocus_step;
                                     best_pixel_size.real_values[address]          = float(size_i) * pixel_size_step;
-                                    //                                if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
+                                    //                                if (size_i != 0) Printf("size_i = %i\n", size_i);
                                     //                                correlation_pixel_sum[pixel_counter] = variance;
                                 }
 
@@ -1356,7 +1360,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     // Most of the time we can get away without synchronizing here, however,
 
-    wxPrintf("\n\n\tTimings: Overall: %s\n", (wxDateTime::Now( ) - overall_start).Format( ));
+    Printf("\n\n\tTimings: Overall: %s\n", (DateTime::Now( ) - overall_start).Format( ));
 
     // Post-search processing: resize results back to original dimensions if necessary
     profile_timing.start("Resize_postSearch");
@@ -1365,7 +1369,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     if ( use_local_normalization ) {
 #ifdef TEST_LOCAL_NORMALIZATION
         if ( ! use_gpu )
-            wxPrintf("\n\n\nLocal normalization: Done on cpu!\n");
+            Printf("\n\n\nLocal normalization: Done on cpu!\n");
         else {
             // FIXME: redundant
             for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
@@ -1442,63 +1446,63 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         // Write output MRC files for MIP, scaled MIP, best angles, defocus, pixel size, and statistical maps
         temp_image.CopyFrom(&max_intensity_projection);
-        MRCFile mip_out(mip_output_file.ToStdString( ), true);
+        MRCFile mip_out(mip_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         mip_out.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&mip_out, 1);
         mip_out.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile scaled_mip_output_mrcfile(scaled_mip_output_file.ToStdString( ), true);
+        MRCFile scaled_mip_output_mrcfile(scaled_mip_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         scaled_mip_output_mrcfile.SetOutputToFP16( );
 #endif
         scaled_mip.WriteSlice(&scaled_mip_output_mrcfile, 1);
         scaled_mip_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile correlation_pixel_sum_output_mrcfile(correlation_avg_output_file.ToStdString( ), true);
+        MRCFile correlation_pixel_sum_output_mrcfile(correlation_avg_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         correlation_pixel_sum_output_mrcfile.SetOutputToFP16( );
 #endif
         correlation_pixel_sum_image.WriteSlice(&correlation_pixel_sum_output_mrcfile, 1);
         correlation_pixel_sum_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile correlation_pixel_sum_of_squares_output_mrcfile(correlation_std_output_file.ToStdString( ), true);
+        MRCFile correlation_pixel_sum_of_squares_output_mrcfile(correlation_std_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         correlation_pixel_sum_of_squares_output_mrcfile.SetOutputToFP16( );
 #endif
         correlation_pixel_sum_of_squares_image.WriteSlice(&correlation_pixel_sum_of_squares_output_mrcfile, 1);
         correlation_pixel_sum_of_squares_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile best_psi_output_mrcfile(best_psi_output_file.ToStdString( ), true);
+        MRCFile best_psi_output_mrcfile(best_psi_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_psi_output_mrcfile.SetOutputToFP16( );
 #endif
         best_psi.WriteSlice(&best_psi_output_mrcfile, 1);
         best_psi_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile best_theta_output_mrcfile(best_theta_output_file.ToStdString( ), true);
+        MRCFile best_theta_output_mrcfile(best_theta_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_theta_output_mrcfile.SetOutputToFP16( );
 #endif
         best_theta.WriteSlice(&best_theta_output_mrcfile, 1);
         best_theta_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile best_phi_output_mrcfile(best_phi_output_file.ToStdString( ), true);
+        MRCFile best_phi_output_mrcfile(best_phi_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_phi_output_mrcfile.SetOutputToFP16( );
 #endif
         best_phi.WriteSlice(&best_phi_output_mrcfile, 1);
         best_phi_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile best_defocus_output_mrcfile(best_defocus_output_file.ToStdString( ), true);
+        MRCFile best_defocus_output_mrcfile(best_defocus_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_defocus_output_mrcfile.SetOutputToFP16( );
 #endif
         best_defocus.WriteSlice(&best_defocus_output_mrcfile, 1);
         best_defocus_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
-        MRCFile best_pixel_size_output_mrcfile(best_pixel_size_output_file.ToStdString( ), true);
+        MRCFile best_pixel_size_output_mrcfile(best_pixel_size_output_file, true);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_pixel_size_output_mrcfile.SetOutputToFP16( );
 #endif
@@ -1645,9 +1649,9 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
 
     if ( is_running_locally == true ) {
-        wxPrintf("\nMatch Template: Normal termination\n");
-        wxDateTime finish_time = wxDateTime::Now( );
-        wxPrintf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
+        Printf("\nMatch Template: Normal termination\n");
+        DateTime finish_time = DateTime::Now( );
+        Printf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
     }
 
     return true;
@@ -1686,15 +1690,15 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
     // constexpr values for histogram values.
     using namespace cistem::match_template;
 
-    wxPrintf("Master Handling result for image %i..", result_number);
+    Printf("Master Handling result for image %i..", result_number);
 
     // Check if an AggregatedTemplateResult already exists for this image
-    for ( int result_counter = 0; result_counter < aggregated_results.GetCount( ); result_counter++ ) {
+    for ( int result_counter = 0; result_counter < aggregated_results.size(); result_counter++ ) {
         if ( aggregated_results[result_counter].image_number == result_number ) {
             aggregated_results[result_counter].AddResult(result_array, array_size, result_number, number_of_expected_results);
             need_a_new_result = false;
             array_location    = result_counter;
-            wxPrintf("Found array location for image %i, at %i\n", result_number, array_location);
+            Printf("Found array location for image %i, at %i\n", result_number, array_location);
             break;
         }
     }
@@ -1703,11 +1707,11 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
     if ( need_a_new_result == true ) {
         AggregatedTemplateResult result_to_add;
         // So I guess this Add, then index into size - 1 is like push_back kinda?
-        aggregated_results.Add(result_to_add);
-        aggregated_results[aggregated_results.GetCount( ) - 1].image_number = result_number;
-        aggregated_results[aggregated_results.GetCount( ) - 1].AddResult(result_array, array_size, result_number, number_of_expected_results);
-        array_location = aggregated_results.GetCount( ) - 1;
-        wxPrintf("Adding new result to array for image %i, at %i\n", result_number, array_location);
+        aggregated_results.push_back(std::move(result_to_add));
+        aggregated_results[aggregated_results.size() - 1].image_number = result_number;
+        aggregated_results[aggregated_results.size() - 1].AddResult(result_array, array_size, result_number, number_of_expected_results);
+        array_location = aggregated_results.size() - 1;
+        Printf("Adding new result to array for image %i, at %i\n", result_number, array_location);
     }
 
     // Check if all expected results for this image have been received
@@ -1715,7 +1719,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         // All parts of the result for this image are now collected. Proceed to finalize.
         // TODO send the result back to the GUI, for now hack mode to save the files to the directory..
 
-        wxString directory_for_writing_results = current_job_package.jobs[0].arguments[37].ReturnStringArgument( );
+        std::string directory_for_writing_results = current_job_package.jobs[0].arguments[37].ReturnStringArgument( );
 
         // Image objects for storing and processing results
         Image temp_image;
@@ -1794,7 +1798,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         temp_image.WriteSlice(&mip_output_file, 1);
         mip_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
 
-        wxPrintf("Writing result %i\n", aggregated_results[array_location].image_number - 1);
+        Printf("Writing result %i\n", aggregated_results[array_location].image_number - 1);
 
         // psi
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
@@ -1898,7 +1902,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         square_sum_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
 
         // Write histogram text file
-        //NumericTextFile histogram_file(wxString::Format("%s/histogram_%i.txt", directory_for_writing_results, aggregated_results[array_location].image_number), OPEN_TO_WRITE, 4);
+        //NumericTextFile histogram_file(Format("%s/histogram_%i.txt", directory_for_writing_results, aggregated_results[array_location].image_number), OPEN_TO_WRITE, 4);
         NumericTextFile histogram_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[31].ReturnStringArgument( ), OPEN_TO_WRITE, 4);
 
         double* expected_survival_histogram = new double[histogram_number_of_points];
@@ -1923,7 +1927,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         const float CCG_NOISE_STDDEV = 1.0;
         double      temp_threshold   = 0.0;
         double      erf_input        = (n_expected_false_positives * 2.0) / (1.0 * (double(number_of_valid_search_pixels) * double(number_of_search_positions)));
-        //        wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_angles_searched, erf_input);
+        //        Printf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_angles_searched, erf_input);
 
 #ifdef MKL
         vdErfcInv(1, &erf_input, &temp_threshold);
@@ -2015,7 +2019,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         while ( 1 == 1 ) {
             // look for a peak..
             nTrys++;
-            //            wxPrintf("Trying the %ld'th peak\n",nTrys);
+            //            Printf("Trying the %ld'th peak\n",nTrys);
             // FIXME min-distance from edges would be better to set dynamically.
             current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, exclusion_radius);
             if ( current_peak.value < expected_threshold )
@@ -2036,7 +2040,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_peak_info.x_pos = current_peak.x * search_pixel_size; // RETURNING IN ANGSTROMS (also takes care of binning if present)
             temp_peak_info.y_pos = current_peak.y * search_pixel_size; // RETURNING IN ANGSTROMS
 
-            //            wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
+            //            Printf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
 
             for ( j = std::max(myroundint(current_peak.y) - min_peak_radius, 0); j < std::min(myroundint(current_peak.y) + min_peak_radius, scaled_mip.logical_y_dimension); j++ ) {
                 sq_dist_y = float(j) - current_peak.y;
@@ -2071,7 +2075,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                 //                address += scaled_mip.padding_jump_value;
             }
 
-            //        wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
+            //        Printf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
             //        coordinates[0] = current_peak.x * search_pixel_size;
             //        coordinates[1] = current_peak.y * search_pixel_size;
             ////        coordinates[2] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;
@@ -2098,7 +2102,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                 // insert it into the output image
 
                 result_image.InsertOtherImageAtSpecifiedPosition(&current_projection, current_peak.x - result_image.physical_address_of_box_center_x, current_peak.y - result_image.physical_address_of_box_center_y, 0, 0.0f);
-                all_peak_infos.Add(temp_peak_info);
+                all_peak_infos.push_back(temp_peak_info);
             }
             else {
                 SendInfo("WARNING: More than 1000 peaks above threshold were found. Limiting results to 1000 peaks.\n");
@@ -2118,7 +2122,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         // Clean up: remove the completed AggregatedTemplateResult and associated memory
         // this should be done now.. so delete it
 
-        aggregated_results.RemoveAt(array_location);
+        aggregated_results.erase(aggregated_results.begin( ) + array_location);
         delete[] expected_survival_histogram;
         delete[] survival_histogram;
     }
@@ -2153,6 +2157,77 @@ AggregatedTemplateResult::AggregatedTemplateResult( ) {
 AggregatedTemplateResult::~AggregatedTemplateResult( ) {
     if ( collated_data_array != NULL )
         delete[] collated_data_array;
+}
+
+/**
+ * @brief Move constructor. Takes ownership of the other object's collated_data_array.
+ */
+AggregatedTemplateResult::AggregatedTemplateResult(AggregatedTemplateResult&& other) noexcept {
+    image_number                    = other.image_number;
+    number_of_received_results      = other.number_of_received_results;
+    total_number_of_angles_searched = other.total_number_of_angles_searched;
+    disable_flat_fielding           = other.disable_flat_fielding;
+
+    collated_data_array        = other.collated_data_array;
+    collated_mip_data          = other.collated_mip_data;
+    collated_psi_data          = other.collated_psi_data;
+    collated_theta_data        = other.collated_theta_data;
+    collated_phi_data          = other.collated_phi_data;
+    collated_defocus_data      = other.collated_defocus_data;
+    collated_pixel_size_data   = other.collated_pixel_size_data;
+    collated_pixel_sums        = other.collated_pixel_sums;
+    collated_pixel_square_sums = other.collated_pixel_square_sums;
+    collated_histogram_data    = other.collated_histogram_data;
+
+    other.collated_data_array        = NULL;
+    other.collated_mip_data          = NULL;
+    other.collated_psi_data          = NULL;
+    other.collated_theta_data        = NULL;
+    other.collated_phi_data          = NULL;
+    other.collated_defocus_data      = NULL;
+    other.collated_pixel_size_data   = NULL;
+    other.collated_pixel_sums        = NULL;
+    other.collated_pixel_square_sums = NULL;
+    other.collated_histogram_data    = NULL;
+}
+
+/**
+ * @brief Move assignment. Frees anything this object owns, then takes over the other object's memory.
+ */
+AggregatedTemplateResult& AggregatedTemplateResult::operator=(AggregatedTemplateResult&& other) noexcept {
+    if ( this != &other ) {
+        if ( collated_data_array != NULL )
+            delete[] collated_data_array;
+
+        image_number                    = other.image_number;
+        number_of_received_results      = other.number_of_received_results;
+        total_number_of_angles_searched = other.total_number_of_angles_searched;
+        disable_flat_fielding           = other.disable_flat_fielding;
+
+        collated_data_array        = other.collated_data_array;
+        collated_mip_data          = other.collated_mip_data;
+        collated_psi_data          = other.collated_psi_data;
+        collated_theta_data        = other.collated_theta_data;
+        collated_phi_data          = other.collated_phi_data;
+        collated_defocus_data      = other.collated_defocus_data;
+        collated_pixel_size_data   = other.collated_pixel_size_data;
+        collated_pixel_sums        = other.collated_pixel_sums;
+        collated_pixel_square_sums = other.collated_pixel_square_sums;
+        collated_histogram_data    = other.collated_histogram_data;
+
+        other.collated_data_array        = NULL;
+        other.collated_mip_data          = NULL;
+        other.collated_psi_data          = NULL;
+        other.collated_theta_data        = NULL;
+        other.collated_phi_data          = NULL;
+        other.collated_defocus_data      = NULL;
+        other.collated_pixel_size_data   = NULL;
+        other.collated_pixel_sums        = NULL;
+        other.collated_pixel_square_sums = NULL;
+        other.collated_histogram_data    = NULL;
+    }
+
+    return *this;
 }
 
 /**
@@ -2268,7 +2343,7 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
     }
 
     number_of_received_results++;
-    wxPrintf("Received %i of %i results\n", number_of_received_results, number_of_expected_results);
+    Printf("Received %i of %i results\n", number_of_received_results, number_of_expected_results);
 }
 
 /**

@@ -40,7 +40,7 @@ void ElectronDose::Init(float wanted_acceleration_voltage, float wanted_pixel_si
         voltage_scaling_factor = 0.532;
     }
     else {
-        wxPrintf("Error: Unsupported voltage (%f)\n\n", wanted_acceleration_voltage);
+        Printf("Error: Unsupported voltage (%f)\n\n", wanted_acceleration_voltage);
         DEBUG_ABORT;
     }
 

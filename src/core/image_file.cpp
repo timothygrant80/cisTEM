@@ -1,7 +1,7 @@
 #include "core_headers.h"
 
 ImageFile::ImageFile( ) {
-    filename         = wxFileName("");
+    filename         = std::filesystem::path("");
     file_type        = UNSUPPORTED_FILE_TYPE;
     file_type_string = "Unsupported file type";
 }
@@ -15,20 +15,20 @@ ImageFile::~ImageFile( ) {
 }
 
 void ImageFile::SetFileTypeFromExtension( ) {
-    wxString ext = filename.GetExt( );
-    if ( ext.IsSameAs("tif") || ext.IsSameAs("tiff") ) {
+    std::string ext = ReturnFileExtension(filename.string());
+    if ( ext == "tif" || ext == "tiff" ) {
         file_type        = TIFF_FILE;
         file_type_string = "TIFF";
     }
-    else if ( ext.IsSameAs("mrc") || ext.IsSameAs("mrcs") || ext.IsSameAs("ccp4") ) {
+    else if ( ext == "mrc" || ext == "mrcs" || ext == "ccp4" ) {
         file_type        = MRC_FILE;
         file_type_string = "MRC";
     }
-    else if ( ext.IsSameAs("dm3") || ext.IsSameAs("dm4") || ext.IsSameAs("dm") ) {
+    else if ( ext == "dm3" || ext == "dm4" || ext == "dm" ) {
         file_type        = DM_FILE;
         file_type_string = "DM";
     }
-    else if ( ext.IsSameAs("eer") ) {
+    else if ( ext == "eer" ) {
         file_type        = EER_FILE;
         file_type_string = "EER";
     }
@@ -39,7 +39,7 @@ void ImageFile::SetFileTypeFromExtension( ) {
         // GetMRCDetails is also wanted as a member of the MRCFile class, and this method relies on the function
         // being a non-member
         int x_size, y_size, number_of_frames;
-        if ( GetMRCDetails(filename.GetFullPath( ), x_size, y_size, number_of_frames) ) {
+        if ( GetMRCDetails(filename.string().c_str(), x_size, y_size, number_of_frames) ) {
             file_type        = MRC_FILE;
             file_type_string = "MRC";
         }
@@ -68,7 +68,7 @@ bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_
         case EER_FILE: file_seems_ok = eer_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist, check_only_the_first_image, eer_super_res_factor, eer_frames_per_image); break;
         default:
             MyPrintWithDetails("Unsupported file type\n");
-            MyDebugAssertTrue(false, "Unsupported file type: %s\n", filename.GetFullPath( ).ToStdString( ));
+            MyDebugAssertTrue(false, "Unsupported file type: %s\n", filename.string());
             DEBUG_ABORT;
             break;
     }
@@ -203,8 +203,8 @@ bool ImageFile::IsOpen( ) {
 }
 
 void ImageFile::PrintInfo( ) {
-    wxPrintf("File name: %s\n", filename.GetFullName( ));
-    wxPrintf("File type: %s\n", file_type_string);
-    wxPrintf("Dimensions: X = %i Y = %i Z = %i\n", ReturnXSize( ), ReturnYSize( ), ReturnZSize( ));
-    wxPrintf("Number of slices: %i\n", ReturnNumberOfSlices( ));
+    Printf("File name: %s\n", filename.filename().string());
+    Printf("File type: %s\n", file_type_string);
+    Printf("Dimensions: X = %i Y = %i Z = %i\n", ReturnXSize( ), ReturnYSize( ), ReturnZSize( ));
+    Printf("Number of slices: %i\n", ReturnNumberOfSlices( ));
 }

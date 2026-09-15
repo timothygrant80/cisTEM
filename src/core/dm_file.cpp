@@ -27,14 +27,14 @@ DMFile::DMFile(std::string wanted_filename, bool overwrite) {
     OpenFile(wanted_filename);
 }
 
-DMFile::DMFile(wxString wanted_filename) {
+DMFile::DMFile(std::string wanted_filename) {
     version    = 0;
     show       = 0;
     level      = 0;
     sb         = 0;
     endianness = 1;
     keep       = 0;
-    OpenFile(wanted_filename.ToStdString( ));
+    OpenFile(wanted_filename);
 }
 
 DMFile::~DMFile( ) {
@@ -45,8 +45,8 @@ bool DMFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for
     MyDebugAssertFalse(overwrite, "Overwriting is not supported for DM files");
     MyDebugAssertFalse(wait_for_file_to_exist, "Waiting for file to exist not supported for DM files");
     unsigned char* fake_pointer;
-    readDM(wxString(wanted_filename), fake_pointer, false);
-    filename   = wxString(wanted_filename);
+    readDM(std::string(wanted_filename), fake_pointer, false);
+    filename   = std::string(wanted_filename);
     pixel_size = 1.0; //TODO: figure out where the pixel size is (if anywhere)
 
     // TODO: return false if something is fishy about this file
@@ -113,7 +113,7 @@ A 2D/3D image format used with CCD cameras in electron microscopy.
 		Byte order determination:	Big-endian
 		Data types: 				many.
 **/
-int DMFile::readDM(wxString wanted_filename, unsigned char* p, bool readdata, int img_select) {
+int DMFile::readDM(std::string wanted_filename, unsigned char* p, bool readdata, int img_select) {
     std::ifstream* fimg = new std::ifstream(wanted_filename);
     if ( fimg->fail( ) )
         return -1;
@@ -140,7 +140,7 @@ int DMFile::readDM(wxString wanted_filename, unsigned char* p, bool readdata, in
         case 4: readTagGroupWithVersion(fimg, p, readdata, img_select); break;
         default:
             MyDebugAssertFalse(true, "Digital Micrograph format version %i not supported!\n", version);
-            wxPrintf("Digital Micrograph format version %i not supported!\n", version);
+            Printf("Digital Micrograph format version %i not supported!\n", version);
             DEBUG_ABORT;
     }
 

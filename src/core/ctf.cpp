@@ -327,7 +327,7 @@ void CTF::SetEnvelope(float wanted_acceleration_voltage, float wanted_pixel_size
         squared_energy_half_width = (1 + LORENTZ_FACTOR_100) / (1 + 0.5f * LORENTZ_FACTOR_100) * chromatic_abberation * energy_spread / (ELECTRON_REST_MASS + RELATIVISTIC_VOLTAGE_100);
     }
     else {
-        wxPrintf("Error: Unsupported voltage (%f)\n\n", wanted_acceleration_voltage);
+        Printf("Error: Unsupported voltage (%f)\n\n", wanted_acceleration_voltage);
         DEBUG_ABORT;
     }
 
@@ -399,10 +399,10 @@ std::complex<float> CTF::EvaluateComplex(float squared_spatial_frequency, float 
 
     // Frealign code:
     // CTF=CMPLX(WGH1*SCHI-WGH2*CCHI,-WGH1*CCHI-WGH2*SCHI)
-    //	wxPrintf("cistem real  = %g\n", -sinf(chi + pre));
-    //	wxPrintf("frealign real= %g\n", sqrtf(1.0 - powf(amplitude_contrast, 2)) * sinf(-chi) - amplitude_contrast * cosf(-chi));
-    //	wxPrintf("cistem comp  = %g\n", -cosf(chi + pre));
-    //	wxPrintf("frealign comp= %g\n", -sqrtf(1.0 - powf(amplitude_contrast, 2)) * cosf(-chi) - amplitude_contrast * sinf(-chi));
+    //	Printf("cistem real  = %g\n", -sinf(chi + pre));
+    //	Printf("frealign real= %g\n", sqrtf(1.0 - powf(amplitude_contrast, 2)) * sinf(-chi) - amplitude_contrast * cosf(-chi));
+    //	Printf("cistem comp  = %g\n", -cosf(chi + pre));
+    //	Printf("frealign comp= %g\n", -sqrtf(1.0 - powf(amplitude_contrast, 2)) * cosf(-chi) - amplitude_contrast * sinf(-chi));
 }
 
 // Return the value of the CTF at the given squared spatial frequency and azimuth
@@ -442,7 +442,7 @@ float CTF::EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth) 
 
     // Check that things are set
     if ( this->squared_energy_half_width == -1 || this->squared_illumination_aperture == -1 ) {
-        wxPrintf("\nTo use EvaluateWithEnvelope, call SetEnvelope first\n");
+        Printf("\nTo use EvaluateWithEnvelope, call SetEnvelope first\n");
         exit(-1);
     }
     // Don't get hung up on speed here: this can all be cleaned up FIXME
@@ -480,11 +480,11 @@ std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_freque
     }
     else {
         float phase_shift = PhaseShiftGivenBeamTiltAndShift(squared_spatial_frequency, BeamTiltGivenAzimuth(azimuth), ParticleShiftGivenAzimuth(azimuth));
-        //		wxPrintf("p1 = %g\n", phase_shift);
+        //		Printf("p1 = %g\n", phase_shift);
         //		phase_shift = fmodf(phase_shift, 2.0f * (float)PI);
         //		if (phase_shift > PI) phase_shift -= 2.0f * PI;
         //		if (phase_shift <= -PI) phase_shift += 2.0f * PI;
-        //		wxPrintf("p2 = %g\n", phase_shift);
+        //		Printf("p2 = %g\n", phase_shift);
         //		phase_shift = rad_2_deg(phase_shift);
         //		return phase_shift + I * 0.0f;
         // This should be exp(-I*phaseshift), but because our convention is to compute -1*sin( f - CS ) == sin( CS -f ) the phase shift carries an implicit *-1.0f.
@@ -723,36 +723,36 @@ void Renormalize1DSpectrumForFRC(int number_of_bins, double average[], double fi
                         if ( fit[i] < fit[i - 1] && fit[i] < fit[i + 1] )
                             bin_of_zero = i;
                     }
-                    //wxPrintf("bin zero = %i\n",bin_of_zero);
+                    //Printf("bin zero = %i\n",bin_of_zero);
 
                     // Now we can rank before the zero (the downslope)
-                    //wxPrintf("downslope (including zero)...\n");
+                    //Printf("downslope (including zero)...\n");
                     temp_vector.clear( );
                     for ( i = bin_of_previous_extremum; i <= bin_of_zero; i++ ) {
-                        //wxPrintf("about to push back %f\n",float(average[i]));
+                        //Printf("about to push back %f\n",float(average[i]));
                         temp_vector.push_back(float(average[i]));
                     }
                     temp_ranks = rankSort(temp_vector);
                     for ( i = bin_of_previous_extremum; i <= bin_of_zero; i++ ) {
-                        //wxPrintf("replaced %f",average[i]);
+                        //Printf("replaced %f",average[i]);
                         average[i] = double(float(temp_ranks.at(i - bin_of_previous_extremum)) / float(temp_vector.size( ) - 1));
                         average[i] = sin(average[i] * PI * 0.5);
-                        //wxPrintf(" with %f\n",average[i]);
+                        //Printf(" with %f\n",average[i]);
                     }
 
                     // Now we can rank after the zero (upslope)
-                    //wxPrintf("upslope...\n");
+                    //Printf("upslope...\n");
                     temp_vector.clear( );
                     for ( i = bin_of_zero + 1; i < bin_of_current_extremum; i++ ) {
-                        //wxPrintf("about to push back %f\n",float(average[i]));
+                        //Printf("about to push back %f\n",float(average[i]));
                         temp_vector.push_back(float(average[i]));
                     }
                     temp_ranks = rankSort(temp_vector);
                     for ( i = bin_of_zero + 1; i < bin_of_current_extremum; i++ ) {
-                        //wxPrintf("[rank]bin %i: replaced %f",i,average[i]);
+                        //Printf("[rank]bin %i: replaced %f",i,average[i]);
                         average[i] = double(float(temp_ranks.at(i - bin_of_zero - 1) + 1) / float(temp_vector.size( ) + 1));
                         average[i] = sin(average[i] * PI * 0.5);
-                        //wxPrintf(" with %f\n",average[i]);
+                        //Printf(" with %f\n",average[i]);
                     }
                     //MyDebugAssertTrue(abs(average[bin_of_zero]) < 0.01,"Zero bin (%i) isn't set to zero: %f\n", bin_of_zero, average[bin_of_zero]);
                 }
@@ -768,11 +768,11 @@ void Renormalize1DSpectrumForFRC(int number_of_bins, double average[], double fi
                             min_value = average[i];
                     }
                     for ( i = bin_of_previous_extremum; i < bin_of_current_extremum; i++ ) {
-                        //wxPrintf("bin %i: replaced %f",i,average[i]);
+                        //Printf("bin %i: replaced %f",i,average[i]);
                         average[i] -= min_value;
                         if ( max_value - min_value > 0.0001 )
                             average[i] /= (max_value - min_value);
-                        //wxPrintf(" with %f\n",average[i]);
+                        //Printf(" with %f\n",average[i]);
                     }
                 }
             }
@@ -853,7 +853,7 @@ void ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], dou
                 fit_mean += fit[i];
             }
             number_of_bins_in_window = float(2 * half_window_width[bin_counter] + 1);
-            //wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f , spectrum_sum = %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window,spectrum_mean);
+            //Printf("bin %03i, number of extrema: %f, number of bins in window: %f , spectrum_sum = %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window,spectrum_mean);
             spectrum_mean /= number_of_bins_in_window;
             fit_mean /= number_of_bins_in_window;
             // Second pass
@@ -872,7 +872,7 @@ void ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], dou
             }
             frc_sigma[bin_counter] = 2.0 / sqrtf(number_of_bins_in_window);
         }
-        //wxPrintf("First fit bin: %i\n", first_fit_bin);
+        //Printf("First fit bin: %i\n", first_fit_bin);
         MyDebugAssertTrue(frc[bin_counter] > -1.01 && frc[bin_counter] < 1.01, "Bad FRC value: %f", frc[bin_counter]);
     }
 }

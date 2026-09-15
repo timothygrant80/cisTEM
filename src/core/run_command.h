@@ -4,7 +4,7 @@ class RunCommand {
     RunCommand( );
     ~RunCommand( );
 
-    wxString command_to_run;
+    std::string command_to_run;
     int      number_of_copies;
     int      number_of_threads_per_copy;
     bool     override_total_copies;
@@ -14,5 +14,5 @@ class RunCommand {
     bool operator==(const RunCommand& other) const;
     bool operator!=(const RunCommand& other) const;
 
-    void SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms);
+    void SetCommand(std::string wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms);
 };

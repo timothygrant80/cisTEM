@@ -322,10 +322,10 @@ void RotationMatrix::ConvertToValidEulerAngles(float& output_phi_in_degrees, flo
     if ( should_throw_error == true ) // the matrix is not right, this is probably an edge case, the theta will be close to right, but the phi can have significant error -  lets brute force around the found solution to refine it! (note this "improves" on a nobel prize winners work :) )
     {
 
-        //wxPrintf("\nFound Angles before refinement= (%.2f, %.2f, %.2f)\n\n", output_phi_in_degrees, output_theta_in_degrees, output_psi_in_degrees);
-        /*wxPrintf("Found Matrix before refinement :- \n\n%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][0], test_matrix.m[1][0], test_matrix.m[2][0]);
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][1], test_matrix.m[1][1], test_matrix.m[2][1]);
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][2], test_matrix.m[1][2], test_matrix.m[2][2]);*/
+        //Printf("\nFound Angles before refinement= (%.2f, %.2f, %.2f)\n\n", output_phi_in_degrees, output_theta_in_degrees, output_psi_in_degrees);
+        /*Printf("Found Matrix before refinement :- \n\n%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][0], test_matrix.m[1][0], test_matrix.m[2][0]);
+		Printf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][1], test_matrix.m[1][1], test_matrix.m[2][1]);
+		Printf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][2], test_matrix.m[1][2], test_matrix.m[2][2]);*/
 
         float old_best_phi   = output_phi_in_degrees;
         float old_best_theta = output_theta_in_degrees;
@@ -432,7 +432,7 @@ void RotationMatrix::ConvertToValidEulerAngles(float& output_phi_in_degrees, flo
         output_theta_in_degrees = best_theta;
         output_psi_in_degrees   = best_psi;
 
-        //wxPrintf("\nFound Angles = (%.2f, %.2f, %.2f)\n\n", output_phi_in_degrees, output_theta_in_degrees, output_psi_in_degrees);
+        //Printf("\nFound Angles = (%.2f, %.2f, %.2f)\n\n", output_phi_in_degrees, output_theta_in_degrees, output_psi_in_degrees);
     }
 
     // if in debug mode do a final check
@@ -455,20 +455,20 @@ void RotationMatrix::ConvertToValidEulerAngles(float& output_phi_in_degrees, flo
 	{
 		MyPrintWithDetails("Rotation Matrix to Euler angles conversion failed\n");
 
-		wxPrintf("\nFound Angles = (%.2f, %.2f, %.2f)\n\n", output_phi_in_degrees, output_theta_in_degrees, output_psi_in_degrees);
+		Printf("\nFound Angles = (%.2f, %.2f, %.2f)\n\n", output_phi_in_degrees, output_theta_in_degrees, output_psi_in_degrees);
 
-		wxPrintf("Matrix :- \n\n%+.4f\t%+.4f\t%+.4f\n", m[0][0], m[1][0], m[2][0]);
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n", m[0][1], m[1][1], m[2][1]);
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n\n", m[0][2], m[1][2], m[2][2]);
-		wxPrintf("cos_theta values = %.2f\n", fabsf(fabsf(cos_theta) - 1.0f));
+		Printf("Matrix :- \n\n%+.4f\t%+.4f\t%+.4f\n", m[0][0], m[1][0], m[2][0]);
+		Printf("%+.4f\t%+.4f\t%+.4f\n", m[0][1], m[1][1], m[2][1]);
+		Printf("%+.4f\t%+.4f\t%+.4f\n\n", m[0][2], m[1][2], m[2][2]);
+		Printf("cos_theta values = %.2f\n", fabsf(fabsf(cos_theta) - 1.0f));
 
-		wxPrintf("Found Matrix :- \n\n%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][0], test_matrix.m[1][0], test_matrix.m[2][0]);
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][1], test_matrix.m[1][1], test_matrix.m[2][1]);
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][2], test_matrix.m[1][2], test_matrix.m[2][2]);
+		Printf("Found Matrix :- \n\n%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][0], test_matrix.m[1][0], test_matrix.m[2][0]);
+		Printf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][1], test_matrix.m[1][1], test_matrix.m[2][1]);
+		Printf("%+.4f\t%+.4f\t%+.4f\n", test_matrix.m[0][2], test_matrix.m[1][2], test_matrix.m[2][2]);
 
-		wxPrintf("Difference :- \n\n%+.4f\t%+.4f\t%+.4f\n", fabsf(m[0][0] - test_matrix.m[0][0]), fabsf(m[1][0] - test_matrix.m[1][0]), fabsf(m[2][0] - test_matrix.m[2][0]));
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n", fabsf(m[0][1] - test_matrix.m[0][1]), fabsf(m[1][1] - test_matrix.m[1][1]), fabsf(m[2][1] - test_matrix.m[2][1]));
-		wxPrintf("%+.4f\t%+.4f\t%+.4f\n\n", fabsf(m[0][2] - test_matrix.m[0][2]), fabsf(m[1][2] - test_matrix.m[1][2]), fabsf(m[2][2] - test_matrix.m[2][2]));
+		Printf("Difference :- \n\n%+.4f\t%+.4f\t%+.4f\n", fabsf(m[0][0] - test_matrix.m[0][0]), fabsf(m[1][0] - test_matrix.m[1][0]), fabsf(m[2][0] - test_matrix.m[2][0]));
+		Printf("%+.4f\t%+.4f\t%+.4f\n", fabsf(m[0][1] - test_matrix.m[0][1]), fabsf(m[1][1] - test_matrix.m[1][1]), fabsf(m[2][1] - test_matrix.m[2][1]));
+		Printf("%+.4f\t%+.4f\t%+.4f\n\n", fabsf(m[0][2] - test_matrix.m[0][2]), fabsf(m[1][2] - test_matrix.m[1][2]), fabsf(m[2][2] - test_matrix.m[2][2]));
 
 		DEBUG_ABORT;
 	}
@@ -550,7 +550,7 @@ float RotationMatrix::FrobeniusNorm( ) {
 }
 
 void RotationMatrix::PrintMatrix( ) {
-    wxPrintf("\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n",
+    Printf("\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n",
              m[0][0], m[0][1], m[0][2],
              m[1][0], m[1][1], m[1][2],
              m[2][0], m[2][1], m[2][2]);

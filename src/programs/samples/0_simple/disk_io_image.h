@@ -25,8 +25,8 @@
 #define SRC_PROGRAMS_SAMPLES_0_SIMPLE_DISK_IO_IMAGE_HPP_
 
 // Assuming this is called from samples_functional_testing.cpp, you will have a file written to disk "${HOME}/hiv_image_80x80x1.mrc"
-// wxString temp_directory = wxFileName::GetHomeDir();
-// wxString hiv_image_80x80x1_filename = temp_directory + "/hiv_image_80x80x1.mrc";
+// std::string temp_directory = ReturnHomeDirectory();
+// std::string hiv_image_80x80x1_filename = temp_directory + "/hiv_image_80x80x1.mrc";
 
 // The easiest way to read or write and image is simply to use the "quick and dirty methods" in Image class
 // TODO instantiate an image object, read it in using quick and dirt read slice.
@@ -41,7 +41,7 @@
 // TODO Modify pixel size, set to 2
 
 // We'll skip the quick and dirty write slices, and now write a temporary file with our modified pixel size.
-// TODO use mrc_file method write slice to disk, to write tmp1.mrc (in the temp directory above, you'll need a new wxString too
+// TODO use mrc_file method write slice to disk, to write tmp1.mrc (in the temp directory above, you'll need a new std::string too
 
 // Alternatively, you can pass a pointer to your mrc_file object to the image object method WriteSlices
 // TODO write out tmp2.mrc using the Image class method
@@ -51,10 +51,10 @@
 
 // TODO call end test and ensure the printout indicates this test (disk_io_image) has pass/failed.
 
-void PrintResult(wxString testName, bool result);
-void DiskIOImageRunner(wxString hiv_images_80x80x10_filename, wxString temp_directory);
-bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory);
+void PrintResult(std::string testName, bool result);
+void DiskIOImageRunner(std::string hiv_images_80x80x10_filename, std::string temp_directory);
+bool DiskIOImageTests(std::string hiv_images_80x80x10_filename, std::string temp_directory);
 
-void TestResult(wxString testName, bool result);
+void TestResult(std::string testName, bool result);
 
 #endif /* SRC_PROGRAMS_SAMPLES_0_SIMPLE_DISK_IO_IMAGE_HPP_ */

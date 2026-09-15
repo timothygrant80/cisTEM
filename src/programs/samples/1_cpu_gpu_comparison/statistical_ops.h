@@ -8,12 +8,12 @@ struct MeasuredValue {
 };
 
 // Test runner
-void CPUvsGPUStatisticalOpsRunner(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory);
+void CPUvsGPUStatisticalOpsRunner(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory);
 
 // Tests for mean, variance etc.
-bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory);
+bool DoStatsticalMomentsTests(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory);
 
 // Tests for min/max
-bool DoExtremumTests(const wxString& hiv_image_80x80x1_filename, wxString& temp_directory);
+bool DoExtremumTests(const std::string& hiv_image_80x80x1_filename, std::string& temp_directory);
 
 #endif

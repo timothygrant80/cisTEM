@@ -167,7 +167,7 @@ void ReconstructedVolume::InitWithReconstruct3D(Reconstruct3D& image_reconstruct
     projection_initialized                      = true;
 }
 
-void ReconstructedVolume::InitWithDimensions(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, wxString wanted_symmetry_symbol) {
+void ReconstructedVolume::InitWithDimensions(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, std::string wanted_symmetry_symbol) {
     if ( density_map == NULL ) {
         density_map = new Image;
     }
@@ -369,7 +369,7 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D& reconstruction) {
                 if ( reconstruction.ctf_reconstruction[pixel_counter] != 0.0 ) {
                     //					if (reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_X(i)==40 && reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j)==20 && reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k)==4)
                     //					{
-                    //						wxPrintf("counter = %li, image = %g, ctf = %g, weights = %g, n = %i\n", pixel_counter, cabsf(reconstruction.image_reconstruction.complex_values[pixel_counter]),
+                    //						Printf("counter = %li, image = %g, ctf = %g, weights = %g, n = %i\n", pixel_counter, cabsf(reconstruction.image_reconstruction.complex_values[pixel_counter]),
                     //						reconstruction.ctf_reconstruction[pixel_counter], reconstruction.weights_reconstruction[pixel_counter], reconstruction.number_of_measurements[pixel_counter]);
                     //					}
 
@@ -514,7 +514,7 @@ float ReconstructedVolume::ComputeOrientationDistributionEfficiency(Reconstruct3
     // (they actually binarize at 1/e^2, but they first normalize by the number of images)
     // I also add a factor of * 0.5, since we are dealing with squared CTF rather than unity
     threshold = exp(-2.0) * 0.5 * psf.ReturnMaximumValue( );
-    wxPrintf("threshold = %f\n", threshold);
+    Printf("threshold = %f\n", threshold);
     MyDebugAssertTrue(threshold > psf.ReturnMinimumValue( ) && threshold < psf.ReturnMaximumValue( ), "Bad threshold value: %f. Min, max of image: %f - %f\n", threshold, psf.ReturnMinimumValue( ), psf.ReturnMaximumValue( ));
     psf.Binarise(threshold);
     //psf.QuickAndDirtyWriteSlices("psf_bin.mrc",1,psf.logical_z_dimension);
@@ -526,11 +526,11 @@ float ReconstructedVolume::ComputeOrientationDistributionEfficiency(Reconstruct3
     //psf_radial_count.SetupXAxis(0.0, 0.5*sqrt(2.0)*float(psf.logical_x_dimension), 0.5*sqrt(2.0)*float(psf.logical_x_dimension));
     psf_radial_average.SetupXAxis(0.0, psf.ReturnMaximumDiagonalRadius( ), psf.ReturnMaximumDiagonalRadius( ) * 0.5);
     psf_radial_count.SetupXAxis(0.0, psf.ReturnMaximumDiagonalRadius( ), psf.ReturnMaximumDiagonalRadius( ) * 0.5);
-    wxPrintf("psf dim = %i, x axis from 0.0 to %0.3f\n", psf.logical_x_dimension, psf.ReturnMaximumDiagonalRadius( ));
+    Printf("psf dim = %i, x axis from 0.0 to %0.3f\n", psf.logical_x_dimension, psf.ReturnMaximumDiagonalRadius( ));
     psf.Compute1DRotationalAverage(psf_radial_average, psf_radial_count, false);
     psf_radial_average.PrintToStandardOut( );
     psf_radial_average_max = psf_radial_average.ReturnMaximumValue( );
-    wxPrintf("PSF radial average: max value = %0.3f at %0.3f\n", psf_radial_average_max, psf_radial_average.ReturnMode( ));
+    Printf("PSF radial average: max value = %0.3f at %0.3f\n", psf_radial_average_max, psf_radial_average.ReturnMode( ));
 
     // Now let's walk through the radial average and make a note of the slope from max to 0.0 and how steep it is
     radius_0pc   = -1.0;
@@ -557,7 +557,7 @@ float ReconstructedVolume::ComputeOrientationDistributionEfficiency(Reconstruct3
         }
     }
 
-    wxPrintf("Radius 0: %0.3f; 25: %0.3f; 50: %0.3f; 75: %0.3f; 100: %0.3f\n", radius_0pc, radius_25pc, radius_50pc, radius_75pc, radius_100pc);
+    Printf("Radius 0: %0.3f; 25: %0.3f; 50: %0.3f; 75: %0.3f; 100: %0.3f\n", radius_0pc, radius_25pc, radius_50pc, radius_75pc, radius_100pc);
 
     // We cheat and come up with pretend values for the radius mean and sigma
     radius_mean  = radius_50pc;
@@ -598,7 +598,7 @@ void ReconstructedVolume::OptimalFilter(ResolutionStatistics& statistics) {
 }
 
 void ReconstructedVolume::FinalizeSimple(Reconstruct3D& reconstruction, int& original_box_size, float& original_pixel_size, float& pixel_size,
-                                         float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff, wxString& output_volume) {
+                                         float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff, std::string& output_volume) {
     int     intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
     int     box_size              = reconstruction.logical_x_dimension;
     MRCFile output_file;
@@ -617,7 +617,7 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D& reconstruction, int& ori
     density_map->BackwardFFT( );
     CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
     //	output_3d.mask_volume_in_voxels = output_3d1.mask_volume_in_voxels;
-    output_file.OpenFile(output_volume.ToStdString( ), true);
+    output_file.OpenFile(output_volume, true);
     density_map->WriteSlices(&output_file, 1, density_map->logical_z_dimension);
     // Make sure the size is set appropriately
     output_file.my_header.SetDimensionsVolume(density_map->logical_x_dimension, density_map->logical_y_dimension, density_map->logical_z_dimension);
@@ -628,7 +628,7 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D& reconstruction, int& ori
 
 void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
                                           float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
-                                          bool center_mass, wxString& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics, float weiner_filter_nominator) {
+                                          bool center_mass, std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics, float weiner_filter_nominator) {
     int                  original_box_size     = density_map_1->logical_x_dimension;
     int                  intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
     int                  box_size              = reconstruction.logical_x_dimension;
@@ -642,8 +642,8 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* 
     ResolutionStatistics cropped_statistics(pixel_size, box_size);
     ResolutionStatistics temp_statistics(pixel_size, intermediate_box_size);
     Peak                 center_of_mass;
-    wxChar               symmetry_type;
-    long                 symmetry_number;
+    char               symmetry_type;
+    long                 symmetry_number = 0;
 
     if ( pixel_size != original_pixel_size )
         resolution_limit = 2.0 * pixel_size;
@@ -717,16 +717,16 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* 
         //		temp_float = density_map->ReturnAverageOfRealValuesOnEdges();
         temp_float     = density_map->ReturnAverageOfRealValues( );
         center_of_mass = density_map->CenterOfMass(temp_float, true);
-        symmetry_type  = symmetry_symbol.Capitalize( )[0];
+        symmetry_type  = char(toupper(symmetry_symbol[0]));
         if ( symmetry_type == 'C' && center_of_mass.value > 0.0 ) {
-            symmetry_symbol.Mid(1).ToLong(&symmetry_number);
+            StringToLong(symmetry_symbol.substr(1), symmetry_number);
             if ( symmetry_number < 2 )
                 density_map->RealSpaceIntegerShift(int(center_of_mass.x), int(center_of_mass.y), int(center_of_mass.z));
             else
                 density_map->RealSpaceIntegerShift(0, 0, int(center_of_mass.z));
         }
     }
-    output_file.OpenFile(output_volume.ToStdString( ), true);
+    output_file.OpenFile(output_volume, true);
     density_map->WriteSlices(&output_file, 1, density_map->logical_z_dimension);
     output_file.SetPixelSize(original_pixel_size);
     EmpiricalDistribution<double> density_distribution;
@@ -737,7 +737,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* 
 
 void ReconstructedVolume::FinalizeML(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
                                      float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
-                                     wxString& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics) {
+                                     std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics) {
     int                  original_box_size     = density_map_1->logical_x_dimension;
     int                  intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
     int                  box_size              = reconstruction.logical_x_dimension;
@@ -801,7 +801,7 @@ void ReconstructedVolume::FinalizeML(Reconstruct3D& reconstruction, Image* densi
     if ( intermediate_box_size == box_size )
         Correct3D(outer_mask_radius / original_pixel_size);
     CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
-    output_file.OpenFile(output_volume.ToStdString( ), true);
+    output_file.OpenFile(output_volume, true);
     density_map->WriteSlices(&output_file, 1, density_map->logical_z_dimension);
     output_file.SetPixelSize(original_pixel_size);
     output_file.CloseFile( );
@@ -845,7 +845,7 @@ void ReconstructedVolume::Calculate3DML(Reconstruct3D& reconstruction) {
     //	{
     //		if (reconstruction.signal_power_spectrum->data_y[i] != 0.0) wiener_constant[i] = reconstruction.noise_power_spectrum->data_y[i] / reconstruction.signal_power_spectrum->data_y[i];
     //		else wiener_constant[i] = - 1.0;
-    //		wxPrintf("noise, signal, filter = %i %g %g %g\n", i, reconstruction.noise_power_spectrum->data_y[i], reconstruction.signal_power_spectrum->data_y[i], wiener_constant[i]);
+    //		Printf("noise, signal, filter = %i %g %g %g\n", i, reconstruction.noise_power_spectrum->data_y[i], reconstruction.signal_power_spectrum->data_y[i], wiener_constant[i]);
     //	}
 
     for ( k = 0; k <= reconstruction.image_reconstruction.physical_upper_bound_complex_z; k++ ) {
@@ -864,7 +864,7 @@ void ReconstructedVolume::Calculate3DML(Reconstruct3D& reconstruction) {
 
                     if ( wiener_constant[bin] >= 0.0 ) {
                         density_map->complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + wiener_constant[bin]);
-                        //						wxPrintf("i j k = %i %i %i bin = %i pow = %g rec = %g ctf2 = %g filt = %g final = %g\n",i,j,k,bin,signal_power_spectrum.data_y[bin],
+                        //						Printf("i j k = %i %i %i bin = %i pow = %g rec = %g ctf2 = %g filt = %g final = %g\n",i,j,k,bin,signal_power_spectrum.data_y[bin],
                         //								cabsf(reconstruction.image_reconstruction.complex_values[pixel_counter]),
                         //								reconstruction.ctf_reconstruction[pixel_counter],wiener_constant[bin], cabsf(density_map->complex_values[pixel_counter]));
                     }

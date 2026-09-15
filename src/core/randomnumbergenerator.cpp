@@ -33,7 +33,7 @@ float RandomNumberGenerator::GetUniformRandom( ) {
     if ( use_internal ) {
         rnd1 = (float)Internal_rand( );
         hmax = ((float)32767) / 2.0;
-        //		wxPrintf("rnd1 = %g\n", rnd1);
+        //		Printf("rnd1 = %g\n", rnd1);
     }
     else {
         rnd1 = (float)rand( );
@@ -68,6 +68,6 @@ void RandomNumberGenerator::Internal_srand(unsigned int random_seed) {
 
 int RandomNumberGenerator::Internal_rand( ) {
     next_seed = next_seed * 1103515245 + 12345;
-    //	wxPrintf("next = %i\n", next_seed);
+    //	Printf("next = %i\n", next_seed);
     return ((unsigned int)(next_seed / 65536) % 32768);
 }

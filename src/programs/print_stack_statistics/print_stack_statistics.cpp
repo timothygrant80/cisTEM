@@ -46,9 +46,9 @@ bool PrintStackStatistics::DoCalculation( ) {
     double average_min = 0;
     double average_max = 0;
 
-    wxPrintf("\n\n");
+    Printf("\n\n");
 
-    wxPrintf("Image No.      Min Value.     Max Value.    Average Value.  Sigma.\n\n");
+    Printf("Image No.      Min Value.     Max Value.    Average Value.  Sigma.\n\n");
 
     for ( int image_counter = 0; image_counter < my_input_file_one.ReturnNumberOfSlices( ); image_counter++ ) {
         my_image_one.ReadSlice(&my_input_file_one, image_counter + 1);
@@ -61,10 +61,10 @@ bool PrintStackStatistics::DoCalculation( ) {
         average_max += image_max;
         average_average += image_average;
 
-        wxPrintf("  %7i\t%f\t%f\t%f\t%f\n", image_counter + 1, image_min, image_max, image_average, image_sigma);
+        Printf("  %7i\t%f\t%f\t%f\t%f\n", image_counter + 1, image_min, image_max, image_average, image_sigma);
     }
 
-    wxPrintf("\n  Average:\t%f\t%f\t%f\t%f\n\n\n", average_min / my_input_file_one.ReturnNumberOfSlices( ), average_max / my_input_file_one.ReturnNumberOfSlices( ), average_average / my_input_file_one.ReturnNumberOfSlices( ), average_sigma / my_input_file_one.ReturnNumberOfSlices( ));
+    Printf("\n  Average:\t%f\t%f\t%f\t%f\n\n\n", average_min / my_input_file_one.ReturnNumberOfSlices( ), average_max / my_input_file_one.ReturnNumberOfSlices( ), average_average / my_input_file_one.ReturnNumberOfSlices( ), average_sigma / my_input_file_one.ReturnNumberOfSlices( ));
 
     return true;
 }

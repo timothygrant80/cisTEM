@@ -5,7 +5,7 @@
 AssetGroup::AssetGroup( ) {
     // start off with 15 members;
     id                = -1;
-    name              = wxEmptyString;
+    name              = std::string();
     number_of_members = 0;
     number_allocated  = 15;
     members           = new long[15];
@@ -82,7 +82,7 @@ AssetGroup& AssetGroup::operator=(const AssetGroup* t) {
     return *this;
 }
 
-void AssetGroup::SetName(wxString wanted_name) {
+void AssetGroup::SetName(std::string wanted_name) {
     name = wanted_name;
 }
 
@@ -139,7 +139,7 @@ void AssetGroup::CopyFrom(AssetGroup* other_group) {
 void AssetGroup::RemoveMember(long number_to_remove) // number to remove is the array position IN THE GROUP - this is confusing, as in Add member, it is the array position from all assets
 {
     if ( number_to_remove < 0 || number_to_remove >= number_of_members ) {
-        wxPrintf("Error! Trying to add to remove an image that doesn't exist\n\n");
+        Printf("Error! Trying to add to remove an image that doesn't exist\n\n");
         exit(-1);
     }
 
@@ -176,7 +176,7 @@ AssetGroupList::AssetGroupList( ) {
 
 void AssetGroupList::AddMemberToGroup(long wanted_group_number, long member_to_add) {
     if ( wanted_group_number < 0 || wanted_group_number >= number_of_groups ) {
-        wxPrintf("Error! Trying to add to a group that does not exist\n\n");
+        Printf("Error! Trying to add to a group that does not exist\n\n");
         exit(-1);
     }
 
@@ -227,7 +227,7 @@ void AssetGroupList::ShiftMembersDueToAssetRemoval(long wanted_asset) {
     }
 }
 
-void AssetGroupList::AddGroup(wxString name) {
+void AssetGroupList::AddGroup(std::string name) {
     // check we have enough memory
 
     AssetGroup* buffer;
@@ -288,10 +288,10 @@ void AssetGroupList::AddGroup(AssetGroup* group_to_add) {
 }
 
 void AssetGroupList::RemoveGroup(long number_to_remove) {
-    //wxPrintf("Removing group #%li\n", number_to_remove);
+    //Printf("Removing group #%li\n", number_to_remove);
 
     if ( number_to_remove < 0 || number_to_remove >= number_of_groups ) {
-        wxPrintf("Error! Trying to remove a group that does not exist\n\n");
+        Printf("Error! Trying to remove a group that does not exist\n\n");
         exit(-1);
     }
 

@@ -46,7 +46,7 @@ void SocketServerThread::Entry( ) {
 
     for ( short int current_port = START_PORT; current_port <= END_PORT; current_port++ ) {
         if ( current_port == END_PORT ) {
-            wxPrintf("Server: Could not find a valid port !\n\n");
+            Printf("Server: Could not find a valid port !\n\n");
             parent_pointer->server_is_running = false;
             return;
         }
@@ -55,7 +55,7 @@ void SocketServerThread::Entry( ) {
         if ( socket_server.Listen(current_port) ) {
             my_port             = current_port;
             all_my_ip_addresses = ReturnIPAddress( );
-            my_port_string      = wxString::Format("%hi", my_port);
+            my_port_string      = Format("%hi", my_port);
 
             parent_pointer->server_is_running = true;
             local_copy_server_is_running      = true;
@@ -80,7 +80,7 @@ void SocketServerThread::Entry( ) {
                 // we have a new connection, but we don't know if it has the correct job code.
                 // ask it for identification, and add it for monitoring so we can respond when it sends a job code..
 
-                WriteToSocket(new_connection, socket_please_identify, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+                WriteToSocket(new_connection, socket_please_identify, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING);
 
                 MyDebugAssertTrue(parent_pointer->brother_event_handler != NULL, "event handler not set for socket communicator!");
                 parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::MonitorSocket, parent_pointer, new_connection));
@@ -151,7 +151,7 @@ bool SocketCommunicator::SetupServer( ) {
     }
 
     if ( server_is_running == false ) {
-        wxPrintf("Warning:: Timed out waiting for server...\n");
+        Printf("Warning:: Timed out waiting for server...\n");
         return false;
     }
     return true;
@@ -189,17 +189,17 @@ short int SocketCommunicator::ReturnServerPort( ) {
     return -1;
 }
 
-wxString SocketCommunicator::ReturnServerPortString( ) {
+std::string SocketCommunicator::ReturnServerPortString( ) {
     if ( server_is_running == true && server_thread != NULL )
         return server_thread->my_port_string;
     return "";
 }
 
-wxArrayString SocketCommunicator::ReturnServerAllIpAddresses( ) {
+std::vector<std::string> SocketCommunicator::ReturnServerAllIpAddresses( ) {
     if ( server_is_running == true && server_thread != NULL )
         return server_thread->all_my_ip_addresses;
 
-    wxArrayString blank;
+    std::vector<std::string> blank;
     return blank;
 }
 
@@ -228,7 +228,7 @@ void SocketCommunicator::MonitorSocket(TcpSocket* socket_to_monitor) {
             }
 
             if ( monitor_is_running == false ) {
-                wxPrintf("Warning:: Timed out waiting for socket monitor thead to start...\n");
+                Printf("Warning:: Timed out waiting for socket monitor thead to start...\n");
                 DEBUG_ABORT
             }
         }
@@ -385,7 +385,7 @@ void SocketClientMonitorThread::Entry( ) {
 
             // this socket has data, read the message..
 
-            if ( ReadFromSocket(current_socket, &socket_input_buffer, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+            if ( ReadFromSocket(current_socket, &socket_input_buffer, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING) == false ) {
                 // socket is likely dead
                 ReportDisconnectAndForget(socket_counter);
                 continue;
@@ -396,17 +396,17 @@ void SocketClientMonitorThread::Entry( ) {
             if ( memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0 ) {
                 // send my job code..
 
-                if ( WriteToSocket(current_socket, socket_sending_identification, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+                if ( WriteToSocket(current_socket, socket_sending_identification, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING) == false ) {
                     ReportDisconnectAndForget(socket_counter);
                 }
-                else if ( WriteToSocket(current_socket, parent_pointer->current_job_code, SOCKET_CODE_SIZE, true, "SendJobCodeIdentifier", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+                else if ( WriteToSocket(current_socket, parent_pointer->current_job_code, SOCKET_CODE_SIZE, true, "SendJobCodeIdentifier", FUNCTION_DETAILS_AS_STRING) == false ) {
                     ReportDisconnectAndForget(socket_counter);
                 }
             }
             else if ( memcmp(socket_input_buffer, socket_sending_identification, SOCKET_CODE_SIZE) == 0 ) {
                 unsigned char* received_job_code = new unsigned char[SOCKET_CODE_SIZE];
                 // read the job code
-                if ( ReadFromSocket(current_socket, received_job_code, SOCKET_CODE_SIZE, true, "SendJobCodeIdentifier", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                if ( ReadFromSocket(current_socket, received_job_code, SOCKET_CODE_SIZE, true, "SendJobCodeIdentifier", FUNCTION_DETAILS_AS_STRING) == true ) {
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleNewSocketConnection, parent_pointer, current_socket, received_job_code));
 
                     // stop monitoring this socket.. we will let the overridden code decide what to do with it based on the identification code..
@@ -445,13 +445,13 @@ void SocketClientMonitorThread::Entry( ) {
                 }
             }
             else if ( memcmp(socket_input_buffer, socket_you_are_a_worker, SOCKET_CODE_SIZE) == 0 ) {
-                wxString master_ip_address;
-                wxString master_port_string;
+                std::string master_ip_address;
+                std::string master_port_string;
                 bool     no_error;
 
-                master_ip_address = ReceivewxStringFromSocket(current_socket, no_error);
+                master_ip_address = ReceiveStringFromSocket(current_socket, no_error);
                 if ( no_error == true )
-                    master_port_string = ReceivewxStringFromSocket(current_socket, no_error);
+                    master_port_string = ReceiveStringFromSocket(current_socket, no_error);
 
                 if ( no_error == true ) {
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketYouAreAWorker, parent_pointer, current_socket, master_ip_address, master_port_string));
@@ -484,9 +484,9 @@ void SocketClientMonitorThread::Entry( ) {
                 }
             }
             else if ( memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0 ) {
-                wxString error_message;
+                std::string error_message;
                 bool     no_error;
-                error_message = ReceivewxStringFromSocket(current_socket, no_error);
+                error_message = ReceiveStringFromSocket(current_socket, no_error);
 
                 if ( no_error == true ) {
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketIHaveAnError, parent_pointer, current_socket, error_message));
@@ -496,9 +496,9 @@ void SocketClientMonitorThread::Entry( ) {
                 }
             }
             else if ( memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0 ) {
-                wxString info_message;
+                std::string info_message;
                 bool     no_error;
-                info_message = ReceivewxStringFromSocket(current_socket, no_error);
+                info_message = ReceiveStringFromSocket(current_socket, no_error);
 
                 if ( no_error == true )
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketIHaveInfo, parent_pointer, current_socket, info_message));
@@ -508,7 +508,7 @@ void SocketClientMonitorThread::Entry( ) {
             }
             else if ( memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0 ) {
                 int finished_job_number;
-                if ( ReadFromSocket(current_socket, &finished_job_number, sizeof(int), true, "SendJobNumber", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                if ( ReadFromSocket(current_socket, &finished_job_number, sizeof(int), true, "SendJobNumber", FUNCTION_DETAILS_AS_STRING) == true ) {
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketJobFinished, parent_pointer, current_socket, finished_job_number));
                 }
                 else {
@@ -517,7 +517,7 @@ void SocketClientMonitorThread::Entry( ) {
             }
             else if ( memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0 ) {
                 int received_number_of_connections;
-                if ( ReadFromSocket(current_socket, &received_number_of_connections, sizeof(int), true, "SendNumberOfConnections", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                if ( ReadFromSocket(current_socket, &received_number_of_connections, sizeof(int), true, "SendNumberOfConnections", FUNCTION_DETAILS_AS_STRING) == true ) {
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketNumberOfConnections, parent_pointer, current_socket, received_number_of_connections));
                 }
                 else {
@@ -526,7 +526,7 @@ void SocketClientMonitorThread::Entry( ) {
             }
             else if ( memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0 ) {
                 long received_timing_in_milliseconds;
-                if ( ReadFromSocket(current_socket, &received_timing_in_milliseconds, sizeof(long), true, "SendTotalMillisecondsSpentOnThreads", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                if ( ReadFromSocket(current_socket, &received_timing_in_milliseconds, sizeof(long), true, "SendTotalMillisecondsSpentOnThreads", FUNCTION_DETAILS_AS_STRING) == true ) {
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketAllJobsFinished, parent_pointer, current_socket, received_timing_in_milliseconds));
                 }
                 else {
@@ -556,18 +556,18 @@ void SocketClientMonitorThread::Entry( ) {
             }
             else if ( memcmp(socket_input_buffer, socket_result_with_image_to_write, SOCKET_CODE_SIZE) == 0 ) {
                 Image*   image_to_write = new Image;
-                wxString filename_to_write;
+                std::string filename_to_write;
                 int      position_in_stack;
                 bool     ok = false;
 
                 int details[3];
-                if ( ReadFromSocket(current_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                if ( ReadFromSocket(current_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING) == true ) {
                     image_to_write->Allocate(details[0], details[1], 1, true, false);
                     position_in_stack = details[2];
 
-                    if ( ReadFromSocket(current_socket, image_to_write->real_values, image_to_write->real_memory_allocated * sizeof(float), true, "SendResultImageDataFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                    if ( ReadFromSocket(current_socket, image_to_write->real_values, image_to_write->real_memory_allocated * sizeof(float), true, "SendResultImageDataFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING) == true ) {
                         bool no_error;
-                        filename_to_write = ReceivewxStringFromSocket(current_socket, no_error);
+                        filename_to_write = ReceiveStringFromSocket(current_socket, no_error);
                         if ( no_error == true ) {
                             // THIS IS UNUSUAL
                             // The previous implementation received the image, then queued the event (with CallAfter), expecting myApp to handle write it.  This lead to a situation where if the data was
@@ -580,7 +580,7 @@ void SocketClientMonitorThread::Entry( ) {
                                 // if we are writing a file, close it..
                                 if ( buffered_output_file.IsOpen( ) == true )
                                     buffered_output_file.CloseFile( );
-                                buffered_output_file.OpenFile(filename_to_write.ToStdString( ), true);
+                                buffered_output_file.OpenFile(filename_to_write, true);
 
                                 // Setup the file
                                 image_to_write->WriteSlice(&buffered_output_file, 1);
@@ -601,14 +601,14 @@ void SocketClientMonitorThread::Entry( ) {
             else if ( memcmp(socket_input_buffer, socket_program_defined_result, SOCKET_CODE_SIZE) == 0 ) {
                 int details[3];
 
-                if ( ReadFromSocket(current_socket, details, sizeof(int) * 3, true, "SendProgramDefinedResultDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                if ( ReadFromSocket(current_socket, details, sizeof(int) * 3, true, "SendProgramDefinedResultDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING) == true ) {
                     int size_of_data_array         = details[0];
                     int result_number              = details[1];
                     int number_of_expected_results = details[2];
 
                     float* data_array = new float[size_of_data_array];
 
-                    if ( ReadFromSocket(current_socket, data_array, size_of_data_array * sizeof(float), true, "SendProgramDefinedResultArrayFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                    if ( ReadFromSocket(current_socket, data_array, size_of_data_array * sizeof(float), true, "SendProgramDefinedResultArrayFromWorkerToMaster", FUNCTION_DETAILS_AS_STRING) == true ) {
                         parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketProgramDefinedResult, parent_pointer, current_socket, data_array, size_of_data_array, result_number, number_of_expected_results));
                     }
                     else {
@@ -623,7 +623,7 @@ void SocketClientMonitorThread::Entry( ) {
             else if ( memcmp(socket_input_buffer, socket_send_thread_timing, SOCKET_CODE_SIZE) == 0 ) {
                 long received_timing_in_milliseconds;
 
-                if ( ReadFromSocket(current_socket, &received_timing_in_milliseconds, sizeof(long), true, "SendMillisecondsSpentByThread", FUNCTION_DETAILS_AS_WXSTRING) == true ) {
+                if ( ReadFromSocket(current_socket, &received_timing_in_milliseconds, sizeof(long), true, "SendMillisecondsSpentByThread", FUNCTION_DETAILS_AS_STRING) == true ) {
                     parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketSendThreadTiming, parent_pointer, current_socket, received_timing_in_milliseconds));
                 }
                 else {

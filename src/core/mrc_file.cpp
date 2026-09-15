@@ -121,9 +121,9 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 }
 
 void MRCFile::PrintInfo( ) {
-    wxPrintf("\nSummary information for file %s\n", filename);
+    Printf("\nSummary information for file %s\n", filename);
     my_header.PrintInfo( );
-    wxPrintf("\n");
+    Printf("\n");
 }
 
 float MRCFile::ReturnPixelSize( ) {
@@ -144,7 +144,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_a
         MyDebugAssertTrue(end_slice <= ReturnNumberOfSlices( ), "end slice number larger than total slices!");
         MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
         //MyDebugAssertTrue(my_header.ReturnMachineStamp() == my_header.ReturnLocalMachineStamp(), "Byteswapping not yet supported");
-        //wxPrintf("mchst from headers: %i, local mchst: %i\n",my_header.ReturnMachineStamp(), my_header.ReturnLocalMachineStamp());
+        //Printf("mchst from headers: %i, local mchst: %i\n",my_header.ReturnMachineStamp(), my_header.ReturnLocalMachineStamp());
 
         // calculate and seek to the start byte..
 
@@ -195,7 +195,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_a
 
         // we need a temp array for non float formats..
 
-        //	wxPrintf("seek_position = %li\n", (seek_position - 1024) / 1679616 + 1);
+        //	Printf("seek_position = %li\n", (seek_position - 1024) / 1679616 + 1);
         switch ( my_header.Mode( ) ) {
             // 1-byte integer
             case 0: {
@@ -299,7 +299,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_a
                     low_4bits = temp_char_array[input_array_position] & 0x0F;
                     hi_4bits  = (temp_char_array[input_array_position] >> 4) & 0x0F;
 
-                    //wxPrintf("\n\ninput = %i, low = %i, high = %i\n\n", int(temp_char_array[input_array_position]), int(low_4bits), int(hi_4bits));
+                    //Printf("\n\ninput = %i, low = %i, high = %i\n\n", int(temp_char_array[input_array_position]), int(low_4bits), int(hi_4bits));
 
                     input_array_position++;
 
@@ -381,7 +381,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_a
                 delete[] temp_array;
             }
             else {
-                wxPrintf("Ooops, strange ordering of data in MRC file not yet supported");
+                Printf("Ooops, strange ordering of data in MRC file not yet supported");
                 DEBUG_ABORT;
             }
         }

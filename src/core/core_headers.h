@@ -74,50 +74,31 @@ typedef struct CurvePoint {
 #include <wx/textfile.h>
 #include <wx/log.h>
 #include <wx/regex.h>
-#include <wx/stackwalk.h>
 #include <wx/xml/xml.h>
 #ifdef ENABLE_WEBVIEW
 #include <wx/webview.h>
 #endif
 
-class StackDump : public wxStackWalker // so we can give backtraces..
-{
+#include <execinfo.h>
+
+// Prints a backtrace of the calling thread (used by the debug assert macros).
+class StackDump {
   public:
-    StackDump(const char* argv0)
-        : wxStackWalker(argv0) {
-    }
+    StackDump(const char* argv0 = NULL) { (void)argv0; }
 
-    virtual void Walk(size_t skip = 1) {
-        wxPrintf("Stack dump:\n\n");
-
-        wxStackWalker::Walk(skip);
-    }
-
-  protected:
-    virtual void OnStackFrame(const wxStackFrame& frame) {
-        wxPrintf("[%2i] ", int(frame.GetLevel( )));
-
-        wxString name = frame.GetName( );
-        if ( ! name.empty( ) ) {
-            wxPrintf("%-20.40s", name.mb_str( ));
+    void Walk(size_t skip = 1) {
+        void* frames[128];
+        int   count = backtrace(frames, 128);
+        printf("Stack dump:\n\n");
+        char** symbols = backtrace_symbols(frames, count);
+        for ( int frame = int(skip); frame < count; frame++ ) {
+            if ( symbols != NULL )
+                printf("[%2i] %s\n", frame - int(skip), symbols[frame]);
+            else
+                printf("[%2i] %p\n", frame - int(skip), frames[frame]);
         }
-        else {
-            wxPrintf("0x%08lx", (unsigned long)frame.GetAddress( ));
-        }
-
-        if ( frame.HasSourceLocation( ) ) {
-            wxPrintf("\t%s:%i",
-                     frame.GetFileName( ).mb_str( ),
-                     int(frame.GetLine( )));
-        }
-
-        wxPrintf("");
-
-        wxString type, val;
-        for ( size_t n = 0; frame.GetParam(n, &type, &name, &val); n++ ) {
-            wxPrintf("\t%s %s = %s\n", type.mb_str( ), name.mb_str( ), val.mb_str( ));
-        }
-        wxPrintf("\n");
+        printf("\n");
+        free(symbols);
     }
 };
 

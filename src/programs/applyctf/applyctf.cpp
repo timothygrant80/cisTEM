@@ -158,7 +158,7 @@ bool ApplyCTFApp::DoCalculation( ) {
 
     // Loop over input images
 
-    wxPrintf("\nApplying CTF...\n\n");
+    Printf("\nApplying CTF...\n\n");
     my_progress_bar = new ProgressBar(number_of_input_images);
 
     for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {

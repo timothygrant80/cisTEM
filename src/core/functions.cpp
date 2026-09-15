@@ -146,23 +146,19 @@ bool SendStringToSocket(const std::string& string_to_send, TcpSocket* socket) {
 
     // send the length of the string, followed by the string
 
-    if ( WriteToSocket(socket, &length_of_string, sizeof(int), true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( WriteToSocket(socket, &length_of_string, sizeof(int), true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
-    if ( length_of_string > 0 && WriteToSocket(socket, string_to_send.data( ), length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( length_of_string > 0 && WriteToSocket(socket, string_to_send.data( ), length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
     return true;
 }
 
-bool SendwxStringToSocket(wxString* string_to_send, TcpSocket* socket) {
-    return SendStringToSocket(string_to_send->ToStdString( ), socket);
-}
-
 bool SendTemplateMatchingResultToSocket(TcpSocket* socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // send the image number and all the peak details...
 
-    int number_of_peaks   = peak_infos.GetCount( );
-    int number_of_changes = peak_changes.GetCount( );
+    int number_of_peaks   = peak_infos.size();
+    int number_of_changes = peak_changes.size();
 
     int number_of_bytes = sizeof(int) + sizeof(float) + sizeof(int) + sizeof(int) + (number_of_peaks * sizeof(float) * 8) + (number_of_changes * sizeof(float) * 10); // THIS WILL NEED TO BE CHANGED IF EXTRA THINGS ARE ADDED
 
@@ -181,7 +177,7 @@ bool SendTemplateMatchingResultToSocket(TcpSocket* socket, int& image_number, fl
 
     // peaks..
 
-    for ( int counter = 0; counter < peak_infos.GetCount( ); counter++ ) {
+    for ( int counter = 0; counter < peak_infos.size(); counter++ ) {
         pointer_to_float_data[float_position] = peak_infos[counter].x_pos;
         float_position++;
         pointer_to_float_data[float_position] = peak_infos[counter].y_pos;
@@ -225,11 +221,11 @@ bool SendTemplateMatchingResultToSocket(TcpSocket* socket, int& image_number, fl
         float_position++;
     }
 
-    if ( WriteToSocket(socket, socket_template_match_result_ready, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( WriteToSocket(socket, socket_template_match_result_ready, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
-    if ( WriteToSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( WriteToSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
-    if ( WriteToSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( WriteToSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
     return true;
@@ -240,15 +236,15 @@ bool ReceiveTemplateMatchingResultFromSocket(TcpSocket* socket, int& image_numbe
     int number_of_peaks;
     int number_of_changes;
 
-    if ( ReadFromSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( ReadFromSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
     unsigned char* data_buffer = new unsigned char[number_of_bytes];
-    if ( ReadFromSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( ReadFromSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_STRING) == false )
         return false;
 
-    peak_infos.Clear( );
-    peak_changes.Clear( );
+    peak_infos.clear( );
+    peak_changes.clear( );
 
     TemplateMatchFoundPeakInfo temp_peak_info;
 
@@ -281,7 +277,7 @@ bool ReceiveTemplateMatchingResultFromSocket(TcpSocket* socket, int& image_numbe
         temp_peak_info.peak_height = pointer_to_float_data[float_position];
         float_position++;
 
-        peak_infos.Add(temp_peak_info);
+        peak_infos.push_back(temp_peak_info);
     }
 
     for ( int counter = 0; counter < number_of_changes; counter++ ) {
@@ -306,7 +302,7 @@ bool ReceiveTemplateMatchingResultFromSocket(TcpSocket* socket, int& image_numbe
         temp_peak_info.new_peak_number = pointer_to_float_data[float_position];
         float_position++;
 
-        peak_changes.Add(temp_peak_info);
+        peak_changes.push_back(temp_peak_info);
     }
 
     delete[] data_buffer;
@@ -372,14 +368,14 @@ std::string ReceiveStringFromSocket(TcpSocket* socket, bool& receive_worked) {
 
     // receive the length of the string, followed by the string
 
-    if ( ReadFromSocket(socket, &length_of_string, sizeof(int), true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_WXSTRING) == false || length_of_string < 0 ) {
+    if ( ReadFromSocket(socket, &length_of_string, sizeof(int), true, "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_STRING) == false || length_of_string < 0 ) {
         receive_worked = false;
         return "";
     }
 
     std::string received_string(size_t(length_of_string), '\0');
 
-    if ( length_of_string > 0 && ReadFromSocket(socket, &received_string[0], length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false ) {
+    if ( length_of_string > 0 && ReadFromSocket(socket, &received_string[0], length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_STRING) == false ) {
         receive_worked = false;
         return "";
     }
@@ -387,19 +383,15 @@ std::string ReceiveStringFromSocket(TcpSocket* socket, bool& receive_worked) {
     return received_string;
 }
 
-wxString ReceivewxStringFromSocket(TcpSocket* socket, bool& receive_worked) {
-    return wxString(ReceiveStringFromSocket(socket, receive_worked));
-}
-
-wxArrayString ReturnIPAddress( ) {
+std::vector<std::string> ReturnIPAddress( ) {
 
     struct ifaddrs* ifAddrStruct = NULL;
     struct ifaddrs* ifa          = NULL;
     void*           tmpAddrPtr   = NULL;
     char            addressBuffer[INET_ADDRSTRLEN + 1];
 
-    wxString      ip_address;
-    wxArrayString all_ip_addresses;
+    std::string      ip_address;
+    std::vector<std::string> all_ip_addresses;
 
     for ( int counter = 0; counter <= INET_ADDRSTRLEN; counter++ ) {
         addressBuffer[counter] = 0;
@@ -418,24 +410,24 @@ wxArrayString ReturnIPAddress( ) {
             inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
 
             ip_address = addressBuffer;
-            ip_address.Trim( );
-            ip_address.Trim(false);
+            TrimRight(ip_address);
+            TrimLeft(ip_address);
 
-            if ( ip_address.Find("127.0.0.1") == wxNOT_FOUND )
-                all_ip_addresses.Add(ip_address);
+            if ( ip_address.find("127.0.0.1") == std::string::npos )
+                all_ip_addresses.push_back(ip_address);
 
             //if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) ip_address = addressBuffer;
             //if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) all_ip_addresses.Add(addressBuffer);
         }
     }
 
-    all_ip_addresses.Add("127.0.0.1");
+    all_ip_addresses.push_back("127.0.0.1");
 
-    /*    wxPrintf("There are %li ip addresses\n", all_ip_addresses.GetCount());
+    /*    Printf("There are %li ip addresses\n", all_ip_addresses.size());
 
-	    for (int counter = 0; counter < all_ip_addresses.GetCount(); counter++)
+	    for (int counter = 0; counter < all_ip_addresses.size(); counter++)
 	    {
-	    	wxPrintf("%i = %s\n", counter, all_ip_addresses.Item(counter));
+	    	Printf("%i = %s\n", counter, all_ip_addresses[counter]);
 	    }*/
 
     if ( ifAddrStruct != NULL )
@@ -444,15 +436,15 @@ wxArrayString ReturnIPAddress( ) {
     return all_ip_addresses;
 }
 
-wxString ReturnIPAddressFromSocket(TcpSocket* socket) {
-    return wxString(socket->ReturnLocalIPAddress( ));
+std::string ReturnIPAddressFromSocket(TcpSocket* socket) {
+    return std::string(socket->ReturnLocalIPAddress( ));
 }
 
 // Test whether the filename's extension matches; case insensitive
 bool FilenameExtensionMatches(std::string filename, std::string extension) {
-    wxFileName input_filename_wx(filename);
-    wxString   input_filename_ext = input_filename_wx.GetExt( );
-    return input_filename_ext.IsSameAs(extension, false);
+    std::filesystem::path input_filename_wx(filename);
+    std::string   input_filename_ext = ReturnFileExtension(input_filename_wx.string());
+    return EqualsNoCase(input_filename_ext, extension);
 }
 
 /*
@@ -573,7 +565,7 @@ int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforc
 void ReturnBestFourierBinnedSize(float& output_binning_factor, int& dx, int& dy, const int input_x_size, const int input_y_size) {
     // We want to find the smallest change from the output_binning_factor that will result in
     // a factorizable output size in both dimensions, which may not be trivial for rectangular images.
-    wxPrintf("\nWanted output binning factor    : %f\n", output_binning_factor);
+    Printf("\nWanted output binning factor    : %f\n", output_binning_factor);
     constexpr std::array<int, 6>    factors = {2, 3, 5, 7, 11, 13};
     std::vector<int>                factorized_sizes_x;
     std::vector<int>                factorized_sizes_y;
@@ -695,7 +687,7 @@ void ReturnBestFourierBinnedSize(float& output_binning_factor, int& dx, int& dy,
             }
         }
 
-        wxPrintf("Best additional binning factor : %f, producing size x and y of %d and %d respectively\n", best_binning_factor,
+        Printf("Best additional binning factor : %f, producing size x and y of %d and %d respectively\n", best_binning_factor,
                  RoundAndMakeEven(output_x_f / best_binning_factor), RoundAndMakeEven(output_y_f / best_binning_factor));
 
         // The full binning is now
@@ -703,7 +695,7 @@ void ReturnBestFourierBinnedSize(float& output_binning_factor, int& dx, int& dy,
         output_x = RoundAndMakeEven(float(input_x_size) / output_binning_factor);
         output_y = RoundAndMakeEven(float(input_y_size) / output_binning_factor);
 
-        wxPrintf("Total binning factor w/ trimming: %f, producing size x and y of %d and %d respectively\n", output_binning_factor, output_x + dx, output_y + dy);
+        Printf("Total binning factor w/ trimming: %f, producing size x and y of %d and %d respectively\n", output_binning_factor, output_x + dx, output_y + dy);
     }
 }
 
@@ -729,7 +721,7 @@ void Deallocate2DFloatArray(float**& array, int dim1) {
     array = NULL;
 }
 
-long ReturnFileSizeInBytes(wxString filename) {
+long ReturnFileSizeInBytes(std::string filename) {
     long          size;
     std::ifstream filesize(filename, std::ifstream::ate | std::ifstream::binary);
     size = filesize.tellg( );
@@ -739,7 +731,7 @@ long ReturnFileSizeInBytes(wxString filename) {
 
 void CheckSocketForError(TcpSocket* socket_to_check) {
     if ( socket_to_check->Error( ) == true ) {
-        wxPrintf("Socket Error : %s\n", ReturnSocketErrorText(socket_to_check));
+        Printf("Socket Error : %s\n", ReturnSocketErrorText(socket_to_check));
     }
 }
 
@@ -772,36 +764,44 @@ float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float maj
     return original_pixel_size / average_scale;
 }
 
-void SplitFileIntoDirectoryAndFile(wxString& input_file, wxString& output_directory, wxString& output_file) {
-    wxFileName    current_filename = input_file;
-    wxArrayString directories      = current_filename.GetDirs( );
-    output_directory               = "/";
+void SplitFileIntoDirectoryAndFile(std::string& input_file, std::string& output_directory, std::string& output_file) {
+    std::filesystem::path    current_filename = input_file;
+    std::vector<std::string> directories;
 
-    for ( int directory_counter = 0; directory_counter < directories.GetCount( ); directory_counter++ ) {
-        output_directory += directories.Item(directory_counter);
+    // the directory components, without the leading root separator (wxFileName::GetDirs)
+    for ( const auto& directory_component : current_filename.parent_path( ) ) {
+        if ( directory_component == "/" || directory_component.empty( ) )
+            continue;
+        directories.push_back(directory_component.string( ));
+    }
+
+    output_directory = "/";
+
+    for ( int directory_counter = 0; directory_counter < int(directories.size( )); directory_counter++ ) {
+        output_directory += directories[directory_counter];
         output_directory += "/";
     }
 
-    output_file = current_filename.GetFullName( );
+    output_file = current_filename.filename().string();
 }
 
-int ReturnNumberofAsymmetricUnits(wxString symmetry) {
-    wxString current_symmetry_string = symmetry;
-    wxChar   symmetry_type;
+int ReturnNumberofAsymmetricUnits(std::string symmetry) {
+    std::string current_symmetry_string = symmetry;
+    char   symmetry_type;
     long     symmetry_number;
 
-    current_symmetry_string = current_symmetry_string.Trim( );
-    current_symmetry_string = current_symmetry_string.Trim(false);
+    TrimRight(current_symmetry_string);
+    TrimLeft(current_symmetry_string);
 
-    MyDebugAssertTrue(current_symmetry_string.Length( ) > 0, "symmetry string is blank");
-    symmetry_type = current_symmetry_string.Capitalize( )[0];
+    MyDebugAssertTrue(current_symmetry_string.length() > 0, "symmetry string is blank");
+    symmetry_type = toupper(static_cast<unsigned char>(current_symmetry_string[0]));
 
-    if ( current_symmetry_string.Length( ) == 1 ) {
+    if ( current_symmetry_string.length() == 1 ) {
         symmetry_number = 0;
     }
     else {
-        if ( ! current_symmetry_string.Mid(1).ToLong(&symmetry_number) ) {
-            MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", current_symmetry_string.Mid(1));
+        if ( ! StringToLong(current_symmetry_string.substr(1), symmetry_number) ) {
+            MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", current_symmetry_string.substr(1));
             DEBUG_ABORT;
         }
     }
@@ -870,7 +870,7 @@ std::vector<size_t> rankSort(const std::vector<float>& v_temp) {
     return result;
 }
 
-wxString StringFromSocketCode(unsigned char* socket_input_buffer) {
+std::string StringFromSocketCode(unsigned char* socket_input_buffer) {
     if ( memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0 ) {
         return "socket_please_identify";
     }
@@ -1158,14 +1158,14 @@ int CheckNumberOfThreads(int number_of_threads) {
     // Work out number of cores
     numCoresAndLogicalProcs(&number_physical_cores, &number_logical_cores);
     if ( number_of_threads > number_logical_cores && number_logical_cores > 0 ) {
-        wxPrintf("\nWarning: you are using %i threads, which is more than %i, the number of logical cores. This could be inefficient.\n\n", number_of_threads, number_logical_cores);
+        Printf("\nWarning: you are using %i threads, which is more than %i, the number of logical cores. This could be inefficient.\n\n", number_of_threads, number_logical_cores);
     }
     else if ( number_of_threads > number_physical_cores && number_physical_cores > 0 ) {
-        wxPrintf("\nWarning: you are using %i threads, which is more than %i, the number of phyiscal cores. This could be inefficient.\n\n", number_of_threads, number_physical_cores);
+        Printf("\nWarning: you are using %i threads, which is more than %i, the number of phyiscal cores. This could be inefficient.\n\n", number_of_threads, number_physical_cores);
     }
     return number_of_threads;
 #else
-    wxPrintf("OpenMP is not available - will not use parallel threads.\n\n");
+    Printf("OpenMP is not available - will not use parallel threads.\n\n");
     return 1;
 #endif
 }
@@ -1199,7 +1199,7 @@ int ReturnAppropriateNumberOfThreads(int optimalThreads) {
              processorCoreCount > 0 && logicalProcessorCount == numProcs )
             physicalProcs = processorCoreCount;
         if ( getenv("IMOD_REPORT_CORES") )
-            wxPrintf("core count = %d  logical processors = %d  OMP num = %d => physical "
+            Printf("core count = %d  logical processors = %d  OMP num = %d => physical "
                      "processors = %d\n",
                      processorCoreCount, logicalProcessorCount, numProcs,
                      physicalProcs);
@@ -1249,7 +1249,7 @@ int ReturnAppropriateNumberOfThreads(int optimalThreads) {
         numThreads = forceThreads;
 
     if ( getenv("IMOD_REPORT_CORES") )
-        wxPrintf("numProcs %d  limThreads %d  numThreads %d\n", numProcs,
+        Printf("numProcs %d  limThreads %d  numThreads %d\n", numProcs,
                  limThreads, numThreads);
     fflush(stdout);
 #else
@@ -1278,13 +1278,13 @@ double cisTEM_erfcinv(double x) {
     return cisTEM_erfinv(1.0 - x);
 }
 
-bool StripEnclosingSingleQuotesFromString(wxString& string_to_strip) {
+bool StripEnclosingSingleQuotesFromString(std::string& string_to_strip) {
 
     if ( string_to_strip[0] == '\'' && string_to_strip[string_to_strip.length( ) - 1] == '\'' ) {
-        if ( string_to_strip.Length( ) < 3 )
+        if ( string_to_strip.length() < 3 )
             string_to_strip = "";
         else
-            string_to_strip = string_to_strip.Mid(1, string_to_strip.length( ) - 2);
+            string_to_strip = string_to_strip.substr(1, string_to_strip.length( ) - 2);
         return true;
     }
     else
@@ -1414,15 +1414,15 @@ void ActivateMKLDebugForNonIntelCPU( ) // this sets an environment variable that
             memcpy(CPUBrandString + 32, CPUInfo, sizeof(CPUInfo));
     }
 
-    wxString CPUBrandWXString           = CPUBrandString;
-    wxString CPUBrandWXString_Lowercase = CPUBrandString;
-    CPUBrandWXString_Lowercase.MakeLower( );
-    CPUBrandWXString.Trim(true);
-    CPUBrandWXString.Trim(false);
+    std::string CPUBrandWXString           = CPUBrandString;
+    std::string CPUBrandWXString_Lowercase = CPUBrandString;
+    CPUBrandWXString_Lowercase = ToLower(CPUBrandWXString_Lowercase);
+    TrimRight(CPUBrandWXString);
+    TrimLeft(CPUBrandWXString);
 
     bool is_an_intel_cpu;
 
-    if ( CPUBrandWXString_Lowercase.Find("intel") != wxNOT_FOUND )
+    if ( CPUBrandWXString_Lowercase.find("intel") != std::string::npos )
         is_an_intel_cpu = true;
     else
         is_an_intel_cpu = false;
@@ -1439,7 +1439,7 @@ void ActivateMKLDebugForNonIntelCPU( ) // this sets an environment variable that
         if ( can_use_intel_core_4th_gen_features( ) ) {
             MyDebugPrint("This CPU supports ISA extensions introduced in Haswell\n");
             MyDebugPrint("Setting MKL_DEBUG_CPU_TYPE=5 Environment variable\n");
-            wxSetEnv("MKL_DEBUG_CPU_TYPE", "5");
+            setenv("MKL_DEBUG_CPU_TYPE", "5", 1);
         }
         else
             MyDebugPrint("This CPU does not support all ISA extensions introduced in Haswell\n");

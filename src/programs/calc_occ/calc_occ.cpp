@@ -16,8 +16,8 @@ IMPLEMENT_APP(CalcOccApp)
 void CalcOccApp::DoInteractiveUserInput( ) {
     int      number_of_parameter_files;
     float    occupancy_change_multiplier = 1.0;
-    wxString input_file_seed;
-    wxString output_file_seed;
+    std::string input_file_seed;
+    std::string output_file_seed;
 
     UserInput* my_input = new UserInput("CalcOcc", 1.00);
 
@@ -31,8 +31,8 @@ void CalcOccApp::DoInteractiveUserInput( ) {
     //	my_current_job.Reset(4);
     my_current_job.ManualSetArguments("iftt", number_of_parameter_files,
                                       occupancy_change_multiplier,
-                                      input_file_seed.ToUTF8( ).data( ),
-                                      output_file_seed.ToUTF8( ).data( ));
+                                      input_file_seed.c_str(),
+                                      output_file_seed.c_str());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -40,8 +40,8 @@ void CalcOccApp::DoInteractiveUserInput( ) {
 bool CalcOccApp::DoCalculation( ) {
     int      number_of_parameter_files   = my_current_job.arguments[0].ReturnIntegerArgument( );
     float    occupancy_change_multiplier = my_current_job.arguments[1].ReturnFloatArgument( );
-    wxString input_file_seed             = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString output_file_seed            = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string input_file_seed             = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string output_file_seed            = my_current_job.arguments[3].ReturnStringArgument( );
 
     int   i, j;
     int   number_of_files;
@@ -52,18 +52,18 @@ bool CalcOccApp::DoCalculation( ) {
     float average_sigma;
     float sum_probabilities;
     float occupancy;
-    //wxFileName	parameter_file_name = input_file_seed;
-    wxString extension = wxFileName(input_file_seed).GetExt( );
-    wxString parameter_file;
+    //std::filesystem::path	parameter_file_name = input_file_seed;
+    std::string extension = ReturnFileExtension(input_file_seed);
+    std::string parameter_file;
 
     Refinement input_refinement;
 
     // count parameter files
     number_of_files = 0;
-    parameter_file  = wxFileName::StripExtension(input_file_seed) + wxString::Format("%i", number_of_files + 1) + "." + extension;
+    parameter_file  = StripExtension(input_file_seed) + Format("%i", number_of_files + 1) + "." + extension;
     while ( DoesFileExist(parameter_file) ) {
         number_of_files++;
-        parameter_file = wxFileName::StripExtension(input_file_seed) + wxString::Format("%i", number_of_files + 1) + "." + extension;
+        parameter_file = StripExtension(input_file_seed) + Format("%i", number_of_files + 1) + "." + extension;
     }
     if ( number_of_files == 0 ) {
         MyPrintWithDetails("Error: Parameter file %s not found\n", parameter_file);
@@ -76,14 +76,14 @@ bool CalcOccApp::DoCalculation( ) {
     input_parameter_files                        = new FrealignParameterFile[number_of_files];
     float average_occupancies[number_of_files];
 
-    wxPrintf("\nReading %i parameter files...\n", number_of_files);
+    Printf("\nReading %i parameter files...\n", number_of_files);
     for ( i = 0; i < number_of_files; i++ ) {
-        parameter_file = wxFileName::StripExtension(input_file_seed) + wxString::Format("%i", i + 1) + "." + extension;
-        wxPrintf("\n%s", parameter_file);
+        parameter_file = StripExtension(input_file_seed) + Format("%i", i + 1) + "." + extension;
+        Printf("\n%s", parameter_file);
         input_parameter_files[i].Open(parameter_file, OPEN_TO_READ);
         input_parameter_files[i].ReadFile( );
     }
-    wxPrintf("\nFinished reading files\n\n");
+    Printf("\nFinished reading files\n\n");
 
     input_refinement.SizeAndFillWithEmpty(input_parameter_files[0].number_of_lines, number_of_files);
 
@@ -110,13 +110,13 @@ bool CalcOccApp::DoCalculation( ) {
     input_refinement.UpdateOccupancies( );
 
     for ( long particle_counter = 0; particle_counter < 10; particle_counter++ ) {
-        wxPrintf("%li, occ = %f, logp = %f, sigma = %f\n", input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].occupancy, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].logp, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma);
+        Printf("%li, occ = %f, logp = %f, sigma = %f\n", input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].occupancy, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].logp, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma);
     }
 
     /*
 
 	// calculate average occupancies
-	wxPrintf("Average occupancies:\n");
+	Printf("Average occupancies:\n");
 	for (i = 0; i < number_of_files; i++)
 	{
 		count = 0;
@@ -132,7 +132,7 @@ bool CalcOccApp::DoCalculation( ) {
 			}
 		}
 		average_occupancies[i] /= count;
-		wxPrintf("Parameter file %3i: %8.2f\n", i, average_occupancies[i]);
+		Printf("Parameter file %3i: %8.2f\n", i, average_occupancies[i]);
 	}
 
 	for (j = 0; j < input_parameter_files[0].number_of_lines; j++)
@@ -178,11 +178,11 @@ bool CalcOccApp::DoCalculation( ) {
 	}
 
 	// Write parameter files
-	wxPrintf("\nWriting %i parameter files...\n", number_of_files);
+	Printf("\nWriting %i parameter files...\n", number_of_files);
 	for (i = 0; i < number_of_files; i++)
 	{
-		parameter_file = wxFileName::StripExtension(output_file_seed) + wxString::Format("%i", i + 1) + "." + extension;
-		wxPrintf("\n%s", parameter_file);
+		parameter_file = StripExtension(output_file_seed) + Format("%i", i + 1) + "." + extension;
+		Printf("\n%s", parameter_file);
 		FrealignParameterFile output_parameter_file(parameter_file, OPEN_TO_WRITE);
 		input_parameter_files[i].Rewind();
 		for (j = 0; j < input_parameter_files[i].number_of_lines; j++)
@@ -191,9 +191,9 @@ bool CalcOccApp::DoCalculation( ) {
 			output_parameter_file.WriteLine(input_parameters);
 		}
 	}
-	wxPrintf("\n\nFinished writing files\n");
+	Printf("\n\nFinished writing files\n");
 
-	wxPrintf("\nCalcOcc: Normal termination\n\n");
+	Printf("\nCalcOcc: Normal termination\n\n");
 
 	*/
 

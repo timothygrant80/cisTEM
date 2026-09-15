@@ -7,11 +7,11 @@ class
   public:
     bool     DoCalculation( );
     void     DoInteractiveUserInput( );
-    wxString symmetry_symbol;
+    std::string symmetry_symbol;
     bool     my_test_1 = false;
     bool     my_test_2 = true;
 
-    std::array<wxString, 2> input_starfile_filename;
+    std::array<std::string, 2> input_starfile_filename;
 
   private:
 };

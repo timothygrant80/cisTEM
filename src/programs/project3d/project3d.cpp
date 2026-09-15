@@ -15,10 +15,10 @@ IMPLEMENT_APP(Project3DApp)
 // override the DoInteractiveUserInput
 
 void Project3DApp::DoInteractiveUserInput( ) {
-    wxString input_star_filename;
-    wxString input_reconstruction;
-    wxString ouput_projection_stack;
-    wxString output_star_file;
+    std::string input_star_filename;
+    std::string input_reconstruction;
+    std::string ouput_projection_stack;
+    std::string output_star_file;
     int      first_particle = 1;
     int      last_particle  = 0;
     float    pixel_size     = 1;
@@ -32,7 +32,7 @@ void Project3DApp::DoInteractiveUserInput( ) {
     float    mask_radius = 100.0;
     float    padding     = 1.0;
     float    wanted_SNR  = 1.0;
-    wxString my_symmetry = "C1";
+    std::string my_symmetry = "C1";
     bool     apply_CTF;
     bool     apply_shifts;
     bool     apply_mask;
@@ -87,16 +87,16 @@ void Project3DApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     //	my_current_job.Reset(14);
-    my_current_job.ManualSetArguments("tttiifffftbbbbbfit", input_star_filename.ToUTF8( ).data( ),
-                                      input_reconstruction.ToUTF8( ).data( ),
-                                      ouput_projection_stack.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tttiifffftbbbbbfit", input_star_filename.c_str(),
+                                      input_reconstruction.c_str(),
+                                      ouput_projection_stack.c_str(),
                                       first_particle,
                                       last_particle,
                                       pixel_size,
                                       mask_radius,
                                       wanted_SNR,
                                       padding,
-                                      my_symmetry.ToUTF8( ).data( ),
+                                      my_symmetry.c_str(),
                                       apply_CTF,
                                       apply_shifts,
                                       apply_mask,
@@ -104,15 +104,15 @@ void Project3DApp::DoInteractiveUserInput( ) {
                                       project_based_on_star,
                                       angular_step,
                                       max_threads,
-                                      output_star_file.ToUTF8( ).data( ));
+                                      output_star_file.c_str());
 }
 
 // override the do calculation method which will be what is actually run..
 
 bool Project3DApp::DoCalculation( ) {
-    wxString input_star_filename     = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_reconstruction    = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString output_projection_stack = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string input_star_filename     = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_reconstruction    = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string output_projection_stack = my_current_job.arguments[2].ReturnStringArgument( );
     int      first_particle          = my_current_job.arguments[3].ReturnIntegerArgument( );
     int      last_particle           = my_current_job.arguments[4].ReturnIntegerArgument( );
     float    pixel_size              = my_current_job.arguments[5].ReturnFloatArgument( );
@@ -126,7 +126,7 @@ bool Project3DApp::DoCalculation( ) {
     float    mask_radius           = my_current_job.arguments[6].ReturnFloatArgument( );
     float    wanted_SNR            = my_current_job.arguments[7].ReturnFloatArgument( );
     float    padding               = my_current_job.arguments[8].ReturnFloatArgument( );
-    wxString my_symmetry           = my_current_job.arguments[9].ReturnStringArgument( );
+    std::string my_symmetry           = my_current_job.arguments[9].ReturnStringArgument( );
     bool     apply_CTF             = my_current_job.arguments[10].ReturnBoolArgument( );
     bool     apply_shifts          = my_current_job.arguments[11].ReturnBoolArgument( );
     bool     apply_mask            = my_current_job.arguments[12].ReturnBoolArgument( );
@@ -134,7 +134,7 @@ bool Project3DApp::DoCalculation( ) {
     bool     project_based_on_star = my_current_job.arguments[14].ReturnBoolArgument( );
     float    angular_step          = my_current_job.arguments[15].ReturnFloatArgument( );
     int      max_threads           = my_current_job.arguments[16].ReturnIntegerArgument( );
-    wxString output_star_file      = my_current_job.arguments[17].ReturnStringArgument( );
+    std::string output_star_file      = my_current_job.arguments[17].ReturnStringArgument( );
 
     Image               projection_image;
     Image               final_image;
@@ -150,7 +150,7 @@ bool Project3DApp::DoCalculation( ) {
     float      average_sigma = 0.0;
     float      variance;
     float      mask_falloff = 10.0;
-    wxArrayInt lines_to_process;
+    std::vector<int> lines_to_process;
 
     cisTEMParameterLine input_parameters;
 
@@ -171,7 +171,7 @@ bool Project3DApp::DoCalculation( ) {
 
         // Then, if the symmetry is C, we set the theta max to 180 and recalculate the grid search positions.
 
-        if ( my_symmetry.StartsWith("C") ) {
+        if ( StartsWith(my_symmetry, "C") ) {
             if ( global_euler_search.test_mirror == true ) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
             {
                 global_euler_search.theta_max = 180.0f;
@@ -181,8 +181,8 @@ bool Project3DApp::DoCalculation( ) {
         global_euler_search.CalculateGridSearchPositions(false);
     }
 
-    MRCFile         input_file(input_reconstruction.ToStdString( ), false);
-    MRCFile         output_file(output_projection_stack.ToStdString( ), true);
+    MRCFile         input_file(input_reconstruction, false);
+    MRCFile         output_file(output_projection_stack, true);
     AnglesAndShifts my_parameters;
     CTF             my_ctf;
 
@@ -230,15 +230,15 @@ bool Project3DApp::DoCalculation( ) {
 
         for ( current_image = 0; current_image < input_star_file.ReturnNumberofLines( ); current_image++ ) {
             if ( input_star_file.ReturnPositionInStack(current_image) >= first_particle && input_star_file.ReturnPositionInStack(current_image) <= last_particle ) {
-                lines_to_process.Add(current_image);
+                lines_to_process.push_back(current_image);
             }
         }
 
-        wxPrintf("\nAverage sigma noise = %f, average score = %f\nNumber of projections to calculate = %li\n\n", average_sigma, average_score, lines_to_process.GetCount( ));
+        Printf("\nAverage sigma noise = %f, average score = %f\nNumber of projections to calculate = %li\n\n", average_sigma, average_score, lines_to_process.size());
     }
 
     if ( project_based_on_star ) {
-        number_of_projections_to_calculate = lines_to_process.GetCount( );
+        number_of_projections_to_calculate = lines_to_process.size();
     }
     else {
         number_of_projections_to_calculate = global_euler_search.number_of_search_positions;
@@ -365,7 +365,7 @@ bool Project3DApp::DoCalculation( ) {
     output_params.WriteTocisTEMStarFile(output_star_file);
     delete my_progress;
 
-    wxPrintf("\n\nProject3D: Normal termination\n\n");
+    Printf("\n\nProject3D: Normal termination\n\n");
 
     return true;
 }

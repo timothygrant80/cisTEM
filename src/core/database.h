@@ -14,7 +14,7 @@ class Database {
   public:
     sqlite3*   sqlite_database;
     int        last_return_code;
-    wxFileName database_file;
+    std::filesystem::path database_file;
 
     bool is_open; // for tracking database status when performing operations that occur before database has been within MainFrame::current_project
 
@@ -23,11 +23,11 @@ class Database {
 
     void Close(bool remove_lock = true);
 
-    wxString ReturnFilename( ) { return database_file.GetFullPath( ); };
+    std::string ReturnFilename( ) { return database_file.string(); };
 
-    bool CreateNewDatabase(wxFileName database_file);
-    bool Open(wxFileName file_to_open, bool disable_locking = false);
-    bool CopyDatabaseFile(wxFileName backup_db);
+    bool CreateNewDatabase(std::filesystem::path database_file);
+    bool Open(std::filesystem::path file_to_open, bool disable_locking = false);
+    bool CopyDatabaseFile(std::filesystem::path backup_db);
 
     inline void Begin( ) {
         if ( number_of_active_transactions == 0 )
@@ -45,7 +45,7 @@ class Database {
         //MyPrintWithDetails("\nCommit %i\n", number_of_active_transactions);
     }
 
-    inline wxString map_type_char_to_sqlite_string(char format) {
+    inline std::string map_type_char_to_sqlite_string(char format) {
         if ( format == 't' ) // text
         {
             return " TEXT";
@@ -72,12 +72,12 @@ class Database {
         }
     }
 
-    inline bool RecordCurrentWorkflowInDB(const wxString& workflow) {
+    inline bool RecordCurrentWorkflowInDB(const std::string& workflow) {
         // Perform update of workflow stored as integer to workflow stored as string
         if ( CheckIfCurrentWorkflowIsInteger( ) ) {
             ExecuteSQL("CREATE TABLE MASTER_SETTINGS_BACKUP AS SELECT * FROM MASTER_SETTINGS;");
             ExecuteSQL("DROP TABLE MASTER_SETTINGS;");
-            ExecuteSQL(wxString("CREATE TABLE MASTER_SETTINGS (") +
+            ExecuteSQL(std::string("CREATE TABLE MASTER_SETTINGS (") +
                        "NUMBER INTEGER, " +
                        "PROJECT_DIRECTORY TEXT, " +
                        "PROJECT_NAME TEXT, " +
@@ -87,7 +87,7 @@ class Database {
                        "CISTEM_VERSION_TEXT TEXT, " +
                        "CURRENT_WORKFLOW TEXT);");
 
-            ExecuteSQL(wxString::Format("INSERT INTO MASTER_SETTINGS ("
+            ExecuteSQL(Format("INSERT INTO MASTER_SETTINGS ("
                                         "NUMBER, "
                                         "PROJECT_DIRECTORY, "
                                         "PROJECT_NAME, "
@@ -111,27 +111,27 @@ class Database {
             ExecuteSQL("DROP TABLE MASTER_SETTINGS_BACKUP;");
         }
         else {
-            ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_WORKFLOW = '%s'", workflow));
+            ExecuteSQL(Format("UPDATE MASTER_SETTINGS SET CURRENT_WORKFLOW = '%s'", workflow));
         }
         return true;
     }
 
-    bool CreateTable(const char* table_name, const char* column_format, ...);
-    bool CreateTable(const char* table_name, const char* column_format, std::vector<wxString> columns);
-    bool DeleteTable(const char* table_name);
-    bool AddColumnToTable(wxString table_name, wxString column_name, wxString column_format, wxString default_value);
+    bool CreateTable(const std::string& table_name, const char* column_format, ...);
+    bool CreateTable(const std::string& table_name, const char* column_format, std::vector<std::string> columns);
+    bool DeleteTable(const std::string& table_name);
+    bool AddColumnToTable(std::string table_name, std::string column_name, std::string column_format, std::string default_value);
     //bool DeleteTable(const char *table_name);
-    bool InsertOrReplace(const char* table_name, const char* column_format, ...);
-    bool GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text, wxString& current_workflow);
+    bool InsertOrReplace(const std::string& table_name, const char* column_format, ...);
+    bool GetMasterSettings(std::filesystem::path& project_directory, std::string& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, std::string& cistem_version_text, std::string& current_workflow);
 
     bool SetProjectStatistics(double& total_cpu_hours, int& total_jobs_run);
     bool CreateAllTables( );
 
-    void BeginBatchInsert(const char* table_name, int number_of_columns, ...);
+    void BeginBatchInsert(const std::string& table_name, int number_of_columns, ...);
     void AddToBatchInsert(const char* column_format, ...);
     void EndBatchInsert( );
 
-    bool BeginBatchSelect(const char* select_command);
+    bool BeginBatchSelect(const std::string& select_command);
     bool GetFromBatchSelect(const char* column_format, ...);
     void EndBatchSelect( );
 
@@ -140,26 +140,26 @@ class Database {
     template <class... Args>
     bool GetFromBatchSelect_NoChar(Args... args);
 
-    int  ExecuteSQL(const char* command);
-    int  Prepare(wxString select_command, sqlite3_stmt** current_statement);
+    int  ExecuteSQL(const std::string& command);
+    int  Prepare(std::string select_command, sqlite3_stmt** current_statement);
     int  Step(sqlite3_stmt* current_statement);
     int  Finalize(sqlite3_stmt* current_statement);
     void CheckBindCode(int return_code);
 
-    int      ReturnSingleIntFromSelectCommand(wxString select_command);
-    long     ReturnSingleLongFromSelectCommand(wxString select_command);
-    double   ReturnSingleDoubleFromSelectCommand(wxString select_command);
-    wxString ReturnSingleStringFromSelectCommand(wxString select_command);
+    int      ReturnSingleIntFromSelectCommand(std::string select_command);
+    long     ReturnSingleLongFromSelectCommand(std::string select_command);
+    double   ReturnSingleDoubleFromSelectCommand(std::string select_command);
+    std::string ReturnSingleStringFromSelectCommand(std::string select_command);
 
-    wxArrayInt    ReturnIntArrayFromSelectCommand(wxString select_command);
-    wxArrayLong   ReturnLongArrayFromSelectCommand(wxString select_command);
-    wxArrayString ReturnStringArrayFromSelectCommand(wxString select_command);
+    std::vector<int>    ReturnIntArrayFromSelectCommand(std::string select_command);
+    std::vector<long>   ReturnLongArrayFromSelectCommand(std::string select_command);
+    std::vector<std::string> ReturnStringArrayFromSelectCommand(std::string select_command);
 
-    bool DoesTableExist(wxString table_name);
-    bool DoesColumnExist(wxString table_name, wxString column_name);
+    bool DoesTableExist(std::string table_name);
+    bool DoesColumnExist(std::string table_name, std::string column_name);
 
-    void ReturnProcessLockInfo(long& active_process_id, wxString& active_hostname);
-    void SetProcessLockInfo(long& active_process_id, wxString& active_hostname);
+    void ReturnProcessLockInfo(long& active_process_id, std::string& active_hostname);
+    void SetProcessLockInfo(long& active_process_id, std::string& active_hostname);
 
     long ReturnRefinementIDGivenReconstructionID(long reconstruction_id);
 
@@ -200,7 +200,7 @@ class Database {
     void GetUniquePickingJobIDs(int* picking_job_ids, int number_of_picking_jobs);
     void GetUniqueIDsOfImagesWithCTFEstimations(int* image_ids, int& number_of_image_ids);
 
-    void GetMovieImportDefaults(float& voltage, float& spherical_aberration, float& pixel_size, float& exposure_per_frame, bool& movies_are_gain_corrected, wxString& gain_reference_filename, bool& movies_are_dark_corrected, wxString dark_reference_filename, bool& resample_movies, float& desired_pixel_size, bool& correct_mag_distortion, float& mag_distortion_angle, float& mag_distortion_major_scale, float& mag_distortion_minor_scale, bool& protein_is_white, int& eer_super_res_factor, int& eer_frames_per_image);
+    void GetMovieImportDefaults(float& voltage, float& spherical_aberration, float& pixel_size, float& exposure_per_frame, bool& movies_are_gain_corrected, std::string& gain_reference_filename, bool& movies_are_dark_corrected, std::string dark_reference_filename, bool& resample_movies, float& desired_pixel_size, bool& correct_mag_distortion, float& mag_distortion_angle, float& mag_distortion_major_scale, float& mag_distortion_minor_scale, bool& protein_is_white, int& eer_super_res_factor, int& eer_frames_per_image);
     void GetImageImportDefaults(float& voltage, float& spherical_aberration, float& pixel_size, bool& protein_is_white);
 
     void GetActiveDefocusValuesByImageID(long wanted_image_id, float& defocus_1, float& defocus_2, float& defocus_angle, float& phase_shift, float& amplitude_contrast, float& tilt_angle, float& tilt_axis);
@@ -208,18 +208,18 @@ class Database {
     void AddRefinementPackageAsset(RefinementPackage* asset_to_add);
     void AddTemplateMatchesPackageAsset(TemplateMatchesPackage* asset_to_add);
 
-    wxArrayLong Return2DClassMembers(long wanted_classifiction_id, int wanted_class);
+    std::vector<long> Return2DClassMembers(long wanted_classifiction_id, int wanted_class);
     int         ReturnNumberOf2DClassMembers(long wanted_classification_id, int wanted_class_number);
 
     //Convenience insertion functions..
 
-    //void AddSingleMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);
+    //void AddSingleMovieAsset(int movie_asset_id,  std::string filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);
 
     void AddOrReplaceRunProfile(RunProfile* profile_to_add);
     void DeleteRunProfile(int wanted_id);
 
     void BeginMovieAssetInsert( );
-    void AddNextMovieAsset(int movie_asset_id, wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, wxString dark_reference, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white, int eer_super_res_factor, int eer_frames_per_image);
+    void AddNextMovieAsset(int movie_asset_id, std::string name, std::string filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, std::string gain_filename, std::string dark_reference, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white, int eer_super_res_factor, int eer_frames_per_image);
     void EndMovieAssetInsert( );
 
     void BeginMovieAssetMetadataInsert( );
@@ -229,12 +229,12 @@ class Database {
     void UpdateNumberOfFramesForAMovieAsset(int movie_asset_id, int new_number_of_frames);
 
     void BeginImageAssetInsert( );
-    void AddNextImageAsset(int image_asset_id, wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white);
+    void AddNextImageAsset(int image_asset_id, std::string name, std::string filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white);
 
     void EndImageAssetInsert( ) { EndBatchInsert( ); };
 
     void BeginVolumeAssetInsert( );
-    void AddNextVolumeAsset(int image_asset_id, wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size, wxString half_map_1_filename, wxString half_map_2_filename);
+    void AddNextVolumeAsset(int image_asset_id, std::string name, std::string filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size, std::string half_map_1_filename, std::string half_map_2_filename);
 
     void EndVolumeAssetInsert( ) { EndBatchInsert( ); };
 
@@ -257,19 +257,19 @@ class Database {
 
     // Table creation wrappers..
 
-    bool CreateParticlePickingResultsTable(const int& picking_job_id) { return CreateTable(wxString::Format("PARTICLE_PICKING_RESULTS_%i", picking_job_id), "piirrrirrr", "POSITION_ID", "PICKING_ID", "PARENT_IMAGE_ASSET_ID", "X_POSITION", "Y_POSITION", "PEAK_HEIGHT", "TEMPLATE_ASSET_ID", "TEMPLATE_PSI", "TEMPLATE_THETA", "TEMPLATE_PHI"); };
+    bool CreateParticlePickingResultsTable(const int& picking_job_id) { return CreateTable(Format("PARTICLE_PICKING_RESULTS_%i", picking_job_id), "piirrrirrr", "POSITION_ID", "PICKING_ID", "PARENT_IMAGE_ASSET_ID", "X_POSITION", "Y_POSITION", "PEAK_HEIGHT", "TEMPLATE_ASSET_ID", "TEMPLATE_PSI", "TEMPLATE_THETA", "TEMPLATE_PHI"); };
 
     bool CreateProcessLockTable( ) { return CreateTable("PROCESS_LOCK", "plt", "NUMBER", "ACTIVE_PROCESS", "ACTIVE_HOST"); };
 
-    bool CreateRefinementPackageContainedParticlesTable(const long refinement_package_asset_id) { return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", refinement_package_asset_id), "piirrrrrrrrrri", "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE", "AMPLITUDE_CONTRAST", "ASSIGNED_SUBSET"); };
+    bool CreateRefinementPackageContainedParticlesTable(const long refinement_package_asset_id) { return CreateTable(Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", refinement_package_asset_id), "piirrrrrrrrrri", "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE", "AMPLITUDE_CONTRAST", "ASSIGNED_SUBSET"); };
 
-    bool CreateRefinementPackageCurrent3DReferencesTable(const long refinement_package_asset_id) { return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", refinement_package_asset_id), "pi", "CLASS_NUMBER", "VOLUME_ASSET_ID"); };
+    bool CreateRefinementPackageCurrent3DReferencesTable(const long refinement_package_asset_id) { return CreateTable(Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", refinement_package_asset_id), "pi", "CLASS_NUMBER", "VOLUME_ASSET_ID"); };
 
-    bool CreateRefinementPackageRefinementsList(const long refinement_package_asset_id) { return CreateTable(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", refinement_package_asset_id), "pl", "REFINEMENT_NUMBER", "REFINEMENT_ID"); };
+    bool CreateRefinementPackageRefinementsList(const long refinement_package_asset_id) { return CreateTable(Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", refinement_package_asset_id), "pl", "REFINEMENT_NUMBER", "REFINEMENT_ID"); };
 
-    bool CreateRefinementPackageClassificationsList(const long refinement_package_asset_id) { return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", refinement_package_asset_id), "pl", "CLASSIFICATION_NUMBER", "CLASSIFICATION_ID"); };
+    bool CreateRefinementPackageClassificationsList(const long refinement_package_asset_id) { return CreateTable(Format("REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", refinement_package_asset_id), "pl", "CLASSIFICATION_NUMBER", "CLASSIFICATION_ID"); };
 
-    bool CreateRefinementDetailsTable(const long refinement_id) { return CreateTable(wxString::Format("REFINEMENT_DETAILS_%li", refinement_id), "plrrrrrrirrrrirrrrirrrrlliiilrrir", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT",
+    bool CreateRefinementDetailsTable(const long refinement_id) { return CreateTable(Format("REFINEMENT_DETAILS_%li", refinement_id), "plrrrrrrirrrrirrrrirrrrlliiilrrir", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT",
                                                                                      "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT",
                                                                                      "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE",
                                                                                      "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y",
@@ -279,25 +279,25 @@ class Database {
                                                                                      "RECONSTRUCTION_ID", "SHOULD_AUTOMASK", "SHOULD_REFINE_INPUT_PARAMS", "SHOULD_USE_SUPPLIED_MASK",
                                                                                      "MASK_ASSET_ID", "MASK_EDGE_WIDTH", "OUTSIDE_MASK_WEIGHT", "SHOULD_LOWPASS_OUTSIDE_MASK", "MASK_FILTER_RESOLUTION"); };
 
-    bool CreateTemplateMatchPeakListTable(const long template_match_job_id) { return CreateTable(wxString::Format("TEMPLATE_MATCH_PEAK_LIST_%li", template_match_job_id), "prrrrrrrr", "PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT"); }
+    bool CreateTemplateMatchPeakListTable(const long template_match_job_id) { return CreateTable(Format("TEMPLATE_MATCH_PEAK_LIST_%li", template_match_job_id), "prrrrrrrr", "PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT"); }
 
-    bool CreateTemplateMatchPeakChangeListTable(const long template_match_job_id) { return CreateTable(wxString::Format("TEMPLATE_MATCH_PEAK_CHANGE_LIST_%li", template_match_job_id), "prrrrrrrrii", "PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT", "ORIGINAL_PEAK_NUMBER", "NEW_PEAK_NUMBER"); }
+    bool CreateTemplateMatchPeakChangeListTable(const long template_match_job_id) { return CreateTable(Format("TEMPLATE_MATCH_PEAK_CHANGE_LIST_%li", template_match_job_id), "prrrrrrrrii", "PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT", "ORIGINAL_PEAK_NUMBER", "NEW_PEAK_NUMBER"); }
 
-    bool CreateRefinementResultTable(const long refinement_id, const int class_number) { return CreateTable(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrrirrrrrrrri", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y", "ASSIGNED_SUBSET"); };
+    bool CreateRefinementResultTable(const long refinement_id, const int class_number) { return CreateTable(Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrrirrrrrrrri", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y", "ASSIGNED_SUBSET"); };
 
-    bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_number) { return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_number), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR"); };
+    bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_number) { return CreateTable(Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_number), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR"); };
 
-    bool CreateRefinementAngularDistributionTable(const long refinement_id, const int class_number) { return CreateTable(wxString::Format("REFINEMENT_ANGULAR_DISTRIBUTION_%li_%i", refinement_id, class_number), "pr", "BIN_NUMBER", "NUMBER_IN_BIN"); }
+    bool CreateRefinementAngularDistributionTable(const long refinement_id, const int class_number) { return CreateTable(Format("REFINEMENT_ANGULAR_DISTRIBUTION_%li_%i", refinement_id, class_number), "pr", "BIN_NUMBER", "NUMBER_IN_BIN"); }
 
-    bool CreateClassificationResultTable(const long classification_id) { return CreateTable(wxString::Format("CLASSIFICATION_RESULT_%li", classification_id), "Prrrirrrrrrrrrrrrrr", "POSITION_IN_STACK", "PSI", "XSHIFT", "YSHIFT", "BEST_CLASS", "SIGMA", "LOGP", "PIXEL_SIZE", "VOLTAGE", "CS", "AMPLITUDE_CONTRAST", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y"); };
+    bool CreateClassificationResultTable(const long classification_id) { return CreateTable(Format("CLASSIFICATION_RESULT_%li", classification_id), "Prrrirrrrrrrrrrrrrr", "POSITION_IN_STACK", "PSI", "XSHIFT", "YSHIFT", "BEST_CLASS", "SIGMA", "LOGP", "PIXEL_SIZE", "VOLTAGE", "CS", "AMPLITUDE_CONTRAST", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y"); };
 
-    bool CreateClassificationSelectionTable(const long selection_id) { return CreateTable(wxString::Format("CLASSIFICATION_SELECTION_%li", selection_id), "pl", "SELECTION_NUMBER", "CLASS_AVERAGE_NUMBER"); };
+    bool CreateClassificationSelectionTable(const long selection_id) { return CreateTable(Format("CLASSIFICATION_SELECTION_%li", selection_id), "pl", "SELECTION_NUMBER", "CLASS_AVERAGE_NUMBER"); };
 
     bool CreateMovieImportDefaultsTable( ) { return CreateTable("MOVIE_IMPORT_DEFAULTS", "prrrrititirirrriii", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "MOVIES_ARE_DARK_CORRECTED", "DARK_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE", "EER_SUPER_RES_FACTOR", "EER_FRAMES_PER_IMAGE"); };
 
     bool CreateImageImportDefaultsTable( ) { return CreateTable("IMAGE_IMPORT_DEFAULTS", "prrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "PROTEIN_IS_WHITE"); };
 
-    bool CreateStartupResultTable(const long startup_id) { return CreateTable(wxString::Format("STARTUP_RESULT_%li", startup_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID"); };
+    bool CreateStartupResultTable(const long startup_id) { return CreateTable(Format("STARTUP_RESULT_%li", startup_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID"); };
 
     void DoVacuum( ) { ExecuteSQL("VACUUM"); }
 
@@ -363,9 +363,9 @@ class Database {
 
     void EndAllTemplateMatchesPackagesSelect( ) { EndBatchSelect( ); };
 
-    void AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids);
-    void AddReconstructionJob(long reconstruction_id, long refinement_package_asset_id, long refinement_id, wxString name, float inner_mask_radius, float outer_mask_radius, float resolution_limit, float score_weight_conversion, bool should_adjust_score, bool should_crop_images, bool should_save_half_maps, bool should_likelihood_blur, float smoothing_factor, int class_number, long volume_asset_id);
-    void GetReconstructionJob(long wanted_reconstruction_id, long& refinement_package_asset_id, long& refinement_id, wxString& name, float& inner_mask_radius, float& outer_mask_radius, float& resolution_limit, float& score_weight_conversion, bool& should_adjust_score, bool& should_crop_images, bool& should_save_half_maps, bool& should_likelihood_blur, float& smoothing_factor, int& class_number, long& volume_asset_id);
+    void AddStartupJob(long startup_job_id, long refinement_package_asset_id, std::string name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, std::vector<long> result_volume_ids);
+    void AddReconstructionJob(long reconstruction_id, long refinement_package_asset_id, long refinement_id, std::string name, float inner_mask_radius, float outer_mask_radius, float resolution_limit, float score_weight_conversion, bool should_adjust_score, bool should_crop_images, bool should_save_half_maps, bool should_likelihood_blur, float smoothing_factor, int class_number, long volume_asset_id);
+    void GetReconstructionJob(long wanted_reconstruction_id, long& refinement_package_asset_id, long& refinement_id, std::string& name, float& inner_mask_radius, float& outer_mask_radius, float& resolution_limit, float& score_weight_conversion, bool& should_adjust_score, bool& should_crop_images, bool& should_save_half_maps, bool& should_likelihood_blur, float& smoothing_factor, int& class_number, long& volume_asset_id);
 
     // Convenience CTF parameter function
     void GetCTFParameters(const int& ctf_estimation_id, double& acceleration_voltage, double& spherical_aberration, double& amplitude_constrast, double& defocus_1, double& defocus_2, double& defocus_angle, double& additional_phase_shift, double& iciness);
@@ -407,8 +407,8 @@ class Database {
     void AddClassificationSelection(ClassificationSelection* classification_selection_to_add);
     //ClassificationSelection *GetClassificationSelectionByID(long wanted_selection_id);
 
-    using TableChanges = std::vector<wxString>;
-    using ColumnChange = std::tuple<wxString, wxString, char>;
+    using TableChanges = std::vector<std::string>;
+    using ColumnChange = std::tuple<std::string, std::string, char>;
 
     enum {
         COLUMN_CHANGE_TABLE,

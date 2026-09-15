@@ -1,6 +1,4 @@
 #include "core_headers.h"
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 
 #include "../../include/gemmi/model.hpp"
 #include "../../include/gemmi/mmread.hpp"
@@ -18,7 +16,7 @@ Atom::Atom( ) {
     charge           = 0.0;
 }
 
-Atom::Atom(const wxString& name, const bool& is_real_particle, const AtomType& atom_type, const float& x, const float& y, const float& z, const float& occ, const float& bfactor, const float& charge) {
+Atom::Atom(const std::string& name, const bool& is_real_particle, const AtomType& atom_type, const float& x, const float& y, const float& z, const float& occ, const float& bfactor, const float& charge) {
     this->name             = name;
     this->is_real_particle = is_real_particle;
     this->atom_type        = atom_type;
@@ -95,9 +93,7 @@ PDB::PDB( ) {
 
 void PDB::SetDefaultValues( ) {
     input_file_stream  = NULL;
-    input_text_stream  = NULL;
     output_file_stream = NULL;
-    output_text_stream = NULL;
 
     SetEmpty( );
 }
@@ -200,9 +196,7 @@ PDB::PDB(long   number_of_non_water_atoms,
     this->use_star_file = use_star_file;
 
     input_file_stream  = NULL;
-    input_text_stream  = NULL;
     output_file_stream = NULL;
-    output_text_stream = NULL;
     // Create a total PDB object to hold all the atoms in a specimen at a given time in the trajectory
     atoms.reserve(number_of_non_water_atoms);
 
@@ -231,7 +225,7 @@ PDB::PDB(long   number_of_non_water_atoms,
     this->use_hetatm                                                                  = allow_hetatms;
 }
 
-PDB::PDB(wxString          Filename,
+PDB::PDB(std::string          Filename,
          long              wanted_access_type,
          float             wanted_pixel_size,
          long              wanted_records_per_line,
@@ -252,9 +246,7 @@ PDB::PDB(wxString          Filename,
     this->use_star_file  = use_star_file;
 
     input_file_stream  = NULL;
-    input_text_stream  = NULL;
     output_file_stream = NULL;
-    output_text_stream = NULL;
 
     this->use_provided_com         = false;
     this->is_alpha_fold_prediction = is_alpha_fold_prediction;
@@ -280,7 +272,7 @@ PDB::PDB(wxString          Filename,
     Open(Filename, wanted_access_type, wanted_records_per_line);
 }
 
-PDB::PDB(wxString Filename,
+PDB::PDB(std::string Filename,
          long     wanted_access_type,
          float    wanted_pixel_size,
          long     wanted_records_per_line,
@@ -290,9 +282,7 @@ PDB::PDB(wxString Filename,
          bool     allow_hetatms,
          double*  COM) {
     input_file_stream  = NULL;
-    input_text_stream  = NULL;
     output_file_stream = NULL;
-    output_text_stream = NULL;
 
     use_star_file = false;
 
@@ -305,7 +295,7 @@ PDB::PDB(wxString Filename,
     if ( COM ) {
         for ( int iCOM = 0; iCOM < 3; iCOM++ ) {
             center_of_mass[iCOM] = COM[iCOM];
-            wxPrintf("Using provided center of mass %d %3.3f\n", iCOM, this->center_of_mass[iCOM]);
+            Printf("Using provided center of mass %d %3.3f\n", iCOM, this->center_of_mass[iCOM]);
         }
     }
     else {
@@ -325,14 +315,14 @@ PDB::~PDB( ) {
     Close( );
 }
 
-void PDB::Open(wxString Filename, long wanted_access_type, long wanted_records_per_line) {
+void PDB::Open(std::string Filename, long wanted_access_type, long wanted_records_per_line) {
     access_type      = wanted_access_type;
     records_per_line = wanted_records_per_line;
     text_filename    = Filename;
 
     if ( access_type == OPEN_TO_READ ) {
         if ( input_file_stream != NULL ) {
-            if ( input_file_stream->GetFile( )->IsOpened( ) == true ) {
+            if ( input_file_stream->is_open( ) == true ) {
                 MyPrintWithDetails("File already Open\n");
                 DEBUG_ABORT;
             }
@@ -347,7 +337,7 @@ void PDB::Open(wxString Filename, long wanted_access_type, long wanted_records_p
             }
 
             if ( output_file_stream != NULL ) {
-                if ( output_file_stream->GetFile( )->IsOpened( ) == true ) {
+                if ( output_file_stream->is_open( ) == true ) {
                     MyPrintWithDetails("File already Open\n");
                     DEBUG_ABORT;
                 }
@@ -364,27 +354,20 @@ void PDB::Open(wxString Filename, long wanted_access_type, long wanted_records_p
 }
 
 void PDB::Close( ) {
-    if ( input_text_stream != NULL )
-        delete input_text_stream;
-    if ( output_text_stream != NULL )
-        delete output_text_stream;
-
     if ( output_file_stream != NULL ) {
-        if ( output_file_stream->GetFile( )->IsOpened( ) == true )
-            output_file_stream->GetFile( )->Close( );
+        if ( output_file_stream->is_open( ) == true )
+            output_file_stream->close( );
         delete output_file_stream;
     }
 
     if ( input_file_stream != NULL ) {
-        if ( input_file_stream->GetFile( )->IsOpened( ) == true )
-            input_file_stream->GetFile( )->Close( );
+        if ( input_file_stream->is_open( ) == true )
+            input_file_stream->close( );
         delete input_file_stream;
     }
 
     input_file_stream  = NULL;
-    input_text_stream  = NULL;
     output_file_stream = NULL;
-    output_text_stream = NULL;
 }
 
 void PDB::SetEmpty( ) {
@@ -409,8 +392,8 @@ void PDB::SetEmpty( ) {
 
 void PDB::Init( ) {
 
-    wxString current_line;
-    wxString token;
+    std::string current_line;
+    std::string token;
     double   temp_double;
     int      current_records_per_line;
     int      old_records_per_line                      = -1;
@@ -429,17 +412,17 @@ void PDB::Init( ) {
     this->number_of_atoms = 0;
 
     // After a phenix ADP refinement + Chimera selection and split, all ATOM --> HETATM. Quick hack to set this until I can figure out why. Generally speaking, this should be left as ATOM
-    wxString pdb_atom = "ATOM";
+    std::string pdb_atom = "ATOM";
 
     gemmi::Structure st;
     try {
-        st = gemmi::read_structure(gemmi::MaybeGzipped(text_filename.ToStdString( )));
+        st = gemmi::read_structure(gemmi::MaybeGzipped(text_filename));
         // I'm sure there is already something in GEMMI to do an iteration like this.
         for ( gemmi::Model& model : st.models ) {
             for ( gemmi::Chain& chain : model.chains ) {
-                // wxPrintf("Working on chain %s\n",chain.name);
+                // Printf("Working on chain %s\n",chain.name);
                 for ( gemmi::Residue& res : chain.residues ) {
-                    // wxPrintf("Residue Name, Segment, Entity type, %s %s\n",res.name,res.segment)
+                    // Printf("Residue Name, Segment, Entity type, %s %s\n",res.name,res.segment)
                     for ( gemmi::Atom& atom : res.atoms ) {
                         bool use_residue = use_hetatm ? (res.het_flag == 'A' || res.het_flag == 'H') : (res.het_flag == 'A' && ! res.is_water( ));
                         if ( use_residue ) { // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
@@ -464,11 +447,11 @@ void PDB::Init( ) {
         number_of_atoms += (number_of_atoms * this->max_number_of_noise_particles);
     }
 
-    // wxPrintf("Max particles is %d here\n", max_number_of_noise_particles);
+    // Printf("Max particles is %d here\n", max_number_of_noise_particles);
     // If noie noise atoms, this will always equal number of atoms. Otherwise, number of atoms is at most this, and changes from particle to particle in the stack
     number_of_real_and_noise_atoms = number_of_atoms;
 
-    // wxPrintf("\nIn constructor real total current %ld %ld %ld\n", number_of_real_atoms, number_of_real_and_noise_atoms, number_of_atoms);
+    // Printf("\nIn constructor real total current %ld %ld %ld\n", number_of_real_atoms, number_of_real_and_noise_atoms, number_of_atoms);
     // Create the atom array, then loop back over the pdb to get the desired info.
     atoms.reserve(number_of_real_and_noise_atoms);
 
@@ -490,7 +473,7 @@ void PDB::Init( ) {
                             i_bfactor = 4.f + powf(100.f - atom.b_iso, 1.314159f);
 
                             // atoms[current_atom_number].bfactor = 4.f + powf(100.f - atom.b_iso, 1.314159f);
-                            // wxPrintf("Confidence score %f, bfactor %f\n",atom.b_iso,atoms[current_atom_number].bfactor);
+                            // Printf("Confidence score %f, bfactor %f\n",atom.b_iso,atoms[current_atom_number].bfactor);
                         }
                         else {
                             i_bfactor = atom.b_iso;
@@ -499,7 +482,7 @@ void PDB::Init( ) {
                         }
 
                         if ( res.is_water( ) ) {
-                            std::cerr << "Caution, water is not fully implemented yet " << wxString(atom.name) << std::endl;
+                            std::cerr << "Caution, water is not fully implemented yet " << std::string(atom.name) << std::endl;
                             i_atom_type = water;
                         }
                         else {
@@ -570,14 +553,14 @@ void PDB::Init( ) {
                                     i_atom_type = gold;
                                     break;
                                 default:
-                                    wxPrintf("Un-coded conversion from gemmi::el to Atom::atom_type\n");
+                                    Printf("Un-coded conversion from gemmi::el to Atom::atom_type\n");
                                     std::cerr << "Element is " << atom.element.name( ) << " and el" << atom.element.ordinal( ) << '\n';
                                     exit(-1);
                                     break;
                             }
                         } // if/else on water vs normal atom
 
-                        atoms.emplace_back(wxString(atom.name), true, i_atom_type, float(atom.pos.x), float(atom.pos.y), float(atom.pos.z), atom.occ, i_bfactor, float(atom.charge));
+                        atoms.emplace_back(std::string(atom.name), true, i_atom_type, float(atom.pos.x), float(atom.pos.y), float(atom.pos.z), atom.occ, i_bfactor, float(atom.charge));
                         current_atom_number++;
                         n_atoms_in_single_molecule_from_star_file++;
 
@@ -617,7 +600,7 @@ void PDB::Init( ) {
                                      -star_file_parameters.ReturnPhi(iParticle),
                                      iParticle,
                                      current_frame_number - 1);
-            // wxPrintf("x,y,z (%f,%f,%f) psi/theta/phi (%f,%f,%f), ipart/frame %d %d\n", star_file_parameters.ReturnXShift(iParticle),
+            // Printf("x,y,z (%f,%f,%f) psi/theta/phi (%f,%f,%f), ipart/frame %d %d\n", star_file_parameters.ReturnXShift(iParticle),
             //                              star_file_parameters.ReturnYShift(iParticle),
             //                              (0.5f * (star_file_parameters.ReturnDefocus1(iParticle)+star_file_parameters.ReturnDefocus2(iParticle))) - star_file_parameters.average_defocus,
             //                              star_file_parameters.ReturnPsi(iParticle),
@@ -647,7 +630,7 @@ void PDB::Init( ) {
         for ( current_atom_number = 0; current_atom_number < 3; current_atom_number++ ) {
             center_of_mass[current_atom_number] /= number_counted;
             if ( std::isnan(center_of_mass[current_atom_number]) ) {
-                wxPrintf("NaN in center of mass calc from PDB for coordinate %ld, 0=x,1=y,2=z", current_atom_number);
+                Printf("NaN in center of mass calc from PDB for coordinate %ld, 0=x,1=y,2=z", current_atom_number);
                 throw;
             }
         }
@@ -655,10 +638,10 @@ void PDB::Init( ) {
 
     if ( shift_by_center_of_mass ) {
         // if ( use_provided_com ) {
-        //     wxPrintf("\n\nSetting PDB center of mass to that provided %f %f %f (x,y,z Angstrom)\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
+        //     Printf("\n\nSetting PDB center of mass to that provided %f %f %f (x,y,z Angstrom)\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
         // }
         // else {
-        //     wxPrintf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
+        //     Printf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
         // }
 
         // Set the coordinate origin to the calculated or provided center of mass
@@ -680,7 +663,7 @@ void PDB::Init( ) {
             if ( fabsf(atoms[current_atom_number].z_coordinate) > max_radius )
                 max_radius = fabsf(atoms[current_atom_number].z_coordinate);
         }
-        wxPrintf("Max particles is %d in spot 2\n", max_number_of_noise_particles);
+        Printf("Max particles is %d in spot 2\n", max_number_of_noise_particles);
 
         for ( int iPart = 0; iPart < this->max_number_of_noise_particles; iPart++ ) {
             for ( current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++ ) {
@@ -695,20 +678,18 @@ void PDB::Rewind( ) {
 
     if ( access_type == OPEN_TO_READ ) {
         delete input_file_stream;
-        delete input_text_stream;
 
-        input_file_stream = new wxFileInputStream(text_filename);
-        input_text_stream = new wxTextInputStream(*input_file_stream);
+        input_file_stream = new std::ifstream(text_filename);
     }
     else
-        output_file_stream->GetFile( )->Seek(0);
+        output_file_stream->seekp(0);
 }
 
 void PDB::Flush( ) {
     if ( access_type == OPEN_TO_READ )
-        input_file_stream->GetFile( )->Flush( );
+        input_file_stream->sync( );
     else
-        output_file_stream->GetFile( )->Flush( );
+        output_file_stream->flush( );
 }
 
 void PDB::ReadLine(float* data_array) {
@@ -717,24 +698,25 @@ void PDB::ReadLine(float* data_array) {
         DEBUG_ABORT;
     }
 
-    wxString current_line;
-    wxString token;
+    std::string current_line;
+    std::string token;
     double   temp_double;
 
-    while ( input_file_stream->Eof( ) == false ) {
-        current_line = input_text_stream->ReadLine( );
-        current_line.Trim(false);
+    while ( std::getline(*input_file_stream, current_line) ) {
+        if ( ! current_line.empty( ) && current_line.back( ) == '\r' )
+            current_line.pop_back( );
+        TrimLeft(current_line);
 
-        if ( current_line.StartsWith("C") == false && current_line.StartsWith("#") == false && current_line.Length( ) != 0 )
+        if ( StartsWith(current_line, "C") == false && StartsWith(current_line, "#") == false && current_line.length() != 0 )
             break;
     }
 
-    wxStringTokenizer tokenizer(current_line);
+    std::vector<std::string> tokenizer = SplitString(current_line);
 
     for ( int counter = 0; counter < records_per_line; counter++ ) {
-        token = tokenizer.GetNextToken( );
-        if ( token.ToDouble(&temp_double) == false ) {
-            MyPrintWithDetails("Failed on the following record : %s\nFrom Line  : %s\n", token.ToUTF8( ).data( ), current_line.ToUTF8( ).data( ));
+        token = size_t(counter) < tokenizer.size( ) ? tokenizer[counter] : std::string( );
+        if ( StringToDouble(token, temp_double) == false ) {
+            MyPrintWithDetails("Failed on the following record : %s\nFrom Line  : %s\n", token.c_str(), current_line.c_str());
             DEBUG_ABORT;
         }
         else {
@@ -750,12 +732,12 @@ void PDB::WriteLine(float* data_array) {
     }
 
     for ( int counter = 0; counter < records_per_line; counter++ ) {
-        output_text_stream->WriteString(wxString::Format("%14.5f", data_array[counter]));
+        *output_file_stream << Format("%14.5f", data_array[counter]);
         if ( counter != records_per_line - 1 )
-            output_text_stream->WriteString(" ");
+            *output_file_stream << " ";
     }
 
-    output_text_stream->WriteString("\n");
+    *output_file_stream << "\n";
 }
 
 void PDB::WriteLine(double* data_array) {
@@ -765,48 +747,48 @@ void PDB::WriteLine(double* data_array) {
     }
 
     for ( int counter = 0; counter < records_per_line; counter++ ) {
-        output_text_stream->WriteDouble(data_array[counter]);
+        *output_file_stream << Format("%f", data_array[counter]);
         if ( counter != records_per_line - 1 )
-            output_text_stream->WriteString(" ");
+            *output_file_stream << " ";
     }
 
-    output_text_stream->WriteString("\n");
+    *output_file_stream << "\n";
 }
 
 void PDB::WriteCommentLine(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    wxString comment_string;
-    wxString buffer;
+    std::string comment_string;
+    std::string buffer;
 
-    comment_string.PrintfV(format, args);
+    comment_string = cistem::detail::VFormat(format, args);
 
     buffer = comment_string;
-    buffer.Trim(false);
+    TrimLeft(buffer);
 
-    if ( buffer.StartsWith("#") == false && buffer.StartsWith("C") == false ) {
+    if ( StartsWith(buffer, "#") == false && StartsWith(buffer, "C") == false ) {
         comment_string = "# " + comment_string;
     }
 
-    output_text_stream->WriteString(comment_string);
+    *output_file_stream << comment_string;
 
-    if ( comment_string.EndsWith("\n") == false )
-        output_text_stream->WriteString("\n");
+    if ( EndsWith(comment_string, "\n") == false )
+        *output_file_stream << "\n";
 
     va_end(args);
 }
 
-wxString PDB::ReturnFilename( ) {
+std::string PDB::ReturnFilename( ) {
     return text_filename;
 }
 
 void PDB::TransformBaseCoordinates(float wanted_origin_x, float wanted_origin_y, float wanted_origin_z, float euler1, float euler2, float euler3, int particle_idx, int frame_number) {
-    // Sets the initial position and orientation of the particle (my_ensemble.my_trajectories.Item(0)...) {
+    // Sets the initial position and orientation of the particle (my_ensemble.my_trajectories[0]...) {
 
     // Initialize a new trajectory which represents an individual instance of a particle
     ParticleTrajectory dummy_trajectory;
-    my_trajectory.Add(dummy_trajectory, 1);
+    my_trajectory.insert(my_trajectory.end( ), 1, dummy_trajectory);
 
     initial_values.emplace_back(euler1, euler2, euler3, wanted_origin_x, wanted_origin_y, wanted_origin_z);
 
@@ -815,30 +797,30 @@ void PDB::TransformBaseCoordinates(float wanted_origin_x, float wanted_origin_y,
     rotmat.SetToRotation(euler1, euler2, euler3);
 
     // Is it safe to increment like this?
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][0]  = wanted_origin_x;
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][1]  = wanted_origin_y;
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][2]  = wanted_origin_z;
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][3]  = rotmat.m[0][0];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][4]  = rotmat.m[1][0];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][5]  = rotmat.m[2][0];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][6]  = rotmat.m[0][1];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][7]  = rotmat.m[1][1];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][8]  = rotmat.m[2][1];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][9]  = rotmat.m[0][2];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][10] = rotmat.m[1][2];
-    my_trajectory.Item(particle_idx).current_orientation[frame_number][11] = rotmat.m[2][2];
+    my_trajectory[particle_idx].current_orientation[frame_number][0]  = wanted_origin_x;
+    my_trajectory[particle_idx].current_orientation[frame_number][1]  = wanted_origin_y;
+    my_trajectory[particle_idx].current_orientation[frame_number][2]  = wanted_origin_z;
+    my_trajectory[particle_idx].current_orientation[frame_number][3]  = rotmat.m[0][0];
+    my_trajectory[particle_idx].current_orientation[frame_number][4]  = rotmat.m[1][0];
+    my_trajectory[particle_idx].current_orientation[frame_number][5]  = rotmat.m[2][0];
+    my_trajectory[particle_idx].current_orientation[frame_number][6]  = rotmat.m[0][1];
+    my_trajectory[particle_idx].current_orientation[frame_number][7]  = rotmat.m[1][1];
+    my_trajectory[particle_idx].current_orientation[frame_number][8]  = rotmat.m[2][1];
+    my_trajectory[particle_idx].current_orientation[frame_number][9]  = rotmat.m[0][2];
+    my_trajectory[particle_idx].current_orientation[frame_number][10] = rotmat.m[1][2];
+    my_trajectory[particle_idx].current_orientation[frame_number][11] = rotmat.m[2][2];
 
     // Storing the update for reference. On the intial round this matches the orientation.
-    my_trajectory.Item(particle_idx).current_update[frame_number][0] = wanted_origin_x;
-    my_trajectory.Item(particle_idx).current_update[frame_number][1] = wanted_origin_y;
-    my_trajectory.Item(particle_idx).current_update[frame_number][2] = wanted_origin_z;
-    my_trajectory.Item(particle_idx).current_update[frame_number][3] = euler1;
-    my_trajectory.Item(particle_idx).current_update[frame_number][4] = euler2;
-    my_trajectory.Item(particle_idx).current_update[frame_number][5] = euler3;
+    my_trajectory[particle_idx].current_update[frame_number][0] = wanted_origin_x;
+    my_trajectory[particle_idx].current_update[frame_number][1] = wanted_origin_y;
+    my_trajectory[particle_idx].current_update[frame_number][2] = wanted_origin_z;
+    my_trajectory[particle_idx].current_update[frame_number][3] = euler1;
+    my_trajectory[particle_idx].current_update[frame_number][4] = euler2;
+    my_trajectory[particle_idx].current_update[frame_number][5] = euler3;
 
     // Now that a new member is added to the ensemble, increment the counter
     this->number_of_particles_initialized++;
-    // wxPrintf("\n\nNumber of particles initialized %d\n", this->number_of_particles_initialized);
+    // Printf("\n\nNumber of particles initialized %d\n", this->number_of_particles_initialized);
 }
 
 void PDB::TransformLocalAndCombine(PDB& clean_copy, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle) {
@@ -850,7 +832,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
     /*
      * Take an array of PDB objects and create a single array of atoms transformed according to the timestep
     */
-    // wxPrintf("\n\nTransforming local and combining\n");
+    // Printf("\n\nTransforming local and combining\n");
     // std::cerr << " My size their size " << atoms.size( ) << " dd " << pdb_ensemble->atoms.size( ) << std::endl;
 
     int   current_pdb        = 0;
@@ -879,20 +861,20 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
         if ( this->atoms.capacity( ) < pdb_ensemble[current_pdb].number_of_atoms ) {
             this->atoms.reserve(pdb_ensemble[current_pdb].number_of_atoms);
         }
-        // wxPrintf("Checking %ld %ld\n", pdb_ensemble[current_pdb].atoms.size( ), atoms.size( ));
+        // Printf("Checking %ld %ld\n", pdb_ensemble[current_pdb].atoms.size( ), atoms.size( ));
         for ( current_particle = 0; current_particle < pdb_ensemble[current_pdb].number_of_particles_initialized; current_particle++ ) {
-            ox = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][0];
-            oy = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][1];
-            oz = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][2];
-            rotmat.SetToValues(pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][3],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][4],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][5],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][6],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][7],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][8],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][9],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][10],
-                               pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][11]);
+            ox = pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][0];
+            oy = pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][1];
+            oz = pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][2];
+            rotmat.SetToValues(pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][3],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][4],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][5],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][6],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][7],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][8],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][9],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][10],
+                               pdb_ensemble[current_pdb].my_trajectory[current_particle].current_orientation[0][11]);
 
             rotmat *= particle_rot;
             // Randomly set noise atoms before copying in. Initially, there is a copy of every real atom, at the same x,y,z coords. For frame zero we
@@ -964,7 +946,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                     RandomNumberGenerator my_rand(pi_v<float>);
                     // Set the number of noise particles for this given particle in the stack
                     pdb_ensemble[current_pdb].number_of_noise_particles = my_rand.GetUniformRandomSTD(std::max(0, this->max_number_of_noise_particles - 2), this->max_number_of_noise_particles);
-                    wxPrintf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles, max_number_of_noise_particles);
+                    Printf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles, max_number_of_noise_particles);
 
                     // Angular sector size such that noise particles do not overlap. This could be a method.
                     float sector_size = 1.1f; //2.0*pi_v<float> / pdb_ensemble[current_pdb].number_of_noise_particles;
@@ -1006,7 +988,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                                 float dy     = sinf(offset_angle);
                                 float ang_diff;
                                 int   jPart;
-                                //                            wxPrintf("offset angle is %3.3f\n", rad_2_deg(offset_angle));
+                                //                            Printf("offset angle is %3.3f\n", rad_2_deg(offset_angle));
 
                                 // now check the angle against each previous
                                 for ( jPart = 0; jPart < iPart; jPart++ ) {
@@ -1024,7 +1006,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                                 }
                             }
                             if ( is_too_close ) {
-                                wxPrintf("Error, did not find a well separated noise particle\n");
+                                Printf("Error, did not find a well separated noise particle\n");
                                 //                            exit(-1);
                             }
                             else {
@@ -1044,7 +1026,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
 
                         pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].Init(my_rand.GetUniformRandomSTD(0, 360), my_rand.GetUniformRandomSTD(0, 360), my_rand.GetUniformRandomSTD(0, 360), offset_X, offset_Y);
 
-                        wxPrintf("\nreal total current %ld %ld %ld\n", pdb_ensemble[current_pdb].number_of_real_atoms, pdb_ensemble[current_pdb].number_of_real_and_noise_atoms, pdb_ensemble[current_pdb].number_of_atoms);
+                        Printf("\nreal total current %ld %ld %ld\n", pdb_ensemble[current_pdb].number_of_real_atoms, pdb_ensemble[current_pdb].number_of_real_and_noise_atoms, pdb_ensemble[current_pdb].number_of_atoms);
 
                         for ( int current_atom_number = 0; current_atom_number < pdb_ensemble[current_pdb].number_of_real_atoms; current_atom_number++ ) {
 
@@ -1130,10 +1112,10 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
         average_bFactor /= current_total_atom;
     }
     if ( isnan(average_bFactor) ) {
-        wxPrintf("\n\n\t\tWARNING: average_bFactor is nan setting to zero, this should be fixed, not ignored!\n");
+        Printf("\n\n\t\tWARNING: average_bFactor is nan setting to zero, this should be fixed, not ignored!\n");
         average_bFactor = 0;
     }
-    // wxPrintf("\t\t\n\nAVG BFACTOR FROM PDB IS %f, current_total_atom %ld\n\n", average_bFactor, current_total_atom);
+    // Printf("\t\t\n\nAVG BFACTOR FROM PDB IS %f, current_total_atom %ld\n\n", average_bFactor, current_total_atom);
 
     if ( current_total_atom > 2 ) { // for single atom test
         // Again, need a check to make sure all sizes are consistent
@@ -1171,13 +1153,13 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
 
     if ( this->cubic_size > 1 ) {
         // Override the dimensions
-        // wxPrintf("Cubic size is %d\n", this->cubic_size);
+        // Printf("Cubic size is %d\n", this->cubic_size);
         this->vol_nX = cubic_size;
         this->vol_nY = cubic_size;
         this->vol_nZ = cubic_size;
     }
     else {
-        // wxPrintf("Vol ang z is %f\n", this->vol_angZ);
+        // Printf("Vol ang z is %f\n", this->vol_angZ);
         this->vol_nX = myroundint(this->vol_angX / pixel_size);
         this->vol_nY = myroundint(this->vol_angY / pixel_size);
         this->vol_nZ = myroundint(this->vol_angZ / pixel_size);

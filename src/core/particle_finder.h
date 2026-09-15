@@ -20,7 +20,7 @@ class ParticleFinder {
     void                          RedoWithNewNumberOfBackgroundBoxes( );
     void                          RedoWithNewAlgorithmToFindBackground( );
 
-    wxString ReturnMicrographFilename( ) { return micrograph_filename; };
+    std::string ReturnMicrographFilename( ) { return micrograph_filename; };
 
     CTF ReturnMicrographCTFWithPickingPixelSize( ) { return micrograph_ctf; };
 
@@ -28,7 +28,7 @@ class ParticleFinder {
 
     float ReturnOriginalMicrographPixelSize( ) { return original_micrograph_pixel_size; };
 
-    void SetAllUserParameters(wxString wanted_micrograph_filename,
+    void SetAllUserParameters(std::string wanted_micrograph_filename,
                               float    wanted_original_micrograph_pixel_size,
                               float    wanted_acceleration_voltage_in_keV,
                               float    wanted_spherical_aberration_in_mm,
@@ -38,13 +38,13 @@ class ParticleFinder {
                               float    wanted_defocus_2_in_angstroms,
                               float    wanted_astigmatism_angle_in_degrees,
                               bool     wanted_already_have_templates,
-                              wxString wanted_templates_filename,
+                              std::string wanted_templates_filename,
                               bool     wanted_average_templates_radially,
                               int      wanted_number_of_template_rotations,
                               float    wanted_typical_radius_in_angstroms,
                               float    wanted_maximum_radius_in_angstroms,
                               float    wanted_highest_resolution_to_use,
-                              wxString wanted_output_stack_filename,
+                              std::string wanted_output_stack_filename,
                               int      wanted_output_stack_box_size,
                               int      wanted_minimum_distance_from_edges_in_pixels,
                               float    wanted_minimum_peak_height_for_candidate_particles,
@@ -58,7 +58,7 @@ class ParticleFinder {
                               bool     wanted_particles_are_white);
 
     // Todo: To be made private
-    // Todo: use more appropriate objects to do this. Maybe ParticlePositionAssets, or wxArrays of floats
+    // Todo: use more appropriate objects to do this. Maybe ParticlePositionAssets, or arrays of floats
     // Use will (mis)use Curve objects to keep track of our results
     Curve results_x_y;
     Curve results_height_template;
@@ -68,8 +68,8 @@ class ParticleFinder {
 
   private:
     // Parameters from the user
-    wxString micrograph_filename;
-    wxString templates_filename;
+    std::string micrograph_filename;
+    std::string templates_filename;
     bool     already_have_templates;
     float    original_micrograph_pixel_size;
     float    highest_resolution_to_use;
@@ -87,7 +87,7 @@ class ParticleFinder {
     float    high_variance_threshold_in_fwhm;
     bool     avoid_high_low_mean_areas;
     int      minimum_distance_from_edges_in_pixels;
-    wxString output_stack_filename;
+    std::string output_stack_filename;
     bool     particles_are_white;
 
     // CTF parameters from the user

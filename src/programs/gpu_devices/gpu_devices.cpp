@@ -23,7 +23,7 @@ void GpuDevices::DoInteractiveUserInput( ) {
 bool GpuDevices::DoCalculation( ) {
     DeviceManager gpuDev;
 
-    wxPrintf("\nGpuDevices is running...\n\n");
+    Printf("\nGpuDevices is running...\n\n");
 
     gpuDev.ListDevices( );
     return true;

@@ -123,7 +123,7 @@ class TemplateMatchingDataSizer {
 
     inline void PrintImageSizes( ) {
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
-            wxPrintf("old x, y = %i %i\n  new x, y = %i %i\n", image_size.x, image_size.y, image_search_size.x, image_search_size.y);
+            Printf("old x, y = %i %i\n  new x, y = %i %i\n", image_size.x, image_size.y, image_search_size.x, image_search_size.y);
         }
     }
 

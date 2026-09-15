@@ -1,5 +1,4 @@
 #include "../../core/core_headers.h"
-#include <wx/dir.h>
 
 class
         ConvertTIF2MRC : public MyApp {
@@ -43,9 +42,9 @@ bool ConvertTIF2MRC::DoCalculation( ) {
     input_file.OpenFile(input_filename, false);
     output_file.OpenFile(output_filename, true);
 
-    //	wxPrintf("Tif file = %ix%ix%i\n", input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize());
+    //	Printf("Tif file = %ix%ix%i\n", input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize());
 
-    wxPrintf("Converting File...\n\n");
+    Printf("Converting File...\n\n");
 
     ProgressBar* my_progress = new ProgressBar(input_file.ReturnNumberOfSlices( ));
 

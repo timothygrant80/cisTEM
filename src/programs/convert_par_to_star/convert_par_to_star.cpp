@@ -37,8 +37,8 @@ void ConvertParToStar::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool ConvertParToStar::DoCalculation( ) {
-    wxString input_filename_one = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString output_filename    = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_filename_one = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_filename    = my_current_job.arguments[1].ReturnStringArgument( );
     float    microscope_voltage = my_current_job.arguments[2].ReturnFloatArgument( );
     float    microscope_cs      = my_current_job.arguments[3].ReturnFloatArgument( );
     float    amplitude_contrast = my_current_job.arguments[4].ReturnFloatArgument( );
@@ -48,13 +48,13 @@ bool ConvertParToStar::DoCalculation( ) {
     float    image_shift_x      = my_current_job.arguments[8].ReturnFloatArgument( );
     float    image_shift_y      = my_current_job.arguments[9].ReturnFloatArgument( );
 
-    wxPrintf("\nConverting...\n\n");
+    Printf("\nConverting...\n\n");
     cisTEMParameters converted_params;
     converted_params.ReadFromFrealignParFile(input_filename_one, pixel_size, microscope_voltage, microscope_cs, amplitude_contrast, beam_tilt_x, beam_tilt_y, image_shift_x, image_shift_y);
 
     converted_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | IMAGE_IS_ACTIVE | PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | OCCUPANCY | LOGP | SIGMA | SCORE | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y);
     converted_params.WriteTocisTEMStarFile(output_filename);
-    wxPrintf("\n\n");
+    Printf("\n\n");
 
     return true;
 }

@@ -144,7 +144,7 @@ void Image::SampleFFT(Image& sampled_image, int sample_rate) {
                 //				y_in = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
                 //				address = ReturnFourier1DAddressFromLogicalCoord(x_in, y_in, 0);
                 //				address = sampled_image.ReturnFourier1DAddressFromLogicalCoord(x_in / sample_rate, y_in / sample_rate, 0);
-                //				wxPrintf("address_in, address_out, address = %li, %li, %li, x,y_in = %i, %i, value = %g\n", address_in, address_out, address, x_in, y_in, cabsf(complex_values[address_in]));
+                //				Printf("address_in, address_out, address = %li, %li, %li, x,y_in = %i, %i, value = %g\n", address_in, address_out, address, x_in, y_in, cabsf(complex_values[address_in]));
                 address_in += sample_rate;
                 address_out++;
             }
@@ -335,7 +335,7 @@ float Image::ReturnSigmaNoise(Image& matching_projection, float mask_radius) {
     pixel_variance_projection = matching_projection.ReturnVarianceOfRealValues(mask_radius);
     alpha                     = fabsf(correlation_coefficient / pixel_variance_projection);
     //	sigma = sqrtf(pixel_variance_image - powf(alpha,2) * pixel_variance_projection);
-    //	wxPrintf("var_input = %f, var_output = %g, alpha = %f, sigma_signal = %f, sigma_noise = %f\n", pixel_variance_image, pixel_variance_projection, alpha, sqrtf(pixel_variance_image - powf(sigma,2)), sigma);
+    //	Printf("var_input = %f, var_output = %g, alpha = %f, sigma_signal = %f, sigma_noise = %f\n", pixel_variance_image, pixel_variance_projection, alpha, sqrtf(pixel_variance_image - powf(sigma,2)), sigma);
 
     return sqrtf(pixel_variance_image - powf(alpha, 2) * pixel_variance_projection);
 }
@@ -547,12 +547,12 @@ float Image::GetWeightedCorrelationWithImage(Image& projection_image, int* bins,
         if ( sum_b[i] != 0.0 ) {
             if ( i <= bin_limit_signed ) {
                 sum3 += cross_terms[i];
-                //				wxPrintf("i_s = %i, sum_a = %g, sum_b = %i, cross = %g\n", i, sum_a[i], sum_b[i], cross_terms[i]);
+                //				Printf("i_s = %i, sum_a = %g, sum_b = %i, cross = %g\n", i, sum_a[i], sum_b[i], cross_terms[i]);
                 //				r = cross_terms[i] / sqrtf(sum_b[i]);
             }
             else {
                 sum3 += fabsf(cross_terms[i]);
-                //				wxPrintf("i_u = %i, sum_a = %g, sum_b = %i, cross = %g\n", i, sum_a[i], sum_b[i], cross_terms[i]);
+                //				Printf("i_u = %i, sum_a = %g, sum_b = %i, cross = %g\n", i, sum_a[i], sum_b[i], cross_terms[i]);
                 //				r = fabsf(cross_terms[i] / sqrtf(sum_b[i]));
             }
             sum1 += sum_a[i];
@@ -1511,7 +1511,7 @@ void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr
             /*
 			if (j==0 && i < 300 && i > 0)
 			{
-				wxPrintf("sp = %f; ssnr = %f; hp = %f; ctf_value = %f; filter = %f\n",1.5/frequency,ssnr_value_pre_ctf,hp_value,ctf_value,filter_value);
+				Printf("sp = %f; ssnr = %f; hp = %f; ctf_value = %f; filter = %f\n",1.5/frequency,ssnr_value_pre_ctf,hp_value,ctf_value,filter_value);
 			}
 			*/
 
@@ -1607,7 +1607,7 @@ void Image::OptimalFilterFSC(Curve& FSC) {
                     //					if (FSC.data_y[bin] != 0.0) complex_values[pixel_counter] /= (1.0 + 0.5 * (1.0 - fabsf(FSC.data_y[bin])) / fabsf(FSC.data_y[bin]));
                     if ( FSC.data_y[bin] != 0.0 )
                         complex_values[pixel_counter] *= 2.0 * fabsf(FSC.data_y[bin]) / (1.0 + fabsf(FSC.data_y[bin]));
-                    //					if (j == 0 && k == 0) wxPrintf("FSC, filt = %i %g %g %g\n", bin, x, FSC.data_y[bin], 2.0 * fabsf(FSC.data_y[bin]) / (1.0 + fabsf(FSC.data_y[bin])));
+                    //					if (j == 0 && k == 0) Printf("FSC, filt = %i %g %g %g\n", bin, x, FSC.data_y[bin], 2.0 * fabsf(FSC.data_y[bin]) / (1.0 + fabsf(FSC.data_y[bin])));
                 }
                 else {
                     complex_values[pixel_counter] = 0.0f + I * 0.0f;
@@ -2022,7 +2022,7 @@ void Image::RotateFourier2DGenerateIndex(Kernel2D**& kernel_index, float psi_max
     number_of_psi_positions = myroundint(psi_max / psi_step);
     if ( number_of_psi_positions < 1 )
         number_of_psi_positions = 1;
-    //	wxPrintf("psi_max = %f, psi_step = %f, number of psi positions = %i\n", psi_max, psi_step, number_of_psi_positions);
+    //	Printf("psi_max = %f, psi_step = %f, number of psi positions = %i\n", psi_max, psi_step, number_of_psi_positions);
     kernel_index = new Kernel2D*[number_of_psi_positions]; // dynamic array of pointers to float
     for ( psi_i = 0; psi_i < number_of_psi_positions; psi_i++ ) {
         kernel_index[psi_i] = new Kernel2D[real_memory_allocated / 2]; // each i-th pointer is now pointing to dynamic array (size number_of_positions) of actual float values
@@ -4272,7 +4272,7 @@ void Image::LocalResSignificanceFilter(float pixel_size, float starting_resoluti
             filter_frequency = 0.5;
         buffer3d.CosineMask(filter_frequency, window);
         buffer3d.BackwardFFT( );
-        buffer3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/filter_%i.mrc", counter).ToStdString( ), 1, buffer3d.logical_z_dimension);
+        buffer3d.QuickAndDirtyWriteSlices(Format("/tmp/filter_%i.mrc", counter), 1, buffer3d.logical_z_dimension);
 
         sharp3d.SharpenMap(pixel_size, pixel_size / (current_spatial_frequency), false, 0.0f, mask_radius_in_angstroms, 50.0f, 0.0f, 0.0f, 500.0f, false, &automask);
 
@@ -4298,8 +4298,8 @@ void Image::LocalResSignificanceFilter(float pixel_size, float starting_resoluti
         //threshold_value = distro.GetSampleMean() + (8.0f * sqrtf(distro.GetSampleVariance()));
         //threshold_value = (8.0f * sqrtf(distro.GetSampleVariance()));
         //sharp3d.QuickAndDirtyWriteSlices("/tmp/sharp.mrc", 1, sharp3d.logical_z_dimension);
-        //wxPrintf("Threshold = %f\n", threshold_value);
-        sharp3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/sharp_%i.mrc", counter).ToStdString( ), 1, buffer3d.logical_z_dimension);
+        //Printf("Threshold = %f\n", threshold_value);
+        sharp3d.QuickAndDirtyWriteSlices(Format("/tmp/sharp_%i.mrc", counter), 1, buffer3d.logical_z_dimension);
 
         float original_average_value = sharp3d.ReturnAverageOfRealValues(mask_radius_in_angstroms / pixel_size, true);
         sharp3d.SetMinimumValue(original_average_value);
@@ -4309,7 +4309,7 @@ void Image::LocalResSignificanceFilter(float pixel_size, float starting_resoluti
 
         sharp3d.Binarise(threshold_value);
         sharp3d.QuickAndDirtyWriteSlices("/tmp/bin.mrc", 1, sharp3d.logical_z_dimension);
-        sharp3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/bin_%i.mrc", counter).ToStdString( ), 1, buffer3d.logical_z_dimension);
+        sharp3d.QuickAndDirtyWriteSlices(Format("/tmp/bin_%i.mrc", counter), 1, buffer3d.logical_z_dimension);
         counter++;
         pixels_above_threshold = 0;
         for ( pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
@@ -4326,7 +4326,7 @@ void Image::LocalResSignificanceFilter(float pixel_size, float starting_resoluti
             }
         }
 
-        wxPrintf("Resolution %.2f has %i pixels above threshold (this added %i pixels to the output)\n", pixel_size / current_spatial_frequency, pixels_above_threshold, pixels_added);
+        Printf("Resolution %.2f has %i pixels above threshold (this added %i pixels to the output)\n", pixel_size / current_spatial_frequency, pixels_above_threshold, pixels_added);
     }
 
     for ( pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
@@ -4517,7 +4517,7 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
             // everything is already done..
 
             is_in_real_space = should_be_in_real_space;
-            //			wxPrintf("returning\n");
+            //			Printf("returning\n");
 
             return;
         }
@@ -5486,7 +5486,7 @@ float Image::ReturnSigmaOfFourierValuesOnEdges( ) {
 
     average_density = total / double(number_of_pixels);
     sigma           = sqrtf((total_squared / double(number_of_pixels)) - pow(average_density, 2));
-    //wxPrintf("Average = %f, Sigma = %f\n", average_density, sigma);
+    //Printf("Average = %f, Sigma = %f\n", average_density, sigma);
     return sigma;
 }
 
@@ -5540,7 +5540,7 @@ float Image::ReturnSigmaOfFourierValuesOnEdgesAndCorners( ) {
 
     average_density = total / double(number_of_pixels);
     sigma           = sqrtf((total_squared / double(number_of_pixels)) - pow(average_density, 2));
-    //wxPrintf("Average = %f, Sigma = %f\n", average_density, sigma);
+    //Printf("Average = %f, Sigma = %f\n", average_density, sigma);
     return sigma;
 }
 
@@ -6874,9 +6874,9 @@ void Image::ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_
         if ( current_filter_freq < pixel_size / max_res_Angstroms )
             current_filter_freq = pixel_size / max_res_Angstroms;
         on_lowest_resolution = current_filter_freq <= pixel_size / max_res_Angstroms;
-        wxPrintf("current filter freq = %f; pixel_size/max_res_Angstroms = %f; filter_freq_step_size = %f\n", current_filter_freq, pixel_size / max_res_Angstroms, filter_freq_step_size);
+        Printf("current filter freq = %f; pixel_size/max_res_Angstroms = %f; filter_freq_step_size = %f\n", current_filter_freq, pixel_size / max_res_Angstroms, filter_freq_step_size);
         if ( on_lowest_resolution )
-            wxPrintf("On lowest resolution\n");
+            Printf("On lowest resolution\n");
 
         // Apply filter
         lp_volume.ForwardFFT( );
@@ -6898,7 +6898,7 @@ void Image::ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_
         lp_volume.BackwardFFT( );
         /*
 #ifdef DEBUG
-		lp_volume.QuickAndDirtyWriteSlices(wxString::Format("dbg_fil_%02i.mrc",filter_counter).ToStdString(), 1, lp_volume.logical_z_dimension);
+		lp_volume.QuickAndDirtyWriteSlices(Format("dbg_fil_%02i.mrc",filter_counter), 1, lp_volume.logical_z_dimension);
 #endif
 		*/
 
@@ -8097,23 +8097,23 @@ void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_w
                 // Deal with the positive Nyquist in the 3rd dimension
                 kk            = physical_index_of_first_negative_frequency_z;
                 int kk_mirror = other_image->logical_z_dimension - physical_index_of_first_negative_frequency_z;
-                //wxPrintf("\nkk = %i; kk_mirror = %i\n",kk,kk_mirror);
+                //Printf("\nkk = %i; kk_mirror = %i\n",kk,kk_mirror);
                 int jj_mirror;
-                //wxPrintf("Will loop jj from %i to %i\n",1,physical_index_of_first_negative_frequency_y);
+                //Printf("Will loop jj from %i to %i\n",1,physical_index_of_first_negative_frequency_y);
                 for ( jj = 1; jj <= physical_index_of_first_negative_frequency_y; jj++ ) {
                     //jj_mirror = other_image->logical_y_dimension - jj;
                     jj_mirror = jj;
                     for ( ii = 0; ii <= physical_upper_bound_complex_x; ii++ ) {
-                        //wxPrintf("(1) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
+                        //Printf("(1) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
                         other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii, jj, kk)] = other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii, jj_mirror, kk_mirror)];
                     }
                 }
-                //wxPrintf("Will loop jj from %i to %i\n", other_image->logical_y_dimension - physical_index_of_first_negative_frequency_y, other_image->logical_y_dimension - 1);
+                //Printf("Will loop jj from %i to %i\n", other_image->logical_y_dimension - physical_index_of_first_negative_frequency_y, other_image->logical_y_dimension - 1);
                 for ( jj = other_image->logical_y_dimension - physical_index_of_first_negative_frequency_y; jj <= other_image->logical_y_dimension - 1; jj++ ) {
                     //jj_mirror = other_image->logical_y_dimension - jj;
                     jj_mirror = jj;
                     for ( ii = 0; ii <= physical_upper_bound_complex_x; ii++ ) {
-                        //wxPrintf("(2) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
+                        //Printf("(2) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
                         other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii, jj, kk)] = other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii, jj_mirror, kk_mirror)];
                     }
                 }
@@ -9714,8 +9714,8 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
                             }
                         }
 
-                        //wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
-                        //wxPrintf("value %f, %f, %f (%f)\n", x, y, z, real_values[pixel_counter]);
+                        //Printf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
+                        //Printf("value %f, %f, %f (%f)\n", x, y, z, real_values[pixel_counter]);
 
                         pixel_counter++;
                     }
@@ -9743,8 +9743,8 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
                                 found_peak.y                             = j - physical_address_of_box_center_y;
                                 found_peak.z                             = k - physical_address_of_box_center_z;
                                 found_peak.physical_address_within_image = pixel_counter;
-                                //wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
-                                //wxPrintf("new peak %i, %i, %i (%f)\n", i, j, k, found_peak.value);
+                                //Printf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
+                                //Printf("new peak %i, %i, %i (%f)\n", i, j, k, found_peak.value);
                             }
                         }
 
@@ -9796,8 +9796,8 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
                             }
                         }
 
-                        //wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
-                        //wxPrintf("value %f, %f, %f (%f)\n", x, y, z, real_values[pixel_counter]);
+                        //Printf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
+                        //Printf("value %f, %f, %f (%f)\n", x, y, z, real_values[pixel_counter]);
 
                         pixel_counter++;
                     }
@@ -9908,7 +9908,7 @@ float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_o
 
     // estimate a mask radius
     mask_radius_local = sqrtf((temp_image->ReturnAverageOfRealValues( ) * temp_image->logical_x_dimension * temp_image->logical_y_dimension) / PI);
-    //wxPrintf("mask radius = %f\n", mask_radius_local);
+    //Printf("mask radius = %f\n", mask_radius_local);
 
     ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true);
     //phase_difference_spectrum->Binarise(0.0f);
@@ -9929,11 +9929,11 @@ float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_o
             if ( score < best_score ) {
                 best_score            = score;
                 best_beamtilt_azimuth = current_beamtilt_azimuth;
-                //		wxPrintf("Writing for %f, %f", rad_2_deg(current_beamtilt_azimuth), score);
+                //		Printf("Writing for %f, %f", rad_2_deg(current_beamtilt_azimuth), score);
             }
 
             counter++;
-            //wxPrintf("cycle %i, search %i\n", cycle_counter + 1, counter);
+            //Printf("cycle %i, search %i\n", cycle_counter + 1, counter);
         }
 
         // set the next values for the next cycle..
@@ -9979,13 +9979,13 @@ float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_o
                 for ( current_particle_shift = particle_shift_search_start_value; current_particle_shift <= particle_shift_search_end_value; current_particle_shift += particle_shift_search_step_size ) {
                     if ( counter >= first_position_to_search && counter <= last_position_to_search )
                         counter++;
-                    //	wxPrintf("%i = %f, %f, %f, %f\n",cycle_counter, current_beamtilt_azimuth, current_particle_shift_azimuth, current_beamtilt, current_particle_shift);
+                    //	Printf("%i = %f, %f, %f, %f\n",cycle_counter, current_beamtilt_azimuth, current_particle_shift_azimuth, current_beamtilt, current_particle_shift);
                 }
             }
         }
     }
 
-    //	wxPrintf("There are %i positions\n", counter);
+    //	Printf("There are %i positions\n", counter);
     // actual search
 
     beam_tilt_azimuth_search_start_value = (best_beamtilt_azimuth)-0.1f; // search 10 degrees either side
@@ -10005,7 +10005,7 @@ float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_o
     particle_shift_search_step_size   = 0.05f;
 
     if ( progress_bar && ReturnThreadNumberOfCurrentThread( ) == 0 ) {
-        wxPrintf("\nEstimating beamtilt...\n\n");
+        Printf("\nEstimating beamtilt...\n\n");
         my_progress = new ProgressBar(counter);
     }
 
@@ -10229,7 +10229,7 @@ float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_o
         MyDebugPrint("Best Results = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
         MyDebugPrint("Minimization took %s\n", simplex_minimzer.ReturnTimeSpanOfMinimization( ).Format( ));
 
-        wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+        Printf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
 
         temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
 
@@ -10288,7 +10288,7 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
 
     integer_peak = FindPeakWithIntegerCoordinates(wanted_min_radius, wanted_max_radius, wanted_min_distance_from_edges);
 
-    //wxPrintf("Integer Peak = %f, %f\n", integer_peak.x, integer_peak.y);
+    //Printf("Integer Peak = %f, %f\n", integer_peak.x, integer_peak.y);
 
     best_x = integer_peak.x + physical_address_of_box_center_x;
     best_y = integer_peak.y + physical_address_of_box_center_y;
@@ -10355,7 +10355,7 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
             found_peak.value = integer_peak.value;
     }
 
-    //wxPrintf("%f %f %f %f\n", integer_peak.x, integer_peak.y, found_peak.x, found_peak.y);
+    //Printf("%f %f %f %f\n", integer_peak.x, integer_peak.y, found_peak.x, found_peak.y);
     return found_peak;
 }
 
@@ -10509,7 +10509,7 @@ bool Image::ContainsBlankEdges(float mask_radius) {
         line_variance += powf(real_values[i], 2);
     }
     line_variance = line_variance / logical_x_dimension - powf(line_average / logical_x_dimension, 2);
-    //	wxPrintf("var = %g line = %g\n", variance, line_variance);
+    //	Printf("var = %g line = %g\n", variance, line_variance);
     if ( variance > 0.0 && line_variance / variance < threshold )
         blank_edge = true;
     else if ( line_variance < logical_x_dimension * tiny )
@@ -10525,7 +10525,7 @@ bool Image::ContainsBlankEdges(float mask_radius) {
             pixel_counter += logical_x_dimension + padding_jump_value;
         }
         line_variance = line_variance / logical_y_dimension - powf(line_average / logical_y_dimension, 2);
-        //		wxPrintf("var = %g line = %g\n", variance, line_variance);
+        //		Printf("var = %g line = %g\n", variance, line_variance);
         if ( variance > 0.0 && line_variance / variance < threshold )
             blank_edge = true;
         else if ( line_variance < logical_x_dimension * tiny )
@@ -10542,7 +10542,7 @@ bool Image::ContainsBlankEdges(float mask_radius) {
             pixel_counter += logical_x_dimension + padding_jump_value;
         }
         line_variance = line_variance / logical_y_dimension - powf(line_average / logical_y_dimension, 2);
-        //		wxPrintf("var = %g line = %g\n", variance, line_variance);
+        //		Printf("var = %g line = %g\n", variance, line_variance);
         if ( variance > 0.0 && line_variance / variance < threshold )
             blank_edge = true;
         else if ( line_variance < logical_x_dimension * tiny )
@@ -10559,7 +10559,7 @@ bool Image::ContainsBlankEdges(float mask_radius) {
             pixel_counter++;
         }
         line_variance = line_variance / logical_x_dimension - powf(line_average / logical_x_dimension, 2);
-        //		wxPrintf("var = %g line = %g\n", variance, line_variance);
+        //		Printf("var = %g line = %g\n", variance, line_variance);
         if ( variance > 0.0 && line_variance / variance < threshold )
             blank_edge = true;
         else if ( line_variance < logical_x_dimension * tiny )
@@ -10569,11 +10569,11 @@ bool Image::ContainsBlankEdges(float mask_radius) {
     return blank_edge;
 }
 
-void Image::Rotate3DByRotationMatrixAndOrApplySymmetry(RotationMatrix& wanted_matrix, float wanted_max_radius_in_pixels, wxString wanted_symmetry) {
+void Image::Rotate3DByRotationMatrixAndOrApplySymmetry(RotationMatrix& wanted_matrix, float wanted_max_radius_in_pixels, std::string wanted_symmetry) {
     Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(wanted_matrix, 0.0f, 0.0f, 0.0f, wanted_max_radius_in_pixels, wanted_symmetry);
 }
 
-void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels, wxString wanted_symmetry) // like above but with shift
+void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels, std::string wanted_symmetry) // like above but with shift
 {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");
@@ -10634,7 +10634,7 @@ void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& 
     Consume(&buffer_image);
 }
 
-void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels, wxString wanted_symmetry) {
+void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels, std::string wanted_symmetry) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");
 
@@ -10816,7 +10816,7 @@ void Image::Rotate2D(Image& rotated_image, AnglesAndShifts& rotation_angle, floa
                 x_rotated += physical_address_of_box_center_x;
                 y_rotated += physical_address_of_box_center_y;
                 rotated_image.real_values[pixel_counter] = ReturnLinearInterpolated2D(x_rotated, y_rotated);
-                //				wxPrintf("x_coordinate_2d, y_coordinate_2d, x_rotated, y_totated = %g, %g, %g, %g, value = %g\n", x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated, rotated_image.real_values[pixel_counter]);
+                //				Printf("x_coordinate_2d, y_coordinate_2d, x_rotated, y_totated = %g, %g, %g, %g, value = %g\n", x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated, rotated_image.real_values[pixel_counter]);
             }
             else {
                 rotated_image.real_values[pixel_counter] = edge_value;
@@ -10876,7 +10876,7 @@ void Image::Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle
                 y_rotated += physical_address_of_box_center_y;
                 rotated_image.real_values[pixel_counter] = ReturnLinearInterpolated2D(x_rotated, y_rotated);
                 //				rotated_image.real_values[pixel_counter] = ReturnNearest2D(x_rotated, y_rotated);
-                //				wxPrintf("x_coordinate_2d, y_coordinate_2d, x_rotated, y_totated = %g, %g, %g, %g, value = %g\n", x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated, rotated_image.real_values[pixel_counter]);
+                //				Printf("x_coordinate_2d, y_coordinate_2d, x_rotated, y_totated = %g, %g, %g, %g, value = %g\n", x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated, rotated_image.real_values[pixel_counter]);
             }
             else {
                 rotated_image.real_values[pixel_counter] = edge_value;
@@ -10968,7 +10968,7 @@ float Image::Skew2D(Image& skewed_image, float height_offset, float minimum_heig
     //		y0 = FLT_MAX;
     //		y0_skewed = - FLT_MAX;
     //	}
-    //	wxPrintf("y0, y0_skewed = %g %g\n", y0, y0_skewed);
+    //	Printf("y0, y0_skewed = %g %g\n", y0, y0_skewed);
 
     //	height_max = -FLT_MAX;
     min_x         = float(skewed_image.logical_x_dimension) - 1.0f;
@@ -11024,7 +11024,7 @@ float Image::Skew2D(Image& skewed_image, float height_offset, float minimum_heig
     //	if (max_x > float(logical_x_dimension) - 1.0f) offset_i = - int(ceil(max_x - float(logical_x_dimension) + 1.0f));
     //	if (min_y < 0.0f) offset_j = int(ceil(-min_y));
     //	if (max_y > float(logical_y_dimension) - 1.0f) offset_j = - int(ceil(max_y - float(logical_y_dimension) + 1.0f));
-    //	wxPrintf("minx, maxx, miny, maxy, offx, offy = %g %g %g %g %i %i\n", min_x, max_x, min_y, max_y, offset_i, offset_j);
+    //	Printf("minx, maxx, miny, maxy, offx, offy = %g %g %g %g %i %i\n", min_x, max_x, min_y, max_y, offset_i, offset_j);
 
     //	counter_offset = long(skewed_image.logical_x_dimension + skewed_image.padding_jump_value) * long(1000) + long(500);
     pixel_counter = 0;
@@ -11034,15 +11034,15 @@ float Image::Skew2D(Image& skewed_image, float height_offset, float minimum_heig
             x_coordinate_2d = i - skewed_image.physical_address_of_box_center_x + offset_i;
             rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
 
-            //			if (pixel_counter == counter_offset) wxPrintf("x_rotated, y_rotated = %g %g\n", x_rotated, y_rotated);
-            //			if (pixel_counter == counter_offset) wxPrintf("tan_angle, height_offset, minimum_height = %g %g %g\n", tan_angle, height_offset, minimum_height);
+            //			if (pixel_counter == counter_offset) Printf("x_rotated, y_rotated = %g %g\n", x_rotated, y_rotated);
+            //			if (pixel_counter == counter_offset) Printf("tan_angle, height_offset, minimum_height = %g %g %g\n", tan_angle, height_offset, minimum_height);
 
             //			x_rotated, y_rotated = -296.31 -1764.21
             //			tan_angle, height_offset, minimum_height = 1.19175 1360 60
 
             //			y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated * sqrtf(minimum_height / height_offset + 1.0f);
             y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated;
-            //			if (x_coordinate_2d == y_coordinate_2d) wxPrintf("tan, off, x, y, rad', rad = %g %g %g %g %g %g\n", tan_angle, height_offset, x_coordinate_2d, y_coordinate_2d, y_rotated, y_skewed);
+            //			if (x_coordinate_2d == y_coordinate_2d) Printf("tan, off, x, y, rad', rad = %g %g %g %g %g %g\n", tan_angle, height_offset, x_coordinate_2d, y_coordinate_2d, y_rotated, y_skewed);
             //			if (y_rotated < y0_skewed) y_skewed = y0 - y_skewed;
             if ( y_rotated < y0 )
                 y_skewed = y0 - y_skewed;
@@ -11054,12 +11054,12 @@ float Image::Skew2D(Image& skewed_image, float height_offset, float minimum_heig
                 //			x_skewed = x_rotated * sqrtf((fabsf(height_offset + y_skewed * tan_angle) + minimum_height) / height_offset);
                 shrink_factor_squared = height / height_offset;
                 x_skewed              = x_rotated * sqrtf(shrink_factor_squared);
-                //			if (pixel_counter == counter_offset) wxPrintf("x_skewed, y_skewed = %g %g\n", x_skewed, y_skewed);
+                //			if (pixel_counter == counter_offset) Printf("x_skewed, y_skewed = %g %g\n", x_skewed, y_skewed);
 
                 inverse_rotation_angle.euler_matrix.RotateCoords2D(x_skewed, y_skewed, x_rotated, y_rotated);
                 x_rotated = x_rotated * padding_factor + physical_address_of_box_center_x;
                 y_rotated = y_rotated * padding_factor + physical_address_of_box_center_y;
-                //			wxPrintf("x in, out = %g %g    y in, out = %g %g\n", x_coordinate_2d, x_rotated, y_coordinate_2d, y_rotated);
+                //			Printf("x in, out = %g %g    y in, out = %g %g\n", x_coordinate_2d, x_rotated, y_coordinate_2d, y_rotated);
                 // Keep margin of one pixel to make sure interpolation is reasonable.
                 if ( x_rotated >= 1.0f && x_rotated < logical_x_dimension - 1 && y_rotated >= 1.0f && y_rotated < logical_y_dimension - 1 ) {
                     //				skewed_image.real_values[pixel_counter] = ReturnNearest2D(x_rotated, y_rotated);
@@ -11419,7 +11419,7 @@ Peak Image::CenterOfMass(float threshold, bool apply_threshold) {
                 sum_yd += (j - physical_address_of_box_center_y) * temp_float;
                 sum_zd += (k - physical_address_of_box_center_z) * temp_float;
                 sum_d += temp_float;
-                //				wxPrintf("%g %g %g %g\n", temp_float, powf(fabsf(temp_float), 0.66), real_values[pixel_counter], sum_xd);
+                //				Printf("%g %g %g %g\n", temp_float, powf(fabsf(temp_float), 0.66), real_values[pixel_counter], sum_xd);
                 pixel_counter++;
             }
             pixel_counter += padding_jump_value;
@@ -11945,7 +11945,7 @@ double BeamTiltScorer::ScoreValues(double input_values[]) {
 double BeamTiltScoreFunctionForSimplex(void* pt2Object, double values[]) {
     BeamTiltScorer* scorer_to_use = reinterpret_cast<BeamTiltScorer*>(pt2Object);
     //	float score = scorer_to_use->ScoreValues(values);
-    //	wxPrintf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
+    //	Printf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
     return scorer_to_use->ScoreValues(values);
 }
 

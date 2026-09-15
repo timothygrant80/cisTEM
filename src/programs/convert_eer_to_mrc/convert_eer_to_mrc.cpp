@@ -21,7 +21,7 @@ void ConvertEERToMRC::DoInteractiveUserInput( ) {
     int         super_res_level       = my_input->GetIntFromUser("Super Resolution Level (1, 2 or 4)", "do you want images 1, 2, or 4 times physical size", "1", 1, 4);
 
     if ( super_res_level == 3 ) {
-        wxPrintf("You just had to put 3 didn't you!  Well, now I am sulking\n");
+        Printf("You just had to put 3 didn't you!  Well, now I am sulking\n");
         exit(-1);
     }
 

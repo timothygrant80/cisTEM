@@ -1,9 +1,6 @@
-#include <wx/wx.h>
-#include <wx/app.h>
-#include <wx/cmdline.h>
 #include <cstdio>
+#include <unistd.h>
 #include <unordered_map>
-#include "wx/socket.h"
 
 #include "../../core/core_headers.h"
 #include "../../../include/libtorch/cistem_torch_helper.h"
@@ -38,30 +35,30 @@
 
 void printArray(Image& image, bool round_to_int = false) {
     float val;
-    wxPrintf("Running tests...\n");
+    Printf("Running tests...\n");
     for ( int k = 0; k < image.logical_z_dimension; k++ ) {
-        wxPrintf("z = %i\n", k);
+        Printf("z = %i\n", k);
         for ( int i = 0; i < image.logical_x_dimension; i++ ) {
             for ( int j = 0; j < image.logical_y_dimension; j++ ) {
                 val = image.ReturnRealPixelFromPhysicalCoord(i, j, k);
                 if ( round_to_int )
-                    wxPrintf("%i ", myroundint(val));
+                    Printf("%i ", myroundint(val));
                 else
-                    wxPrintf("%f ", val);
+                    Printf("%f ", val);
             }
-            wxPrintf("\n");
+            Printf("\n");
         }
     }
 }
 
 class
-        MyTestApp : public MyApp //public wxAppConsole
+        MyTestApp : public MyApp
 {
-    wxString hiv_image_80x80x1_filename;
-    wxString hiv_images_80x80x10_filename;
-    wxString sine_wave_128x128x1_filename;
-    wxString numeric_text_filename;
-    wxString temp_directory;
+    std::string hiv_image_80x80x1_filename;
+    std::string hiv_images_80x80x10_filename;
+    std::string sine_wave_128x128x1_filename;
+    std::string numeric_text_filename;
+    std::string temp_directory;
 
   public:
     // We need DoCalculation so we can have a bool return type for automated testing and a noop DoInteractiveUserInput to allow it to run from the console.
@@ -130,17 +127,17 @@ void MyTestApp::DoInteractiveUserInput( ) {
 }
 
 bool MyTestApp::DoCalculation( ) {
-    wxPrintf("\n\n\n     **   ");
+    Printf("\n\n\n     **   ");
     if ( OutputIsAtTerminal( ) == true )
-        wxPrintf(ANSI_UNDERLINE "ProjectX Library Tester" ANSI_UNDERLINE_OFF);
+        Printf(ANSI_UNDERLINE "ProjectX Library Tester" ANSI_UNDERLINE_OFF);
     else
-        wxPrintf("ProjectX Library Tester");
-    wxPrintf("   **\n");
+        Printf("ProjectX Library Tester");
+    Printf("   **\n");
 
-    //wxPrintf("")
+    //Printf("")
 
     WriteEmbeddedFiles( );
-    wxPrintf("\n");
+    Printf("\n");
 
     // Do tests..
 
@@ -175,7 +172,7 @@ bool MyTestApp::DoCalculation( ) {
     TestLibTorch( );
 #endif
 
-    wxPrintf("\n\n\n");
+    Printf("\n\n\n");
 
     if ( ! all_tests_have_passed )
         std::exit(-1);
@@ -335,7 +332,7 @@ void MyTestApp::TestClipIntoFourier( ) {
     if ( write_files_out )
         big_image_ampl.QuickAndDirtyWriteSlices("dbg_big_ampl.mrc", 1, 8);
 
-    //wxPrintf("%f %f %f %f\n",cabsf(test_image.complex_values[2]),cabsf(big_image.complex_values[2]),test_image_ampl.real_values[2], big_image_ampl.real_values[2]);
+    //Printf("%f %f %f %f\n",cabsf(test_image.complex_values[2]),cabsf(big_image.complex_values[2]),test_image_ampl.real_values[2], big_image_ampl.real_values[2]);
 
     // Do a few checks of the pixel amplitudes
     if ( abs(abs(test_image.complex_values[0]) - abs(big_image.complex_values[0])) > error_tolerance )
@@ -349,7 +346,7 @@ void MyTestApp::TestClipIntoFourier( ) {
         for ( j_logi = -2; j_logi <= 2; j_logi++ ) {
             for ( i_logi = 0; i_logi <= 2; i_logi++ ) {
                 if ( big_image.complex_values[big_image.ReturnFourier1DAddressFromLogicalCoord(i_logi, j_logi, k_logi)] == 0.0f ) {
-                    wxPrintf("\nComplex pixel with logical coords %i %i %i was not set!\n", i_logi, j_logi, k_logi);
+                    Printf("\nComplex pixel with logical coords %i %i %i was not set!\n", i_logi, j_logi, k_logi);
                     FailTest;
                 }
             }
@@ -374,7 +371,7 @@ void MyTestApp::TestClipIntoFourier( ) {
         for ( j = 0; j < 4; j++ ) {
             for ( i = 0; i < 4; i++ ) {
                 if ( abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001 ) {
-                    wxPrintf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
+                    Printf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
                     FailTest;
                 }
                 address++;
@@ -403,7 +400,7 @@ void MyTestApp::TestClipIntoFourier( ) {
         for ( j = 0; j < 5; j++ ) {
             for ( i = 0; i < 5; i++ ) {
                 if ( abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001 ) {
-                    wxPrintf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
+                    Printf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
                     FailTest;
                 }
                 address++;
@@ -432,7 +429,7 @@ void MyTestApp::TestClipIntoFourier( ) {
         for ( j = 0; j < 5; j++ ) {
             for ( i = 0; i < 5; i++ ) {
                 if ( abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001 ) {
-                    wxPrintf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
+                    Printf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
                     FailTest;
                 }
                 address++;
@@ -461,7 +458,7 @@ void MyTestApp::TestClipIntoFourier( ) {
         for ( j = 0; j < 4; j++ ) {
             for ( i = 0; i < 4; i++ ) {
                 if ( abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001 ) {
-                    wxPrintf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
+                    Printf("Voxel at address %i use to have value %f, now is %f\n", address, test_image_original.real_values[address], test_image.real_values[address]);
                     FailTest;
                 }
                 address++;
@@ -476,26 +473,26 @@ void MyTestApp::TestClipIntoFourier( ) {
 void MyTestApp::TestDatabase( ) {
     BeginTest("Database");
 
-    temp_directory             = wxFileName::GetTempDir( );
-    wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
+    temp_directory             = ReturnTempDirectory();
+    std::string database_filename = temp_directory + "/1_0_test/1_0_test.db";
     Project  project;
     Database database;
     database.Open(database_filename);
     auto schema_result = database.CheckSchema( );
     if ( schema_result.first.size( ) < 1 || schema_result.second.size( ) < 1 ) {
-        wxPrintf("Check Schema did not detect missing tables/columns\n");
+        Printf("Check Schema did not detect missing tables/columns\n");
         FailTest;
     }
     database.UpdateSchema(schema_result.second);
     schema_result = database.CheckSchema( );
     if ( schema_result.first.size( ) > 0 || schema_result.second.size( ) > 0 ) {
-        wxPrintf("Update Schema did not fix missing tables/columns\n");
+        Printf("Update Schema did not fix missing tables/columns\n");
         FailTest;
     }
     database.Close( );
     project.OpenProjectFromFile(database_filename);
     if ( project.cistem_version_text != CISTEM_VERSION_TEXT ) {
-        wxPrintf("New database does not have right version text\n");
+        Printf("New database does not have right version text\n");
         FailTest;
     }
     project.Close(false, true);
@@ -527,7 +524,7 @@ void MyTestApp::TestStarToBinaryFileConversion( ) {
         temp_line.microscope_spherical_aberration_mm = global_random_number_generator.GetUniformRandom( ) * 2.7;
         temp_line.microscope_voltage_kv              = global_random_number_generator.GetUniformRandom( ) * 300;
         temp_line.occupancy                          = global_random_number_generator.GetUniformRandom( ) * 100;
-        temp_line.original_image_filename            = wxString::Format("This_is_an_original_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+        temp_line.original_image_filename            = Format("This_is_an_original_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
         temp_line.particle_group                     = myroundint(global_random_number_generator.GetUniformRandom( ) * 10);
         temp_line.phase_shift                        = global_random_number_generator.GetUniformRandom( ) * 3.14;
         temp_line.phi                                = global_random_number_generator.GetUniformRandom( ) * 180;
@@ -535,10 +532,10 @@ void MyTestApp::TestStarToBinaryFileConversion( ) {
         temp_line.position_in_stack                  = counter + 1;
         temp_line.pre_exposure                       = global_random_number_generator.GetUniformRandom( ) * 10;
         temp_line.psi                                = global_random_number_generator.GetUniformRandom( ) * 180;
-        temp_line.reference_3d_filename              = wxString::Format("This_is_a_reference_3d_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+        temp_line.reference_3d_filename              = Format("This_is_a_reference_3d_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
         temp_line.score                              = global_random_number_generator.GetUniformRandom( ) * 100;
         temp_line.sigma                              = global_random_number_generator.GetUniformRandom( ) * 180;
-        temp_line.stack_filename                     = wxString::Format("This_is_a_stack_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+        temp_line.stack_filename                     = Format("This_is_a_stack_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
         temp_line.theta                              = global_random_number_generator.GetUniformRandom( ) * 180;
         temp_line.total_exposure                     = global_random_number_generator.GetUniformRandom( ) * 100;
         temp_line.x_shift                            = global_random_number_generator.GetUniformRandom( ) * 50;
@@ -546,42 +543,42 @@ void MyTestApp::TestStarToBinaryFileConversion( ) {
         temp_line.original_x_position                = global_random_number_generator.GetUniformRandom( ) * 4000;
         temp_line.original_y_position                = global_random_number_generator.GetUniformRandom( ) * 4000;
 
-        test_parameters.all_parameters.Add(temp_line);
+        test_parameters.all_parameters.push_back(temp_line);
     }
 
     test_parameters.parameters_to_write.SetAllToTrue( );
 
-    temp_directory = wxFileName::GetTempDir( );
+    temp_directory = ReturnTempDirectory();
 
     // write star and binary file..
 
-    wxString original_star_filename    = temp_directory + "/star_file.star";
-    wxString original_binary_filename  = temp_directory + "/binary_file.cistem";
-    wxString star_from_binary_filename = temp_directory + "/star_file_converted_from_binary.star";
-    wxString binary_from_star_filename = temp_directory + "/binary_file_converted_from_star.cistem";
+    std::string original_star_filename    = temp_directory + "/star_file.star";
+    std::string original_binary_filename  = temp_directory + "/binary_file.cistem";
+    std::string star_from_binary_filename = temp_directory + "/star_file_converted_from_binary.star";
+    std::string binary_from_star_filename = temp_directory + "/binary_file_converted_from_star.cistem";
 
-    test_parameters.WriteTocisTEMStarFile(original_star_filename.ToStdString( ).c_str( ));
-    test_parameters.WriteTocisTEMBinaryFile(original_binary_filename.ToStdString( ).c_str( ));
+    test_parameters.WriteTocisTEMStarFile(original_star_filename.c_str( ));
+    test_parameters.WriteTocisTEMBinaryFile(original_binary_filename.c_str( ));
 
     // read in binary file and write out star file..
 
     test_parameters.ClearAll( );
-    test_parameters.ReadFromcisTEMBinaryFile(original_binary_filename.ToStdString( ).c_str( ));
-    test_parameters.WriteTocisTEMStarFile(star_from_binary_filename.ToStdString( ).c_str( ));
+    test_parameters.ReadFromcisTEMBinaryFile(original_binary_filename.c_str( ));
+    test_parameters.WriteTocisTEMStarFile(star_from_binary_filename.c_str( ));
 
     // read in star file and write to binary..
 
     test_parameters.ClearAll( );
-    test_parameters.ReadFromcisTEMStarFile(original_star_filename.ToStdString( ).c_str( ));
-    test_parameters.WriteTocisTEMBinaryFile(binary_from_star_filename.ToStdString( ).c_str( ));
+    test_parameters.ReadFromcisTEMStarFile(original_star_filename.c_str( ));
+    test_parameters.WriteTocisTEMBinaryFile(binary_from_star_filename.c_str( ));
 
     // Check the sizes are the same - this isn't a very thorough test, but better than nothing.
     // It is at least an easy way to get files with all the parameters written out to quickly check by eye
 
-    long original_star_size_in_bytes    = ReturnFileSizeInBytes(original_star_filename.ToStdString( ).c_str( ));
-    long original_binary_size_in_bytes  = ReturnFileSizeInBytes(original_binary_filename.ToStdString( ).c_str( ));
-    long star_from_binary_size_in_bytes = ReturnFileSizeInBytes(star_from_binary_filename.ToStdString( ).c_str( ));
-    long binary_from_star_size_in_bytes = ReturnFileSizeInBytes(binary_from_star_filename.ToStdString( ).c_str( ));
+    long original_star_size_in_bytes    = ReturnFileSizeInBytes(original_star_filename.c_str( ));
+    long original_binary_size_in_bytes  = ReturnFileSizeInBytes(original_binary_filename.c_str( ));
+    long star_from_binary_size_in_bytes = ReturnFileSizeInBytes(star_from_binary_filename.c_str( ));
+    long binary_from_star_size_in_bytes = ReturnFileSizeInBytes(binary_from_star_filename.c_str( ));
 
     if ( original_star_size_in_bytes != star_from_binary_size_in_bytes )
         FailTest;
@@ -596,11 +593,11 @@ void MyTestApp::TestStarToBinaryFileConversion( ) {
 
     FILE* current_file;
 
-    current_file = fopen(original_star_filename.ToStdString( ).c_str( ), "rb");
+    current_file = fopen(original_star_filename.c_str( ), "rb");
     fread(original_star_file, 1, original_star_size_in_bytes, current_file);
     fclose(current_file);
 
-    current_file = fopen(star_from_binary_filename.ToStdString( ).c_str( ), "rb");
+    current_file = fopen(star_from_binary_filename.c_str( ), "rb");
     fread(star_file_from_binary_file, 1, star_from_binary_size_in_bytes, current_file);
     fclose(current_file);
 
@@ -634,7 +631,7 @@ void MyTestApp::TestElectronExposureFilter( ) {
   using this line in the inner loop (once for odd once for even)
     for (auto & indx : indx_even)
     {
-        wxPrintf("%3.9f, ", dose_filter_odd[indx]);
+        Printf("%3.9f, ", dose_filter_odd[indx]);
     }
   */
     const int size_small = 1024;
@@ -668,11 +665,11 @@ void MyTestApp::TestElectronExposureFilter( ) {
 
             for ( auto& indx : indx_even ) {
                 if ( ! FloatsAreAlmostTheSame(dose_filter_even[indx], ground_truth_even[ground_truth_counter]) ) {
-                    wxPrintf("Failed for kv,pix,ev: %3.f %3.3f, values %f %f\n", acceleration_voltage, pixel_size, dose_filter_even[indx], ground_truth_even[ground_truth_counter]);
+                    Printf("Failed for kv,pix,ev: %3.f %3.3f, values %f %f\n", acceleration_voltage, pixel_size, dose_filter_even[indx], ground_truth_even[ground_truth_counter]);
                     FailTest;
                 }
                 if ( ! FloatsAreAlmostTheSame(dose_filter_odd[indx], ground_truth_odd[ground_truth_counter]) ) {
-                    wxPrintf("Failed for kv,pix,od: %3.f %3.3f, values %f %f\n", acceleration_voltage, pixel_size, dose_filter_odd[indx], ground_truth_odd[ground_truth_counter]);
+                    Printf("Failed for kv,pix,od: %3.f %3.3f, values %f %f\n", acceleration_voltage, pixel_size, dose_filter_odd[indx], ground_truth_odd[ground_truth_counter]);
                     FailTest;
                 }
                 ground_truth_counter++;
@@ -694,7 +691,7 @@ void MyTestApp::TestEmpiricalDistribution( ) {
     BeginTest("Empirical Distribution");
 
     Image test_image;
-    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
 
     EmpiricalDistribution<double> my_dist = test_image.ReturnDistributionOfRealValues( );
 
@@ -715,12 +712,12 @@ void MyTestApp::TestEmpiricalDistribution( ) {
 }
 
 /** 
- * RAII helper to capture wx logging output into a buffer safely. If we expand usage, could move this to defines.
- * There is still something I'm not clear on where the log message is still printed to the console unless the calls are scoped individually.
- * In any event, this works okay for now, without peeling back all the layers of wxLog.
+ * RAII helper to capture logging output into a buffer safely. If we expand usage, could move this to defines.
+ * MyDebugWarnThreadSafety writes the warning to stderr, so stderr is what is redirected here; the redirection
+ * is undone by StderrRedirect's destructor, so it is put back however call() returns.
  */
 struct LogCaptureRAII {
-    wxLogBuffer buffer;
+    std::string buffer;
 
     LogCaptureRAII( ) {
     }
@@ -729,11 +726,41 @@ struct LogCaptureRAII {
     LogCaptureRAII(const LogCaptureRAII&)            = delete;
     LogCaptureRAII& operator=(const LogCaptureRAII&) = delete;
 
+    // Sends everything written to stderr while it is alive to `text` instead.
+    struct StderrRedirect {
+        std::string& text;
+        int          saved_descriptor;
+        FILE*        capture_file;
+
+        StderrRedirect(std::string& wanted_text) : text(wanted_text) {
+            fflush(stderr);
+            saved_descriptor = dup(fileno(stderr));
+            capture_file     = tmpfile( );
+            if ( capture_file != NULL )
+                dup2(fileno(capture_file), fileno(stderr));
+        }
+
+        ~StderrRedirect( ) {
+            fflush(stderr);
+            if ( saved_descriptor >= 0 ) {
+                dup2(saved_descriptor, fileno(stderr));
+                close(saved_descriptor);
+            }
+            if ( capture_file != NULL ) {
+                rewind(capture_file);
+                char   read_buffer[1024];
+                size_t bytes_read;
+                while ( (bytes_read = fread(read_buffer, 1, sizeof(read_buffer), capture_file)) > 0 )
+                    text.append(read_buffer, bytes_read);
+                fclose(capture_file);
+            }
+        }
+    };
+
     template <class Obj, class MemFn, class... Args>
     decltype(auto) call(Obj&& obj, MemFn memfn, Args&&... args) {
         clear( );
-        wxLog* old_target;
-        old_target = wxLog::SetActiveTarget(&buffer);
+        StderrRedirect redirect(buffer);
 
         // memfn is a pointer-to-member (e.g., &T::foo)
         if constexpr ( std::is_void_v<std::invoke_result_t<MemFn, Obj, Args...>> ) {
@@ -745,19 +772,15 @@ struct LogCaptureRAII {
             auto&& r = (std::forward<Obj>(obj).*memfn)(std::forward<Args>(args)...);
             return std::forward<decltype(r)>(r);
         }
-
-        wxLog::SetActiveTarget(old_target);
     }
 
     // Check whether the captured buffer contains the given substring
-    bool contains(const wxString& string_to_check) {
-        wxString all = buffer.GetBuffer( );
-        return ! all.IsEmpty( ) && all.Find(string_to_check) != wxNOT_FOUND;
+    bool contains(const std::string& string_to_check) {
+        return ! buffer.empty( ) && buffer.find(string_to_check) != std::string::npos;
     }
 
     void clear( ) {
-        auto b = buffer.GetBuffer( );
-        b.Clear( );
+        buffer.clear( );
     }
 };
 
@@ -837,7 +860,7 @@ void MyTestApp::TestSumOfSquaresFourierAndFFTNormalization( ) {
     BeginTest("Sum Of Squares Fourier");
 
     Image test_image;
-    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
     test_image.ForwardFFT(false);
 
     // By Parsevals theorem, the sum of squares of the Fourier transform of an image is equal to the sum of squares of the real image.
@@ -849,7 +872,7 @@ void MyTestApp::TestSumOfSquaresFourierAndFFTNormalization( ) {
 
     // We normalize for the full round trip on the forward FFT, so in this case the sum of squares should be
     // realspace sumof squares / N.
-    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
     test_image.ForwardFFT(true);
     sum_of_squares = test_image.ReturnSumOfSquares( );
     if ( ! RelativeErrorIsLessThanEpsilon(sum_of_squares, 1.f) )
@@ -975,7 +998,7 @@ void MyTestApp::TestRandomVariableFunctions( ) {
         test_image.AddNoise(GAMMA, alpha, beta);
         test_image.UpdateDistributionOfRealValues(&my_dist);
         if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean( ), alpha * beta, true, 2.0f * acceptable_error) ) {
-            wxPrintf("m,a/b %f %f\n", my_dist.GetSampleMean( ), alpha * beta);
+            Printf("m,a/b %f %f\n", my_dist.GetSampleMean( ), alpha * beta);
             FailTest;
         }
         if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleVariance( ), alpha * beta * beta, true, 2.0f * acceptable_error) )
@@ -1276,7 +1299,7 @@ void MyTestApp::TestSpectrumBoxConvolution( ) {
     Image test_image;
     Image output_image;
 
-    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
 
     output_image.Allocate(test_image.logical_x_dimension, test_image.logical_y_dimension, test_image.logical_z_dimension);
     test_image.SpectrumBoxConvolution(&output_image, 7, 3);
@@ -1300,8 +1323,8 @@ void MyTestApp::TestImageArithmeticFunctions( ) {
     Image ref_image;
     Peak  my_peak;
 
-    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename.ToStdString( ), 1);
-    ref_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename.ToStdString( ), 2);
+    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename, 1);
+    ref_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename, 2);
     test_image.AddImage(&ref_image);
 
     if ( FloatsAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -1.313164) == false )
@@ -1369,7 +1392,7 @@ void MyTestApp::TestNumericTextFiles( ) {
 
     BeginTest("NumericTextFile::WriteLine float");
 
-    wxString        output_filename = temp_directory + "/number_out.num";
+    std::string        output_filename = temp_directory + "/number_out.num";
     NumericTextFile output_test_file(output_filename, OPEN_TO_WRITE, 5);
 
     for ( int i = 0; i < line_values[0].size( ); i++ ) {
@@ -1456,7 +1479,7 @@ void MyTestApp::TestAlignmentFunctions( ) {
     Image ref_image;
     Peak  my_peak;
 
-    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename, 1);
     test_image.PhaseShift(20, 20, 0);
 
     if ( FloatsAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -1.010296) == false )
@@ -1575,8 +1598,8 @@ void MyTestApp::TestAlignmentFunctions( ) {
     // CalculateCrossCorrelationImageWith
     BeginTest("Image::CalculateCrossCorrelationImageWith");
 
-    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename.ToStdString( ), 1);
-    ref_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename, 1);
+    ref_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
     test_image.CalculateCrossCorrelationImageWith(&ref_image);
 
     if ( FloatsAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), 0.004323) == false )
@@ -1592,8 +1615,8 @@ void MyTestApp::TestAlignmentFunctions( ) {
 
     BeginTest("Image::FindPeakWithIntegerCoordinates");
 
-    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
-    ref_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
+    ref_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
     test_image.PhaseShift(7, 10, 0);
 
     test_image.CalculateCrossCorrelationImageWith(&ref_image);
@@ -1614,8 +1637,8 @@ void MyTestApp::TestAlignmentFunctions( ) {
 
     BeginTest("Image::FindPeakWithParabolaFit");
 
-    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
-    ref_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
+    ref_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename, 1);
     test_image.PhaseShift(7.3, 10.7, 0);
 
     test_image.CalculateCrossCorrelationImageWith(&ref_image);
@@ -1642,7 +1665,7 @@ void MyTestApp::TestFilterFunctions( ) {
 
     Image test_image;
 
-    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename.ToStdString( ), 1);
+    test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename, 1);
     test_image.ForwardFFT( );
     test_image.ApplyBFactor(1500);
     test_image.BackwardFFT( );
@@ -1722,7 +1745,7 @@ void MyTestApp::TestScalingAndSizingFunctions( ) {
 
     BeginTest("Image::ClipInto");
 
-    MRCFile             input_file(hiv_images_80x80x10_filename.ToStdString( ), false);
+    MRCFile             input_file(hiv_images_80x80x10_filename, false);
     Image               test_image;
     Image               clipped_image;
     std::complex<float> test_pixel;
@@ -1880,7 +1903,7 @@ void MyTestApp::TestScalingAndSizingFunctions( ) {
 void MyTestApp::TestMRCFunctions( ) {
     BeginTest("MRCFile::OpenFile");
 
-    MRCFile input_file(hiv_images_80x80x10_filename.ToStdString( ), false);
+    MRCFile input_file(hiv_images_80x80x10_filename, false);
 
     // check dimensions..
 
@@ -1928,7 +1951,7 @@ void MyTestApp::TestFFTFunctions( ) {
     BeginTest("Image::ForwardFFT");
     CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice", "Image::SetToConstant"});
 
-    MRCFile input_file(sine_wave_128x128x1_filename.ToStdString( ), false);
+    MRCFile input_file(sine_wave_128x128x1_filename, false);
 
     // make an image that is all 1..
 
@@ -2002,17 +2025,17 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
     run_profile_manager.AddBlankProfile( );
 
     int num                                                   = run_profile_manager.number_of_run_profiles;
-    run_profile_manager.run_profiles[num - 1].name            = wxString::Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
-    run_profile_manager.run_profiles[num - 1].manager_command = wxString::Format("This_is_a $command string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
-    run_profile_manager.run_profiles[num - 1].name            = wxString::Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+    run_profile_manager.run_profiles[num - 1].name            = Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+    run_profile_manager.run_profiles[num - 1].manager_command = Format("This_is_a $command string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+    run_profile_manager.run_profiles[num - 1].name            = Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
     run_profile_manager.run_profiles[num - 1].AddCommand("$command", 2, 1, false, 0, 10);
 
     // Write out to disk
-    temp_directory = wxFileName::GetTempDir( );
+    temp_directory = ReturnTempDirectory();
 
-    wxArrayInt to_write;
-    to_write.Add(0);
-    to_write.Add(1);
+    std::vector<int> to_write;
+    to_write.push_back(0);
+    to_write.push_back(1);
 
     run_profile_manager.WriteRunProfilesToDisk(temp_directory + "/run_profiles.txt", to_write);
 
@@ -2179,14 +2202,14 @@ void MyTestApp::BeginTest(const char* test_name) {
 
     int length      = strlen(test_name);
     int blank_space = 45 - length;
-    wxPrintf("Testing %s ", test_name);
+    Printf("Testing %s ", test_name);
     test_has_passed = true;
 
     for ( int counter = 0; counter < blank_space; counter++ ) {
-        wxPrintf(" ");
+        Printf(" ");
     }
 
-    wxPrintf(": ");
+    Printf(": ");
 }
 
 void MyTestApp::EndTest( ) {
@@ -2205,20 +2228,20 @@ bool MyTestApp::CheckDependencies(std::initializer_list<std::string> list) {
     // Nothing has been added, so must be false.
     bool return_val = true;
     if ( test_results.empty( ) ) {
-        wxPrintf("\nCheckDependencies: No tests have been run yet.\n");
+        Printf("\nCheckDependencies: No tests have been run yet.\n");
         return_val = false;
     }
     else {
         for ( auto dep : list ) {
             auto search = test_results.find(dep);
             if ( search == test_results.end( ) ) {
-                wxPrintf("\nCheckDependencies: %s has not been run.\n", dep);
+                Printf("\nCheckDependencies: %s has not been run.\n", dep);
                 return_val = false;
                 break;
             }
             else {
                 if ( search->second == false ) {
-                    wxPrintf("\nCheckDependencies: %s has previously failed.\n", dep);
+                    Printf("\nCheckDependencies: %s has previously failed.\n", dep);
                     return_val = false;
                     break;
                 }
@@ -2236,56 +2259,56 @@ void MyTestApp::PrintResultWorker(bool passed, int line, bool skip_on_failure) {
 
     if ( passed == true ) {
         if ( OutputIsAtTerminal( ) == true )
-            wxPrintf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
+            Printf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
         else
-            wxPrintf("PASSED!");
+            Printf("PASSED!");
     }
     else {
         if ( skip_on_failure ) {
             if ( OutputIsAtTerminal( ) == true )
-                wxPrintf(ANSI_COLOR_BLUE "FAILED, BUT SKIPPING! (Line : %i)" ANSI_COLOR_RESET, line);
+                Printf(ANSI_COLOR_BLUE "FAILED, BUT SKIPPING! (Line : %i)" ANSI_COLOR_RESET, line);
             else
-                wxPrintf("FAILED, BUT SKIPPING! (Line : %i)", line);
+                Printf("FAILED, BUT SKIPPING! (Line : %i)", line);
         }
         else {
             if ( OutputIsAtTerminal( ) == true )
-                wxPrintf(ANSI_COLOR_RED "FAILED! (Line : %i)" ANSI_COLOR_RESET, line);
+                Printf(ANSI_COLOR_RED "FAILED! (Line : %i)" ANSI_COLOR_RESET, line);
             else
-                wxPrintf("FAILED! (Line : %i)", line);
+                Printf("FAILED! (Line : %i)", line);
             exit(1);
         }
     }
 
-    wxPrintf("\n");
+    Printf("\n");
 }
 
 void MyTestApp::PrintTitle(const char* title) {
-    wxPrintf("\n");
+    Printf("\n");
     if ( OutputIsAtTerminal( ) == true )
-        wxPrintf(ANSI_UNDERLINE "%s" ANSI_UNDERLINE_OFF, title);
+        Printf(ANSI_UNDERLINE "%s" ANSI_UNDERLINE_OFF, title);
     else
-        wxPrintf("%s", title);
-    wxPrintf("\n\n");
+        Printf("%s", title);
+    Printf("\n\n");
 }
 
 void MyTestApp::WriteEmbeddedFiles( ) {
-    temp_directory = wxFileName::GetTempDir( );
-    wxPrintf("\nWriting out embedded test files to '%s'...", temp_directory);
+    temp_directory = ReturnTempDirectory();
+    Printf("\nWriting out embedded test files to '%s'...", temp_directory);
     fflush(stdout);
 
     hiv_image_80x80x1_filename   = temp_directory + "/hiv_image_80x80x1.mrc";
     hiv_images_80x80x10_filename = temp_directory + "/hiv_images_shift_noise_80x80x10.mrc";
     sine_wave_128x128x1_filename = temp_directory + "/sine_wave_128x128x1.mrc";
 
-    WriteEmbeddedArray(hiv_image_80x80x1_filename, hiv_image_80x80x1_array, sizeof(hiv_image_80x80x1_array));
-    WriteEmbeddedArray(hiv_images_80x80x10_filename, hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array));
-    WriteEmbeddedArray(hiv_images_80x80x10_filename, hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array));
-    WriteEmbeddedArray(sine_wave_128x128x1_filename, sine_128x128x1_array, sizeof(sine_128x128x1_array));
+    WriteEmbeddedArray(hiv_image_80x80x1_filename.c_str( ), hiv_image_80x80x1_array, sizeof(hiv_image_80x80x1_array));
+    WriteEmbeddedArray(hiv_images_80x80x10_filename.c_str( ), hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array));
+    WriteEmbeddedArray(hiv_images_80x80x10_filename.c_str( ), hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array));
+    WriteEmbeddedArray(sine_wave_128x128x1_filename.c_str( ), sine_128x128x1_array, sizeof(sine_128x128x1_array));
 
     numeric_text_filename = temp_directory + "/numbers.num";
-    WriteNumericTextFile(numeric_text_filename);
-    WriteDatabase(temp_directory + "/1_0_test", temp_directory + "/1_0_test/1_0_test.db");
-    wxPrintf("done!\n");
+    WriteNumericTextFile(numeric_text_filename.c_str( ));
+    WriteDatabase((temp_directory + "/1_0_test").c_str( ), (temp_directory + "/1_0_test/1_0_test.db").c_str( ));
+    Printf("done!\n");
 }
 
 void MyTestApp::WriteEmbeddedArray(const char* filename, const unsigned char* array, long length) {
@@ -2294,8 +2317,8 @@ void MyTestApp::WriteEmbeddedArray(const char* filename, const unsigned char* ar
     output_file       = fopen(filename, "wb+");
 
     if ( output_file == NULL ) {
-        wxPrintf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n", filename);
-        wxPrintf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n", filename);
+        Printf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n", filename);
+        Printf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n", filename);
         DEBUG_ABORT;
     }
 
@@ -2306,11 +2329,11 @@ void MyTestApp::WriteEmbeddedArray(const char* filename, const unsigned char* ar
 
 void MyTestApp::WriteDatabase(const char* dir, const char* filename) {
     Database database;
-    wxFileName::Mkdir(dir, 0777, wxPATH_MKDIR_FULL);
-    wxFileName::Mkdir(std::string(dir) + "/Assets/", 0777, wxPATH_MKDIR_FULL);
-    wxFileName db_filename = wxFileName(filename);
-    if ( db_filename.Exists( ) )
-        wxRemoveFile(filename);
+    MakeDirectory(dir);
+    MakeDirectory(std::string(dir) + "/Assets/");
+    std::filesystem::path db_filename = std::filesystem::path(filename);
+    if ( PathExists(db_filename.string()) )
+        RemoveFile(filename);
     database.CreateNewDatabase(db_filename);
     database.ExecuteSQL(R"sql(
 	PRAGMA foreign_keys=OFF;
@@ -2351,8 +2374,8 @@ void MyTestApp::WriteNumericTextFile(const char* filename) {
     output_file       = fopen(filename, "wb+");
 
     if ( output_file == NULL ) {
-        wxPrintf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n", filename);
-        wxPrintf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n", filename);
+        Printf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n", filename);
+        Printf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n", filename);
         DEBUG_ABORT;
     }
 

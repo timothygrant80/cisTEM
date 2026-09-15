@@ -24,17 +24,17 @@ class ScatteringPotential {
 
   public:
     ScatteringPotential( );
-    ScatteringPotential(const wxString& filename, int wanted_cubic_size);
+    ScatteringPotential(const std::string& filename, int wanted_cubic_size);
     virtual ~ScatteringPotential( );
 
     void SetDefaultValues( );
 
     std::vector<PDB>      pdb_ensemble;
-    std::vector<wxString> pdb_file_names;
+    std::vector<std::string> pdb_file_names;
 
     // When simulating a simple 3d density, we only need a single pdb object and not a full ensemble
     void InitPdbObject(bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass = nullptr);
-    void InitPdbObject(wxString const& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass = nullptr);
+    void InitPdbObject(std::string const& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass = nullptr);
 
     void InitPdbEnsemble(bool              shift_by_center_of_mass,
                          int               minimum_padding_x_and_y,

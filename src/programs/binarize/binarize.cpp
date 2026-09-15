@@ -49,7 +49,7 @@ bool Binarize::DoCalculation( ) {
 
     float input_pixel_size = my_input_file.ReturnPixelSize( );
 
-    wxPrintf("\nBinarizing Images...\n\n");
+    Printf("\nBinarizing Images...\n\n");
     ProgressBar* my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices( ));
 
     count0 = 0;
@@ -73,7 +73,7 @@ bool Binarize::DoCalculation( ) {
     }
 
     delete my_progress;
-    wxPrintf("\nNumber of zero pixels = %li, number of non-zero pixels = %li\n\n", count0, count1);
+    Printf("\nNumber of zero pixels = %li, number of non-zero pixels = %li\n\n", count0, count1);
 
     my_output_file.SetPixelSize(input_pixel_size);
     my_output_file.WriteHeader( );

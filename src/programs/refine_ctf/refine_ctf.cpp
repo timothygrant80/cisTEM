@@ -11,7 +11,7 @@ class
 
   private:
     // for loading new 3d references on the fly..
-    void SetupNewReference3D(wxString wanted_filename, float inner_mask_radius, float outer_mask_radius, float pixel_size, float mask_falloff, bool threshold_input_3d, float padding, bool beamtilt_refinement, float low_resolution_limit, float high_resolution_limit, float molecular_mass_in_kDa);
+    void SetupNewReference3D(std::string wanted_filename, float inner_mask_radius, float outer_mask_radius, float pixel_size, float mask_falloff, bool threshold_input_3d, float padding, bool beamtilt_refinement, float low_resolution_limit, float high_resolution_limit, float molecular_mass_in_kDa);
 
     MRCFile             input_file;
     ReconstructedVolume input_3d, unbinned_3d;
@@ -75,14 +75,14 @@ float FrealignObjectiveFunction(void* scoring_parameters, float* array_of_values
     //	float score =  	- comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
     //			  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
     //			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float);
-    //	wxPrintf("psi, theta, phi, x, y, = %g, %g, %g, %g, %g, score = %g\n",
+    //	Printf("psi, theta, phi, x, y, = %g, %g, %g, %g, %g, score = %g\n",
     //			comparison_object->particle->alignment_parameters.ReturnPsiAngle(),
     //			comparison_object->particle->alignment_parameters.ReturnThetaAngle(),
     //			comparison_object->particle->alignment_parameters.ReturnPhiAngle(),
     //			comparison_object->particle->alignment_parameters.ReturnShiftX(),
     //			comparison_object->particle->alignment_parameters.ReturnShiftY(), score);
     //	return score;
-    //	wxPrintf("sigma_noise, mask_volume, penalty = %g %g %g\n", comparison_object->particle->sigma_noise, comparison_object->particle->mask_volume,
+    //	Printf("sigma_noise, mask_volume, penalty = %g %g %g\n", comparison_object->particle->sigma_noise, comparison_object->particle->mask_volume,
     //			comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float));
     return -comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
                                                                                          comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit) -
@@ -102,16 +102,16 @@ void RefineCTFApp::DoInteractiveUserInput( ) {
 
     int max_threads;
 
-    wxString input_particle_images           = my_input->GetFilenameFromUser("Input particle images", "The input image stack, containing the experimental particle images", "my_image_stack.mrc", true);
-    wxString input_star_filename             = my_input->GetFilenameFromUser("Input cisTEM star filename", "The input parameter file, containing your particle alignment parameters", "my_parameters.star", true);
-    wxString input_reconstruction            = my_input->GetFilenameFromUser("Input reconstruction", "The 3D reconstruction from which projections are calculated", "my_reconstruction.mrc", true);
-    wxString input_reconstruction_statistics = my_input->GetFilenameFromUser("Input data statistics", "The table listing FSC, Part_FSC, Part_SSNR and Rec_SSNR", "my_statistics.txt", false);
+    std::string input_particle_images           = my_input->GetFilenameFromUser("Input particle images", "The input image stack, containing the experimental particle images", "my_image_stack.mrc", true);
+    std::string input_star_filename             = my_input->GetFilenameFromUser("Input cisTEM star filename", "The input parameter file, containing your particle alignment parameters", "my_parameters.star", true);
+    std::string input_reconstruction            = my_input->GetFilenameFromUser("Input reconstruction", "The 3D reconstruction from which projections are calculated", "my_reconstruction.mrc", true);
+    std::string input_reconstruction_statistics = my_input->GetFilenameFromUser("Input data statistics", "The table listing FSC, Part_FSC, Part_SSNR and Rec_SSNR", "my_statistics.txt", false);
     bool     use_statistics                  = my_input->GetYesNoFromUser("Use statistics", "Answer No if no statistics are available?", "Yes");
-    wxString ouput_star_filename             = my_input->GetFilenameFromUser("Output star file", "The output parameter file, containing your refined particle alignment parameters", "my_refined_parameters.star", false);
-    wxString ouput_shift_filename            = my_input->GetFilenameFromUser("Output parameter changes", "The changes in the alignment parameters compared to the input parameters", "my_parameter_changes.par", false);
-    wxString ouput_phase_difference_image    = my_input->GetFilenameFromUser("Output phase difference image", "Diagnostic image indicating the average phase difference (x20) between aligned images and matching projections", "my_phase_difference.mrc", false);
-    wxString ouput_beamtilt_image            = my_input->GetFilenameFromUser("Output beam tilt image", "Diagnostic image indicating phase difference (x20) generated by beam tilt", "my_beamtilt_image.mrc", false);
-    wxString ouput_difference_image          = my_input->GetFilenameFromUser("Output phase diff - beam tilt ", "Difference between phase difference and matching beam tilt (x20)", "my_difference_image.mrc", false);
+    std::string ouput_star_filename             = my_input->GetFilenameFromUser("Output star file", "The output parameter file, containing your refined particle alignment parameters", "my_refined_parameters.star", false);
+    std::string ouput_shift_filename            = my_input->GetFilenameFromUser("Output parameter changes", "The changes in the alignment parameters compared to the input parameters", "my_parameter_changes.par", false);
+    std::string ouput_phase_difference_image    = my_input->GetFilenameFromUser("Output phase difference image", "Diagnostic image indicating the average phase difference (x20) between aligned images and matching projections", "my_phase_difference.mrc", false);
+    std::string ouput_beamtilt_image            = my_input->GetFilenameFromUser("Output beam tilt image", "Diagnostic image indicating phase difference (x20) generated by beam tilt", "my_beamtilt_image.mrc", false);
+    std::string ouput_difference_image          = my_input->GetFilenameFromUser("Output phase diff - beam tilt ", "Difference between phase difference and matching beam tilt (x20)", "my_difference_image.mrc", false);
     int      first_particle                  = my_input->GetIntFromUser("First particle to refine (0 = first in stack)", "The first particle in the stack that should be refined", "1", 0);
     int      last_particle                   = my_input->GetIntFromUser("Last particle to refine (0 = last in stack)", "The last particle in the stack that should be refined", "0", 0);
     float    pixel_size                      = my_input->GetFloatFromUser("Pixel size of reconstruction (A)", "Pixel size of input reconstruction in Angstroms", "1.0", 0.0);
@@ -140,22 +140,22 @@ void RefineCTFApp::DoInteractiveUserInput( ) {
     int      job_number_from_gui                 = 0;
     int      expected_number_of_results_from_gui = 0;
     bool     estimate_phase_difference_image;
-    wxString directory_for_results = "/dev/null"; // shouldn't be used in interactive
+    std::string directory_for_results = "/dev/null"; // shouldn't be used in interactive
 
     delete my_input;
 
     //	my_current_job.Reset(32);
     my_current_job.ManualSetArguments("ttttbtttttiifffffffffbbbbbbbiii",
-                                      input_particle_images.ToUTF8( ).data( ),
-                                      input_star_filename.ToUTF8( ).data( ),
-                                      input_reconstruction.ToUTF8( ).data( ),
-                                      input_reconstruction_statistics.ToUTF8( ).data( ),
+                                      input_particle_images.c_str(),
+                                      input_star_filename.c_str(),
+                                      input_reconstruction.c_str(),
+                                      input_reconstruction_statistics.c_str(),
                                       use_statistics,
-                                      ouput_star_filename.ToUTF8( ).data( ),
-                                      ouput_shift_filename.ToUTF8( ).data( ),
-                                      ouput_phase_difference_image.ToUTF8( ).data( ),
-                                      ouput_beamtilt_image.ToUTF8( ).data( ),
-                                      ouput_difference_image.ToUTF8( ).data( ),
+                                      ouput_star_filename.c_str(),
+                                      ouput_shift_filename.c_str(),
+                                      ouput_phase_difference_image.c_str(),
+                                      ouput_beamtilt_image.c_str(),
+                                      ouput_difference_image.c_str(),
                                       first_particle,
                                       last_particle,
                                       pixel_size,
@@ -182,18 +182,18 @@ void RefineCTFApp::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool RefineCTFApp::DoCalculation( ) {
-    wxDateTime start_time = wxDateTime::Now( );
+    DateTime start_time = DateTime::Now( );
 
-    wxString input_particle_images            = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_star_filename              = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString input_reconstruction             = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString input_reconstruction_statistics  = my_current_job.arguments[3].ReturnStringArgument( );
+    std::string input_particle_images            = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_star_filename              = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string input_reconstruction             = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string input_reconstruction_statistics  = my_current_job.arguments[3].ReturnStringArgument( );
     bool     use_statistics                   = my_current_job.arguments[4].ReturnBoolArgument( );
-    wxString output_star_filename             = my_current_job.arguments[5].ReturnStringArgument( );
-    wxString output_shift_filename            = my_current_job.arguments[6].ReturnStringArgument( );
-    wxString ouput_phase_difference_image     = my_current_job.arguments[7].ReturnStringArgument( );
-    wxString ouput_beamtilt_image             = my_current_job.arguments[8].ReturnStringArgument( );
-    wxString ouput_difference_image           = my_current_job.arguments[9].ReturnStringArgument( );
+    std::string output_star_filename             = my_current_job.arguments[5].ReturnStringArgument( );
+    std::string output_shift_filename            = my_current_job.arguments[6].ReturnStringArgument( );
+    std::string ouput_phase_difference_image     = my_current_job.arguments[7].ReturnStringArgument( );
+    std::string ouput_beamtilt_image             = my_current_job.arguments[8].ReturnStringArgument( );
+    std::string ouput_difference_image           = my_current_job.arguments[9].ReturnStringArgument( );
     int      first_particle                   = my_current_job.arguments[10].ReturnIntegerArgument( );
     int      last_particle                    = my_current_job.arguments[11].ReturnIntegerArgument( );
     float    pixel_size                       = my_current_job.arguments[12].ReturnFloatArgument( );
@@ -219,8 +219,8 @@ bool RefineCTFApp::DoCalculation( ) {
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
 
-    wxString      currently_open_3d_filename;
-    wxArrayString all_reference_3d_filenames;
+    std::string      currently_open_3d_filename;
+    std::vector<std::string> all_reference_3d_filenames;
 
     Particle refine_particle;
 
@@ -266,7 +266,7 @@ bool RefineCTFApp::DoCalculation( ) {
     float    best_score;
     bool     file_read;
     bool*    image_has_been_processed;
-    wxString symmetry = "C1";
+    std::string symmetry = "C1";
 
     // Constraints for phi, theta, psi not yet implemented
     refine_particle.constraints_used.phi     = false;
@@ -302,13 +302,13 @@ bool RefineCTFApp::DoCalculation( ) {
     ZeroFloatArray(cg_accuracy, 17);
 
     if ( (is_running_locally && ! DoesFileExist(input_star_filename)) || (! is_running_locally && ! DoesFileExistWithWait(input_star_filename, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input parameter file %s not found\n", input_star_filename));
+        SendErrorAndCrash(Format("Error: Input parameter file %s not found\n", input_star_filename));
     }
     if ( (is_running_locally && ! DoesFileExist(input_particle_images)) || (! is_running_locally && ! DoesFileExistWithWait(input_particle_images, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
+        SendErrorAndCrash(Format("Error: Input particle stack %s not found\n", input_particle_images));
     }
     if ( (is_running_locally && ! DoesFileExist(input_reconstruction)) || (! is_running_locally && ! DoesFileExistWithWait(input_reconstruction, 90)) ) {
-        SendErrorAndCrash(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
+        SendErrorAndCrash(Format("Error: Input reconstruction %s not found\n", input_reconstruction));
     }
 
     cisTEMParameters input_star_file;
@@ -318,7 +318,7 @@ bool RefineCTFApp::DoCalculation( ) {
     if ( input_star_file.parameters_that_were_read.reference_3d_filename == true ) {
         if ( is_running_locally == true )
             MyPrintfCyan("Running with per particle 3D reference from input star file..\n");
-        all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+        all_reference_3d_filenames.push_back(Trimmed(input_star_file.ReturnReference3DFilename(0)));
 
         // get all the filenames..
 
@@ -327,35 +327,35 @@ bool RefineCTFApp::DoCalculation( ) {
         for ( current_line = 1; current_line < input_star_file.ReturnNumberofLines( ); current_line++ ) {
             found_filename = false;
 
-            for ( filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount( ); filename_counter++ ) {
-                if ( all_reference_3d_filenames[filename_counter] == input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false) ) {
+            for ( filename_counter = 0; filename_counter < all_reference_3d_filenames.size(); filename_counter++ ) {
+                if ( all_reference_3d_filenames[filename_counter] == Trimmed(input_star_file.ReturnReference3DFilename(current_line)) ) {
                     found_filename = true;
                     break;
                 }
             }
 
             if ( found_filename == false ) {
-                all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false));
+                all_reference_3d_filenames.push_back(Trimmed(input_star_file.ReturnReference3DFilename(current_line)));
             }
         }
     }
     else {
         input_star_file.SetAllReference3DFilename(input_reconstruction);
-        all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+        all_reference_3d_filenames.push_back(Trimmed(input_star_file.ReturnReference3DFilename(0)));
     }
 
     //	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
 
-    if ( all_reference_3d_filenames.GetCount( ) > 1 )
-        wxPrintf("\nThere are %li 3D references\n", all_reference_3d_filenames.GetCount( ));
+    if ( all_reference_3d_filenames.size() > 1 )
+        Printf("\nThere are %li 3D references\n", all_reference_3d_filenames.size());
     else
-        wxPrintf("\nThere is 1 3D reference\n");
+        Printf("\nThere is 1 3D reference\n");
     currently_open_3d_filename = all_reference_3d_filenames[0];
 
     //	if (input_star_file.parameters_that_were_read.reference_3d_filename == true)
     //	{
     //		if (is_running_locally == true) MyPrintfCyan("Running with per particle 3D reference from input star file..\n");
-    //		all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+    //		all_reference_3d_filenames.push_back(Trimmed(input_star_file.ReturnReference3DFilename(0)));
     //
     //		// get all the filenames..
     //
@@ -365,9 +365,9 @@ bool RefineCTFApp::DoCalculation( ) {
     //		{
     //			found_filename = false;
     //
-    //			for (filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount(); filename_counter++)
+    //			for (filename_counter = 0; filename_counter < all_reference_3d_filenames.size(); filename_counter++)
     //			{
-    //				if (all_reference_3d_filenames[filename_counter] == input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false))
+    //				if (all_reference_3d_filenames[filename_counter] == Trimmed(input_star_file.ReturnReference3DFilename(current_line)))
     //				{
     //					found_filename = true;
     //					break;
@@ -376,22 +376,22 @@ bool RefineCTFApp::DoCalculation( ) {
     //
     //			if (found_filename == false)
     //			{
-    //				all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false));
+    //				all_reference_3d_filenames.push_back(Trimmed(input_star_file.ReturnReference3DFilename(current_line)));
     //			}
     //		}
     //	}
     //	else
     //	{
     //			input_star_file.SetAllReference3DFilename(input_reconstruction);
-    //			all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+    //			all_reference_3d_filenames.push_back(Trimmed(input_star_file.ReturnReference3DFilename(0)));
     //	}
 
     //	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
 
-    //	wxPrintf("There are %li 3D references\n", all_reference_3d_filenames.GetCount());
+    //	Printf("There are %li 3D references\n", all_reference_3d_filenames.size());
     //	currently_open_3d_filename = all_reference_3d_filenames[0];
 
-    MRCFile input_stack(input_particle_images.ToStdString( ), false);
+    MRCFile input_stack(input_particle_images, false);
 
     if ( last_particle == 0 )
         last_particle = input_stack.ReturnZSize( );
@@ -409,10 +409,10 @@ bool RefineCTFApp::DoCalculation( ) {
                     spherical_aberration_mm = input_parameters.microscope_spherical_aberration_mm;
                 }
                 else if ( voltage_kV != input_parameters.microscope_voltage_kv ) {
-                    SendErrorAndCrash(wxString::Format("Error: Input parameter file %s contains variable MicroscopeVoltagekV, not allowed with beamtilt estimation\n", input_star_filename));
+                    SendErrorAndCrash(Format("Error: Input parameter file %s contains variable MicroscopeVoltagekV, not allowed with beamtilt estimation\n", input_star_filename));
                 }
                 else if ( spherical_aberration_mm != input_parameters.microscope_spherical_aberration_mm ) {
-                    SendErrorAndCrash(wxString::Format("Error: Input parameter file %s contains variable MicroscopeCsMM, not allowed with beamtilt estimation\n", input_star_filename));
+                    SendErrorAndCrash(Format("Error: Input parameter file %s contains variable MicroscopeCsMM, not allowed with beamtilt estimation\n", input_star_filename));
                 }
             }
             images_to_process++;
@@ -421,16 +421,16 @@ bool RefineCTFApp::DoCalculation( ) {
 
     //	random_particle.SetSeed(int(10000.0 * fabsf(input_star_file.ReturnAverageSigma(true)))%10000);
 
-    input_file.OpenFile(currently_open_3d_filename.ToStdString( ), false, true);
+    input_file.OpenFile(currently_open_3d_filename, false, true);
 
     MRCFile ouput_phase_difference_file;
-    MRCFile ouput_beamtilt_file(ouput_beamtilt_image.ToStdString( ), true);
-    MRCFile ouput_difference_file(ouput_difference_image.ToStdString( ), true);
+    MRCFile ouput_beamtilt_file(ouput_beamtilt_image, true);
+    MRCFile ouput_difference_file(ouput_difference_image, true);
 
     if ( is_running_locally == true ) {
-        ouput_phase_difference_file.OpenFile(ouput_phase_difference_image.ToStdString( ), true);
-        ouput_beamtilt_file.OpenFile(ouput_beamtilt_image.ToStdString( ), true);
-        ouput_difference_file.OpenFile(ouput_difference_image.ToStdString( ), true);
+        ouput_phase_difference_file.OpenFile(ouput_phase_difference_image, true);
+        ouput_beamtilt_file.OpenFile(ouput_beamtilt_image, true);
+        ouput_difference_file.OpenFile(ouput_difference_image, true);
     }
 
     // Hack to make threading work
@@ -472,20 +472,20 @@ bool RefineCTFApp::DoCalculation( ) {
         output_star_file.AddCommentToHeader("# Use statistics:                          " + BoolToYesNo(use_statistics));
         output_star_file.AddCommentToHeader("# Output cisTEM star file:                 " + output_star_filename);
         output_star_file.AddCommentToHeader("# Output parameter changes:                " + output_shift_filename);
-        output_star_file.AddCommentToHeader("# First particle to refine:                " + wxString::Format("%i", first_particle));
-        output_star_file.AddCommentToHeader("# Last particle to refine:                 " + wxString::Format("%i", last_particle));
-        output_star_file.AddCommentToHeader("# Pixel size of reconstruction (A):        " + wxString::Format("%f", pixel_size));
-        //	output_star_file.AddCommentToHeader("# Beam energy (keV):                       " + wxString::Format("%f", voltage_kV));
-        //	output_star_file.AddCommentToHeader("# Spherical aberration (mm):               " + wxString::Format("%f", spherical_aberration_mm));
-        //	output_star_file.AddCommentToHeader("# Amplitude contrast:                      " + wxString::Format("%f", amplitude_contrast));
-        output_star_file.AddCommentToHeader("# Molecular mass of particle (kDa):        " + wxString::Format("%f", molecular_mass_kDa));
-        output_star_file.AddCommentToHeader("# Inner mask radius for refinement (A):    " + wxString::Format("%f", inner_mask_radius));
-        output_star_file.AddCommentToHeader("# Outer mask radius for refinement (A):    " + wxString::Format("%f", outer_mask_radius));
-        output_star_file.AddCommentToHeader("# Low resolution limit (A):                " + wxString::Format("%f", low_resolution_limit));
-        output_star_file.AddCommentToHeader("# High resolution limit (A):               " + wxString::Format("%f", high_resolution_limit));
-        output_star_file.AddCommentToHeader("# Defocus search range (A):                " + wxString::Format("%f", defocus_search_range));
-        output_star_file.AddCommentToHeader("# Defocus step (A):                        " + wxString::Format("%f", defocus_step));
-        output_star_file.AddCommentToHeader("# Padding factor:                          " + wxString::Format("%f", padding));
+        output_star_file.AddCommentToHeader("# First particle to refine:                " + Format("%i", first_particle));
+        output_star_file.AddCommentToHeader("# Last particle to refine:                 " + Format("%i", last_particle));
+        output_star_file.AddCommentToHeader("# Pixel size of reconstruction (A):        " + Format("%f", pixel_size));
+        //	output_star_file.AddCommentToHeader("# Beam energy (keV):                       " + Format("%f", voltage_kV));
+        //	output_star_file.AddCommentToHeader("# Spherical aberration (mm):               " + Format("%f", spherical_aberration_mm));
+        //	output_star_file.AddCommentToHeader("# Amplitude contrast:                      " + Format("%f", amplitude_contrast));
+        output_star_file.AddCommentToHeader("# Molecular mass of particle (kDa):        " + Format("%f", molecular_mass_kDa));
+        output_star_file.AddCommentToHeader("# Inner mask radius for refinement (A):    " + Format("%f", inner_mask_radius));
+        output_star_file.AddCommentToHeader("# Outer mask radius for refinement (A):    " + Format("%f", outer_mask_radius));
+        output_star_file.AddCommentToHeader("# Low resolution limit (A):                " + Format("%f", low_resolution_limit));
+        output_star_file.AddCommentToHeader("# High resolution limit (A):               " + Format("%f", high_resolution_limit));
+        output_star_file.AddCommentToHeader("# Defocus search range (A):                " + Format("%f", defocus_search_range));
+        output_star_file.AddCommentToHeader("# Defocus step (A):                        " + Format("%f", defocus_step));
+        output_star_file.AddCommentToHeader("# Padding factor:                          " + Format("%f", padding));
         output_star_file.AddCommentToHeader("# Refine defocus:                          " + BoolToYesNo(ctf_refinement));
         output_star_file.AddCommentToHeader("# Estimate beamtilt:                       " + BoolToYesNo(beamtilt_refinement));
         output_star_file.AddCommentToHeader("# Normalize particles:                     " + BoolToYesNo(normalize_particles));
@@ -508,13 +508,13 @@ bool RefineCTFApp::DoCalculation( ) {
 
     if ( use_statistics ) {
         if ( ! DoesFileExist(input_reconstruction_statistics) ) {
-            SendError(wxString::Format("Error: Input statistics %s not found\n", input_reconstruction_statistics));
+            SendError(Format("Error: Input statistics %s not found\n", input_reconstruction_statistics));
             exit(-1);
         }
         input_statistics.ReadStatisticsFromFile(input_reconstruction_statistics);
     }
     else {
-        wxPrintf("\nUsing default statistics\n");
+        Printf("\nUsing default statistics\n");
         input_statistics.GenerateDefaultStatistics(molecular_mass_kDa);
     }
 
@@ -539,7 +539,7 @@ bool RefineCTFApp::DoCalculation( ) {
     //	unbinned_image.Allocate(input_file.ReturnXSize() * padding, input_file.ReturnYSize() * padding, true);
     //	binned_image.Allocate(binned_image_box_size, binned_image_box_size, false);
 
-    wxPrintf("\nBinning factor for refinement = %f, new pixel size = %f\n", binning_factor_refine, input_3d.pixel_size);
+    Printf("\nBinning factor for refinement = %f, new pixel size = %f\n", binning_factor_refine, input_3d.pixel_size);
 
     temp_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), true);
     sum_power.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
@@ -562,7 +562,7 @@ bool RefineCTFApp::DoCalculation( ) {
         refine_particle.constraints_used.y_shift = false;
 
     if ( normalize_particles ) {
-        wxPrintf("Calculating noise power spectrum...\n\n");
+        Printf("Calculating noise power spectrum...\n\n");
         random_reset_count = std::max(random_reset_count, max_threads);
         percentage         = float(max_samples) / float(images_to_process) / random_reset_count;
         sum_power.SetToConstant(0.0f);
@@ -655,21 +655,21 @@ bool RefineCTFApp::DoCalculation( ) {
         noise_power_spectrum.Reciprocal( );
 
         if ( exclude_blank_edges ) {
-            wxPrintf("\nImages with blank edges excluded from noise power calculation = %i\n", number_of_blank_edges);
+            Printf("\nImages with blank edges excluded from noise power calculation = %i\n", number_of_blank_edges);
         }
     }
 
-    wxPrintf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n",
+    Printf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n",
              parameter_average.sigma, parameter_average.score, parameter_average.x_shift, parameter_average.y_shift, sqrtf(parameter_variance.x_shift), sqrtf(parameter_variance.y_shift), images_to_process);
 
     // look over all file names..
 
-    for ( filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount( ); filename_counter++ ) {
+    for ( filename_counter = 0; filename_counter < all_reference_3d_filenames.size(); filename_counter++ ) {
         if ( is_running_locally == true ) {
-            if ( all_reference_3d_filenames.GetCount( ) > 1 )
-                wxPrintf("\n3D reference # %i of %li\n\n", filename_counter + 1, all_reference_3d_filenames.GetCount( ));
+            if ( all_reference_3d_filenames.size() > 1 )
+                Printf("\n3D reference # %i of %li\n\n", filename_counter + 1, all_reference_3d_filenames.size());
             else
-                wxPrintf("\n");
+                Printf("\n");
             my_progress = new ProgressBar(images_to_process / max_threads);
         }
 
@@ -723,8 +723,8 @@ bool RefineCTFApp::DoCalculation( ) {
                 if ( input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle )
                     continue;
 
-                if ( input_parameters.reference_3d_filename.Trim(true).Trim(false) != currently_open_3d_filename ) {
-                    wxPrintf("%s does not equal %s\n", input_parameters.reference_3d_filename.Trim(true).Trim(false), currently_open_3d_filename);
+                if ( Trim(input_parameters.reference_3d_filename) != currently_open_3d_filename ) {
+                    Printf("%s does not equal %s\n", Trim(input_parameters.reference_3d_filename), currently_open_3d_filename);
                     continue;
                 }
 
@@ -995,7 +995,7 @@ bool RefineCTFApp::DoCalculation( ) {
 
                 // need to work out which section we should be running
 
-                //wxPrintf("first = %i, last = %i\n", first_position_to_search, last_position_to_search);
+                //Printf("first = %i, last = %i\n", first_position_to_search, last_position_to_search);
                 score_local = phase_difference_sum.FindBeamTilt(input_ctf, pixel_size, temp_image_local, beamtilt_image_local, sum_power_local, beamtilt_x_local, beamtilt_y_local, particle_shift_x_local, particle_shift_y_local, phase_multiplier, is_running_locally, first_position_to_search, last_position_to_search);
 
 #pragma omp critical
@@ -1017,7 +1017,7 @@ bool RefineCTFApp::DoCalculation( ) {
 
             temp_image.WriteSlice(&ouput_phase_difference_file, 1);
 
-            //	wxPrintf("Final score = %f\n", score);
+            //	Printf("Final score = %f\n", score);
             sum_power.WriteSlice(&ouput_difference_file, 1);
             beamtilt_image.WriteSlice(&ouput_beamtilt_file, 1);
 
@@ -1034,25 +1034,25 @@ bool RefineCTFApp::DoCalculation( ) {
             //			float significance = 0.5f * PI * powf((0.5f - binarized_score) * mask_radius_local, 2);
 
             if ( significance > MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE ) {
-                wxPrintf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * beamtilt_x, 1000.0f * beamtilt_y);
-                wxPrintf("Particle shift x,y [A] = %10.4f %10.4f\n", particle_shift_x, particle_shift_y);
+                Printf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * beamtilt_x, 1000.0f * beamtilt_y);
+                Printf("Particle shift x,y [A] = %10.4f %10.4f\n", particle_shift_x, particle_shift_y);
                 MyDebugPrint("Significance score = %.2f\n", significance);
 
-                for ( current_line = 0; current_line < output_star_file.all_parameters.GetCount( ); current_line++ ) {
-                    output_star_file.all_parameters.Item(current_line).beam_tilt_x   = 1000.0f * beamtilt_x;
-                    output_star_file.all_parameters.Item(current_line).beam_tilt_y   = 1000.0f * beamtilt_y;
-                    output_star_file.all_parameters.Item(current_line).image_shift_x = particle_shift_x;
-                    output_star_file.all_parameters.Item(current_line).image_shift_y = particle_shift_y;
+                for ( current_line = 0; current_line < output_star_file.all_parameters.size(); current_line++ ) {
+                    output_star_file.all_parameters[current_line].beam_tilt_x   = 1000.0f * beamtilt_x;
+                    output_star_file.all_parameters[current_line].beam_tilt_y   = 1000.0f * beamtilt_y;
+                    output_star_file.all_parameters[current_line].image_shift_x = particle_shift_x;
+                    output_star_file.all_parameters[current_line].image_shift_y = particle_shift_y;
                 }
             }
             else {
 
-                wxPrintf("\nNo detectable beam tilt, set to zero\n");
+                Printf("\nNo detectable beam tilt, set to zero\n");
                 MyDebugPrint("Significance score = %.2f\n", significance);
             }
         }
 
-        for ( current_line = 0; current_line < output_star_file.all_parameters.GetCount( ); current_line++ ) {
+        for ( current_line = 0; current_line < output_star_file.all_parameters.size(); current_line++ ) {
             output_shifts_file.all_parameters[current_line] = output_star_file.all_parameters[current_line];
             output_shifts_file.all_parameters[current_line].Subtract(input_star_file.all_parameters[current_line]);
             output_shifts_file.all_parameters[current_line].position_in_stack = output_star_file.all_parameters[current_line].position_in_stack;
@@ -1062,9 +1062,9 @@ bool RefineCTFApp::DoCalculation( ) {
         output_star_file.WriteTocisTEMStarFile(output_star_filename, -1, -1, first_particle, last_particle);
         output_shifts_file.WriteTocisTEMStarFile(output_shift_filename, -1, -1, first_particle, last_particle);
 
-        wxPrintf("\nRefine CTF: Normal termination\n");
-        wxDateTime finish_time = wxDateTime::Now( );
-        wxPrintf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
+        Printf("\nRefine CTF: Normal termination\n");
+        DateTime finish_time = DateTime::Now( );
+        Printf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
     }
     else // we need to send our section of the beam tilt images back to the master..
     {
@@ -1101,7 +1101,7 @@ bool RefineCTFApp::DoCalculation( ) {
 void RefineCTFApp::MasterHandleProgramDefinedResult(float* result_array, long array_size, int result_number, int number_of_expected_results) // my_app.cpp deletes the result array memory
 {
 
-    wxPrintf("Master, Received result %i (%i of %i)\n", result_number, number_of_received_results + 1, number_of_expected_results);
+    Printf("Master, Received result %i (%i of %i)\n", result_number, number_of_received_results + 1, number_of_expected_results);
 
     if ( sum_for_master.is_in_memory == false ) {
         sum_for_master.Allocate(result_array[0], result_array[1], 1, false);
@@ -1146,7 +1146,7 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float* result_array, long ar
         //		temp.QuickAndDirtyWriteSlice("/tmp/ori.mrc", 1);
         sum_for_master.QuickAndDirtyWriteSlice(phase_error_filename, 1, true);
 
-        /*		wxPrintf("Estimating Beam Tilt...\n");
+        /*		Printf("Estimating Beam Tilt...\n");
 		std::string phase_error_filename = current_job_package.jobs[0].arguments[7].ReturnStringArgument();
 		std::string found_beamtilt_filename = current_job_package.jobs[0].arguments[8].ReturnStringArgument();
 		float pixel_size = current_job_package.jobs[0].arguments[12].ReturnFloatArgument();
@@ -1177,19 +1177,19 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float* result_array, long ar
 
 		if (score > 10.0f)
 		{
-			wxPrintf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * found_beamtilt_x, 1000.0f * found_beamtilt_y);
-			wxPrintf("Particle shift x,y [A] = %10.4f %10.4f\n", found_particle_shift_x, found_particle_shift_y);
+			Printf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * found_beamtilt_x, 1000.0f * found_beamtilt_y);
+			Printf("Particle shift x,y [A] = %10.4f %10.4f\n", found_particle_shift_x, found_particle_shift_y);
 		}
 		else
 		{
-			wxPrintf("\nNo beam tilt detected, set to zero\n");
+			Printf("\nNo beam tilt detected, set to zero\n");
 		}
 */
     }
 }
 
-void RefineCTFApp::SetupNewReference3D(wxString wanted_filename, float inner_mask_radius, float outer_mask_radius, float pixel_size, float mask_falloff, bool threshold_input_3d, float padding, bool beamtilt_refinement, float low_resolution_limit, float high_resolution_limit, float molecular_mass_kDa) {
-    input_file.OpenFile(wanted_filename.ToStdString( ), false, true);
+void RefineCTFApp::SetupNewReference3D(std::string wanted_filename, float inner_mask_radius, float outer_mask_radius, float pixel_size, float mask_falloff, bool threshold_input_3d, float padding, bool beamtilt_refinement, float low_resolution_limit, float high_resolution_limit, float molecular_mass_kDa) {
+    input_file.OpenFile(wanted_filename, false, true);
 
     input_3d.InitWithDimensions(input_file.ReturnXSize( ), input_file.ReturnYSize( ), input_file.ReturnZSize( ), pixel_size, "C1");
     input_3d.molecular_mass_in_kDa = molecular_mass_kDa;

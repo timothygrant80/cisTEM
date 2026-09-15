@@ -15,9 +15,9 @@ IMPLEMENT_APP(SplitClassAveragesApp)
 // override the DoInteractiveUserInput
 
 void SplitClassAveragesApp::DoInteractiveUserInput( ) {
-    wxString input_particle_images;
-    wxString input_parameter_file;
-    wxString ouput_class_averages;
+    std::string input_particle_images;
+    std::string input_parameter_file;
+    std::string ouput_class_averages;
     int      number_of_classes = 10;
     int      images_per_class  = 10;
     int      wanted_class_number;
@@ -43,9 +43,9 @@ void SplitClassAveragesApp::DoInteractiveUserInput( ) {
 
     int current_class = 0;
     my_current_job.Reset(10);
-    my_current_job.ManualSetArguments("tttiiiffff", input_particle_images.ToUTF8( ).data( ),
-                                      input_parameter_file.ToUTF8( ).data( ),
-                                      ouput_class_averages.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tttiiiffff", input_particle_images.c_str(),
+                                      input_parameter_file.c_str(),
+                                      ouput_class_averages.c_str(),
                                       wanted_class_number,
                                       number_of_classes,
                                       images_per_class,
@@ -58,9 +58,9 @@ void SplitClassAveragesApp::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool SplitClassAveragesApp::DoCalculation( ) {
-    wxString input_particle_images = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString input_parameter_file  = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString ouput_class_averages  = my_current_job.arguments[2].ReturnStringArgument( );
+    std::string input_particle_images = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string input_parameter_file  = my_current_job.arguments[1].ReturnStringArgument( );
+    std::string ouput_class_averages  = my_current_job.arguments[2].ReturnStringArgument( );
     int      wanted_class_number   = my_current_job.arguments[3].ReturnIntegerArgument( );
     int      number_of_classes     = my_current_job.arguments[4].ReturnIntegerArgument( );
     int      images_per_class      = my_current_job.arguments[5].ReturnIntegerArgument( );
@@ -83,14 +83,14 @@ bool SplitClassAveragesApp::DoCalculation( ) {
     ZeroFloatArray(input_parameters, 17);
 
     if ( ! DoesFileExist(input_parameter_file) ) {
-        SendError(wxString::Format("Error: Input parameter file %s not found\n", input_parameter_file));
+        SendError(Format("Error: Input parameter file %s not found\n", input_parameter_file));
         exit(-1);
     }
     if ( ! DoesFileExist(input_particle_images) ) {
-        SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
+        SendError(Format("Error: Input particle stack %s not found\n", input_particle_images));
         exit(-1);
     }
-    MRCFile               input_stack(input_particle_images.ToStdString( ), false);
+    MRCFile               input_stack(input_particle_images, false);
     FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 
     Image input_image;
@@ -128,11 +128,11 @@ bool SplitClassAveragesApp::DoCalculation( ) {
             temp_line.defocus_angle     = input_parameters[10];
             temp_line.phase_shift       = input_parameters[11];
 
-            class_members.Add(temp_line);
+            class_members.push_back(temp_line);
         }
     }
 
-    wxPrintf("\nClass %i has %li members\n\n", wanted_class_number, class_members.GetCount( ));
+    Printf("\nClass %i has %li members\n\n", wanted_class_number, class_members.size());
 
     for ( class_counter = 0; class_counter < number_of_classes; class_counter++ ) {
 
@@ -144,9 +144,9 @@ bool SplitClassAveragesApp::DoCalculation( ) {
         ctf_sum_image.is_in_real_space = false;
 
         for ( image_counter = 0; image_counter < images_per_class; image_counter++ ) {
-            random_image = myroundint(fabsf(global_random_number_generator.GetUniformRandom( ) * (class_members.GetCount( ) - 1)));
+            random_image = myroundint(fabsf(global_random_number_generator.GetUniformRandom( ) * (class_members.size() - 1)));
             //random_image = image_counter;// + 1;
-            //wxPrintf("random = %i\n", random_image);
+            //Printf("random = %i\n", random_image);
             input_image.ReadSlice(&input_stack, class_members[random_image].position_in_stack);
             current_ctf.Init(microscope_voltage, microscope_cs, amplitude_contrast, class_members[random_image].defocus_1, class_members[random_image].defocus_2, class_members[random_image].defocus_angle, pixel_size, class_members[random_image].phase_shift);
             ctf_input_image.CalculateCTFImage(current_ctf);
@@ -177,7 +177,7 @@ bool SplitClassAveragesApp::DoCalculation( ) {
         sum_image.SwapRealSpaceQuadrants( );
         sum_image.CosineMask(0.45, 0.1);
         sum_image.BackwardFFT( );
-        sum_image.QuickAndDirtyWriteSlice(ouput_class_averages.ToStdString( ), class_counter + 1);
+        sum_image.QuickAndDirtyWriteSlice(ouput_class_averages, class_counter + 1);
     }
 
     return true;

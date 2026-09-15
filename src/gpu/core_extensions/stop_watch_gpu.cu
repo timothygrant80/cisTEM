@@ -14,7 +14,7 @@ void StopWatch::lap_sync(std::string name, bool threadsafe) {
     // Check to see if the event has been encountered. If not, first create it and set elapsed time to zero. Return the events index.
     check_for_name_and_set_current_idx(name);
     if ( is_new ) {
-        wxPrintf("a new event name was encountered when calling Stopwatch::lap(%s) at line %d in file %s\n", name, __LINE__, __FILE__);
+        Printf("a new event name was encountered when calling Stopwatch::lap(%s) at line %d in file %s\n", name, __LINE__, __FILE__);
         exit(-1);
     }
 

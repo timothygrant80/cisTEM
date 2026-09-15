@@ -126,15 +126,30 @@ CONTROLLER_COMMAND = os.environ.get("CISTEM_JOB_CONTROLLER", "cistem_job_control
 _job_runner = None
 
 
-def _controller_available():
-    """True if the first word of CONTROLLER_COMMAND resolves on PATH or is an
+def _controller_available(command=None):
+    """True if the first word of the controller command (the server's
+    CONTROLLER_COMMAND, or a run profile's own) resolves on PATH or is an
     existing file -- the same test the simulation fallback makes for stage
     binaries."""
     try:
-        first = shlex.split(CONTROLLER_COMMAND)[0]
+        first = shlex.split(command or CONTROLLER_COMMAND)[0]
     except (ValueError, IndexError):
         return False
     return shutil.which(first) is not None or os.path.isfile(first)
+
+
+def _controller_command_for(params):
+    """The controller the job's run profile launches: the profile's own
+    `controller_command` when it has one, else the server's default. An
+    unknown profile name gets the default; submit reports it separately."""
+    sys_conn = db.get_system_conn()
+    try:
+        profile = db.load_run_profile_by_name(sys_conn, params.get("run_profile"))
+    finally:
+        sys_conn.close()
+    if profile is not None and (profile.get("controller_command") or "").strip():
+        return profile["controller_command"].strip()
+    return CONTROLLER_COMMAND
 
 
 class DbSink(job_runner.Sink):
@@ -3697,6 +3712,8 @@ def _profile_json(p):
         "manager_run_command": p["manager_command"],
         "gui_address": p["gui_address"],
         "controller_address": p["controller_address"],
+        "controller_run_command": p.get("controller_command", ""),
+        "controller_found": _controller_available(p.get("controller_command") or None),
         "run_commands": p["run_commands"],
         "total_jobs": p["total_jobs"],
     }
@@ -3708,7 +3725,7 @@ def _profile_spec_from_body(body):
     spec = {}
     for api_key, db_key in (("profile_name", "name"), ("manager_run_command", "manager_command"),
                             ("gui_address", "gui_address"), ("controller_address", "controller_address"),
-                            ("run_commands", "run_commands")):
+                            ("controller_run_command", "controller_command"), ("run_commands", "run_commands")):
         if api_key in body:
             spec[db_key] = body[api_key]
     return spec
@@ -3862,15 +3879,20 @@ def create_job(project_id):
     conn.close()
 
     adapter = stages.ADAPTERS.get(stage)
-    if adapter is not None and _job_runner is not None and _controller_available():
+    controller = _controller_command_for(params) if (adapter is not None or stage in DRIVERS) else None
+    if adapter is not None and _job_runner is not None and _controller_available(controller):
         return _submit_to_runner(project_id, job_id, adapter, params)
-    if stage in DRIVERS and _job_runner is not None and _controller_available():
+    if stage in DRIVERS and _job_runner is not None and _controller_available(controller):
         return _start_driver(DRIVERS[stage], project_id, job_id, params)
     if adapter is not None or stage in DRIVERS:
         # This stage *can* run for real; say exactly what is stopping it,
         # rather than the generic simulation note about a stage binary.
         if _job_runner is None:
             why = "the job runner is not listening (see the server's startup output)"
+        elif controller != CONTROLLER_COMMAND:
+            why = "'{}', the controller command of run profile {!r}, was not found on the server's PATH " \
+                  "-- fix it on the home page's Run Profiles panel or clear it to use the server's " \
+                  "default".format(controller, params.get("run_profile"))
         else:
             why = "'{}' was not found on the server's PATH -- build it from the cisTEM tree " \
                   "(src/programs/cistem_job_controller) and install it next to unblur, or set " \

@@ -78,6 +78,33 @@ class RunProfileEditingTests(unittest.TestCase):
         self.assertEqual(p["run_commands"][1]["threads_per_copy"], 1)  # default filled in
         self.assertEqual(p["total_jobs"], 16 + 1)  # override counts, plain copies count
 
+    def test_controller_command_round_trip_and_default(self):
+        profiles = db.load_run_profiles(self.conn)
+        self.assertEqual([p["controller_command"] for p in profiles], ["", "", ""])  # seeds use the server's
+        pid = profiles[0]["run_profile_id"]
+        db.update_run_profile(self.conn, pid, {"controller_command": "  /opt/cistem-dev/bin/cistem_job_controller "})
+        self.assertEqual(db.load_run_profile(self.conn, pid)["controller_command"],
+                         "/opt/cistem-dev/bin/cistem_job_controller")
+        new = db.create_run_profile(self.conn, dict(db.load_run_profile(self.conn, pid), name="Copy"))
+        self.assertEqual(db.load_run_profile(self.conn, new)["controller_command"],
+                         "/opt/cistem-dev/bin/cistem_job_controller")
+        db.update_run_profile(self.conn, pid, {"controller_command": None})
+        self.assertEqual(db.load_run_profile(self.conn, pid)["controller_command"], "")
+
+    def test_old_store_gains_the_column(self):
+        # A system.db from before profiles could name their controller.
+        self.conn.close()
+        db.SYSTEM_DB_PATH.unlink()
+        import sqlite3
+        raw = sqlite3.connect(str(db.SYSTEM_DB_PATH))
+        raw.execute("CREATE TABLE RUN_PROFILES(RUN_PROFILE_ID INTEGER PRIMARY KEY, PROFILE_NAME TEXT, "
+                    "MANAGER_RUN_COMMAND TEXT, GUI_ADDRESS TEXT, CONTROLLER_ADDRESS TEXT, COMMANDS_ID INTEGER)")
+        raw.execute("INSERT INTO RUN_PROFILES(PROFILE_NAME, MANAGER_RUN_COMMAND) VALUES ('Old', '$command')")
+        raw.commit(); raw.close()
+        self.conn = db.get_system_conn()
+        p = db.load_run_profiles(self.conn)[0]
+        self.assertEqual((p["name"], p["controller_command"]), ("Old", ""))
+
     def test_rename_rules(self):
         ids = [p["run_profile_id"] for p in db.load_run_profiles(self.conn)]
         db.update_run_profile(self.conn, ids[0], {"name": "Workstation"})

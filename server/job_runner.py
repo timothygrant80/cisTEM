@@ -296,12 +296,20 @@ class JobRunner:
         # controller is told every address this machine answers on.
         pinned = (session.spec.profile.get("gui_address") or "").strip()
         hosts = pinned if pinned else ",".join(self.hosts_to_advertise())
-        return "{} {} {} {}".format(self.controller_executable, hosts, self.port, session.token)
+        return "{} {} {} {}".format(self.controller_executable_for(session.spec.profile), hosts, self.port,
+                                    session.token)
+
+    def controller_executable_for(self, profile):
+        """The controller a profile launches: its own `controller_command`
+        when it names one (so profiles can point at different cisTEM builds,
+        or at one on a remote machine the manager command reaches), else the
+        runner's default."""
+        return (profile.get("controller_command") or "").strip() or self.controller_executable
 
     def _launch_manager(self, session):
         command = session.spec.manager_command or "$command"
         command = command.replace("$command", self.controller_command_line(session))
-        command = command.replace("$program_name", self.controller_executable)
+        command = command.replace("$program_name", self.controller_executable_for(session.spec.profile))
         # Log the command with the token blanked -- section 9: tokens never appear in logs.
         self.sink.on_log(session.job_id, "launching controller: " + command.replace(session.token, "<token>"))
         log_path = session.spec.controller_log

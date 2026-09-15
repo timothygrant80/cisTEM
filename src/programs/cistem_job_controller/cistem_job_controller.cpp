@@ -69,7 +69,7 @@
 #include <atomic>
 
 #include "../../core/core_headers.h"
-#include "../../core/socket_codes.h"
+#include "../../core/socket_communication_utils/socket_codes.h"
 
 // wxJSON's AsInt() only accepts values it stored as SHORT (or as LONG on a
 // 32-bit build), so on 64-bit Linux any integer above 32767 -- a particle

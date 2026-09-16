@@ -41,6 +41,7 @@ make -j16
 - `--enable-experimental` - Include experimental features
 - `--enable-openmp` - OpenMP parallelization
 - `--with-cuda=/usr/local/cuda` - CUDA installation path
+- `--with-libtiff-dir=/path/to/libtiff` - libtiff root (include/ and lib/) when it is not in a system location; with `--enable-staticmode` its `lib/pkgconfig/libtiff-4.pc` supplies the codec libraries a static libtiff needs
 
 ## VS Code Integration
 

@@ -507,12 +507,33 @@ if test "x$static_link" = "xtrue"; then
 fi
 
 # tiff
-#
+
+LIBTIFF_DIR=""
+AC_ARG_WITH(libtiff-dir,
+AS_HELP_STRING([--with-libtiff-dir=DIR],[Declare the root directory of libtiff, if its
+                          current location is not system accessible ]),
+[
+    if test "$withval" != "yes" -a "$withval" != ""; then
+      LIBTIFF_DIR="$withval"
+      CPPFLAGS="$CPPFLAGS -I$withval/include"
+      CXXFLAGS="$CXXFLAGS -I$withval/include"
+      LDFLAGS="$LDFLAGS -L$withval/lib"
+      if test -d "$withval/lib64"; then
+        LDFLAGS="$LDFLAGS -L$withval/lib64"
+      fi
+      AC_MSG_NOTICE([Using libtiff from $withval])
+    fi
+])
+
 # A static libtiff needs its codec libraries on the link line as well; ask pkg-config for them
 # (falling back to the usual set) so the probe and the final link both succeed with -static.
 TIFF_EXTRA_LIBS=""
 if test "$static_link" = "true"; then
-  TIFF_EXTRA_LIBS="`pkg-config --static --libs-only-l libtiff-4 2>/dev/null | sed -e 's/-ltiff//g'`"
+  tiff_pkg_config_path="$PKG_CONFIG_PATH"
+  if test "x$LIBTIFF_DIR" != "x"; then
+    tiff_pkg_config_path="$LIBTIFF_DIR/lib/pkgconfig:$LIBTIFF_DIR/lib64/pkgconfig:$PKG_CONFIG_PATH"
+  fi
+  TIFF_EXTRA_LIBS="`PKG_CONFIG_PATH=$tiff_pkg_config_path pkg-config --static --libs-only-l libtiff-4 2>/dev/null | sed -e 's/-ltiff//g'`"
   if test "x$TIFF_EXTRA_LIBS" = "x"; then
     TIFF_EXTRA_LIBS="-ljpeg -lz -llzma -lzstd -lwebp -lsharpyuv -ljbig -ldeflate -lLerc -lm"
   fi

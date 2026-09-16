@@ -32,6 +32,8 @@ HTTPS enforcement (see README.md's Security section for what that implies).
 
 import glob as glob_module
 import json
+import logging
+import sqlite3
 import math
 import os
 import secrets
@@ -121,6 +123,8 @@ _live = {}  # job_id -> {"proc": Popen|None, "cancel_requested": bool}
 #                          to dial; default: this machine's, loopback last
 #   JOB_RUNNER_ENABLED     set to 0 to never start the listener
 # ---------------------------------------------------------------------------
+
+log = logging.getLogger("cistem_server")
 
 CONTROLLER_COMMAND = os.environ.get("CISTEM_JOB_CONTROLLER", "cistem_job_controller")
 _job_runner = None
@@ -230,7 +234,10 @@ class DbSink(job_runner.Sink):
         project_id = self._project(job_id)
         if project_id is None:
             return
-        append_log(project_id, job_id, "[{}] {}{}".format(now_iso(), "ERROR: " if level == "error" else "", text))
+        try:
+            append_log(project_id, job_id, "[{}] {}{}".format(now_iso(), "ERROR: " if level == "error" else "", text))
+        except Exception:  # noqa: BLE001 -- a log line that cannot be stored must not derail the protocol it describes
+            log.exception("could not append to the log of job %s: %s", job_id, text)
 
     def on_workers(self, job_id, connected, expected):
         self.on_log(job_id, "{} / {} processes connected".format(connected, expected))
@@ -499,16 +506,38 @@ def append_log(project_id, job_id, line, conn=None):
         _insert_log_line(conn, job_id, line)
         return
     conn = db.get_conn(project_id)
-    with conn:
-        _insert_log_line(conn, job_id, line)
-    conn.close()
+    try:
+        # BEGIN IMMEDIATE takes the write lock before the sequence number is
+        # read, so two threads logging the same job at the same moment (the
+        # runner's "controller connected" a few ms after the driver's
+        # "launching controller") cannot both compute the same SEQ and have
+        # the second INSERT fail on the primary key.
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            _insert_log_line(conn, job_id, line)
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+    finally:
+        conn.close()
 
 
 def _insert_log_line(conn, job_id, line):
-    seq = conn.execute(
-        "SELECT COALESCE(MAX(SEQ), -1) + 1 FROM JOB_LOG_LINES WHERE JOB_ID=?", (job_id,)
-    ).fetchone()[0]
-    conn.execute("INSERT INTO JOB_LOG_LINES(JOB_ID, SEQ, LINE) VALUES (?, ?, ?)", (job_id, seq, line))
+    """Append `line` as the next SEQ of the job. On a connection that already
+    holds the write lock (BEGIN IMMEDIATE, or a transaction that has written)
+    the read-then-insert is atomic; otherwise a concurrent writer can slip in
+    between, which shows as a primary-key violation -- then read again."""
+    for attempt in range(5):
+        seq = conn.execute(
+            "SELECT COALESCE(MAX(SEQ), -1) + 1 FROM JOB_LOG_LINES WHERE JOB_ID=?", (job_id,)
+        ).fetchone()[0]
+        try:
+            conn.execute("INSERT INTO JOB_LOG_LINES(JOB_ID, SEQ, LINE) VALUES (?, ?, ?)", (job_id, seq, line))
+            return
+        except sqlite3.IntegrityError:
+            if attempt == 4:
+                raise
 
 
 # ---------------------------------------------------------------------------

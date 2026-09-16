@@ -2033,6 +2033,26 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"If finding an additional phase shift, this value sets the upper bound for the search."},
         {key:"phase_shift_step_deg", label:"Phase Shift Search Step", unit:"°", type:"number", step:"1", min:0.1, default:"10", group:"Phase Plates", enabledBy:"find_phase_shift",
          tooltip:"If finding an additional phase shift, this value sets the step size for the search."},
+        // Sample thickness estimation (FitNodes* in FindCTFPanelParent): ctffind fits the CTF's thickness
+        // nodes; the labels are the panel's, the help text the program's own questions.
+        {key:"fit_nodes", label:"Estimate Sample Thickness?", type:"checkbox", default:false, group:"Sample Thickness",
+         tooltip:"Answer yes to fit the nodes of the CTF (the points where the Thon rings vanish because of the sample's thickness) and estimate the sample thickness from them."},
+        {key:"fit_nodes_1d", label:"Do a brute-force search for sample thickness?", type:"checkbox", default:true, group:"Sample Thickness", enabledBy:"fit_nodes",
+         tooltip:"Answer yes to use a brute force 1D search for the nodes."},
+        {key:"fit_nodes_2d", label:"Refine CTF and Astigmatism?", type:"checkbox", default:true, group:"Sample Thickness", enabledBy:"fit_nodes",
+         tooltip:"Answer yes to use a 2D refinement for the nodes, refining the CTF and astigmatism together with the thickness."},
+        {key:"fit_nodes_low_res_a", label:"Min. Resolution of Fit", unit:"Å", type:"number", step:"0.1", min:0.1, default:"30", group:"Sample Thickness", enabledBy:"fit_nodes",
+         tooltip:"In Angstroms, the low resolution limit for the node fit."},
+        {key:"fit_nodes_high_res_a", label:"Max. Resolution of Fit", unit:"Å", type:"number", step:"0.1", min:0.1, default:"3", group:"Sample Thickness", enabledBy:"fit_nodes",
+         tooltip:"In Angstroms, the high resolution limit for the node fit."},
+        {key:"fit_nodes_rounded_square", label:"Use no-decay model", type:"checkbox", default:false, group:"Sample Thickness", enabledBy:"fit_nodes",
+         tooltip:"Answer yes to use a rounded square (no decay) model for the nodes."},
+        {key:"fit_nodes_downweight", label:"Ignore spectrum in nodes", type:"checkbox", default:false, group:"Sample Thickness", enabledBy:"fit_nodes",
+         tooltip:"Answer yes to downweight the spectrum at the nodes when fitting."},
+        {key:"resample_if_pixel_too_small", label:"Resample Pixel Size?", type:"checkbox", default:true, group:"Additional Options",
+         tooltip:"Answer yes to resample the spectrum when the pixel size is smaller than the target below, so the fit is not dominated by the empty high-resolution end (ctffind's \"Resample micrograph if pixel size too small?\")."},
+        {key:"target_pixel_size_a", label:"Resample Pixel Size", unit:"Å", type:"number", step:"0.1", min:0.1, default:"1.4", group:"Additional Options", enabledBy:"resample_if_pixel_too_small",
+         tooltip:"In Angstroms, the pixel size to resample to if the input pixel size is too small."},
         {key:"filter_lowres_signal", label:"Weight down low resolution signal?", type:"checkbox", default:true, group:"Additional Options",
          tooltip:"Reduce the intensity of the powerspectrum at low resolution. This is normally desired for single-particle micrographs, but might cause issues for other types of data."}
       ],
@@ -4107,7 +4127,9 @@ From branch : <span id="versionBranch">—</span></p>
     ["Alias Res.", function(c){ return c.detected_alias_resolution ? fmtVal(c.detected_alias_resolution, 2) + " Å" : "None"; }],
     ["Iciness", function(c){ return fmtVal(c.iciness, 2); }],
     ["Tilt Angle", function(c){ return fmtVal(c.tilt_angle, 2) + " °"; }],
-    ["Tilt Axis", function(c){ return fmtVal(c.tilt_axis, 2) + " °"; }]
+    ["Tilt Axis", function(c){ return fmtVal(c.tilt_axis, 2) + " °"; }],
+    // "Est. Sample Thickness" in MyFindCTFResultsPanel: only meaningful when the nodes were fit.
+    ["Thickness", function(c){ return c.fit_nodes ? fmtVal(c.sample_thickness, 0) + " Å" : "—"; }]
   ];
   function buildCtfResultView(box){
     // ShowCTFResultsPanel's arrangement: the diagnostic image and the estimate's
@@ -4154,7 +4176,8 @@ From branch : <span id="versionBranch">—</span></p>
       {key: "ring_res", label: "Fit Resolution", unit: "Å", type: "number", value: function(c){ return c.detected_ring_resolution; }},
       {key: "phase_shift", label: "Additional Phase Shift", unit: "°", type: "number", value: function(c){ return c.additional_phase_shift != null ? c.additional_phase_shift * 180 / Math.PI : null; }},
       {key: "tilt_angle", label: "Tilt Angle", unit: "°", type: "number", value: function(c){ return c.tilt_angle; }},
-      {key: "tilt_axis", label: "Tilt Axis", unit: "°", type: "number", value: function(c){ return c.tilt_axis; }}
+      {key: "tilt_axis", label: "Tilt Axis", unit: "°", type: "number", value: function(c){ return c.tilt_axis; }},
+      {key: "thickness", label: "Sample Thickness", unit: "Å, estimates with thickness fitting only", type: "number", value: function(c){ return c.fit_nodes ? c.sample_thickness : null; }}
     ],
     rowIdKey: "image_asset_id", rowNameKey: "image_name", rowLabel: "Image", rowLabelPlural: "Images",
     groupAssetKey: "image_asset_id", addAllTitle: "Add every image listed to an image group.",
@@ -4182,6 +4205,19 @@ From branch : <span id="versionBranch">—</span></p>
       {label: "Large Astig. Expected", value: function(c){ return fmtYesNo(c.large_astigmatism_expected); }},
       {label: "Restrain Astig.", value: function(c){ return c.restrain_astigmatism ? "Yes (" + fmtVal(c.tolerated_astigmatism, 2) + " Å)" : "No"; }},
       {label: "Phase Shift Search", value: function(c){ return c.find_additional_phase_shift ? fmtVal(c.min_phase_shift * 180 / Math.PI, 1) + "° – " + fmtVal(c.max_phase_shift * 180 / Math.PI, 1) + "°, step " + fmtVal(c.phase_shift_step * 180 / Math.PI, 1) + "°" : "No"; }},
+      // The rows MyFindCTFResultsPanel shows for the thickness options ("Estimate Thickness? :", "Thickness 1D search? :",
+      // "Thickness 2D search? :", "Thickness Min./Max. Res. :", the no-decay model, "Downweight nodes? :",
+      // "Est. Sample Thickness :") and its "Estimate Tilt? :". Estimates written before these columns existed show "—".
+      {label: "Estimate Tilt", value: function(c){ return c.determine_tilt == null ? "—" : fmtYesNo(c.determine_tilt); }},
+      {label: "Estimate Thickness", value: function(c){
+        if (c.fit_nodes == null) return "—";
+        if (!c.fit_nodes) return "No";
+        return "Yes — 1D search " + (c.fit_nodes_1d ? "yes" : "no") + ", 2D refinement " + (c.fit_nodes_2d ? "yes" : "no") +
+          ", " + fmtVal(c.fit_nodes_low_limit, 2) + " – " + fmtVal(c.fit_nodes_high_limit, 2) + " Å" +
+          (c.fit_nodes_rounded_square ? ", no-decay model" : "") + (c.fit_nodes_downweight_nodes ? ", nodes downweighted" : "");
+      }, wide: true},
+      {label: "Est. Sample Thickness", value: function(c){ return c.fit_nodes ? fmtVal(c.sample_thickness, 0) + " Å" : "—"; }},
+      {label: "Resample Pixel Size", value: function(c){ return c.resample_if_nescessary == null ? "—" : (c.resample_if_nescessary ? "Yes (" + fmtVal(c.target_pixel_size, 2) + " Å)" : "No"); }},
       {label: "Diagnostic File", value: function(c){ return c.output_diagnostic_file || "—"; }, wide: true}
     ],
     buildResult: buildCtfResultView

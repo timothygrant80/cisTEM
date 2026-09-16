@@ -107,6 +107,7 @@ def build_tasks(conn, project_id, params):
     else:
         min_phase = max_phase = phase_step = 0.0
     filter_lowres = _flag(params, "filter_lowres_signal", True)
+    resample_if_pixel_too_small = _flag(params, "resample_if_pixel_too_small", True)
     # Sample thickness estimation (ctffind's "Determine sample thickness?" and its
     # expert options); defaults are the program's interactive defaults.
     fit_nodes = _flag(params, "fit_nodes", False)
@@ -175,7 +176,7 @@ def build_tasks(conn, project_id, params):
             A("bool", False),                            # 20 astigmatism is known -- not in the GUI
             A("float", 0.0),                             # 21
             A("float", 0.0),                             # 22
-            A("bool", True),                             # 23 resample if pixel too small
+            A("bool", resample_if_pixel_too_small),      # 23 resample if pixel too small (to the target pixel size, 46)
             A("bool", gain == ""),                       # 24 movie is gain corrected
             A("text", gain or DEV_NULL),                 # 25
             A("bool", dark == ""),                       # 26 movie is dark corrected

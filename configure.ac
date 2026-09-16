@@ -501,11 +501,11 @@ fi
 # It's importnat that -static-intel be specified after -mkl, otherwise mkl will be linked dynamically
 if test "x$static_link" = "xtrue"; then
  if test "x$CXX" = "xicpc"; then
- 	LDFLAGS="$LDFLAGS -static-intel -qopenmp-link=static"
+ 	LDFLAGS="$LDFLAGS -static-intel -qopenmp-link=static -static-libgcc -static-libstdc++"
  	# There is no static library for libcilkrts. Suppress this warning.
  	LDFLAGS="$LDFLAGS -wd10237"
  else
-	LDFLAGS="$LDFLAGS -static"
+	LDFLAGS="$LDFLAGS -static -static-libgcc -static-libstdc++"
  fi
 fi
 
@@ -648,7 +648,7 @@ AC_SUBST(LIBTOOL_FLAGS)
 # produces a statically linked executable. It is a libtool-only flag, so it replaces -static only
 # now that configure's own link tests (which call the compiler directly) are done.
 if test "x$static_link" = "xtrue" -a "x$CXX" != "xicpc"; then
-  LDFLAGS="`echo $LDFLAGS | sed -e 's/-static/-all-static/'`"
+  LDFLAGS="`echo " $LDFLAGS " | sed -e 's/ -static / -all-static /' -e 's/^ //' -e 's/ $//'`"
 fi
 
 AC_CONFIG_FILES([Makefile src/Makefile])

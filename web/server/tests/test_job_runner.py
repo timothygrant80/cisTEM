@@ -142,6 +142,28 @@ class HappyPathTests(unittest.TestCase):
             h.stop()
 
 
+class LocalProgramOfTests(unittest.TestCase):
+    """local_program_of(): where a run profile says a worker program lives on this machine."""
+
+    def test_directory_on_the_run_command_wins(self):
+        profile = {"manager_command": "$command", "run_commands": [{"command": "/opt/cistem/bin/$command"}]}
+        self.assertEqual(jr.local_program_of(profile, "find_particles"), "/opt/cistem/bin/find_particles")
+
+    def test_bare_run_command_means_path(self):
+        profile = {"manager_command": "/opt/cistem/bin/$command", "run_commands": [{"command": "$command"}]}
+        self.assertEqual(jr.local_program_of(profile, "find_particles"), "find_particles")
+
+    def test_remote_run_command_falls_back_to_the_manager_then_path(self):
+        profile = {"manager_command": "/opt/cistem/bin/$command", "run_commands": [{"command": "ssh node $command"}]}
+        self.assertEqual(jr.local_program_of(profile, "align_symmetry"), "/opt/cistem/bin/align_symmetry")
+        profile = {"manager_command": "sbatch --wrap=\"$command\"", "run_commands": [{"command": "ssh node $command"}]}
+        self.assertEqual(jr.local_program_of(profile, "align_symmetry"), "align_symmetry")
+
+    def test_no_profile(self):
+        self.assertEqual(jr.local_program_of(None, "sharpen_map"), "sharpen_map")
+        self.assertEqual(jr.local_program_of({}, "sharpen_map"), "sharpen_map")
+
+
 class LocalControllerOfTests(unittest.TestCase):
     """local_controller_of(): which executable a manager command launches here."""
 

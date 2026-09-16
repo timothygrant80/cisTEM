@@ -9143,7 +9143,7 @@ From branch : <span id="versionBranch">—</span></p>
     var vol = els.paramFields.querySelector('[data-key="volume_asset_id"]');
     if (!vol || !vol.value || vol.disabled || !state.projectId) return;
     var vid = vol.value;
-    apiFetch(projectApiUrl("/sharpen/defaults?volume_asset_id=" + encodeURIComponent(vid))).then(function(r){
+    apiFetch(projectApiUrl("/sharpen/defaults?volume_asset_id=" + encodeURIComponent(vid) + (state.runProfile ? "&run_profile=" + encodeURIComponent(state.runProfile) : ""))).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(d){
@@ -9217,6 +9217,7 @@ From branch : <span id="versionBranch">—</span></p>
     sv.running = true;
     els.submitBtn.disabled = true; els.submitBtn.textContent = "Sharpening…";
     els.submitNote.textContent = "Running sharpen_map on the server — a few seconds for a small box, longer for a large one.";
+    params.run_profile = state.runProfile;  // where sharpen_map lives, as for the picking preview
     apiFetch(projectApiUrl("/sharpen"), {method: "POST", headers: {"Content-Type": "application/json"},
                                          body: JSON.stringify({volume_asset_id: Number(vol.value), params: params})})
       .then(function(r){ return r.json().then(function(d){ if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); return d; }); })
@@ -9423,8 +9424,11 @@ From branch : <span id="versionBranch">—</span></p>
     pv.inflight = true;
     els.previewBtn.disabled = true;
     els.previewStatus.classList.remove("error"); els.previewStatus.textContent = "Picking\u2026";
+    // The run profile says where find_particles lives (a directory on $command in its
+    // commands); the server runs the preview from there, as a job's workers would.
+    var previewParams = collectParams(); previewParams.run_profile = state.runProfile;
     apiFetch(projectApiUrl("/preview/pick"), {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({image_asset_id: Number(imageId), params: collectParams()})})
+      body: JSON.stringify({image_asset_id: Number(imageId), params: previewParams})})
       .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
       .then(function(res){
         if (!res.ok) throw new Error((res.data && res.data.error) || "preview failed");

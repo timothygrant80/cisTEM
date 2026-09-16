@@ -62,6 +62,7 @@ import numpy as np
 
 import db
 import job_protocol as jp
+import job_runner
 import refinement_packages
 import starfile
 import volumes
@@ -881,9 +882,12 @@ def _align_symmetry(project_id, job_id, state):
     """SetupAlignSymmetryJob() + ImposeAlignmentAndSymmetryThread, as one
     local run of align_symmetry per class, which writes the aligned and
     symmetrised volume itself."""
-    exe = shutil.which("align_symmetry")
+    # From where the refinement profile's commands say the workers live (a directory on
+    # $command), else PATH -- the same rule the picking preview uses.
+    candidate = job_runner.local_program_of(_profile(state["refinement_profile"]), "align_symmetry")
+    exe = shutil.which(candidate)
     if not exe:
-        raise ValueError("align_symmetry is not on the server's PATH")
+        raise ValueError("align_symmetry was not found (looked for {!r}, from run profile {!r})".format(candidate, state["refinement_profile"]))
     _log(project_id, job_id, "Aligning to {} symmetry and applying it from here on".format(state["settings"]["symmetry"]))
     out_files = []
     for k, ref in enumerate(state["reference_files"]):

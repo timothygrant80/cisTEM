@@ -141,6 +141,26 @@ def _controller_available(manager_command="$command"):
     return shutil.which(first) is not None or os.path.isfile(first)
 
 
+def _local_program(program, run_profile_name):
+    """Where to run `program` from for the things the server runs itself
+    (the picking preview, sharpen_map): the run profile's commands say where
+    the workers live (job_runner.local_program_of), and PATH is the fallback.
+    Returns (path or None, description of where it looked)."""
+    profile = None
+    if run_profile_name:
+        sys_conn = db.get_system_conn()
+        try:
+            profile = db.load_run_profile_by_name(sys_conn, run_profile_name)
+        finally:
+            sys_conn.close()
+    candidate = job_runner.local_program_of(profile, program)
+    if profile is not None:
+        where = "{!r} (from run profile {!r})".format(candidate, profile["name"])
+    else:
+        where = "{!r} on the server's PATH".format(candidate)
+    return shutil.which(candidate), where
+
+
 def _manager_command_for(params):
     """The manager command of the job's run profile ("$command" when the
     profile is unknown; submit reports that separately)."""
@@ -2937,7 +2957,7 @@ def sharpen_defaults(project_id):
             return jsonify({"error": str(exc)}), 404
         ctx["volumes"] = [{"volume_asset_id": r["VOLUME_ASSET_ID"], "name": r["NAME"], "x_size": r["X_SIZE"], "pixel_size": r["PIXEL_SIZE"]}
                           for r in conn.execute("SELECT * FROM VOLUME_ASSETS ORDER BY VOLUME_ASSET_ID").fetchall()]
-        ctx["available"] = shutil.which("sharpen_map") is not None
+        ctx["available"] = _local_program("sharpen_map", request.args.get("run_profile"))[0] is not None
         return jsonify(ctx)
     finally:
         conn.close()
@@ -2948,15 +2968,16 @@ def sharpen_defaults(project_id):
 def sharpen_run(project_id):
     """Body `{volume_asset_id, params}` -> the sharpened map's Guinier
     curves and central slices, plus a `result_id` for Save / Import.
-    Runs `sharpen_map` directly (`503` if it isn't on the server's PATH);
+    Runs `sharpen_map` directly, from where `params.run_profile`'s commands
+    say the programs live (PATH without one; `503` if it isn't there);
     writes nothing to the project until the result is imported."""
     body = request.get_json(force=True, silent=True) or {}
     volume_id = body.get("volume_asset_id")
     if volume_id in (None, ""):
         return jsonify({"error": "volume_asset_id is required"}), 400
-    executable = shutil.which("sharpen_map")
+    executable, looked = _local_program("sharpen_map", (body.get("params") or {}).get("run_profile"))
     if not executable:
-        return jsonify({"error": "sharpen_map is not on the server's PATH, so there is nothing to sharpen with"}), 503
+        return jsonify({"error": "sharpen_map was not found: looked for {}, so there is nothing to sharpen with".format(looked)}), 503
     conn = db.get_conn(project_id)
     try:
         started = time.time()
@@ -3610,15 +3631,16 @@ def replace_pick_positions(project_id, picking_id):
 def preview_pick(project_id):
     """Run the particle picker on one image with the panel's current
     parameters and return the picks -- cisTEM's Preview / Auto preview.
-    Not a job: nothing is written to the project, and the find_particles
-    binary is run directly (it has to be on the server's PATH)."""
+    Not a job: nothing is written to the project, and find_particles is run
+    directly, from where the selected run profile's commands say the workers
+    live (`params.run_profile`; PATH when the profile does not name a directory)."""
     body = request.get_json(force=True, silent=True) or {}
     image_id = body.get("image_asset_id")
     if image_id is None:
         return jsonify({"error": "image_asset_id is required"}), 400
-    executable = shutil.which("find_particles")
+    executable, looked = _local_program("find_particles", (body.get("params") or {}).get("run_profile"))
     if not executable:
-        return jsonify({"error": "find_particles is not on the server's PATH, so there is nothing to preview with"}), 503
+        return jsonify({"error": "find_particles was not found: looked for {}, so there is nothing to preview with".format(looked)}), 503
     conn = db.get_conn(project_id)
     try:
         try:

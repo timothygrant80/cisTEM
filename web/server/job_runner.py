@@ -117,6 +117,29 @@ def local_controller_of(manager_command, controller_executable):
     return first[:-len("$command")] + controller_first
 
 
+def local_program_of(profile, program):
+    """The path this machine should run `program` (a worker executable such as
+    find_particles) from, as the run profile would launch it: a directory stuck
+    to `$command` in the profile's run commands (`/opt/cistem/bin/$command`,
+    the way to name workers that are not on PATH) names the directory, else a
+    directory in the manager command does, else the bare name is looked up on
+    PATH. Run commands that go through another program (`ssh node $command`)
+    say nothing about this machine and are skipped. The result is a name or
+    path for shutil.which(); whether it exists is the caller's question.
+    Used by the things the server runs itself rather than through a job --
+    the particle-picking preview, align_symmetry, sharpen_map."""
+    profile = profile or {}
+    commands = [c.get("command") for c in profile.get("run_commands") or []]
+    commands.append(profile.get("manager_command"))
+    for command in commands:
+        if not command:
+            continue
+        found = local_controller_of(command, program)
+        if found is not None:
+            return found
+    return program
+
+
 class JobSpec:
     """What submit() needs. `tasks` is the list of {"index", "ref"?, "args"}
     objects exactly as they go on the wire (job_protocol.arg builds args)."""

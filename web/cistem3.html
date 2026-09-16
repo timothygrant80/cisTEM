@@ -2127,7 +2127,7 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"In Angstroms, the maximum radius of the particles to be found. This also determines the minimum distance between picks."},
         {key:"characteristic_radius_a", label:"Template radius", unit:"Å", type:"number", step:"1", min:1, default:"80", group:"Picking Parameters",
          tooltip:"In Angstroms, the radius within which most of the density is enclosed. The template for picking is a soft-edge disc, where the edge is 5 pixels wide and this parameter defines the radius at which the cosine-edge template reaches 0.5."},
-        {key:"threshold_peak_height", label:"Threshold peak height", unit:"", type:"number", step:"0.1", min:0, default:"6.0", group:"Picking Parameters",
+        {key:"threshold_peak_height", label:"Threshold peak height", unit:"", type:"number", step:"0.1", min:0.1, default:"6.0", group:"Picking Parameters",
          tooltip:"Particle coordinates will be defined as the coordinates of any peak in the search function which exceeds this threshold. In numbers of standard deviations above expected noise variations in the scoring function. See Sigworth (2004) for definition."},
         {key:"avoid_low_variance", label:"Avoid low variance areas", type:"checkbox", default:true, group:"Picking Parameters",
          tooltip:"Areas with low local variance should be avoided. This often works well to avoid false positive picks in empty areas."},
@@ -9312,6 +9312,10 @@ From branch : <span id="versionBranch">—</span></p>
       var count = selectedGroupCount();
       var profile = state.runProfiles.filter(function(p){ return p.profile_name === els.runProfile.value; })[0];
       if (count === 0) reason = stage.emptyReason || ("The selected group is empty — add " + (stage.fields.some(function(f){ return f.key === "image_group_id"; }) ? "images" : "movies") + " to it on the Assets tab.");
+      else if (state.currentStage === "particle_picking"){
+        var pickProblem = pickParamsProblem(collectParams());
+        if (pickProblem) reason = pickProblem;
+      }
       else if (state.currentStage === "ab_initio_3d"){
         var mode = els.paramFields.querySelector('[data-key="input_mode"]'), selPick = els.paramFields.querySelector('[data-key="classification_selection_id"]');
         if (mode && mode.value === "Class Averages" && selPick && !selPick.value) reason = "Pick a class selection, or switch to Images. Selections are made on the Results tab under 2D Classification.";
@@ -9357,8 +9361,11 @@ From branch : <span id="versionBranch">—</span></p>
   // ---------- preview (MyFindParticlesPanel: Select preview image / Preview / Auto preview) ----------
   // POST /preview/pick runs the picker on one image with the form's current
   // parameters; the picks are drawn where the Information text was, with a
-  // button to bring the text back. Auto preview re-runs it, debounced, on
-  // every change to a parameter or to the chosen image.
+  // button to bring the text back. Auto preview re-runs it when a parameter
+  // is committed -- Enter or leaving the field, a checkbox or select
+  // changing -- or the chosen image changes, never on each keystroke: typing
+  // "0.1" would otherwise run the picker with a threshold of 0 first, which
+  // accepts every local maximum and takes minutes.
   var pv = { view: null, urls: [], timer: null, inflight: false, pending: false, shown: false };
   function previewSupported(){ return !!(STAGES[state.currentStage] && STAGES[state.currentStage].preview); }
   function previewReleaseUrls(){ pv.urls.forEach(function(u){ URL.revokeObjectURL(u); }); pv.urls = []; }
@@ -9416,10 +9423,23 @@ From branch : <span id="versionBranch">—</span></p>
       syncAutoEdgeDistance();
     }).catch(function(){});
   }
+  // The picker's settings that must be positive: a threshold of 0 accepts
+  // every local maximum and a zero radius makes no template. Returns the
+  // message to show, or null.
+  function pickParamsProblem(params){
+    var checks = [["threshold_peak_height", "Threshold peak height"], ["characteristic_radius_a", "Template radius"], ["maximum_radius_a", "Exclusion radius"]];
+    for (var i = 0; i < checks.length; i++){
+      var v = params[checks[i][0]];
+      if (v === null || v === undefined || v === "" || isNaN(Number(v)) || Number(v) <= 0) return checks[i][1] + " must be greater than 0.";
+    }
+    return null;
+  }
   function runPreview(){
     if (!previewSupported() || !state.projectId) return;
     var imageId = els.previewImage.value;
     if (!imageId || els.previewImage.disabled){ els.previewStatus.textContent = "Pick a preview image first."; return; }
+    var problem = pickParamsProblem(collectParams());
+    if (problem){ els.previewStatus.classList.add("error"); els.previewStatus.textContent = problem; return; }
     if (pv.inflight){ pv.pending = true; return; }
     pv.inflight = true;
     els.previewBtn.disabled = true;
@@ -9458,8 +9478,9 @@ From branch : <span id="versionBranch">—</span></p>
   [els.paramFields, els.expertFields].forEach(function(box){
     box.addEventListener("input", function(e){
       if (e.target && (e.target.dataset.key === "maximum_radius_a")) syncAutoEdgeDistance();
-      schedulePreview();
     });
+    // "change" fires when a typed value is committed (Enter, or focus leaving the
+    // field) and at once for checkboxes and selects -- not per keystroke.
     box.addEventListener("change", function(e){
       if (e.target && /_group_id$/.test(e.target.dataset.key || "")) loadPreviewImages();
       if (e.target && (e.target.dataset.key === "maximum_radius_a" || e.target.dataset.key === "set_min_edge_distance")) syncAutoEdgeDistance();

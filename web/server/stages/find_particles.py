@@ -97,6 +97,7 @@ def build_tasks(conn, project_id, params):
     out_dir = _ensure_dirs(project_id)
 
     settings = _settings_from_params(params)
+    check_settings(settings)
     tasks = []
     for index, image in enumerate(rows):
         asset_id = image["IMAGE_ASSET_ID"]
@@ -129,6 +130,17 @@ def _settings_from_params(params):
         background_boxes=_num(params, "background_boxes", 40, int),
         background_algorithm=BACKGROUND_ALGORITHMS.index(algo) if algo in BACKGROUND_ALGORITHMS else _num(params, "background_algorithm", 0, int),
     )
+
+
+def check_settings(st):
+    """The settings that must be positive. A threshold of 0 accepts every
+    local maximum of the correlation map (a run that takes minutes and
+    returns thousands of picks); a zero radius makes no template. Raises
+    ValueError with the message the panel shows."""
+    for key, label in (("threshold", "Threshold peak height"), ("characteristic_radius", "Template radius"), ("maximum_radius", "Exclusion radius")):
+        value = st.get(key)
+        if value is None or not value > 0:
+            raise ValueError("{} must be greater than 0".format(label))
 
 
 def _image_args(image, input_file, pixel_size, output_stack, st):
@@ -413,6 +425,7 @@ def preview(conn, project_id, image_id, params, executable, timeout=120.0):
         raise ValueError("the image file is missing: {}".format(image["FILENAME"]))
 
     st = _settings_from_params(params)
+    check_settings(st)
     pixel_size = image["PIXEL_SIZE"] or 1.0
     x_size, y_size = image["X_SIZE"], image["Y_SIZE"]
     input_file, input_ps, input_y, used_scaled = image["FILENAME"], pixel_size, y_size, False

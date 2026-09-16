@@ -66,3 +66,17 @@ class ReplacePicksTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CheckSettingsTests(unittest.TestCase):
+    """check_settings(): a zero threshold or radius is refused before the picker runs."""
+
+    def test_defaults_pass(self):
+        fp.check_settings(fp._settings_from_params({}))
+
+    def test_zero_and_negative_are_refused(self):
+        for key, label in (("threshold_peak_height", "Threshold peak height"), ("characteristic_radius_a", "Template radius"), ("maximum_radius_a", "Exclusion radius")):
+            for bad in (0, -1, "0"):
+                with self.assertRaises(ValueError) as cm:
+                    fp.check_settings(fp._settings_from_params({key: bad}))
+                self.assertIn(label, str(cm.exception))

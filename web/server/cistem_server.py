@@ -306,10 +306,10 @@ class DbSink(job_runner.Sink):
             try:
                 summary = adapter.finalize(conn, project_id, job, sent_tasks, task_rows, log_here)
                 metrics.update(summary)
-                self.on_log(job_id, adapter.describe_summary(summary) if hasattr(adapter, "describe_summary")
-                            else "wrote results to the project database: {}".format(summary))
+                log_here(adapter.describe_summary(summary) if hasattr(adapter, "describe_summary")
+                         else "wrote results to the project database: {}".format(summary))
             except Exception as exc:  # noqa: BLE001
-                self.on_log(job_id, "could not write results to the project database: {}".format(exc), level="error")
+                log_here("could not write results to the project database: {}".format(exc), level="error")
         # cisTEM adds the controller's timing to the project's CPU-hours total.
         with conn:
             conn.execute("UPDATE MASTER_SETTINGS SET TOTAL_CPU_HOURS = COALESCE(TOTAL_CPU_HOURS, 0) + ?, "

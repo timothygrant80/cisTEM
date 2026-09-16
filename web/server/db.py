@@ -28,6 +28,7 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -387,43 +388,98 @@ _ALTER_STATEMENTS = [
 # adopt whatever it finds rather than assume every row was inserted through
 # the image import route. Cheap at this scale (a project's images number in
 # the thousands at most) and self-healing.
+# Rows every project has, each with the check that says whether the write is
+# needed at all -- opening a connection must not take the database's write
+# lock when there is nothing to do (see _prepare_project_db).
 _SEED_STATEMENTS = [
-    "INSERT OR IGNORE INTO PARTICLE_POSITION_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (0, 'All Particle Positions', 0)",
-    "INSERT OR IGNORE INTO VOLUME_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (0, 'All Volumes', 0)",
-    "INSERT OR IGNORE INTO IMAGE_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (0, 'All Images', 0)",
-    "INSERT OR IGNORE INTO IMAGE_IMPORT_DEFAULTS(NUMBER) VALUES (1)",
-    "INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) "
-    "SELECT 0, IMAGE_ASSET_ID FROM IMAGE_ASSETS",
+    ("SELECT 1 FROM PARTICLE_POSITION_GROUP_LIST WHERE GROUP_ID = 0",
+     "INSERT OR IGNORE INTO PARTICLE_POSITION_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (0, 'All Particle Positions', 0)"),
+    ("SELECT 1 FROM VOLUME_GROUP_LIST WHERE GROUP_ID = 0",
+     "INSERT OR IGNORE INTO VOLUME_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (0, 'All Volumes', 0)"),
+    ("SELECT 1 FROM IMAGE_GROUP_LIST WHERE GROUP_ID = 0",
+     "INSERT OR IGNORE INTO IMAGE_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (0, 'All Images', 0)"),
+    ("SELECT 1 FROM IMAGE_IMPORT_DEFAULTS WHERE NUMBER = 1",
+     "INSERT OR IGNORE INTO IMAGE_IMPORT_DEFAULTS(NUMBER) VALUES (1)"),
+    # Every image asset is in All Images (the import and Align Movies paths add
+    # theirs; this catches a project written by something that did not).
+    ("SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM IMAGE_ASSETS ia WHERE NOT EXISTS ("
+     "  SELECT 1 FROM IMAGE_GROUP_MEMBERS m WHERE m.GROUP_ID = 0 AND m.IMAGE_ASSET_ID = ia.IMAGE_ASSET_ID))",
+     "INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) "
+     "SELECT 0, IMAGE_ASSET_ID FROM IMAGE_ASSETS"),
     # Number the jobs that predate JOB_NUMBER, oldest first, so a project's
     # numbering is continuous rather than restarting at 1 alongside them.
     # Touches only NULL rows, so it stops being a no-op the moment it has
     # run once. Their NAME is left alone -- those were typed by hand, back
     # when the submit form asked for one.
-    "UPDATE JOBS SET JOB_NUMBER = ("
-    "  SELECT COUNT(*) FROM JOBS older WHERE older.CREATED_AT <= JOBS.CREATED_AT"
-    ") WHERE JOB_NUMBER IS NULL",
+    ("SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM JOBS WHERE JOB_NUMBER IS NULL)",
+     "UPDATE JOBS SET JOB_NUMBER = ("
+     "  SELECT COUNT(*) FROM JOBS older WHERE older.CREATED_AT <= JOBS.CREATED_AT"
+     ") WHERE JOB_NUMBER IS NULL"),
 ]
+
+# Project databases this process has already brought up to date, keyed by
+# path and inode (a database deleted and recreated at the same path is new).
+_prepared_databases = set()
+_prepare_lock = threading.Lock()
+
+# ALTER TABLE <table> ADD COLUMN <name> ...
+_ALTER_RE = re.compile(r"ALTER TABLE (\w+) ADD COLUMN (\w+)", re.IGNORECASE)
+
+
+def _existing_columns(conn, table):
+    return {row[1] for row in conn.execute("PRAGMA table_info({})".format(table))}
+
+
+def _prepare_project_db(conn, path):
+    """Create the schema, add the columns that came later and seed the rows
+    every project has. Done once per database per process: every one of
+    these takes the write lock when it has something to do, and when the
+    job runner, its log lines and the page's polling all open connections
+    in the same second, a write on every open queues them behind each other
+    until one runs past busy_timeout ("database is locked"). Checked
+    first, written only when missing, so an up-to-date database costs a
+    few reads."""
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.executescript(SCHEMA_SQL)
+    columns = {}
+    for stmt in _ALTER_STATEMENTS:
+        m = _ALTER_RE.match(stmt)
+        table, column = m.group(1), m.group(2)
+        if table not in columns:
+            columns[table] = _existing_columns(conn, table)
+        if column.upper() in {c.upper() for c in columns[table]}:
+            continue
+        try:
+            conn.execute(stmt)
+            columns[table].add(column)
+        except sqlite3.OperationalError:
+            pass  # added by another process in the meantime
+    for check, write in _SEED_STATEMENTS:
+        if conn.execute(check).fetchone() is None:
+            with conn:
+                conn.execute(write)
+    # Projects made before CREATION_DATE existed get a best guess once.
+    if conn.execute("SELECT 1 FROM MASTER_SETTINGS WHERE NUMBER=1 AND CREATION_DATE IS NULL").fetchone():
+        with conn:
+            conn.execute("UPDATE MASTER_SETTINGS SET CREATION_DATE=? WHERE NUMBER=1", (_guess_creation_time(path.parent, conn),))
 
 
 def get_conn(project_id):
-    """Open a fresh connection scoped to one project, schema guaranteed present."""
+    """Open a fresh connection scoped to one project, schema guaranteed present
+    (brought up to date on this process's first open of the database, see
+    _prepare_project_db; later opens do no writing at all)."""
     path = project_db_path(project_id)
     conn = sqlite3.connect(str(path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA busy_timeout = 5000")
-    conn.executescript(SCHEMA_SQL)
-    for stmt in _ALTER_STATEMENTS:
-        try:
-            conn.execute(stmt)
-        except sqlite3.OperationalError:
-            pass  # column already exists
-    with conn:
-        for stmt in _SEED_STATEMENTS:
-            conn.execute(stmt)
-        # Projects made before CREATION_DATE existed get a best guess once.
-        if conn.execute("SELECT 1 FROM MASTER_SETTINGS WHERE NUMBER=1 AND CREATION_DATE IS NULL").fetchone():
-            conn.execute("UPDATE MASTER_SETTINGS SET CREATION_DATE=? WHERE NUMBER=1", (_guess_creation_time(path.parent, conn),))
+    conn.execute("PRAGMA busy_timeout = 30000")
+    key = (str(path), os.stat(path).st_ino)
+    # One read tells a database that was deleted and recreated (possibly on
+    # the same inode) from one this process has already prepared.
+    if key not in _prepared_databases or conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='MASTER_SETTINGS'").fetchone() is None:
+        with _prepare_lock:
+            _prepare_project_db(conn, path)
+            _prepared_databases.add(key)
     return conn
 
 
@@ -722,7 +778,7 @@ def get_system_conn():
     conn = sqlite3.connect(str(SYSTEM_DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA busy_timeout = 5000")
+    conn.execute("PRAGMA busy_timeout = 30000")
     conn.executescript(_SYSTEM_SCHEMA_SQL)
     with conn:
         if conn.execute("SELECT COUNT(*) FROM RUN_PROFILES").fetchone()[0] == 0:

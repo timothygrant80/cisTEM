@@ -460,6 +460,13 @@ class JobRunner:
                     break
         except jp.ProtocolError as exc:
             self._protocol_error(conn, exc)
+        except Exception:  # noqa: BLE001 -- a sink (database) failure must not take the runner thread down
+            log.exception("error while handling a frame from %s", conn.peer)
+            if conn.session is not None:
+                try:
+                    self.sink.on_log(conn.session.job_id, "server error while handling the controller's message; see the server log", level="error")
+                except Exception:  # noqa: BLE001
+                    pass
 
     def _send(self, conn, message):
         conn.outbuf += jp.encode_json_frame(message)
@@ -694,8 +701,11 @@ class JobRunner:
 
     def _job_done(self, session, message):
         status = message["status"]
-        self.sink.on_job_done(session.job_id, status, message["cpu_ms"], message["tasks_ok"],
-                              message["tasks_failed"], message.get("error"))
+        try:
+            self.sink.on_job_done(session.job_id, status, message["cpu_ms"], message["tasks_ok"],
+                                  message["tasks_failed"], message.get("error"))
+        except Exception:  # noqa: BLE001 -- the job still ends; what could not be written is in the server log
+            log.exception("sink.on_job_done failed for job %s", session.job_id)
         terminal = {"completed": COMPLETED, "failed": FAILED, "cancelled": CANCELLED}[status]
         # Ack is sent by _handle right after this (job_done forces one); the
         # session then lingers until the controller hangs up or the grace

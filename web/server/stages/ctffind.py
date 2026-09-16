@@ -1,19 +1,23 @@
 """Find CTF: the `ctffind` adapter.
 
 Mirrors MyFindCTFPanel in cisTEM (src/gui/FindCTFPanel.cpp). The task
-argument list is the 41 positional arguments ctffind's DoCalculation()
-reads, in the order the panel's AddJob() packs them -- the format string
-there, "sbisffffifffffbfbfffbffbbsbsbfffbfffbiiib", is the contract, and
-the installed ctffind must agree with it (a binary older than Nov 2023
-lacks the final "weight down low resolution" flag).
+argument list is the 49 positional arguments ctffind's DoCalculation()
+reads (src/programs/ctffind/ctffind.cpp), in the order its
+ManualSetArguments() packs them -- the format string there,
+"tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbbfffbb", is the contract. The
+last eight (41-48) are the sample-thickness "fit nodes" options that came
+with the thickness estimation; a ctffind built before that reads only the
+first 41 and a server sending 41 to the current binary makes it read past
+its argument array.
 
-Results come back as ten floats per image (ProcessResult()): defocus 1 and
-2 (A), astigmatism angle (deg), additional phase shift (rad), score, the
-resolution to which Thon rings were fit, the resolution at which aliasing
-was detected (0 = none), iciness, tilt angle and tilt axis. finalize()
-writes them the way WriteResultToDataBase() does: one ESTIMATED_CTF_PARAMETERS
-row per image and IMAGE_ASSETS.CTF_ESTIMATION_ID pointing at the new row --
-that pointer is the *active* estimate, what downstream stages use.
+Results come back as eleven floats per image (ProcessResult()): defocus 1
+and 2 (A), astigmatism angle (deg), additional phase shift (rad), score,
+the resolution to which Thon rings were fit, the resolution at which
+aliasing was detected (0 = none), iciness, tilt angle, tilt axis and the
+sample thickness (A). finalize() writes them the way
+WriteResultToDataBase() does: one ESTIMATED_CTF_PARAMETERS row per image
+and IMAGE_ASSETS.CTF_ESTIMATION_ID pointing at the new row -- that pointer
+is the *active* estimate, what downstream stages use.
 
 ctffind writes its diagnostic image (the filtered spectrum with the fit in
 the lower-left quadrant) to Assets/CTF/<image>_CTF_<n>.mrc, and beside it
@@ -103,6 +107,16 @@ def build_tasks(conn, project_id, params):
     else:
         min_phase = max_phase = phase_step = 0.0
     filter_lowres = _flag(params, "filter_lowres_signal", True)
+    # Sample thickness estimation (ctffind's "Determine sample thickness?" and its
+    # expert options); defaults are the program's interactive defaults.
+    fit_nodes = _flag(params, "fit_nodes", False)
+    fit_nodes_1d = _flag(params, "fit_nodes_1d", True)
+    fit_nodes_2d = _flag(params, "fit_nodes_2d", True)
+    fit_nodes_low_res = _num(params, "fit_nodes_low_res_a", 30.0, float)
+    fit_nodes_high_res = _num(params, "fit_nodes_high_res_a", 3.0, float)
+    target_pixel_size = _num(params, "target_pixel_size_a", 1.4, float)
+    fit_nodes_rounded_square = _flag(params, "fit_nodes_rounded_square", False)
+    fit_nodes_downweight = _flag(params, "fit_nodes_downweight", False)
 
     A = jp.arg
     tasks = []
@@ -179,8 +193,16 @@ def build_tasks(conn, project_id, params):
             A("int", int(eer_frames)),                   # 38
             A("int", int(eer_super)),                    # 39
             A("bool", filter_lowres),                    # 40 weight down low resolution signal
+            A("bool", fit_nodes),                        # 41 determine sample thickness (fit nodes)
+            A("bool", fit_nodes_1d),                     # 42 fit nodes: brute force 1D search
+            A("bool", fit_nodes_2d),                     # 43 fit nodes: 2D refinement
+            A("float", fit_nodes_low_res),               # 44 fit nodes: low resolution limit (A)
+            A("float", fit_nodes_high_res),              # 45 fit nodes: high resolution limit (A)
+            A("float", target_pixel_size),               # 46 target pixel size after resampling (A)
+            A("bool", fit_nodes_rounded_square),         # 47 fit nodes: rounded square model
+            A("bool", fit_nodes_downweight),             # 48 fit nodes: downweight nodes
         ]
-        assert len(args) == 41
+        assert len(args) == 49
         tasks.append({"index": index, "ref": asset_id, "args": args})
     return tasks
 
@@ -261,7 +283,7 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log):
                 log("task {}: image asset {} no longer exists; skipped".format(row["TASK_INDEX"], image_id), level="error")
                 skipped += 1
                 continue
-            data = list(data) + [0.0] * (10 - len(data))
+            data = list(data) + [0.0] * (11 - len(data))
             restrain = v[15] >= 0
             cur = conn.execute(
                 "INSERT INTO ESTIMATED_CTF_PARAMETERS("
@@ -270,14 +292,21 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log):
                 "MIN_DEFOCUS, MAX_DEFOCUS, DEFOCUS_STEP, RESTRAIN_ASTIGMATISM, TOLERATED_ASTIGMATISM, "
                 "FIND_ADDITIONAL_PHASE_SHIFT, MIN_PHASE_SHIFT, MAX_PHASE_SHIFT, PHASE_SHIFT_STEP, DEFOCUS1, DEFOCUS2, "
                 "DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, SCORE, DETECTED_RING_RESOLUTION, DETECTED_ALIAS_RESOLUTION, "
-                "OUTPUT_DIAGNOSTIC_FILE, NUMBER_OF_FRAMES_AVERAGED, LARGE_ASTIGMATISM_EXPECTED, ICINESS, TILT_ANGLE, TILT_AXIS) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "OUTPUT_DIAGNOSTIC_FILE, NUMBER_OF_FRAMES_AVERAGED, LARGE_ASTIGMATISM_EXPECTED, ICINESS, TILT_ANGLE, TILT_AXIS, "
+                "SAMPLE_THICKNESS, SAMPLE_THICKNESS_JSON, DETERMINE_TILT, FIT_NODES, FIT_NODES_1D, FIT_NODES_2D, "
+                "FIT_NODES_LOW_LIMIT, FIT_NODES_HIGH_LIMIT, FIT_NODES_ROUNDED_SQUARE, FIT_NODES_DOWNWEIGHT_NODES, "
+                "RESAMPLE_IF_NESCESSARY, TARGET_PIXEL_SIZE) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     job["id"], now, image_id, 1 if v[1] else 0, v[5], v[6], v[4], v[7], int(v[8]), v[9], v[10],
                     v[11], v[12], v[13], 1 if restrain else 0, v[15] if restrain else 0.0,
                     1 if v[16] else 0, v[17] if v[16] else 0.0, v[18] if v[16] else 0.0, v[19] if v[16] else 0.0,
                     float(data[0]), float(data[1]), float(data[2]), float(data[3]), float(data[4]), float(data[5]), float(data[6]),
                     v[3], int(v[2]), 1 if v[14] else 0, float(data[7]), float(data[8]), float(data[9]),
+                    # The thickness columns the newer cisTEM GUI writes (FindCTFPanel::WriteResultToDataBase);
+                    # it leaves SAMPLE_THICKNESS_JSON empty too.
+                    float(data[10]), "", 1 if v[36] else 0, 1 if v[41] else 0, 1 if v[42] else 0, 1 if v[43] else 0,
+                    float(v[44]), float(v[45]), 1 if v[47] else 0, 1 if v[48] else 0, 1 if v[23] else 0, float(v[46]),
                 ),
             )
             _point_image_asset(conn, image_id, cur.lastrowid)
@@ -331,7 +360,7 @@ def live_result(conn, task, task_row):
     data = _result_floats(task_row)
     if data is None:
         return None
-    data = list(data) + [0.0] * (10 - len(data))
+    data = list(data) + [0.0] * (11 - len(data))
     v = _arg_values(task)
     image_id = int(task_row["REF"]) if task_row["REF"] is not None else int(task["ref"])
     image = conn.execute("SELECT NAME FROM IMAGE_ASSETS WHERE IMAGE_ASSET_ID=?", (image_id,)).fetchone()
@@ -341,7 +370,8 @@ def live_result(conn, task, task_row):
         "image_name": image["NAME"] if image else Path(v[0]).name,
         "defocus1": data[0], "defocus2": data[1], "defocus_angle": data[2], "additional_phase_shift": data[3],
         "score": data[4], "detected_ring_resolution": data[5], "detected_alias_resolution": data[6],
-        "iciness": data[7], "tilt_angle": data[8], "tilt_axis": data[9],
+        "iciness": data[7], "tilt_angle": data[8], "tilt_axis": data[9], "sample_thickness": data[10],
+        "fit_nodes": bool(v[41]),
         "find_additional_phase_shift": bool(v[16]),
         "output_diagnostic_file": v[3],
         "diagnostic_file_exists": os.path.isfile(v[3]),

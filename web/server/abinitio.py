@@ -889,7 +889,11 @@ def _align_symmetry(project_id, job_id, state):
     for k, ref in enumerate(state["reference_files"]):
         base = str(Path(ref).with_suffix(""))
         no_sym, with_sym = base + "_ali.mrc", base + "_sym.mrc"
-        answers = "\n".join([ref, state["settings"]["symmetry"], no_sym, with_sym, "4.0"]) + "\n"
+        # align_symmetry's questions, in order: input volume, symmetry, aligned output, symmetrised
+        # output, start and end angle of the search on each axis, initial angular step. The angles
+        # are AbInitioManager::SetupAlignSymmetryJob()'s whole range (it splits it across processes;
+        # one local run covers all of it) and its 4 degree step.
+        answers = "\n".join([ref, state["settings"]["symmetry"], no_sym, with_sym, "-90.0", "90.0", "4.0"]) + "\n"
         proc = subprocess.run([exe], input=answers, capture_output=True, text=True, cwd=state["scratch"], timeout=3600)
         if proc.returncode != 0 or not os.path.isfile(with_sym):
             tail = (proc.stdout or "").strip().splitlines()[-3:]

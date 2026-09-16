@@ -26,11 +26,14 @@ CISTEM_CONFIG_DIR=`pwd`
 if test "x$TOPSRCDIR" = "x." ; then
 	TOPSRCDIR=`pwd`
 fi
+# Absolute path of the source tree, so the bundled headers under include/ (nlohmann, pugixml, gemmi,
+# catch2...) are found whatever directory configure was run from and however it was invoked.
+ABS_TOPSRCDIR=`cd "$srcdir" && pwd`
 
 # don't let the AC_PROG_CXX set default flags, set them back to input..
 
-CXXFLAGS="$INPUT_CXXFLAGS -I$TOPSRCDIR/../include"
-CPPFLAGS="$INPUT_CPPFLAGS -I$TOPSRCDIR/../include"
+CXXFLAGS="$INPUT_CXXFLAGS -I$ABS_TOPSRCDIR/include"
+CPPFLAGS="$INPUT_CPPFLAGS -I$ABS_TOPSRCDIR/include"
 
 # set up initial flags
 AC_MSG_NOTICE([Setting up initial flags])

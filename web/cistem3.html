@@ -10222,8 +10222,11 @@ From branch : <span id="versionBranch">—</span></p>
         setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
     },
-    // MyRefine2DPanel while it runs: the newest class averages
-    // (ResultDisplayPanel) and the PlotPanel's three per-round curves.
+    // MyRefine2DPanel while it runs: the PlotPanel's three per-round curves
+    // and the class averages (ResultDisplayPanel). The averages follow the
+    // newest round by default; as in the refinement views, an earlier round
+    // can be picked (prev/next, the drop-down) and is fetched through
+    // GET /classifications/:id, which serves every round the run wrote.
     class2d: function(body){
       var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
       var plots = document.createElement("div"); plots.className = "c2d-plots"; box.appendChild(plots);
@@ -10231,22 +10234,80 @@ From branch : <span id="versionBranch">—</span></p>
       var sigma = makePlotBlock("Mean sigma", [["ra-swatch-sigma", "per active particle"]]);
       var moved = makePlotBlock("Particles that changed class", [["ra-swatch-moved", "%"]]);
       [logp, sigma, moved].forEach(function(pl){ plots.appendChild(pl.root); });
-      var fig = classMontageFigure("Latest class averages"); fig.root.style.marginTop = "12px"; box.appendChild(fig.root);
+      var card = document.createElement("div"); card.className = "live-orth-card"; card.style.marginTop = "12px"; box.appendChild(card);
+      card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Class averages</span>' +
+        '<div class="live-orth-controls">' +
+          '<button class="small" data-role="rprev" title="The round before">&larr;</button>' +
+          '<select data-role="rpick" title="Which round’s class averages to show"></select>' +
+          '<button class="small" data-role="rnext" title="The round after">&rarr;</button>' +
+          '<button class="small" data-role="rlatest" title="Follow the newest round as the run goes on">Latest</button>' +
+        '</div></div>';
+      var fig = classMontageFigure("Class averages"); card.appendChild(fig.root);
+      var rpick = card.querySelector('[data-role="rpick"]'), prev = card.querySelector('[data-role="rprev"]'), next = card.querySelector('[data-role="rnext"]'), latestBtn = card.querySelector('[data-role="rlatest"]');
+      var last = null, chosen = null, cache = {};   // chosen: a classification id, or null for the newest
+      // Every result the run has written, oldest first: the starting references (when the run made
+      // them and a round has since finished) and then one entry per finished round.
+      function rounds(){
+        if (!last) return [];
+        var r = last.result, out = [];
+        if (r.first_round_id != null && r.history && r.history.length) out.push({id: r.first_round_id, label: "Starting references"});
+        (r.history || []).forEach(function(h){ if (h.classification_id != null) out.push({id: h.classification_id, label: "Round " + h.round + " of " + r.rounds}); });
+        if (!out.length || out[out.length - 1].id !== r.classification_id) out.push({id: r.classification_id, label: r.is_startup ? "Starting references" : "Round " + r.round + " of " + r.rounds});
+        return out;
+      }
+      function currentId(){ var rs = rounds(); if (chosen != null && rs.some(function(e){ return e.id === chosen; })) return chosen; chosen = null; return rs.length ? rs[rs.length - 1].id : null; }
+      function render(cls, rightText){
+        fig.left.textContent = cls.name + (cls.is_startup ? " (starting references)" : " (round " + cls.round + " of " + cls.rounds + ")") + (chosen != null ? " · earlier round" : "");
+        fig.right.textContent = rightText;
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+        fig.img.style.maxWidth = cls.montage ? (cls.montage.width * 2) + "px" : "";
+        loadFigure(fig.img, fig.status, "/classifications/" + cls.classification_id + "/averages.png", cls.class_average_file_exists, "class averages", last.urls);
+        setExpand(fig.expand, cls.class_average_file_exists ? {path: cls.class_average_file, title: cls.name + " — class averages", section: 1, greys: "local"} : null);
+      }
+      function showRound(){
+        if (!last) return;
+        var result = last.result, rs = rounds(), id = currentId();
+        rpick.value = chosen != null ? String(chosen) : "latest";
+        var idx = rs.findIndex(function(e){ return e.id === id; });
+        prev.disabled = idx <= 0;
+        next.disabled = chosen == null;
+        latestBtn.disabled = chosen == null;
+        var running = !TERMINAL_STATUSES[selectedJob() ? selectedJob().status : ""];
+        var phase = !running ? "" :
+          (result.phase === "startup" ? "creating starting references" : result.phase === "merge" ? "merging round " + (result.round + 1) : "refining round " + (result.round + 1) + " of " + result.rounds);
+        if (chosen == null){ render(result, phase); return; }
+        if (cache[id]){ render(cache[id], phase); return; }
+        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+        apiFetch(projectApiUrl("/classifications/" + id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
+          var h = (result.history || []).filter(function(e){ return e.classification_id === id; })[0];
+          cache[id] = {classification_id: full.classification_id, name: full.name, class_average_file: full.class_average_file, class_average_file_exists: full.class_average_file_exists,
+                       montage: full.montage, is_startup: !h, round: h ? h.round : 0, rounds: result.rounds};
+          if (currentId() === id && chosen != null) render(cache[id], phase);
+        }).catch(function(err){ fig.status.textContent = "Could not load this round: " + err.message; });
+      }
+      function stepRound(delta){
+        var rs = rounds(); if (!rs.length) return;
+        var idx = rs.findIndex(function(e){ return e.id === currentId(); }), to = idx + delta;
+        if (to < 0) return;
+        chosen = to >= rs.length - 1 ? null : rs[to].id; showRound();
+      }
+      rpick.addEventListener("change", function(){ chosen = rpick.value === "latest" ? null : Number(rpick.value); showRound(); });
+      latestBtn.addEventListener("click", function(){ chosen = null; showRound(); });
+      prev.addEventListener("click", function(){ stepRound(-1); });
+      next.addEventListener("click", function(){ stepRound(1); });
       return function(result, base, urls){
+        last = {result: result, urls: urls};
         var h = result.history || [];
         var xs = h.map(function(e){ return e.round; });
         var opts = {xLabel: "round", xMin: 1, xStep: Math.max(1, Math.ceil((result.rounds || 1) / 10)), xTick: function(v){ return String(Math.round(v)); }, emptyText: "No round has finished yet."};
         drawLinePlot(logp.svg, h.length ? [{xs: xs, ys: h.map(function(e){ return e.average_logp || 0; }), cls: "line-x", dots: "dot-x"}] : [], Object.assign({}, opts, {yLabel: "logP"}));
         drawLinePlot(sigma.svg, h.length ? [{xs: xs, ys: h.map(function(e){ return e.average_sigma || 0; }), cls: "line-y", dots: "dot-y"}] : [], Object.assign({}, opts, {yLabel: "sigma"}));
         drawLinePlot(moved.svg, h.length ? [{xs: xs, ys: h.map(function(e){ return e.percent_moved || 0; }), cls: "line-moved", dots: "dot-moved"}] : [], Object.assign({}, opts, {yLabel: "%", yMin: 0, yMax: 100}));
-        var phase = TERMINAL_STATUSES[selectedJob() ? selectedJob().status : ""] ? "" :
-          (result.phase === "startup" ? "creating starting references" : result.phase === "merge" ? "merging round " + (result.round + 1) : "refining round " + (result.round + 1) + " of " + result.rounds);
-        fig.left.textContent = result.name + (result.is_startup ? " (starting references)" : " (round " + result.round + " of " + result.rounds + ")");
-        fig.right.textContent = phase;
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
-        fig.img.style.maxWidth = result.montage ? (result.montage.width * 2) + "px" : "";
-        loadFigure(fig.img, fig.status, "/classifications/" + result.classification_id + "/averages.png", result.class_average_file_exists, "class averages", urls);
-        setExpand(fig.expand, result.class_average_file_exists ? {path: result.class_average_file, title: result.name + " — class averages", section: 1, greys: "local"} : null);
+        var rs = rounds(), keep = rpick.value; rpick.innerHTML = "";
+        rs.slice(0, -1).forEach(function(e){ var o = document.createElement("option"); o.value = String(e.id); o.textContent = e.label; rpick.appendChild(o); });
+        var latest = document.createElement("option"); latest.value = "latest"; latest.textContent = "Latest (" + (rs.length ? rs[rs.length - 1].label : result.name) + ")"; rpick.appendChild(latest);
+        rpick.value = keep && Array.from(rpick.options).some(function(o){ return o.value === keep; }) ? keep : "latest";
+        showRound();
       };
     }
   };

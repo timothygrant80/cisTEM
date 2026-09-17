@@ -1266,6 +1266,7 @@ def live_result(conn, row):
         "class_average_file_exists": bool(cls["CLASS_AVERAGE_FILE"]) and os.path.isfile(cls["CLASS_AVERAGE_FILE"]),
         "round": state["round"], "rounds": state["rounds"], "phase": state["phase"],
         "is_startup": not history,
+        "first_round_id": state.get("first_round_id"),
         "package_name": state.get("package_name"),
         "history": history,
         "montage": montage_geometry(cls["NUMBER_OF_CLASSES"], box=state.get("box_size")),

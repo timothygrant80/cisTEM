@@ -25,7 +25,8 @@
  *     socket_number_of_connections     ->  workers {connected, expected}
  *     socket_job_result                ->  task_done {status:"ok", result:{kind:"floats"}}
  *     socket_job_finished              ->  task_done {status:"ok"}       (a task with no result)
- *     socket_job_result_queue          ->  task_progress                  (intermediate results)
+ *     socket_job_result_queue          ->  task_progress                  (intermediate results, or
+ *                                                                         just how many so far)
  *     socket_all_jobs_finished + ms    ->  job_done {cpu_ms}
  *     socket_time_to_die (from GUI)    <-  cancel
  *
@@ -56,6 +57,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <set>
 #include <functional>
 #include <string>
 #include <vector>
@@ -296,6 +298,7 @@ class JobControllerApp : public EventLoop, public SocketCommunicator {
     json          task_refs;                // array: index -> ref (or null)
     std::vector<int> progress_counts;       // per task, for task_progress.result_number
     bool             forward_progress;      // package.forward_progress: relay intermediate results at all?
+    bool             progress_only_counts;  // package.progress_counts: when not relaying them, still say how many arrived
 
     // ---- worker side (as in guix_job_control) ----
     bool          have_assigned_master;
@@ -321,6 +324,7 @@ class JobControllerApp : public EventLoop, public SocketCommunicator {
     void SendWorkers( );
     void SendTaskDone(int task, const JobResult* result);
     void SendTaskProgress(const JobResult& result);
+    void SendTaskProgressCount(int task);
     void SendJobDone(const std::string& status, long cpu_ms, const std::string& error = std::string());
     int  ExpectedWorkers( );
 
@@ -688,6 +692,7 @@ JobControllerApp::JobControllerApp( ) {
     link_thread                         = NULL;
     package_started                     = false;
     forward_progress                    = true;
+    progress_only_counts                = false;
     package_complete                    = false;
     expected_task_count                 = 0;
     tasks_received                      = 0;
@@ -847,6 +852,21 @@ void JobControllerApp::SendTaskProgress(const JobResult& result) {
     SendToServer("task_progress", fields);
 }
 
+void JobControllerApp::SendTaskProgressCount(int task) {
+    // package.progress_counts without forward_progress: the server wants to draw a progress bar
+    // from how many intermediate results a task has produced (the GUI's number_of_received_particle_results)
+    // but has no use for the values, so this frame carries the count and no result.
+    if ( task < 0 || task >= int(progress_counts.size( )) )
+        return;
+    json fields;
+    fields["task"]          = task;
+    fields["result_number"] = progress_counts[task];
+    fields["expected"]      = 0; // the legacy queue carries no total; 0 = unknown
+    if ( unsigned(task) < task_refs.size( ) && ! task_refs[unsigned(task)].is_null( ) )
+        fields["ref"] = task_refs[unsigned(task)];
+    SendToServer("task_progress", fields);
+}
+
 void JobControllerApp::SendJobDone(const std::string& status, long cpu_ms, const std::string& error) {
     json fields;
     fields["status"]       = status;
@@ -955,7 +975,8 @@ void JobControllerApp::HandlePackage(json message) {
     std::string    executable = program.contains("executable") ? JsonToStdString(program["executable"])
                                                             : JsonToStdString(JsonMember(program, "name"));
 
-    forward_progress = ! message.contains("forward_progress") || JsonToBool(message["forward_progress"]);
+    forward_progress     = ! message.contains("forward_progress") || JsonToBool(message["forward_progress"]);
+    progress_only_counts = message.contains("progress_counts") && JsonToBool(message["progress_counts"]);
     current_job_package.Reset(profile, executable, expected_task_count);
     task_refs = json::array( );
     task_reported.assign(expected_task_count, 0);
@@ -1182,8 +1203,25 @@ void JobControllerApp::HandleSocketJobResult(TcpSocket* connected_socket, JobRes
 }
 
 void JobControllerApp::HandleSocketJobResultQueue(TcpSocket* connected_socket, ArrayofJobResults* received_queue) {
-    for ( size_t counter = 0; counter < received_queue->size( ); counter++ )
-        SendTaskProgress((*received_queue)[counter]);
+    if ( forward_progress ) {
+        for ( size_t counter = 0; counter < received_queue->size( ); counter++ )
+            SendTaskProgress((*received_queue)[counter]);
+    }
+    else if ( progress_only_counts ) {
+        // Workers flush their queues about once a second (MyApp's queue timer), so one count
+        // frame per task per queue keeps the server's picture current at a few frames a second
+        // however many particles the results are for.
+        std::set<int> touched;
+        for ( size_t counter = 0; counter < received_queue->size( ); counter++ ) {
+            int task = (*received_queue)[counter].job_number;
+            if ( task >= 0 && task < int(progress_counts.size( )) ) {
+                progress_counts[task]++;
+                touched.insert(task);
+            }
+        }
+        for ( int task : touched )
+            SendTaskProgressCount(task);
+    }
     delete received_queue;
 }
 

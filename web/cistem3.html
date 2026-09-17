@@ -650,7 +650,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ctf-result{display:flex;flex-direction:column;gap:10px;height:100%;min-height:0;}
 .ctf-top{display:flex;gap:18px;flex:1 1 auto;min-height:0;}
 .ctf-top > .ra-figure{display:flex;flex-direction:column;flex:0 0 auto;min-height:0;max-width:62%;}
-.ctf-top > .ra-figure > .ra-figure-frame{flex:1 1 0;min-height:240px;aspect-ratio:1 / 1;align-self:flex-start;width:auto;}
+.ctf-top > .ra-figure > .ra-figure-frame{flex:1 1 0;min-height:240px;aspect-ratio:auto;width:100%;}   /* the width comes from the script below (squareFromHeight), not from aspect-ratio: that width never reached the column and the picture overflowed into the numbers on a tall window */
 .ctf-top > .ra-figure.ctf-numbers-figure{flex:1 1 auto;min-width:0;max-width:none;display:flex;flex-direction:column;}
 /* The numbers sit in a box the size of the diagnostic image beside them, the rows spread down it:
    label, a dotted leader, then the value in a right-hand column -- an instrument readout. */
@@ -677,7 +677,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-plot .line-fit{fill:none;stroke:var(--plot-y);stroke-width:1.6;stroke-linejoin:round;}
 .ra-plot .line-q{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linejoin:round;}
 .ra-swatch-amp{border-top-color:var(--success);} .ra-swatch-fit{border-top-color:var(--plot-y);} .ra-swatch-q{border-top-color:var(--accent);}
-@media (max-width:1100px){ .ctf-top{flex-direction:column;} .ctf-top > .ra-figure{max-width:none;} }
+@media (max-width:1100px){ .ctf-top{flex-direction:column;} .ctf-top > .ra-figure{max-width:none;} .ctf-top > .ra-figure > .ra-figure-frame{aspect-ratio:1 / 1;} }   /* stacked: the square follows the width again */
 
 .rpkg-layout{min-height:340px;grid-template-columns:300px minmax(0,1fr);}
 #rpkgDetails{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
@@ -4153,6 +4153,29 @@ From branch : <span id="versionBranch">—</span></p>
     var wrap = document.createElement("div"); wrap.className = "ctf-result"; box.appendChild(wrap);
     var top = document.createElement("div"); top.className = "ctf-top"; wrap.appendChild(top);
     var diag = makeFigure("Diagnostic image", "Filtered amplitude spectrum with the CTF fit in the lower-left quadrant", {captionTop: true}); top.appendChild(diag.root);
+    // The diagnostic image is a square as tall as the room above the 1D fit allows. CSS
+    // cannot feed that height back into the column's width (an aspect-ratio frame took its
+    // width from the height but the column stayed at the picture's own width, so on a tall
+    // window the frame overflowed into the numbers box and hid its labels), so the column is
+    // sized here from the frame's height, capped at 62% of the row so the numbers keep room.
+    var frame = diag.root.querySelector(".ra-figure-frame");
+    function squareFromHeight(){
+      if (getComputedStyle(top).flexDirection === "column"){ diag.root.style.width = ""; return; }   // stacked (the media rule): the square follows the width
+      // The caption above the frame wraps differently once the column narrows, which changes
+      // the frame's height, so settle in a few passes rather than trusting the first reading.
+      for (var pass = 0; pass < 3; pass++){
+        var h = frame.clientHeight, w = top.clientWidth;
+        if (!h || !w) return;
+        var want = Math.min(h, Math.floor(w * 0.62)) + "px";
+        if (diag.root.style.width === want) return;
+        diag.root.style.width = want;
+      }
+    }
+    if (window.ResizeObserver){
+      // The row for the room it gets, and the frame for its height settling after the row's
+      // (the width is set from the height, so the height changing must re-run this).
+      var ro = new ResizeObserver(squareFromHeight); ro.observe(top); ro.observe(frame);
+    }
     var numFig = document.createElement("figure"); numFig.className = "ra-figure caption-top ctf-numbers-figure"; top.appendChild(numFig);
     var numCap = document.createElement("figcaption"); numCap.textContent = "Estimated parameters"; numFig.appendChild(numCap);
     var numbers = document.createElement("div"); numbers.className = "ctf-numbers"; numFig.appendChild(numbers);
@@ -4166,9 +4189,10 @@ From branch : <span id="versionBranch">—</span></p>
       item.appendChild(k); item.appendChild(v); numbers.appendChild(item); return v;
     });
     return {
-      loading: function(){ diag.img.hidden = true; diag.status.hidden = false; diag.status.textContent = "Loading…"; },
+      loading: function(){ squareFromHeight(); diag.img.hidden = true; diag.status.hidden = false; diag.status.textContent = "Loading…"; },
       error: function(msg){ diag.status.textContent = "Could not load this estimate: " + msg; },
       update: function(c, urls, picturePath, filePath){
+        squareFromHeight();   // also here, synchronously: the observer only reports once the tab has rendered a frame
         drawCtfPlot(plot.svg, c.plot);
         CTF_NUMBERS.forEach(function(pair, i){ cells[i].textContent = pair[1](c); });
         loadFigure(diag.img, diag.status, picturePath || ("/ctf-estimates/" + c.ctf_estimation_id + "/diagnostic.png"), c.diagnostic_file_exists, "diagnostic image", urls);

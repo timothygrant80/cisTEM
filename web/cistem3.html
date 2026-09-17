@@ -555,7 +555,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 @media (max-width:1100px){ .pick-result{grid-template-columns:1fr;} }
 /* 2D classification: a montage of class averages with a selection square
    (ClassumDisplayPanel), and the members of the selected class below it. */
-.c2d-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;}
+.c2d-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-content:start;}   /* rows stack from the top: the box is as tall as the panel, and stretched rows put a gap under the FSC */
 .c2d-frame{position:relative;border:1px solid var(--border);background:#404040;min-height:80px;}
 .c2d-frame img{display:block;width:100%;height:auto;}
 .c2d-frame.selectable img{cursor:pointer;}
@@ -567,6 +567,10 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ang-plot{background:#fff;height:auto;aspect-ratio:340 / 240;}
 .ang-frame{position:relative;}
 .c2d-plots.rf-pair{grid-template-columns:repeat(2,minmax(0,1fr));}   /* two equal columns: the reconstruction and the angular distribution */
+/* The reconstruction column is as wide as its picture (shown at its own size, never
+   stretched), so on a wide window the Download button and the "est." caption sit at
+   the picture's right edge instead of the column's. */
+.rf-orth-col,.c2d-orth-fig{width:fit-content;max-width:100%;min-width:0;}   /* .c2d-orth-fig: a figure (frame + caption) around such a picture, e.g. the Refine CTF live view's */
 .rf-pair .ra-plot-head{margin-bottom:6px;}
 /* The plot at window size (the angular distribution's zoom icon). */
 .modal.plot-modal{width:min(1400px,95vw);height:94%;max-height:94%;}
@@ -683,7 +687,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .rpkg-table{flex:1 1 auto;min-height:120px;overflow:auto;}
 
 /* ---------- Jobs: latest result of the selected job ---------- */
-.queue-scroll{max-height:340px;overflow-y:auto;}
+.queue-scroll{max-height:max(340px,35vh);overflow-y:auto;}   /* a taller window shows more of the queue (a 1440px-tall one about 11 jobs) and still leaves the Latest Result panel in view */
 .live-plot-title-name{text-transform:none;letter-spacing:0;color:var(--text-secondary);font-weight:600;margin-left:6px;}
 .live-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;}
 .live-meta{font-size:15.5px;color:var(--text-secondary);}
@@ -5188,7 +5192,7 @@ From branch : <span id="versionBranch">—</span></p>
     // The reconstruction and the angular distribution side by side at equal width, the
     // distribution with a zoom icon that opens it at window size; Download saves the shown map.
     var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
-    var figCol = document.createElement("div"); pair.appendChild(figCol);
+    var figCol = document.createElement("div"); figCol.className = "rf-orth-col"; pair.appendChild(figCol);
     var figHead = document.createElement("div"); figHead.className = "ra-plot-head"; figHead.innerHTML = '<span class="ra-plot-title">Reconstruction</span>'; figCol.appendChild(figHead);
     var dlBtn = document.createElement("button"); dlBtn.className = "small primary"; dlBtn.textContent = "Download"; dlBtn.title = "Save the shown reconstruction as an MRC file"; dlBtn.disabled = true; figHead.appendChild(dlBtn);
     var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); figCol.appendChild(fig.root);
@@ -10263,10 +10267,10 @@ From branch : <span id="versionBranch">—</span></p>
       var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.appendChild(fscPlot.root);
       var tiltRow = document.createElement("div"); tiltRow.className = "c2d-plots"; tiltRow.style.marginTop = "12px"; box.appendChild(tiltRow);
       var tiltFigs = ["phase_difference", "beam_tilt"].map(function(which, i){
-        var fig = classMontageFigure(i ? "Phase pattern the found beam tilt predicts" : "Measured phase-difference spectrum"); fig.frame.classList.add("c2d-orth"); tiltRow.appendChild(fig.root);
+        var fig = classMontageFigure(i ? "Phase pattern the found beam tilt predicts" : "Measured phase-difference spectrum"); fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); tiltRow.appendChild(fig.root);
         fig.left.textContent = i ? "Predicted beam-tilt phases" : "Measured phase differences"; fig.which = which; return fig;
       });
-      var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); box.appendChild(fig.root);
+      var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); box.appendChild(fig.root);
       return function(result, base, urls){
         var h = result.defocus_histogram;
         drawLinePlot(hist.svg, h && h.centres && h.centres.length ? [{xs: h.centres, ys: h.counts, cls: "line-x", dots: "dot-x"}] : [],

@@ -145,13 +145,19 @@ class JobSpec:
     objects exactly as they go on the wire (job_protocol.arg builds args)."""
 
     def __init__(self, job_id, job_info, program, profile, tasks, manager_command, token=None,
-                 controller_log=None, forward_progress=True):
+                 controller_log=None, forward_progress=True, progress_counts=True):
         self.job_id = job_id
         # package.forward_progress: whether the controller should relay the
         # workers' intermediate results (task_progress). Off unless the
         # stage's adapter wants them -- a program like estimate_beamtilt
         # sends one per search position, hundreds of thousands per job.
         self.forward_progress = forward_progress
+        # package.progress_counts: when the results themselves are not relayed,
+        # still send how many each task has produced (a task_progress frame
+        # with no result, at most one per task per worker flush) -- the
+        # progress bar for refine2d/refine3d/reconstruct3d, whose tasks send
+        # one result per particle, moves between task completions.
+        self.progress_counts = progress_counts
         self.job_info = job_info          # package.job
         self.program = program            # package.program: {"name", "executable"}
         self.profile = profile            # package.profile (db.load_run_profiles shape)
@@ -575,7 +581,7 @@ class JobRunner:
             self.sink.on_log(session.job_id, message["text"], level=message["level"])
         elif mtype == "task_progress":
             self.sink.on_task_progress(session.job_id, message["task"], message.get("ref"),
-                                       message["result_number"], message["expected"], message["result"])
+                                       message["result_number"], message["expected"], message.get("result"))
         elif mtype == "task_done":
             self._task_done(session, message)
         elif mtype == "job_done":
@@ -657,7 +663,8 @@ class JobRunner:
         spec = session.spec
         conn = session.conn
         self._send(conn, jp.package(session.seq, spec.job_info, spec.program, self._wire_profile(spec.profile),
-                                    len(spec.tasks), forward_progress=spec.forward_progress))
+                                    len(spec.tasks), forward_progress=spec.forward_progress,
+                                    progress_counts=spec.progress_counts))
         # Section 6.2: chunk so a frame stays well under the 64 MiB limit.
         # A few thousand 38-argument tasks per frame is a few MB.
         chunk = 2000

@@ -222,3 +222,12 @@ class ForwardProgressTests(unittest.TestCase):
         msg = jp.package(seq, {"id": "j"}, {"name": "x", "executable": "x"}, {"name": "p"}, 3, forward_progress=False)
         self.assertIs(msg["forward_progress"], False)
         self.assertEqual(jp.validate(msg), "package")
+
+    def test_package_carries_progress_counts(self):
+        seq = jp.Sequencer()
+        msg = jp.package(seq, {"id": "j"}, {"name": "x", "executable": "x"}, {"name": "p"}, 3)
+        self.assertIs(msg["progress_counts"], False)
+        msg = jp.package(seq, {"id": "j"}, {"name": "x", "executable": "x"}, {"name": "p"}, 3,
+                         forward_progress=False, progress_counts=True)
+        self.assertIs(msg["progress_counts"], True)
+        self.assertEqual(jp.validate(msg), "package")

@@ -9726,10 +9726,10 @@ From branch : <span id="versionBranch">—</span></p>
       track.className = "progress-track";
       var fill = document.createElement("div");
       fill.className = "progress-fill " + job.status;
-      // A multi-run job's bar is the step that is running (its child's tasks
+      // A multi-run job's bar is the step that is running (its child's work
       // done), not the parent's round count: it moves from the first result.
-      var stepFrac = job.status === "running" && job.step && job.step.task_count ? 100 * (job.step.tasks_done || 0) / job.step.task_count : null;
-      fill.style.width = (stepFrac != null ? stepFrac : job.progress != null ? job.progress : (job.status === "completed" ? 100 : 0)) + "%";
+      var frac = job.status === "running" ? (job.step ? workFraction(job.step) : workFraction(job)) : null;
+      fill.style.width = (frac != null ? frac : job.progress != null ? job.progress : (job.status === "completed" ? 100 : 0)) + "%";
       track.appendChild(fill);
       tdProgress.appendChild(track);
       var eta = document.createElement("div");
@@ -9792,8 +9792,28 @@ From branch : <span id="versionBranch">—</span></p>
     var h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
     return (h ? h + "h " : "") + (h || m ? m + "m " : "") + s + "s";
   }
+  // Percent done of a job or step, or null when there is nothing to count:
+  // particles (results_seen of results_expected, for the programs that send
+  // one result per particle -- what cisTEM's refinement panels count) before
+  // whole tasks.
+  function workFraction(job){
+    if (job.results_expected > 1) return Math.min(100, 100 * (job.results_seen || 0) / job.results_expected);
+    if (job.task_count) return 100 * (job.tasks_done || 0) / job.task_count;
+    return null;
+  }
+  function fmtCount(n){ return Number(n || 0).toLocaleString("en-US"); }
   function estimateRemaining(job){
     var now = Date.now();
+    if (job.results_expected > 1){
+      // cisTEM's refinement panels: seconds per particle result since the
+      // first one, times the results still to come.
+      if (!job.results_seen || !job.first_result_at) return null;
+      var leftR = job.results_expected - job.results_seen;
+      if (leftR <= 0) return 0;
+      var sinceR = job.results_seen > 1 ? new Date(job.first_result_at).getTime() : new Date(job.started_at || job.created_at).getTime();
+      var countedR = job.results_seen > 1 ? job.results_seen - 1 : 1;
+      return leftR * ((now - sinceR) / countedR) / 1000;
+    }
     if (job.task_count){
       if (!job.tasks_done || !job.first_task_finished_at) return null;
       var left = job.task_count - job.tasks_done;
@@ -9811,17 +9831,22 @@ From branch : <span id="versionBranch">—</span></p>
     }
     return null;
   }
+  // "12,345/50,000 particles" for a job or step that counts results, else "3/20" tasks.
+  function workCount(job){
+    if (job.results_expected > 1) return fmtCount(job.results_seen) + "/" + fmtCount(job.results_expected) + " particles";
+    return (job.tasks_done || 0) + "/" + job.task_count;
+  }
+  function etaText(eta){ return eta == null ? "estimating\u2026" : (eta < 1 ? "finishing" : fmtDuration(eta) + " left"); }
   function progressNote(job){
     if (job.status === "running"){
       if (job.step && job.step.task_count){
-        // the running step's own count and time left (JobTracker's rule on its tasks), with the parent's round count before it
-        var st = job.step, stepEta = estimateRemaining({task_count: st.task_count, tasks_done: st.tasks_done, first_task_finished_at: st.first_task_finished_at, started_at: st.started_at});
+        // the running step's own count and time left (JobTracker's rule on its tasks or particles), with the parent's round count before it
+        var st = job.step;
         var rounds = job.task_count ? job.tasks_done + "/" + job.task_count + " \u00b7 " : "";
-        return rounds + st.label + ": " + (st.tasks_done || 0) + "/" + st.task_count + " \u00b7 " + (stepEta == null ? "estimating\u2026" : (stepEta < 1 ? "finishing" : fmtDuration(stepEta) + " left"));
+        return rounds + st.label + ": " + workCount(st) + " \u00b7 " + etaText(estimateRemaining(st));
       }
-      var eta = estimateRemaining(job);
-      var done = job.task_count ? job.tasks_done + "/" + job.task_count + " \u00b7 " : "";
-      return done + (eta == null ? "estimating\u2026" : (eta < 1 ? "finishing" : fmtDuration(eta) + " left"));
+      var done = job.task_count ? workCount(job) + " \u00b7 " : "";
+      return done + etaText(estimateRemaining(job));
     }
     if (job.status === "queued") return "waiting to start";
     if (job.status === "completed" && job.started_at && job.finished_at){

@@ -199,6 +199,7 @@ class DbSink(job_runner.Sink):
         with self._lock:
             self._projects.pop(job_id, None)
             self._progress.pop(job_id, None)
+        _forget_result_counts(job_id)
 
     def on_status(self, job_id, status, error=None):
         project_id = self._project(job_id)
@@ -250,6 +251,9 @@ class DbSink(job_runner.Sink):
         these per particle."""
         project_id = self._project(job_id)
         if project_id is None:
+            return
+        _note_result_count(job_id, task, result_number)
+        if result is None:   # a count-only frame (package.progress_counts): nothing to hand the adapter
             return
         with self._lock:
             cached = self._progress.get(job_id)
@@ -397,18 +401,86 @@ STAGE_COMMANDS = {
 # Job store helpers (SQLite-backed, one project's JOBS/JOB_LOG_LINES tables)
 # ---------------------------------------------------------------------------
 
+# How many intermediate results each running task has produced so far, from
+# the controller's task_progress frames (package.progress_counts). In memory
+# only: it is a progress bar, and a server restart just falls back to whole
+# tasks until the next frame arrives.
+_RESULT_COUNTS = {}        # job id -> {task index: results so far}
+_RESULT_COUNT_FIRST = {}   # job id -> when the first count arrived (ISO)
+_RESULT_COUNTS_LOCK = threading.Lock()
+
+
+def _note_result_count(job_id, task, count):
+    with _RESULT_COUNTS_LOCK:
+        counts = _RESULT_COUNTS.setdefault(job_id, {})
+        if count > counts.get(task, 0):
+            counts[task] = count
+        _RESULT_COUNT_FIRST.setdefault(job_id, now_iso())
+
+
+def _result_counts(job_id):
+    with _RESULT_COUNTS_LOCK:
+        return dict(_RESULT_COUNTS.get(job_id, {})), _RESULT_COUNT_FIRST.get(job_id)
+
+
+def _forget_result_counts(job_id):
+    with _RESULT_COUNTS_LOCK:
+        _RESULT_COUNTS.pop(job_id, None)
+        _RESULT_COUNT_FIRST.pop(job_id, None)
+
+
+def _expected_results(stage, tasks):
+    """Per task index, how many intermediate results the program will send:
+    one per particle of its first_particle..last_particle range (refine2d:
+    of the percent_used share, as MyRefine2DPanel counts), or None for a
+    program that does not work through a particle range -- its tasks are
+    the only unit of progress there is."""
+    adapter = stages.ADAPTERS.get(stage)
+    names = getattr(adapter, "ARGUMENT_NAMES", ())
+    if "first_particle" not in names or "last_particle" not in names:
+        return None
+    fi, li = names.index("first_particle"), names.index("last_particle")
+    pi = names.index("percent_used") if "percent_used" in names and adapter.PROGRAM["name"] == "refine2d" else None
+    out = {}
+    for t in tasks:
+        try:
+            args = t["args"]
+            n = int(args[li]["value"]) - int(args[fi]["value"]) + 1
+            if pi is not None:
+                n = int(round(n * float(args[pi]["value"]) / 100.0))
+            out[int(t["index"])] = max(1, n)
+        except (KeyError, IndexError, TypeError, ValueError):
+            return None
+    return out
+
+
 def _task_progress(conn, row):  # noqa: D401 -- see _task_progress_for
-    """How far a runner-backed job has got, for the page's time-remaining
-    estimate (cisTEM's JobTracker: seconds per task so far times tasks left):
-    tasks finished out of tasks sent, and when the first and latest finished.
-    Nothing for a simulated job -- it has no tasks, only a percentage."""
+    """How far a runner-backed job has got, for the page's progress bar and
+    time-remaining estimate (cisTEM's JobTracker: seconds per task so far
+    times tasks left): tasks finished out of tasks sent, and when the first
+    and latest finished. For a program that sends one result per particle
+    (refine2d, refine3d, reconstruct3d, refine_ctf -- cisTEM's panels count
+    those, number_of_received_particle_results, rather than whole jobs) also
+    `results_seen` of `results_expected` particles, finished tasks counting
+    in full, and when the first result arrived. Nothing for a simulated job
+    -- it has no tasks, only a percentage."""
     if not row["TASKS_JSON"]:
         return {}
-    task_count = len(json.loads(row["TASKS_JSON"]))
+    tasks = json.loads(row["TASKS_JSON"])
     done, first, latest = conn.execute(
         "SELECT COUNT(*), MIN(FINISHED_AT), MAX(FINISHED_AT) FROM JOB_TASKS WHERE JOB_ID=? AND STATUS IN ('ok','failed')",
         (row["JOB_ID"],)).fetchone()
-    return {"task_count": task_count, "tasks_done": done, "first_task_finished_at": first, "last_task_finished_at": latest}
+    info = {"task_count": len(tasks), "tasks_done": done, "first_task_finished_at": first, "last_task_finished_at": latest}
+    expected = _expected_results(row["STAGE"], tasks)
+    if expected and any(n > 1 for n in expected.values()):
+        done_tasks = {r[0] for r in conn.execute(
+            "SELECT TASK_INDEX FROM JOB_TASKS WHERE JOB_ID=? AND STATUS IN ('ok','failed')", (row["JOB_ID"],)).fetchall()}
+        counts, first_count_at = _result_counts(row["JOB_ID"])
+        seen = sum(n if i in done_tasks else min(counts.get(i, 0), n) for i, n in expected.items())
+        firsts = [t for t in (first_count_at, first) if t]
+        info.update({"results_expected": sum(expected.values()), "results_seen": seen,
+                     "first_result_at": min(firsts) if firsts else None})
+    return info
 
 
 def _row_to_job(row, conn=None):

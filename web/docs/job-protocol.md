@@ -236,6 +236,7 @@ The server sends the package immediately after `welcome` when `resume` is
 | `program` | object | yes | `{"name": "unblur", "executable": "unblur"}` — `executable` is what the run commands launch and may differ from `name` (e.g. `unblur_gpu`) |
 | `profile` | object | yes | see below |
 | `task_count` | int | yes | total number of tasks that will follow in `tasks` frames |
+| `progress_counts` | bool | no | when `forward_progress` is `false`, whether the controller should still send `task_progress` frames **without** `result` saying how many intermediate results each task has produced so far (default `false`). At most one such frame per task per worker flush (workers flush their result queues about once a second), so a server can draw a per-particle progress bar for `refine2d`/`refine3d`/`reconstruct3d` without receiving the values. |
 | `forward_progress` | bool | no | whether the controller should forward the workers' intermediate results as `task_progress` frames (default `true`). A server sets it `false` for programs whose intermediate results are progress ticks it does not need -- `estimate_beamtilt` sends one per search position, 290 880 of them -- and `true` where they carry data (`refine_ctf`'s per-particle defocus). A controller that does not know the field forwards everything, as before. |
 
 `profile` mirrors cisTEM's `RunProfile`, minus anything the controller does not
@@ -333,9 +334,9 @@ legacy `socket_program_defined_result`.
 |---|---|---|---|
 | `task` | int | yes | |
 | `ref` | string/int | when the task had one | echoed verbatim from `tasks` |
-| `result_number` | int | yes | 1-based index of this partial result |
-| `expected` | int | yes | how many partials this task will send |
-| `result` | object | yes | same shape as `task_done.result` (§6.5) |
+| `result_number` | int | yes | 1-based index of this partial result; with `progress_counts`, how many the task has produced so far |
+| `expected` | int | yes | how many partials this task will send (`0` = unknown; the legacy queue carries no total) |
+| `result` | object | unless count-only | same shape as `task_done.result` (§6.5). Absent from the count-only frames `package.progress_counts` asks for. |
 
 ### 6.5 Results — controller → server
 

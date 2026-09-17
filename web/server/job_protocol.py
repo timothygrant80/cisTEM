@@ -352,9 +352,9 @@ def reject(seq, code, reason=None):
     return make(seq, "reject", **fields)
 
 
-def package(seq, job, program, profile, task_count, forward_progress=True):
+def package(seq, job, program, profile, task_count, forward_progress=True, progress_counts=False):
     return make(seq, "package", job=job, program=program, profile=profile, task_count=int(task_count),
-                forward_progress=bool(forward_progress))
+                forward_progress=bool(forward_progress), progress_counts=bool(progress_counts))
 
 
 def tasks(seq, first_index, task_list):

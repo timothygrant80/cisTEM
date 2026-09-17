@@ -4,8 +4,8 @@ A local, project-based job-submission UI for a single-particle cryo-EM processin
 
 Two pieces:
 
-- **`cistem3.html`** — a standalone page you open in your own browser. On load it auto-connects to the API address in `config.js` (`http://localhost:8000/api` by default) — success shows a login screen, failure shows an error screen with a Retry button. Once logged in you create or open a **project**; once one's open it submits jobs and polls status against that same API, scoped to that project and to you. It makes no network calls anywhere else.
-- **`config.js`** — the one file to edit if your API isn't at `localhost:8000`. A single `window.CRYOEM_CONFIG = { apiBase: "..." }`; reload the page after changing it.
+- **`cistem3.html`** — a standalone page you open in your own browser. On load it auto-connects to the API: an address pinned in `config.js` if there is one, otherwise `/api` on the server that served the page (so `http://<server>:8000/` works from any machine on the network), or `http://localhost:8000/api` when the page was opened as a `file://` URL — success shows a login screen, failure shows an error screen with a Retry button. Once logged in you create or open a **project**; once one's open it submits jobs and polls status against that same API, scoped to that project and to you. It makes no network calls anywhere else.
+- **`config.js`** — the one file to edit if the API isn't on the server that served the page (or isn't at `localhost:8000` when the page is opened as a file). A single `window.CRYOEM_CONFIG = { apiBase: "..." }`; reload the page after changing it.
 - **`server/cistem_server.py`** + **`server/db.py`** + **`server/auth.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`) plus a global `server/data/auth.db` for user accounts and sessions. Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
 
 `reference/dashboard.html` is an earlier static mockup with richer diagnostic charts (throughput, defocus histogram, FSC curve) — a design reference, not wired to the job runner.
@@ -24,7 +24,7 @@ python cistem_server.py
 
 This serves the API at `http://localhost:8000/api`, and also serves the page itself — open `http://localhost:8000/` in a browser and you're there, no separate step needed. On first run, since there are no users yet, it auto-creates an admin account and prints its password to the console (also written once to `server/data/admin_credentials.txt`) — copy that password before it scrolls away.
 
-(You can still open `cistem3.html` directly instead — double-click it, or `open cistem3.html` — it connects to `http://localhost:8000/api` automatically either way; if your API is somewhere else, edit `config.js` first (see above) and reload.)
+(You can still open `cistem3.html` directly instead — double-click it, or `open cistem3.html` — opened as a file it connects to `http://localhost:8000/api`; if your API is somewhere else, edit `config.js` first (see above) and reload.)
 
 1. **Log in** as `admin` with the password from the console/credentials file.
 2. **Manage Users** (admin-only panel on the home screen) — create a real account for yourself (and anyone else) with a role of `user` or `admin`. There's no self-registration; only an admin can create accounts.

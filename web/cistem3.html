@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cisTEM3</title>
-<!-- Local config: edit config.js (sibling file) to change the default API
-     address without touching this file. Missing/failing to load is fine --
-     the app falls back to http://localhost:8000/api. -->
+<!-- Local config: edit config.js (sibling file) to pin the API address
+     without touching this file. Missing/failing to load is fine -- the app
+     then talks to the server that served this page (its origin + /api), or
+     to http://localhost:8000/api when opened as a file:// URL. -->
 <script src="config.js"></script>
 <style>
 /* Deliberately a single native-desktop light theme (no dark mode) --
@@ -2937,10 +2938,20 @@ From branch : <span id="versionBranch">—</span></p>
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
   ].forEach(function(id){ els[id] = document.getElementById(id); });
 
+  // Where the API lives. An explicit apiBase in config.js wins. Otherwise,
+  // when this page was served over http(s), the API is assumed to be on the
+  // same server ("/api" next to the page) -- so http://<server>:8000/ works
+  // from any machine on the network, not just the one running the server.
+  // Opened as file:// there is no origin to derive from, so fall back to the
+  // reference server's default address on this machine.
+  function defaultApiBase(){
+    if (window.CRYOEM_CONFIG && window.CRYOEM_CONFIG.apiBase) return window.CRYOEM_CONFIG.apiBase;
+    if (/^https?:$/.test(window.location.protocol) && window.location.origin) return window.location.origin + "/api";
+    return "http://localhost:8000/api";
+  }
+
   var state = {
-    // Default comes from config.js (edit that file to change it) -- falls
-    // back to localhost:8000 if config.js is missing or didn't load.
-    apiBase: (window.CRYOEM_CONFIG && window.CRYOEM_CONFIG.apiBase) || "http://localhost:8000/api",
+    apiBase: defaultApiBase(),
     authToken: localStorage.getItem("cryoem_auth_token") || null,
     currentUser: null,
     runProfile: localStorage.getItem("cryoem_run_profile") || null,

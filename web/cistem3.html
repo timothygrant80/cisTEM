@@ -1852,6 +1852,7 @@ From branch : <span id="versionBranch">—</span></p>
 <div class="modal plot-modal" id="plotModal">
   <div class="modal-head">
     <div class="modal-title" id="plotModalTitle">Angular Distribution</div>
+    <button class="small" id="plotModalSave" title="Save the plot as shown here as a PNG image">Save PNG</button>
     <button class="log-close" id="plotModalClose" aria-label="Close">&times;</button>
   </div>
   <div class="modal-body"><svg id="plotModalSvg" class="ra-plot ang-plot plot-modal-svg" viewBox="0 0 340 240"></svg></div>
@@ -2898,7 +2899,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
    "browseTitle","browseNote",
-   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost","plotScrim","plotModal","plotModalClose","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
+   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
@@ -5093,6 +5094,48 @@ From branch : <span id="versionBranch">—</span></p>
   });
   els.plotModalClose.addEventListener("click", closePlotModal);
   els.plotScrim.addEventListener("click", closePlotModal);
+  // Save PNG: the enlarged plot rasterised at twice its on-screen size. The
+  // plots are styled by the page's stylesheet, which a serialised SVG does
+  // not carry, so each element's computed presentation is written inline on
+  // a clone first; the clone is then drawn through an <img> onto a canvas.
+  function svgToPngBlob(svg, scale){
+    var rect = svg.getBoundingClientRect(), W = Math.max(1, Math.round(rect.width)), H = Math.max(1, Math.round(rect.height));
+    var clone = svg.cloneNode(true);
+    var PROPS = ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-dasharray", "stroke-linejoin", "stroke-linecap", "opacity",
+                 "font-family", "font-size", "font-weight", "font-style", "text-anchor", "dominant-baseline", "paint-order", "letter-spacing", "visibility"];
+    var src = [svg].concat(Array.prototype.slice.call(svg.querySelectorAll("*")));
+    var dst = [clone].concat(Array.prototype.slice.call(clone.querySelectorAll("*")));
+    src.forEach(function(el, i){
+      var cs = getComputedStyle(el), style = "";
+      PROPS.forEach(function(p){ var v = cs.getPropertyValue(p); if (v) style += p + ":" + v + ";"; });
+      dst[i].setAttribute("style", style);
+    });
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", String(W)); clone.setAttribute("height", String(H));
+    if (!clone.getAttribute("viewBox")) clone.setAttribute("viewBox", "0 0 " + W + " " + H);
+    var bg = getComputedStyle(svg).backgroundColor;
+    var url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], {type: "image/svg+xml;charset=utf-8"}));
+    return new Promise(function(resolve, reject){
+      var img = new Image();
+      img.onload = function(){
+        URL.revokeObjectURL(url);
+        var canvas = document.createElement("canvas"); canvas.width = W * scale; canvas.height = H * scale;
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" ? bg : "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(function(blob){ if (blob) resolve(blob); else reject(new Error("the browser could not encode the image")); }, "image/png");
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("the browser could not render the plot")); };
+      img.src = url;
+    });
+  }
+  els.plotModalSave.addEventListener("click", function(){
+    var btn = els.plotModalSave; btn.disabled = true;
+    var name = (els.plotModalTitle.textContent || "plot").replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") + ".png";
+    svgToPngBlob(els.plotModalSvg, 2).then(function(blob){ saveBlob(blob, name); })
+      .catch(function(err){ alert("Could not save the plot: " + err.message); })
+      .then(function(){ btn.disabled = false; });
+  });
   document.addEventListener("keydown", function(e){ if (e.key === "Escape" && els.plotModal.classList.contains("open")) closePlotModal(); });
   function makeRefinementResultsPage(){
     var page = {items: [], packages: [], packageId: null, selectedId: null, classIndex: 0, current: null, showDetails: false, urls: []};
@@ -9991,10 +10034,13 @@ From branch : <span id="versionBranch">—</span></p>
       if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       var cd = r.headers.get("Content-Disposition") || ""; var m = /filename="?([^";]+)"?/.exec(cd); if (m) name = m[1];
       return r.blob();
-    }).then(function(blob){
-      var url = URL.createObjectURL(blob), a = document.createElement("a");
-      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
-    }).catch(function(err){ alert("Could not download: " + err.message); }).then(function(){ if (btn) btn.disabled = false; });
+    }).then(function(blob){ saveBlob(blob, name); })
+      .catch(function(err){ alert("Could not download: " + err.message); }).then(function(){ if (btn) btn.disabled = false; });
+  }
+  // Hand a blob to the browser's downloads as `name`.
+  function saveBlob(blob, name){
+    var url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
   }
   // The Refine 3D / Auto Refine live view, laid out as the Refine 3D results
   // page is: the FSC across the top, then the reconstruction on the left and

@@ -36,6 +36,7 @@ import logging
 import sqlite3
 import math
 import os
+import re
 import secrets
 import tempfile
 import shlex
@@ -117,6 +118,8 @@ _live = {}  # job_id -> {"proc": Popen|None, "cancel_requested": bool}
 #   CISTEM_JOB_CONTROLLER  controller command, default "cistem_job_controller"
 #                          (e.g. "python3 tools/fake_controller.py" to test
 #                          the server side without any C++)
+#   CISTEM_PORT            the web server's own port; default: the `port`
+#                          in ../config.js (the page's file too), else 8000
 #   JOB_RUNNER_PORT        listening port, default 8010
 #   JOB_RUNNER_BIND        bind address, default 0.0.0.0
 #   JOB_RUNNER_HOSTS       comma-separated addresses the controller is told
@@ -4310,8 +4313,27 @@ def cancel_job(project_id, job_id):
     return jsonify(_row_to_job(_fetch_job_row(project_id, job_id)))
 
 
+def configured_port():
+    """The port to serve on: CISTEM_PORT if set, else the `port: N` line of
+    ../config.js -- the one file a user edits to move the app, shared with the
+    page (which reads it for its file:// fallback) -- else 8000. config.js is
+    JavaScript, read here with a comment-stripping regex rather than a JS
+    engine, so the line must stay in the simple `port: 8000` form it ships in."""
+    env = os.environ.get("CISTEM_PORT")
+    if env:
+        return int(env)
+    try:
+        text = (REPO_ROOT / "config.js").read_text(encoding="utf-8")
+    except OSError:
+        return 8000
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
+    match = re.search(r"\bport\s*:\s*(\d+)", text)
+    return int(match.group(1)) if match else 8000
+
+
 if __name__ == "__main__":
     auth.bootstrap_admin_if_needed()
     start_job_runner()
     _recover_interrupted_jobs()
-    app.run(host="0.0.0.0", port=8000, threaded=True)
+    app.run(host="0.0.0.0", port=configured_port(), threaded=True)

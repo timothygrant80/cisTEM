@@ -5,7 +5,7 @@ A local, project-based job-submission UI for a single-particle cryo-EM processin
 Two pieces:
 
 - **`cistem3.html`** — a standalone page you open in your own browser. On load it auto-connects to the API: an address pinned in `config.js` if there is one, otherwise `/api` on the server that served the page (so `http://<server>:8000/` works from any machine on the network), or `http://localhost:8000/api` when the page was opened as a `file://` URL — success shows a login screen, failure shows an error screen with a Retry button. Once logged in you create or open a **project**; once one's open it submits jobs and polls status against that same API, scoped to that project and to you. It makes no network calls anywhere else.
-- **`config.js`** — the one file to edit if the API isn't on the server that served the page (or isn't at `localhost:8000` when the page is opened as a file). A single `window.CRYOEM_CONFIG = { apiBase: "..." }`; reload the page after changing it.
+- **`config.js`** — the one file to edit to move the app: `port` is the port the server listens on (read at start-up) and the port the page assumes when opened as a file; `apiBase`, commented out by default, pins a different API address altogether (page and API on different hosts, or behind a proxy). Restart the server after changing the port; reload the page after changing either.
 - **`server/cistem_server.py`** + **`server/db.py`** + **`server/auth.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`) plus a global `server/data/auth.db` for user accounts and sessions. Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
 
 `reference/dashboard.html` is an earlier static mockup with richer diagnostic charts (throughput, defocus histogram, FSC curve) — a design reference, not wired to the job runner.
@@ -207,6 +207,7 @@ Settings, all environment variables:
 
 | variable | default | meaning |
 |---|---|---|
+| `CISTEM_PORT` | the `port` in `config.js`, else `8000` | port the web server (API and page) listens on. `config.js` is the usual place to change it: the server reads its `port: 8000` line at start-up, and the page uses the same value when opened as a file |
 | `CISTEM_JOB_CONTROLLER` | `cistem_job_controller` | the controller command `$command` expands to in a run profile's manager command; it must be on `PATH` — or the manager command names its directory, `/opt/cistem/bin/$command` — or the server falls back to simulation |
 | `JOB_RUNNER_PORT` | `8010` | port the runner listens on for controllers |
 | `JOB_RUNNER_BIND` | `0.0.0.0` | bind address |

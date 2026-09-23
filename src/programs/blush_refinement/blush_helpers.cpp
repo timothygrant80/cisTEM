@@ -345,10 +345,8 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
             }
         }
 
-#ifdef BLUSH_DEBUG_LOGGING
         BLUSH_LOG_INFO("[PROFILE] Block loop (%d blocks): %.1f ms", total_iterations, std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now( ) - global_start_time).count( ));
         BLUSH_LOG_INFO("[PROFILE] forward() total: %.1f ms across %ld calls (avg %.2f ms/call)", forward_only_ms, forward_call_count, forward_call_count > 0 ? forward_only_ms / forward_call_count : 0.0);
-#endif
 
         infer_grid = torch::where(count_grid > 0, infer_grid / count_grid, infer_grid);
         infer_grid = torch::where(count_grid < 1e-1f, torch::full_like(infer_grid, 0.0f), infer_grid); // Set values where count_grid is less than 0.1 to 0

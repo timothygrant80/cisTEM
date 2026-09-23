@@ -470,6 +470,9 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults( ) {
 #ifdef cisTEM_USING_BLUSH
         EnableBlushNoButton->SetValue(true);
         EnableBlushYesButton->SetValue(false);
+        BlushThreadsSpinCtrl->SetValue(1);
+        BlushBatchSizeSpinCtrl->SetValue(1);
+        BlushStartRoundSpinCtrl->SetValue(30);
 #endif
 
         ExpertPanel->Thaw( );
@@ -579,12 +582,16 @@ void AbInitio3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
                     BlushThreadsSpinCtrl->Enable(true);
                     BlushBatchSizeStaticText->Enable(true);
                     BlushBatchSizeSpinCtrl->Enable(true);
+                    BlushStartRoundStaticText->Enable(true);
+                    BlushStartRoundSpinCtrl->Enable(true);
                 }
                 else {
                     BlushThreadsStaticText->Enable(false);
                     BlushThreadsSpinCtrl->Enable(false);
                     BlushBatchSizeStaticText->Enable(false);
                     BlushBatchSizeSpinCtrl->Enable(false);
+                    BlushStartRoundStaticText->Enable(false);
+                    BlushStartRoundSpinCtrl->Enable(false);
                 }
             }
 
@@ -1007,6 +1014,7 @@ void AbInitioManager::BeginRefinementCycle( ) {
     apply_blush_denoising = my_parent->EnableBlushYesButton->GetValue( );
     user_blush_batch_size = my_parent->BlushBatchSizeSpinCtrl->GetValue( );
     num_blush_threads     = my_parent->BlushThreadsSpinCtrl->GetValue( );
+    blush_start_round     = my_parent->BlushStartRoundSpinCtrl->GetValue( );
 #endif
 
     // need to take into account symmetry
@@ -1223,7 +1231,7 @@ void AbInitioManager::CycleRefinement( ) {
 
         start_with_reconstruction = false;
 
-        if ( apply_blush_denoising ) {
+        if ( ShouldApplyBlushAtCurrentIteration( ) ) {
             SetupBlushInferenceJob( );
             RunBlushInferenceJob( );
         }
@@ -1277,7 +1285,7 @@ void AbInitioManager::CycleRefinement( ) {
                 RunAlignSymmetryJob( );
             }
             else {
-                if ( apply_blush_denoising ) {
+                if ( ShouldApplyBlushAtCurrentIteration( ) ) {
                     SetupBlushInferenceJob( );
                     RunBlushInferenceJob( );
                 }
@@ -1318,9 +1326,9 @@ void AbInitioManager::CycleRefinement( ) {
                     current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
                 //current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
-                if ( apply_blush_denoising ) {
-                    my_parent->NumberConnectedText->SetLabel("Running Blush...");
-                    my_parent->Layout( );
+                if ( ShouldApplyBlushAtCurrentIteration( ) ) {
+                    SetupBlushInferenceJob( );
+                    RunBlushInferenceJob( );
                 }
                 else {
                     if ( active_should_automask ) {
@@ -2268,12 +2276,17 @@ void AbInitioManager::SetupBlushInferenceJob( ) {
     my_parent->Layout( );
 
     for ( int ref_file = 0; ref_file < num_blush_jobs; ref_file++ ) {
+        // Extract just the filename (without path or extension) from the reference volume
+        wxFileName input_path(current_reference_filenames.Item(ref_file));
+        wxString   base_name = input_path.GetName( ); // Returns filename without path or extension
+
         // Prevent name chaining in subsequent iterations
-        wxString base_name = current_reference_filenames.Item(ref_file).BeforeLast('.');
         if ( base_name.EndsWith("_blushed") ) {
             base_name = base_name.BeforeLast('_');
         }
-        wxString output_ref_filename = base_name.Append("_blushed.mrc");
+
+        // Construct output path in project's Assets/Volumes/Blushed subdirectory
+        wxString output_ref_filename = main_frame->ReturnBlushedVolumesDirectory( ) + base_name + "_blushed.mrc";
 
         my_parent->current_job_package.AddJob("sssffiii", current_reference_filenames.Item(ref_file).ToUTF8( ).data( ),
                                               output_ref_filename.ToUTF8( ).data( ),
@@ -2508,7 +2521,13 @@ void AbInitioManager::ProcessJobResult(JobResult* result_to_process) {
             }
 
             complete_blush_jobs++;
-            current_reference_filenames.Item(current_ref) = current_reference_filenames.Item(current_ref).BeforeLast('.') + "_blushed.mrc";
+            // Update to the new blushed volume path (in project's Assets/Volumes/Blushed subdirectory)
+            wxFileName input_path(current_reference_filenames.Item(current_ref));
+            wxString   base_name = input_path.GetName( );
+            if ( base_name.EndsWith("_blushed") ) {
+                base_name = base_name.BeforeLast('_');
+            }
+            current_reference_filenames.Item(current_ref) = main_frame->ReturnBlushedVolumesDirectory( ) + base_name + "_blushed.mrc";
         }
     }
 }
@@ -2678,6 +2697,23 @@ void AbInitioManager::OnMaskerThreadComplete( ) {
     //my_parent->WriteInfoText("Masking Finished");
     SetupRefinementJob( );
     RunRefinementJob( );
+}
+
+bool AbInitioManager::ShouldApplyBlushAtCurrentIteration( ) {
+    if ( ! apply_blush_denoising )
+        return false;
+
+    // If blush_start_round is 0, apply blush from the beginning
+    if ( blush_start_round == 0 )
+        return true;
+
+    // For the first start, only apply blush after reaching blush_start_round
+    if ( number_of_starts_run == 0 ) {
+        return number_of_rounds_run >= blush_start_round;
+    }
+
+    // For subsequent starts, always apply blush
+    return true;
 }
 
 // FIXME: do we want to run this thread with blush? will need to pass an argument that allows specifying false for this value

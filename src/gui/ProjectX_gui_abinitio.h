@@ -118,6 +118,8 @@ class AbInitio3DPanelParent : public JobPanel
 		wxSpinCtrl* BlushThreadsSpinCtrl;
 		wxStaticText* BlushBatchSizeStaticText;
 		wxSpinCtrl* BlushBatchSizeSpinCtrl;
+		wxStaticText* BlushStartRoundStaticText;
+		wxSpinCtrl* BlushStartRoundSpinCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		AbInitioPlotPanel* PlotPanel;

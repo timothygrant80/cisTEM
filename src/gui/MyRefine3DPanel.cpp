@@ -1932,12 +1932,17 @@ void RefinementManager::SetupBlushInferenceJob( ) {
     my_parent->Layout( );
 
     for ( int ref_file = 0; ref_file < num_blush_jobs; ref_file++ ) {
+        // Extract just the filename (without path or extension) from the reference volume
+        wxFileName input_path(current_reference_filenames.Item(ref_file));
+        wxString   base_name = input_path.GetName( ); // Returns filename without path or extension
+
         // Prevent name chaining in subsequent iterations
-        wxString base_name = current_reference_filenames.Item(ref_file).BeforeLast('.');
         if ( base_name.EndsWith("_blushed") ) {
             base_name = base_name.BeforeLast('_');
         }
-        wxString output_ref_filename = base_name.Append("_blushed.mrc");
+
+        // Construct output path in project's Assets/Volumes/Blushed subdirectory
+        wxString output_ref_filename = main_frame->ReturnBlushedVolumesDirectory( ) + base_name + "_blushed.mrc";
 
         my_parent->current_job_package.AddJob("sssffiii", current_reference_filenames.Item(ref_file).ToUTF8( ).data( ),
                                               output_ref_filename.ToUTF8( ).data( ),
@@ -2133,7 +2138,13 @@ void RefinementManager::ProcessJobResult(JobResult* result_to_process) {
             }
 
             complete_blush_jobs++;
-            current_reference_filenames.Item(current_ref) = current_reference_filenames.Item(current_ref).BeforeLast('.') + "_blushed.mrc";
+            // Update to the new blushed volume path (in project's Assets/Volumes/Blushed subdirectory)
+            wxFileName input_path(current_reference_filenames.Item(current_ref));
+            wxString   base_name = input_path.GetName( );
+            if ( base_name.EndsWith("_blushed") ) {
+                base_name = base_name.BeforeLast('_');
+            }
+            current_reference_filenames.Item(current_ref) = main_frame->ReturnBlushedVolumesDirectory( ) + base_name + "_blushed.mrc";
         }
     }
 }

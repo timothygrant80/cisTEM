@@ -5,11 +5,14 @@
 #include <cstdio>
 #include <ctime>
 #include <cstdarg>
+#include <cstring>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cstdlib>
 
-// #define BLUSH_DEBUG_LOGGING
+#ifdef DEBUG
+#define BLUSH_DEBUG_LOGGING
+#endif
 
 /**
  * @brief Production logging system for Blush inference
@@ -119,8 +122,10 @@ class Logger {
     }
 
     ~Logger( ) {
+        // SAFETY: During static destruction, just close the file descriptor
+        // Don't write anything - it could hang if parent closed the pipe
+        // All necessary logging should be done before main() exits
         if ( log_file ) {
-            Log(Level::INFO, "=== Blush session ended ===");
             fclose(log_file);
             log_file = nullptr;
         }

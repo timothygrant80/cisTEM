@@ -912,6 +912,7 @@ void MyMainFrame::ClearScratchDirectory( ) {
     ClearAutoRefine3DScratch( );
     ClearGenerate3DScratch( );
     ClearRefineCTFScratch( );
+    ClearBlushLogsScratch( );
 }
 
 void MyMainFrame::ClearRefineCTFScratch( ) {
@@ -986,6 +987,24 @@ wxString MyMainFrame::ReturnRefineCTFScratchDirectory( ) {
 
 wxString MyMainFrame::ReturnBlushLogsScratchDirectory( ) {
     return current_project.scratch_directory.GetFullPath( ) + "/BlushLogs/";
+}
+
+void MyMainFrame::ClearBlushLogsScratch( ) {
+    if ( wxDir::Exists(ReturnBlushLogsScratchDirectory( )) == true )
+        wxFileName::Rmdir(ReturnBlushLogsScratchDirectory( ), wxPATH_RMDIR_RECURSIVE);
+    if ( wxDir::Exists(ReturnBlushLogsScratchDirectory( )) == false )
+        wxFileName::Mkdir(ReturnBlushLogsScratchDirectory( ));
+}
+
+wxString MyMainFrame::ReturnBlushedVolumesDirectory( ) {
+    wxString blushed_dir = current_project.volume_asset_directory.GetFullPath( ) + "/Blushed/";
+
+    // Ensure the Blushed subdirectory exists
+    if ( ! wxDir::Exists(blushed_dir) ) {
+        wxFileName::Mkdir(blushed_dir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    }
+
+    return blushed_dir;
 }
 
 bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_project_directory) {

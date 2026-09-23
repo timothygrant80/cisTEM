@@ -234,12 +234,6 @@ class TorchShim {
     };
 };
 
-#include "blush_helpers.h"
-#include <numeric>
-#include <chrono>
-
-using namespace torch::indexing;
-
 class
         BlushRefinement : public MyApp {
 
@@ -356,13 +350,11 @@ bool BlushRefinement::DoCalculation( ) {
         total_blush_iterations = n_steps * n_steps * n_steps;
     }
 
-    ProgressBar* progress_bar;
+    ProgressBar* progress_bar = nullptr;
     if ( is_running_locally ) {
         progress_bar = new ProgressBar(100);
     }
     wxPrintf("\n\nBlushing %s...\n\n", ifname);
-    auto stop_flag = std::make_shared<std::atomic<bool>>(false);
-    auto startTime = std::chrono::high_resolution_clock::now( );
 
     // Load pixel data from Image for passage for passage to serialization function
     std::vector<float> pixel_data(new_box_size * new_box_size * new_box_size);
@@ -426,11 +418,9 @@ bool BlushRefinement::DoCalculation( ) {
     }
     input_volume.AddFFTWPadding( );
 
-    auto   endTime  = std::chrono::high_resolution_clock::now( );
-    double duration = std::chrono::duration<double>(endTime - startTime).count( );
-    // wxPrintf("\n\ntotalForwardTime == %g min\naverage forward time == %g min\n", totalForwardTime / 60, (totalForwardTime / 60) / total_blush_iterations);
-    wxPrintf("\nTotal blush run time: %g\n\n", duration);
-    delete progress_bar;
+    if ( progress_bar ) {
+        delete progress_bar;
+    }
     MRCFile ofile(ofname, true);
     input_volume.WriteSlices(&ofile, 1, box_size);
     ofile.SetPixelSizeAndWriteHeader(pixel_size);

@@ -445,6 +445,25 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 
 	fgSizer1->Add( bSizer29, 1, wxEXPAND, 5 );
 
+	BlushStartRoundStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tBlush Start Round: "), wxDefaultPosition, wxDefaultSize, 0 );
+	BlushStartRoundStaticText->Wrap( -1 );
+	BlushStartRoundStaticText->Enable( false );
+	BlushStartRoundStaticText->SetToolTip( wxT("Round number at which to start applying Blush denoising (0 = start immediately)") );
+
+	fgSizer1->Add( BlushStartRoundStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer30;
+	bSizer30 = new wxBoxSizer( wxVERTICAL );
+
+	BlushStartRoundSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxT("30"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 30 );
+	BlushStartRoundSpinCtrl->Enable( false );
+	BlushStartRoundSpinCtrl->SetToolTip( wxT("Round number at which to start applying Blush denoising (0 = start immediately)") );
+
+	bSizer30->Add( BlushStartRoundSpinCtrl, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer30, 1, wxEXPAND, 5 );
+
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
 

@@ -149,9 +149,8 @@ int main( ) {
             offset += log_dir_length;
         }
 
-// Initialize logger now that we have log directory
-// (GUI mode provides project path, CLI mode passes empty string)
-#ifdef BLUSH_DEBUG_LOGGING
+        // Initialize logger now that we have log directory
+        // (GUI mode provides project path, CLI mode passes empty string)
         BlushLogger::InitializeLogger(log_directory, BlushLogger::Level::INFO);
         BLUSH_LOG_INFO("ipc_blush subprocess started");
         BLUSH_LOG_INFO("[PROFILE] Payload receive (%u bytes): %.1f ms", payload_len, payload_receive_ms);
@@ -162,7 +161,6 @@ int main( ) {
         else {
             BLUSH_LOG_INFO("Using default log directory (CLI mode)");
         }
-#endif
 
         // {
         //     std::string msg = "Successfully loaded model_filename: " + model_filename + "\n";
@@ -236,11 +234,9 @@ int main( ) {
             return true;
         };
 
-#ifdef BLUSH_DEBUG_LOGGING
         BLUSH_LOG_INFO("Starting ApplyBlush: box_size=%d, mask_radius=%.1f, batch_size=%d, num_threads=%d",
                        box_size, mask_radius, batch_size, num_threads);
         auto inference_start = std::chrono::high_resolution_clock::now( );
-#endif
 
         try {
             BlushHelpers::ApplyBlush(pixel_data, model_filename, box_size, mask_radius, batch_size, num_threads, stop_flag, [&write_to_parent](int percent, long seconds_remaining) {
@@ -258,11 +254,9 @@ int main( ) {
 
                 return true;
             });
-#ifdef BLUSH_DEBUG_LOGGING
             auto inference_end = std::chrono::high_resolution_clock::now( );
             BLUSH_LOG_INFO("ApplyBlush completed successfully");
             BLUSH_LOG_INFO("[PROFILE] Model inference: %.1f ms", std::chrono::duration<double, std::milli>(inference_end - inference_start).count( ));
-#endif
 
         } catch ( std::exception& e ) {
             BLUSH_LOG_ERROR("CRITICAL LIBTORCH ERROR: %s", e.what( ));
@@ -277,9 +271,7 @@ int main( ) {
         uint32_t msg_type = 2; // RESULT message type
         uint32_t out_len  = result_payload.size( );
 
-#ifdef BLUSH_DEBUG_LOGGING
         BLUSH_LOG_INFO("Sending RESULT: %u bytes", out_len);
-#endif
 
         auto result_write_start = std::chrono::high_resolution_clock::now( );
         bool ok1                = write_to_parent(&msg_type, sizeof(msg_type));
@@ -290,15 +282,11 @@ int main( ) {
         if ( ! (ok1 && ok2 && ok3) ) {
             BLUSH_LOG_ERROR("Failed to send RESULT: ok1=%d ok2=%d ok3=%d", int(ok1), int(ok2), int(ok3));
         }
-#ifdef BLUSH_DEBUG_LOGGING
         else {
             BLUSH_LOG_INFO("RESULT sent successfully");
             BLUSH_LOG_INFO("[PROFILE] Result write (%u bytes): %.1f ms", out_len, std::chrono::duration<double, std::milli>(result_write_end - result_write_start).count( ));
         }
-#endif
     }
-#ifdef BLUSH_DEBUG_LOGGING
     BLUSH_LOG_INFO("ipc_blush exiting normally");
-#endif
     return 0;
 }

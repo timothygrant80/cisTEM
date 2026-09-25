@@ -212,10 +212,26 @@ def _arg_values(task):
     return [a["value"] for a in task["args"]]
 
 
-def _result_floats(task_row):
+RESULT_NAMES = ("defocus 1", "defocus 2", "astigmatism angle", "additional phase shift", "score", "fit resolution",
+                "alias resolution", "iciness", "tilt angle", "tilt axis", "sample thickness")
+
+
+def _result_floats(task_row, log=None):
+    """ctffind's result floats, or None when the task has none. A value
+    ctffind computed as NaN or infinity arrives as JSON null (JSON has no
+    such numbers; the controller's serialiser writes null) -- stored as 0.0,
+    ctffind's own value for "not determined" (fit resolution, alias
+    resolution), and logged, rather than failing the whole job's write."""
     result = json.loads(task_row["RESULT_JSON"]) if task_row["RESULT_JSON"] else None
     data = (result or {}).get("data") if (result or {}).get("kind") == "floats" else None
-    return data if data and len(data) >= 7 else None
+    if not data or len(data) < 7:
+        return None
+    if any(x is None for x in data):
+        if log is not None:
+            names = [RESULT_NAMES[i] if i < len(RESULT_NAMES) else "value {}".format(i) for i, x in enumerate(data) if x is None]
+            log("task {}: ctffind returned no number (NaN or infinity) for {}; stored as 0.0".format(task_row["TASK_INDEX"], ", ".join(names)), level="error")
+        data = [0.0 if x is None else x for x in data]
+    return [float(x) for x in data]
 
 
 def _avrot_path(diagnostic_file):
@@ -272,7 +288,7 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log):
     with conn:
         for row in task_rows:
             task = by_index.get(row["TASK_INDEX"])
-            data = _result_floats(row) if row["STATUS"] == "ok" and task is not None else None
+            data = _result_floats(row, log) if row["STATUS"] == "ok" and task is not None else None
             if data is None:
                 skipped += 1
                 if row["STATUS"] == "ok":

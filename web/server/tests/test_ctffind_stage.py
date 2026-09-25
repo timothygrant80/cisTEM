@@ -72,6 +72,22 @@ class CtffindStageTests(unittest.TestCase):
         live = ctffind.live_result(self.conn, tasks[0], row)
         self.assertEqual((live["sample_thickness"], live["fit_nodes"]), (812.5, True))
 
+    def test_a_nan_result_is_stored_as_zero_and_logged_instead_of_failing_the_job(self):
+        # The controller writes a NaN or infinite float as JSON null; float(None) used to
+        # raise inside finalize()'s transaction and lose every image's result.
+        tasks = ctffind.build_tasks(self.conn, self.project, {"image_group_id": 5})
+        data = [20015.0, 19800.0, 45.0, 0.0, 0.05, 4.2, 0.0, 0.14, 0.0, 0.0, None]
+        row = {"TASK_INDEX": 0, "STATUS": "ok", "REF": 7, "RESULT_JSON": json.dumps({"kind": "floats", "data": data})}
+        logged = []
+        summary = ctffind.finalize(self.conn, self.project, {"id": "job1"}, tasks, [row], lambda msg, **k: logged.append((msg, k.get("level"))))
+        self.assertEqual(summary["ctf_estimates_written"], 1)
+        r = self.conn.execute("SELECT DEFOCUS1, SAMPLE_THICKNESS FROM ESTIMATED_CTF_PARAMETERS").fetchone()
+        self.assertEqual((r["DEFOCUS1"], r["SAMPLE_THICKNESS"]), (20015.0, 0.0))
+        self.assertEqual(len(logged), 1)
+        self.assertIn("sample thickness", logged[0][0])
+        self.assertEqual(logged[0][1], "error")
+        self.assertEqual(ctffind.live_result(self.conn, tasks[0], row)["sample_thickness"], 0.0)
+
     def test_program_format_string_in_source(self):
         # Guard against the two drifting apart silently: the format string above must be the one in ctffind.cpp.
         src = Path(__file__).resolve().parents[3] / "src" / "programs" / "ctffind" / "ctffind.cpp"

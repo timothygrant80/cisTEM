@@ -354,6 +354,7 @@ def write_job_results(conn, project_id, row):
         return summary
     except Exception as exc:  # noqa: BLE001
         log_here("could not write results to the project database: {}".format(exc), level="error")
+        log.exception("finalize() of job %s (%s) failed", job_id, row["STAGE"])   # the traceback, on the server's own output
         return None
 
 

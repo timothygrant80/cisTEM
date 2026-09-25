@@ -308,22 +308,9 @@ class DbSink(job_runner.Sink):
         row = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (job_id,)).fetchone()
         adapter = stages.ADAPTERS.get(row["STAGE"]) if row is not None else None
         if adapter is not None and tasks_ok:
-            job = _row_to_job(row)
-            sent_tasks = json.loads(row["TASKS_JSON"]) if row["TASKS_JSON"] else []
-            task_rows = conn.execute("SELECT * FROM JOB_TASKS WHERE JOB_ID=? ORDER BY TASK_INDEX", (job_id,)).fetchall()
-            # The adapter logs on *this* connection: it holds the write
-            # transaction, and a second connection would block on it.
-            def log_here(text, level="info"):
-                append_log(project_id, job_id, "[{}] {}{}".format(
-                    now_iso(), "ERROR: " if level == "error" else "", text), conn=conn)
-
-            try:
-                summary = adapter.finalize(conn, project_id, job, sent_tasks, task_rows, log_here)
+            summary = write_job_results(conn, project_id, row)
+            if summary is not None:
                 metrics.update(summary)
-                log_here(adapter.describe_summary(summary) if hasattr(adapter, "describe_summary")
-                         else "wrote results to the project database: {}".format(summary))
-            except Exception as exc:  # noqa: BLE001
-                log_here("could not write results to the project database: {}".format(exc), level="error")
         # cisTEM adds the controller's timing to the project's CPU-hours total.
         with conn:
             conn.execute("UPDATE MASTER_SETTINGS SET TOTAL_CPU_HOURS = COALESCE(TOTAL_CPU_HOURS, 0) + ?, "
@@ -338,6 +325,36 @@ class DbSink(job_runner.Sink):
 
 
 _db_sink = DbSink()
+
+
+def write_job_results(conn, project_id, row):
+    """Run the stage adapter's finalize() for a job whose tasks have all
+    reported: the stored task results (JOB_TASKS) become the project's
+    result tables. Called when the controller reports the job done, and by
+    tools/write_job_results.py to try again for a job whose write failed
+    (the results stay in JOB_TASKS, so nothing needs re-running). Returns
+    the adapter's summary, or None when the write failed (logged)."""
+    job_id = row["JOB_ID"]
+    adapter = stages.ADAPTERS.get(row["STAGE"])
+    if adapter is None:
+        return None
+    job = _row_to_job(row)
+    sent_tasks = json.loads(row["TASKS_JSON"]) if row["TASKS_JSON"] else []
+    task_rows = conn.execute("SELECT * FROM JOB_TASKS WHERE JOB_ID=? ORDER BY TASK_INDEX", (job_id,)).fetchall()
+    # The adapter logs on *this* connection: it holds the write
+    # transaction, and a second connection would block on it.
+    def log_here(text, level="info"):
+        append_log(project_id, job_id, "[{}] {}{}".format(
+            now_iso(), "ERROR: " if level == "error" else "", text), conn=conn)
+
+    try:
+        summary = adapter.finalize(conn, project_id, job, sent_tasks, task_rows, log_here)
+        log_here(adapter.describe_summary(summary) if hasattr(adapter, "describe_summary")
+                 else "wrote results to the project database: {}".format(summary))
+        return summary
+    except Exception as exc:  # noqa: BLE001
+        log_here("could not write results to the project database: {}".format(exc), level="error")
+        return None
 
 
 def _driver_for_parent(project_id, parent_id):

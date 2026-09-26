@@ -190,7 +190,7 @@ _REQUIRED = {
         "task": _is_int,
         "result_number": _is_int,
         "expected": _is_int,
-        "result": lambda v: isinstance(v, dict),
+        # `result` is optional: absent from the count-only frames package.progress_counts asks for (conditional check below)
     },
     # 6.5 results
     "task_done": {
@@ -219,6 +219,7 @@ _CONDITIONAL = [
     ("task_done", "result", lambda v: isinstance(v, dict), lambda m: "result" in m),
     ("task_done", "ref", _is_str_or_int, lambda m: "ref" in m),
     ("task_progress", "ref", _is_str_or_int, lambda m: "ref" in m),
+    ("task_progress", "result", lambda v: isinstance(v, dict), lambda m: "result" in m),
 ]
 
 KNOWN_TYPES = frozenset(_REQUIRED)

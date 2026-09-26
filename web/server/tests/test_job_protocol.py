@@ -223,6 +223,17 @@ class ForwardProgressTests(unittest.TestCase):
         self.assertIs(msg["forward_progress"], False)
         self.assertEqual(jp.validate(msg), "package")
 
+    def test_count_only_task_progress_needs_no_result(self):
+        # package.progress_counts: the controller reports how many results a task has
+        # produced, with no result payload. A result, when present, must still be an object.
+        msg = jp.make(jp.Sequencer(), "task_progress", task=0, result_number=12, expected=0)
+        self.assertEqual(jp.validate(msg), "task_progress")
+        with_result = jp.make(jp.Sequencer(), "task_progress", task=0, result_number=1, expected=0, result={"kind": "floats", "data": [1.0]})
+        self.assertEqual(jp.validate(with_result), "task_progress")
+        bad = jp.make(jp.Sequencer(), "task_progress", task=0, result_number=1, expected=0, result="nope")
+        with self.assertRaises(jp.ProtocolError):
+            jp.validate(bad)
+
     def test_package_carries_progress_counts(self):
         seq = jp.Sequencer()
         msg = jp.package(seq, {"id": "j"}, {"name": "x", "executable": "x"}, {"name": "p"}, 3)

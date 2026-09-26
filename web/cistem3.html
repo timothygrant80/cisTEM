@@ -9800,7 +9800,7 @@ From branch : <span id="versionBranch">—</span></p>
       fill.className = "progress-fill " + job.status;
       // A multi-run job's bar is the step that is running (its child's work
       // done), not the parent's round count: it moves from the first result.
-      var frac = job.status === "running" ? (job.step ? workFraction(job.step) : workFraction(job)) : null;
+      var frac = job.status === "running" ? (job.finishing && job.finishing.total ? 100 * job.finishing.done / job.finishing.total : job.step ? workFraction(job.step) : workFraction(job)) : null;
       fill.style.width = (frac != null ? frac : job.progress != null ? job.progress : (job.status === "completed" ? 100 : 0)) + "%";
       track.appendChild(fill);
       tdProgress.appendChild(track);
@@ -9911,6 +9911,9 @@ From branch : <span id="versionBranch">—</span></p>
   function etaText(eta){ return eta == null ? "estimating\u2026" : (eta < 1 ? "finishing" : fmtDuration(eta) + " left"); }
   function progressNote(job){
     if (job.status === "running"){
+      // Every task is back and the server is writing the results (a project's worth
+      // of picks takes a while): what it has got to, from the adapter's progress calls.
+      if (job.finishing && job.finishing.total) return job.finishing.what + ": " + fmtCount(job.finishing.done) + "/" + fmtCount(job.finishing.total) + " images";
       if (job.step && job.step.task_count){
         // the running step's own count and time left (JobTracker's rule on its tasks or particles), with the parent's round count before it
         var st = job.step;

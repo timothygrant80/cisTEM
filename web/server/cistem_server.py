@@ -31,6 +31,7 @@ HTTPS enforcement (see README.md's Security section for what that implies).
 """
 
 import glob as glob_module
+import inspect
 import json
 import logging
 import sqlite3
@@ -327,6 +328,17 @@ class DbSink(job_runner.Sink):
 _db_sink = DbSink()
 
 
+# What a job's result write has got to, for the Jobs tab while the write runs
+# (the job is still "running" until it returns): job id -> {done, total, what}.
+_FINISHING = {}
+_FINISHING_LOCK = threading.Lock()
+
+
+def _finishing(job_id):
+    with _FINISHING_LOCK:
+        return _FINISHING.get(job_id)
+
+
 def write_job_results(conn, project_id, row):
     """Run the stage adapter's finalize() for a job whose tasks have all
     reported: the stored task results (JOB_TASKS) become the project's
@@ -347,8 +359,14 @@ def write_job_results(conn, project_id, row):
         append_log(project_id, job_id, "[{}] {}{}".format(
             now_iso(), "ERROR: " if level == "error" else "", text), conn=conn)
 
+    def progress(done, total, what):
+        with _FINISHING_LOCK:
+            _FINISHING[job_id] = {"done": int(done), "total": int(total), "what": what}
+
+    # An adapter that reports how far its write has got takes `progress`; the others do not.
+    kwargs = {"progress": progress} if "progress" in inspect.signature(adapter.finalize).parameters else {}
     try:
-        summary = adapter.finalize(conn, project_id, job, sent_tasks, task_rows, log_here)
+        summary = adapter.finalize(conn, project_id, job, sent_tasks, task_rows, log_here, **kwargs)
         log_here(adapter.describe_summary(summary) if hasattr(adapter, "describe_summary")
                  else "wrote results to the project database: {}".format(summary))
         return summary
@@ -356,6 +374,9 @@ def write_job_results(conn, project_id, row):
         log_here("could not write results to the project database: {}".format(exc), level="error")
         log.exception("finalize() of job %s (%s) failed", job_id, row["STAGE"])   # the traceback, on the server's own output
         return None
+    finally:
+        with _FINISHING_LOCK:
+            _FINISHING.pop(job_id, None)
 
 
 def _driver_for_parent(project_id, parent_id):
@@ -539,6 +560,14 @@ def _job_actions(row):
 
 
 def _task_progress_for(conn, row):
+    finishing = _finishing(row["JOB_ID"])
+    info = _task_progress_for_stage(conn, row)
+    if finishing:
+        info = dict(info, finishing=finishing)
+    return info
+
+
+def _task_progress_for_stage(conn, row):
     if row["STAGE"] in DRIVERS:
         state = json.loads(row["STATE_JSON"]) if row["STATE_JSON"] else None
         info = dict(DRIVERS[row["STAGE"]].progress_info(state) or {})

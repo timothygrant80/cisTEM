@@ -1,4 +1,5 @@
 """stages/find_particles.py: the manual-edit save (replace_picks)."""
+import json
 import os
 import sys
 import tempfile
@@ -66,6 +67,60 @@ class ReplacePicksTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WriteSpeedAndProgressTests(unittest.TestCase):
+    """Re-picking a project used to delete each old position's group membership one
+    statement at a time on an unindexed column (quadratic in the picks); the
+    memberships now go in one indexed statement, and finalize() reports its progress."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self._root = db.PROJECTS_ROOT
+        db.PROJECTS_ROOT = Path(self.tmp)
+        self.project = "t-" + os.path.basename(self.tmp)[-6:]
+        (db.PROJECTS_ROOT / self.project).mkdir(parents=True)
+        self.conn = db.get_conn(self.project)
+        n = 20
+        with self.conn as c:
+            c.executemany("INSERT INTO IMAGE_ASSETS(IMAGE_ASSET_ID, NAME, FILENAME, X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PARENT_MOVIE_ID) "
+                          "VALUES (?,?,?,4096,4096,1.0,300,2.7,-1)", [(i, "img%d" % i, "/none/%d.mrc" % i) for i in range(1, n + 1)])
+            c.executemany("INSERT INTO ESTIMATED_CTF_PARAMETERS(CTF_ESTIMATION_ID, IMAGE_ASSET_ID, VOLTAGE, SPHERICAL_ABERRATION, AMPLITUDE_CONTRAST, "
+                          "DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, PIXEL_SIZE) VALUES (?,?,300,2.7,0.07,15000,15000,0,0,1.0)",
+                          [(i, i) for i in range(1, n + 1)])
+            c.executemany("UPDATE IMAGE_ASSETS SET CTF_ESTIMATION_ID=? WHERE IMAGE_ASSET_ID=?", [(i, i) for i in range(1, n + 1)])
+            c.execute("INSERT INTO IMAGE_GROUP_LIST(GROUP_ID, GROUP_NAME, LIST_ID) VALUES (5, 'g', 0)")
+            c.executemany("INSERT INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) VALUES (5, ?)", [(i,) for i in range(1, n + 1)])
+            for j in ("jobA", "jobB"):
+                c.execute("INSERT INTO JOBS(JOB_ID, JOB_NUMBER, STAGE, STATUS, CREATED_AT) VALUES (?, 1, 'particle_picking', 'completed', 0)", (j,))
+        self.tasks = fp.build_tasks(self.conn, self.project, {"image_group_id": 5, "threshold": 6.0, "characteristic_radius": 80.0, "maximum_radius": 100.0})
+        self.rows = [{"TASK_INDEX": t["index"], "STATUS": "ok", "REF": t["ref"],
+                      "RESULT_JSON": json.dumps({"kind": "floats", "data": [100.0, 200.0, 8.0, -1.0, 0.0] * 30})} for t in self.tasks]
+
+    def tearDown(self):
+        self.conn.close()
+        db.PROJECTS_ROOT = self._root
+
+    def test_group_membership_index_exists(self):
+        names = {r[0] for r in self.conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        self.assertIn("idx_position_group_members_asset", names)
+
+    def test_repicking_replaces_positions_and_memberships_and_reports_progress(self):
+        seen = []
+        fp.finalize(self.conn, self.project, {"id": "jobA"}, self.tasks, self.rows, lambda *a, **k: None, progress=lambda d, t, w: seen.append((d, t, w)))
+        self.assertEqual(seen[0], (0, 20, "writing picks"))
+        self.assertEqual(seen[-1], (20, 20, "writing picks"))
+        count = lambda sql: self.conn.execute(sql).fetchone()[0]  # noqa: E731
+        self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_ASSETS"), 600)
+        self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_GROUP_MEMBERS"), 600)
+        fp.finalize(self.conn, self.project, {"id": "jobB"}, self.tasks, self.rows, lambda *a, **k: None)
+        self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_ASSETS"), 600)
+        self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_GROUP_MEMBERS"), 600)
+        self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_ASSETS WHERE PICK_JOB_ID='jobB'"), 600)
+        self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_GROUP_MEMBERS m JOIN PARTICLE_POSITION_ASSETS a "
+                               "ON a.PARTICLE_POSITION_ASSET_ID = m.PARTICLE_POSITION_ASSET_ID"), 600)
+        names = {r[0] for r in self.conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        self.assertIn("idx_" + fp.results_table("jobB") + "_picking", names)
 
 
 class CheckSettingsTests(unittest.TestCase):

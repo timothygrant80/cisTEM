@@ -219,6 +219,16 @@ _RESULTS_TABLE_SQL = (
     "CREATE TABLE IF NOT EXISTS {}(POSITION_ID INTEGER PRIMARY KEY, PICKING_ID INTEGER, PARENT_IMAGE_ASSET_ID INTEGER, "
     "X_POSITION REAL, Y_POSITION REAL, PEAK_HEIGHT REAL, TEMPLATE_ASSET_ID INTEGER, TEMPLATE_PSI REAL, TEMPLATE_THETA REAL, TEMPLATE_PHI REAL)"
 )
+# One picking's rows are read back by PICKING_ID (activating a picking, a manual edit);
+# without this a job with many images scans its whole results table per image.
+_RESULTS_INDEX_SQL = "CREATE INDEX IF NOT EXISTS idx_{0}_picking ON {0}(PICKING_ID)"
+
+
+def _ensure_results_table(conn, job_id):
+    table = results_table(job_id)
+    conn.execute(_RESULTS_TABLE_SQL.format(table))
+    conn.execute(_RESULTS_INDEX_SQL.format(table))
+    return table
 
 
 def _replace_active_picks(conn, image_id, picking_id, job_id):
@@ -226,10 +236,12 @@ def _replace_active_picks(conn, image_id, picking_id, job_id):
     PARTICLE_POSITION_ASSETS rows (any earlier job's for this image go, and
     with them their group memberships), and IMAGE_ASSETS.ACTIVE_PICKING_ID
     records the choice."""
-    old = [r[0] for r in conn.execute("SELECT PARTICLE_POSITION_ASSET_ID FROM PARTICLE_POSITION_ASSETS WHERE PARENT_IMAGE_ASSET_ID=?", (image_id,))]
-    if old:
-        conn.executemany("DELETE FROM PARTICLE_POSITION_GROUP_MEMBERS WHERE PARTICLE_POSITION_ASSET_ID=?", [(i,) for i in old])
-        conn.execute("DELETE FROM PARTICLE_POSITION_ASSETS WHERE PARENT_IMAGE_ASSET_ID=?", (image_id,))
+    # One statement each, on indexed columns: this used to delete the group memberships one
+    # position at a time with no index on the position column, which made re-picking a
+    # project quadratic in its picks (minutes for a few hundred images).
+    conn.execute("DELETE FROM PARTICLE_POSITION_GROUP_MEMBERS WHERE PARTICLE_POSITION_ASSET_ID IN "
+                 "(SELECT PARTICLE_POSITION_ASSET_ID FROM PARTICLE_POSITION_ASSETS WHERE PARENT_IMAGE_ASSET_ID=?)", (image_id,))
+    conn.execute("DELETE FROM PARTICLE_POSITION_ASSETS WHERE PARENT_IMAGE_ASSET_ID=?", (image_id,))
     conn.execute(
         "INSERT INTO PARTICLE_POSITION_ASSETS(PARENT_IMAGE_ASSET_ID, PICKING_ID, PICK_JOB_ID, X_POSITION, Y_POSITION, PEAK_HEIGHT, "
         "TEMPLATE_ASSET_ID, TEMPLATE_PSI, TEMPLATE_THETA, TEMPLATE_PHI) "
@@ -241,14 +253,19 @@ def _replace_active_picks(conn, image_id, picking_id, job_id):
     conn.execute("UPDATE IMAGE_ASSETS SET ACTIVE_PICKING_ID=? WHERE IMAGE_ASSET_ID=?", (picking_id, image_id))
 
 
-def finalize(conn, project_id, job, sent_tasks, task_rows, log):
+def finalize(conn, project_id, job, sent_tasks, task_rows, log, progress=None):
+    """`progress(done, total, what)`, when given, is told after each image so
+    the Jobs tab can show the write going on (a project's worth of picks is
+    the one write long enough to watch)."""
     by_index = {t["index"]: t for t in sent_tasks}
     written = skipped = picked = 0
     now = db.now_epoch()
     table = results_table(job["id"])
     with conn:
-        conn.execute(_RESULTS_TABLE_SQL.format(table))
-        for row in task_rows:
+        _ensure_results_table(conn, job["id"])
+        for n, row in enumerate(task_rows):
+            if progress is not None:
+                progress(n, len(task_rows), "writing picks")
             task = by_index.get(row["TASK_INDEX"])
             positions = _positions(row) if row["STATUS"] == "ok" and task is not None else None
             if positions is None:
@@ -276,6 +293,8 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log):
             _replace_active_picks(conn, image_id, picking_id, job["id"])
             written += 1
             picked += len(positions)
+        if progress is not None:
+            progress(len(task_rows), len(task_rows), "writing picks")
     return {"pickings_written": written, "particles_picked": picked, "tasks_skipped": skipped}
 
 

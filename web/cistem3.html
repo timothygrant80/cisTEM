@@ -503,6 +503,8 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .ra-figure-frame{position:relative;border:none;border-radius:8px;background:var(--surface-sunken);aspect-ratio:1 / 1;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .ra-figure-frame img{width:100%;height:100%;object-fit:contain;display:block;}   /* a 512px diagnostic scales up to the frame: for Thon rings every pixel of display counts */
 .ra-figure-status{font-size:14.5px;color:var(--text-tertiary);padding:8px;text-align:center;}
+.ra-figure-frame img,.c2d-frame img,.pick-frame img{transition:opacity .15s;}
+img.is-loading{opacity:.6;}   /* figLoading(): the picture showing while its replacement loads */
 .ra-figure figcaption{font-size:14.5px;color:var(--text-secondary);margin-top:4px;font-weight:600;}
 .ra-figure.caption-top figcaption{margin:0 0 4px;}
 .ra-nyquist{font-weight:400;color:var(--text-tertiary);font-family:var(--font-mono);}
@@ -3483,24 +3485,44 @@ From branch : <span id="versionBranch">—</span></p>
   // Fetch a PNG through apiFetch (an <img src> can't carry the bearer
   // token) and hand it to an <img> as a blob URL, remembered in `urls` so
   // the page can revoke it when the picture changes.
+  // Say a picture is on its way without blanking the one showing: the status
+  // text takes the frame only while it is empty (the first load, or after an
+  // error or a "no file" message). A picture already there stays, dimmed a
+  // little, until the next has decoded and replaces it in one step -- so
+  // stepping through rounds or images does not flash to grey and back, nor
+  // collapse the frame and grow it again. A message that is not "Loading…"
+  // (no members, nothing merged yet) does replace the picture.
+  function figLoading(img, status, text){
+    text = text || "Loading…";
+    if (/^Loading/.test(text) && !img.hidden && img.src){ img.classList.add("is-loading"); status.hidden = true; return; }
+    img.hidden = true; img.classList.remove("is-loading"); status.hidden = false; status.textContent = text;
+  }
   function loadFigure(img, status, path, exists, what, urls, onResponse){
+    var seq = img.loadSeq = (img.loadSeq || 0) + 1;   // a later call for the same frame supersedes this one
     if (!exists){
       status.hidden = false;
       status.textContent = "The " + what + " file isn’t on disk" + (what === "spectrum" ? " (simulated jobs don’t write one)." : ".");
-      img.hidden = true;
+      img.hidden = true; img.classList.remove("is-loading");
       return;
     }
-    img.hidden = true; status.hidden = false; status.textContent = "Loading…";
+    figLoading(img, status);
     apiFetch(projectApiUrl(path), {cache: "no-cache"}).then(function(r){
       if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       if (onResponse) onResponse(r);
       return r.blob();
     }).then(function(blob){
+      if (img.loadSeq !== seq) return;
       var url = URL.createObjectURL(blob);
       urls.push(url);
-      img.src = url; img.hidden = false; status.hidden = true;
+      // Decode off-screen first, so the swap is one paint with no blank frame between.
+      var pre = new Image(); pre.src = url;
+      return (pre.decode ? pre.decode().catch(function(){}) : Promise.resolve()).then(function(){
+        if (img.loadSeq !== seq) return;
+        img.src = url; img.hidden = false; img.classList.remove("is-loading"); status.hidden = true;
+      });
     }).catch(function(err){
-      status.hidden = false; status.textContent = "Could not render the " + what + ": " + err.message; img.hidden = true;
+      if (img.loadSeq !== seq) return;
+      status.hidden = false; status.textContent = "Could not render the " + what + ": " + err.message; img.hidden = true; img.classList.remove("is-loading");
     });
   }
   // An expand icon in a picture's top-left corner that opens the file behind
@@ -4117,7 +4139,7 @@ From branch : <span id="versionBranch">—</span></p>
       var sum = makeFigure("Aligned sum", null, {captionTop: true}), spectrum = makeFigure("Amplitude spectrum", null, {captionTop: true});
       images.appendChild(sum.root); images.appendChild(spectrum.root);
       return {
-        loading: function(){ sum.img.hidden = true; sum.status.hidden = false; sum.status.textContent = "Loading…"; spectrum.img.hidden = true; spectrum.status.hidden = false; spectrum.status.textContent = "Loading…"; },
+        loading: function(){ figLoading(sum.img, sum.status, "Loading…"); figLoading(spectrum.img, spectrum.status, "Loading…"); },
         error: function(msg){ sum.status.textContent = "Could not load this alignment: " + msg; },
         update: function(a, urls){
           drawDriftPlot(plot.svg, a.shifts, a.exposure_per_frame);
@@ -4190,7 +4212,7 @@ From branch : <span id="versionBranch">—</span></p>
       item.appendChild(k); item.appendChild(v); numbers.appendChild(item); return v;
     });
     return {
-      loading: function(){ squareFromHeight(); diag.img.hidden = true; diag.status.hidden = false; diag.status.textContent = "Loading…"; },
+      loading: function(){ squareFromHeight(); figLoading(diag.img, diag.status, "Loading…"); },
       error: function(msg){ diag.status.textContent = "Could not load this estimate: " + msg; },
       update: function(c, urls, picturePath, filePath){
         squareFromHeight();   // also here, synchronously: the observer only reports once the tab has rendered a frame
@@ -4455,7 +4477,7 @@ From branch : <span id="versionBranch">—</span></p>
     lp.addEventListener("change", function(){ lpRes.disabled = !lp.checked; reloadPicture(); });
     lpRes.addEventListener("change", function(){ if (lp.checked) reloadPicture(); });
     return {
-      loading: function(){ img.hidden = true; status.hidden = false; status.textContent = "Loading\u2026"; while (svg.firstChild) svg.removeChild(svg.firstChild); },
+      loading: function(){ figLoading(img, status); while (svg.firstChild) svg.removeChild(svg.firstChild); },
       error: function(msg){ status.textContent = "Could not load these picks: " + msg; },
       flush: flush,
       update: function(c, urls, picturePath, filePath){
@@ -4775,8 +4797,8 @@ From branch : <span id="versionBranch">—</span></p>
       }
       empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
       rightLabel.textContent = "Class Averages — " + item.name;
-      averages.img.hidden = true; averages.status.hidden = false; averages.status.textContent = "Loading…"; averages.select(null, null, null);
-      members.img.hidden = true; members.status.hidden = false; members.status.textContent = "Click a class average to see its members."; members.left.textContent = ""; members.right.textContent = "";
+      figLoading(averages.img, averages.status, "Loading…"); averages.select(null, null, null);
+      figLoading(members.img, members.status, "Click a class average to see its members."); members.left.textContent = ""; members.right.textContent = "";
       membersHead.textContent = "Class Members";
       apiFetch(projectApiUrl("/classifications/" + item.classification_id)).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
@@ -4800,7 +4822,7 @@ From branch : <span id="versionBranch">—</span></p>
       averages.select(c.montage, k - 1, pickedIndices());
       var n = (c.class_member_counts || [])[k - 1] || 0;
       membersHead.textContent = "Class Members — Class #" + k + " (" + n + " particle" + (n === 1 ? "" : "s") + ")";
-      members.img.hidden = true; members.status.hidden = false; members.status.textContent = n ? "Loading…" : "This class has no members.";
+      figLoading(members.img, members.status, n ? "Loading…" : "This class has no members.");
       members.left.textContent = ""; members.right.textContent = "";
       if (!n) return;
       var limit = 100;
@@ -5285,7 +5307,7 @@ From branch : <span id="versionBranch">—</span></p>
       if (!item){ page.current = null; empty.hidden = false; resultBox.hidden = true; details.hidden = true; rightLabel.textContent = "Refinement"; return; }
       empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
       rightLabel.textContent = "Refinement — " + item.name;
-      fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+      figLoading(fig.img, fig.status, "Loading…");
       apiFetch(projectApiUrl("/refinements/" + item.refinement_id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
         if (full.refinement_id !== page.selectedId) return;
         page.current = full;
@@ -5306,7 +5328,7 @@ From branch : <span id="versionBranch">—</span></p>
       paramsBtn.disabled = false;
       fig.left.textContent = (c.volume_name || "Reconstruction") + (c.reconstructed_volume_asset_id >= 0 ? " (asset #" + c.reconstructed_volume_asset_id + ")" : "");
       fig.right.textContent = c.estimated_resolution ? "est. " + Number(c.estimated_resolution).toFixed(2) + " Å" : "";
-      fig.img.style.maxWidth = "720px"; fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+      fig.img.style.maxWidth = "720px"; figLoading(fig.img, fig.status, "Loading…");
       if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "volume", page.urls);
       else fig.status.textContent = "No reconstruction for this class.";
       setExpand(fig.expand, c.volume_file_exists ? {path: c.volume_filename, title: c.volume_name || "Reconstruction", section: "middle", greys: "local"} : null);
@@ -10134,7 +10156,7 @@ From branch : <span id="versionBranch">—</span></p>
       angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name);
       var est = c.estimated_resolution ? " \u00b7 est. " + Number(c.estimated_resolution).toFixed(2) + " \u00c5" : "";
       capLeft.textContent = full.name + (chosen != null ? " \u00b7 earlier round" : "") + (full.classes.length > 1 ? " \u00b7 class 1 of " + full.classes.length : "") + est;
-      fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
+      figLoading(fig.img, fig.status, "Loading\u2026");
       shownVolume = c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists ? c.reconstructed_volume_asset_id : null;
       dl.disabled = shownVolume == null;
       if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "reconstruction", last.urls);
@@ -10151,7 +10173,7 @@ From branch : <span id="versionBranch">—</span></p>
       card.querySelector('[data-role="rlatest"]').disabled = chosen == null;
       if (rid == null){ fig.status.hidden = false; fig.status.textContent = "No round has finished yet."; return; }
       if (cache[rid]){ render(cache[rid], rid); return; }
-      fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
+      figLoading(fig.img, fig.status, "Loading\u2026");
       apiFetch(projectApiUrl("/refinements/" + rid)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
         cache[rid] = full;
         if (currentRid() === rid) render(full, rid);
@@ -10251,7 +10273,7 @@ From branch : <span id="versionBranch">—</span></p>
         card.querySelector('[data-role="rnext"]').disabled = !pick;
         card.querySelector('[data-role="rlatest"]').disabled = !pick;
         card.querySelector('[data-role="rdownload"]').disabled = !(pick || result.current_volume);
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading\u2026";
+        figLoading(fig.img, fig.status, "Loading\u2026");
         var which = pick ? pick.label + " \u00b7 earlier round" : result.label + " \u00b7 " + (rounds.length ? "latest" : "current");
         var classes = result.number_of_classes > 1 ? " \u00b7 class 1 of " + result.number_of_classes : "";
         capLeft.textContent = which + classes;
@@ -10334,7 +10356,7 @@ From branch : <span id="versionBranch">—</span></p>
           tiltFigs.forEach(function(f){
             f.right.textContent = f.which === "beam_tilt" ? (bt.significant ? bt.beam_tilt_x_mrad.toFixed(2) + ", " + bt.beam_tilt_y_mrad.toFixed(2) + " mrad · shift " + bt.particle_shift_x_a.toFixed(2) + ", " + bt.particle_shift_y_a.toFixed(2) + " Å" : "not significant — set to zero")
               : "significance " + Number(bt.significance).toFixed(2);
-            f.img.hidden = true; f.status.hidden = false; f.status.textContent = "Loading…"; f.img.style.maxWidth = "360px";
+            figLoading(f.img, f.status, "Loading…"); f.img.style.maxWidth = "360px";
             loadFigure(f.img, f.status, "/jobs/" + live.jobId + "/refinectf/" + f.which + ".png", true, "phase image", urls);
           });
         }
@@ -10343,7 +10365,7 @@ From branch : <span id="versionBranch">—</span></p>
         var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];
         fig.right.textContent = running ? (result.phase || "") : (result.volume_ids && result.volume_ids.length ? "volume asset" + (result.volume_ids.length === 1 ? " #" : "s #") + result.volume_ids.join(", #") : "");
         fig.root.hidden = !result.has_picture && !running;
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = result.has_picture ? "Loading…" : "The reconstruction has not been merged yet."; fig.img.style.maxWidth = "720px";
+        figLoading(fig.img, fig.status, result.has_picture ? "Loading…" : "The reconstruction has not been merged yet."); fig.img.style.maxWidth = "720px";
         if (result.has_picture) loadFigure(fig.img, fig.status, "/jobs/" + live.jobId + "/abinitio/current.png", true, "reconstruction", urls);
         setExpand(fig.expand, result.current_volume ? {path: result.current_volume, title: result.label, section: "middle", greys: "local"} : null);
       };
@@ -10385,7 +10407,7 @@ From branch : <span id="versionBranch">—</span></p>
       function render(cls, rightText){
         fig.left.textContent = cls.name + (cls.is_startup ? " (starting references)" : " (round " + cls.round + " of " + cls.rounds + ")") + (chosen != null ? " · earlier round" : "");
         fig.right.textContent = rightText;
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+        figLoading(fig.img, fig.status, "Loading…");
         fig.img.style.maxWidth = cls.montage ? (cls.montage.width * 2) + "px" : "";
         loadFigure(fig.img, fig.status, "/classifications/" + cls.classification_id + "/averages.png", cls.class_average_file_exists, "class averages", last.urls);
         setExpand(fig.expand, cls.class_average_file_exists ? {path: cls.class_average_file, title: cls.name + " — class averages", section: 1, greys: "local"} : null);
@@ -10403,7 +10425,7 @@ From branch : <span id="versionBranch">—</span></p>
           (result.phase === "startup" ? "creating starting references" : result.phase === "merge" ? "merging round " + (result.round + 1) : "refining round " + (result.round + 1) + " of " + result.rounds);
         if (chosen == null){ render(result, phase); return; }
         if (cache[id]){ render(cache[id], phase); return; }
-        fig.img.hidden = true; fig.status.hidden = false; fig.status.textContent = "Loading…";
+        figLoading(fig.img, fig.status, "Loading…");
         apiFetch(projectApiUrl("/classifications/" + id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
           var h = (result.history || []).filter(function(e){ return e.classification_id === id; })[0];
           cache[id] = {classification_id: full.classification_id, name: full.name, class_average_file: full.class_average_file, class_average_file_exists: full.class_average_file_exists,

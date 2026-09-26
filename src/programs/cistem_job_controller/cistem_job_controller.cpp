@@ -170,6 +170,10 @@ static const uint8_t kKindBinary = 0x02;
 #ifndef CISTEM_JOB_CONTROLLER_VERSION
 #define CISTEM_JOB_CONTROLLER_VERSION "phase1"
 #endif
+// hello.features: what this build can do beyond protocol v1's baseline. The server
+// compares it with what the job asks for and says so in the job log if a feature
+// is missing -- a stale binary on a worker host used to fail silently.
+static const char* const kFeatures[] = {"progress_counts"};
 
 // ---------------------------------------------------------------------------
 // Framing helpers (spec section 3). Big-endian length, kind byte, payload.
@@ -501,6 +505,10 @@ class ServerLinkThread {
         controller["host"]    = ReturnLocalHostName( );
         controller["pid"]     = (long)getpid( );
         hello["controller"]   = controller;
+        json features         = json::array( );
+        for ( const char* feature : kFeatures )
+            features.push_back(feature);
+        hello["features"] = features;
         {
             std::lock_guard<std::mutex> lock(app->link_mutex);
             app->our_seq++;

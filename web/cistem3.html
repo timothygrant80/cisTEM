@@ -414,6 +414,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 .empty-note{font-family:var(--font-ui);color:var(--text-secondary);text-align:center;padding:30px 16px;font-size:16px;border:none;border-radius:4px;background:var(--surface-sunken);}
 .empty-note .hint{display:block;font-size:14.5px;margin-top:4px;}
 .empty-note.loading-note{color:var(--text-tertiary);}
+tr.vpending td{color:var(--text-tertiary);font-style:italic;}   /* a paged table's row not fetched yet */
 
 /* ---------- Settings ---------- */
 /* ---------- Results: Align Movies (MyMovieAlignResultsPanel) ----------
@@ -2985,6 +2986,8 @@ From branch : <span id="versionBranch">—</span></p>
     selectedPositionGroupId: 0,
     selectedPackageId: null,
     selectedPositionIds: new Set(),
+    positionsAllSelected: false,   // the Select All box: every position in the group, on the server
+    positionTotal: 0,
     selectedPositionId: null,
     selectedImageId: null,
     selectedImageIds: new Set()
@@ -8113,51 +8116,106 @@ From branch : <span id="versionBranch">—</span></p>
       var html = spacer(first);
       for (var i = first; i < first + count; i++) html += rowHtml(v.items[i], i);
       tbody.innerHTML = html + spacer(n - first - count);
+      wantPages(first, count);
       if (!v.rowHeight){
         // Measure a real row the first time one is laid out (0 while the panel is hidden) and redraw to the true height.
         var tr = tbody.children[1];
         if (tr && tr.offsetHeight){ v.rowHeight = tr.offsetHeight; render(true); }
       }
     }
-    v.setItems = function(items, keepScroll){ v.items = items; tbody.classList.add("virtual"); if (!keepScroll) scroller.scrollTop = 0; render(true); };
-    v.clear = function(html){ v.items = []; v.first = v.count = -1; tbody.classList.remove("virtual"); tbody.innerHTML = html || ""; };
+    v.setItems = function(items, keepScroll){ v.paged = null; v.items = items; tbody.classList.add("virtual"); if (!keepScroll) scroller.scrollTop = 0; render(true); };
+    v.clear = function(html){ v.paged = null; v.items = []; v.first = v.count = -1; tbody.classList.remove("virtual"); tbody.innerHTML = html || ""; };
     v.redraw = function(){ render(true); };
     v.rows = function(){ return Array.from(tbody.querySelectorAll("tr:not(.vspacer)")); };
+    // Paged: the table stands for `total` rows of which only the pages scrolled
+    // to are held (`items` is sparse). rowHtml() gets undefined for a row not yet
+    // fetched and draws a placeholder; scrolling into it asks fetchPage(offset,
+    // limit) -> Promise of that page's rows, once per page. A generation number
+    // drops answers to a list that has since been replaced.
+    v.setPaged = function(total, pageSize, fetchPage, firstPage, keepScroll){
+      v.items = new Array(total); v.paged = {size: pageSize, fetch: fetchPage, pending: {}, gen: (v.paged ? v.paged.gen : 0) + 1};
+      if (firstPage) v.fill(0, firstPage);
+      tbody.classList.add("virtual"); if (!keepScroll) scroller.scrollTop = 0; render(true);
+    };
+    v.fill = function(offset, rows){ for (var i = 0; i < rows.length && offset + i < v.items.length; i++) v.items[offset + i] = rows[i]; };
+    v.loaded = function(){ return v.items.filter(function(it){ return it !== undefined; }); };
+    v.find = function(pred){ for (var i = 0; i < v.items.length; i++) if (v.items[i] !== undefined && pred(v.items[i])) return v.items[i]; return null; };
+    function wantPages(first, count){
+      var pg = v.paged; if (!pg) return;
+      for (var i = first; i < first + count; i++){
+        if (v.items[i] !== undefined) continue;
+        var offset = Math.floor(i / pg.size) * pg.size;
+        if (pg.pending[offset]) continue;
+        pg.pending[offset] = true;
+        (function(offset, gen){
+          pg.fetch(offset, pg.size).then(function(rows){
+            if (!v.paged || v.paged.gen !== gen) return;
+            v.fill(offset, rows || []);
+            if (offset < v.first + v.count && offset + pg.size > v.first) render(true);
+          }).catch(function(){ if (v.paged && v.paged.gen === gen) delete v.paged.pending[offset]; });
+        })(offset, pg.gen);
+      }
+    }
     scroller.addEventListener("scroll", function(){ render(false); });
     // The panel being shown, or the window resized, changes how many rows fit.
     if (window.ResizeObserver) new ResizeObserver(function(){ render(!v.rowHeight); }).observe(scroller);
     return v;
   }
+  // The list is paged (POSITION_PAGE rows per request): the table stands for every
+  // position in the group and fetches the pages scrolled to. So the whole group is
+  // reachable however large, and "all" -- the Select All box, Remove All -- means the
+  // group on the server (all_in_group), not the rows the page happens to hold.
+  var POSITION_PAGE = 5000;
+  function positionPageUrl(offset, limit){ return projectApiUrl("/particle-positions?group_id=" + state.selectedPositionGroupId + "&offset=" + offset + "&limit=" + limit); }
   function loadPositions(){
     if (!state.projectId) return;
-    var key = "positions:" + state.selectedPositionGroupId;
+    var key = "positions:" + state.selectedPositionGroupId, group = state.selectedPositionGroupId;
     if (!listLoaded(key)) ppVirtual.clear(loadingRowHTML(8));
-    apiFetch(projectApiUrl("/particle-positions?group_id=" + state.selectedPositionGroupId)).then(function(r){
+    apiFetch(positionPageUrl(0, POSITION_PAGE)).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(data){ markLoaded(key); renderPositionList((data && data.particle_positions) || [], data); }).catch(function(){});
+    }).then(function(data){
+      if (group !== state.selectedPositionGroupId) return;
+      var refresh = listLoaded(key);   // a refresh keeps the scroll position and the ticks; a group first shown starts at the top
+      if (!refresh){ state.positionsAllSelected = false; state.selectedPositionIds = new Set(); }
+      markLoaded(key); renderPositionList((data && data.particle_positions) || [], data, refresh);
+    }).catch(function(){});
   }
-  function renderPositionList(rows, data){
-    state.positions = rows;
-    var present = new Set(rows.map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }));
-    state.selectedPositionIds = new Set(Array.from(state.selectedPositionIds).filter(function(id){ return present.has(id); }));
-    if (!present.has(state.selectedPositionId)) state.selectedPositionId = null;
-    els.ppListNote.hidden = !(data && data.truncated);
-    if (data && data.truncated) els.ppListNote.textContent = "Showing the first " + rows.length + " of " + data.total + " positions.";
+  function fetchPositionPage(group){
+    return function(offset, limit){
+      if (group !== state.selectedPositionGroupId) return Promise.resolve([]);
+      return apiFetch(positionPageUrl(offset, limit)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(function(data){ return (data && data.particle_positions) || []; });
+    };
+  }
+  function renderPositionList(rows, data, refresh){
+    state.positionTotal = (data && data.total) || rows.length;
+    els.ppListNote.hidden = true;
     if (!rows.length){
+      state.selectedPositionIds = new Set(); state.positionsAllSelected = false; state.selectedPositionId = null;
       updatePositionDetails(null); updatePositionBulkButtons();
       ppVirtual.clear("<tr><td colspan='8'><div class='empty-note'>No particle positions in this group" +
         "<span class='hint'>Run Find Particles from the Actions tab \u2014 each image's picks land here.</span></div></td></tr>");
       return;
     }
-    ppVirtual.setItems(rows, true);
-    updatePositionDetails(rows.filter(function(p){ return p.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId; })[0] || null);
+    ppVirtual.setPaged(state.positionTotal, POSITION_PAGE, fetchPositionPage(state.selectedPositionGroupId), rows, !!refresh);
+    // Ticks and the selection survive a refresh only for rows still present; a Select
+    // All stays a Select All (the group may have grown or shrunk, it still means all).
+    if (!state.positionsAllSelected){
+      var present = new Set(rows.map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }));
+      state.selectedPositionIds = new Set(Array.from(state.selectedPositionIds).filter(function(id){ return present.has(id); }));
+    }
+    updatePositionDetails(ppVirtual.find(function(p){ return p.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId; }));
     updatePositionBulkButtons();
   }
+  function positionSelectionCount(){ return state.positionsAllSelected ? state.positionTotal || 0 : state.selectedPositionIds.size; }
+  // The ids of a bulk action's positions: the whole group, or the ticked rows.
+  function positionSelectionBody(){ return state.positionsAllSelected ? {all_in_group: state.selectedPositionGroupId} : {particle_position_ids: Array.from(state.selectedPositionIds)}; }
   var ppVirtual = makeVirtualBody(els.ppListBody, 8, function(p, i){
+    if (p === undefined) return "<tr class='vpending" + (i % 2 ? " alt" : "") + "'><td class='check-col'></td><td colspan='7'>Loading\u2026</td></tr>";
     var id = p.PARTICLE_POSITION_ASSET_ID;
     return "<tr class='clickable" + (id === state.selectedPositionId ? " selected" : "") + (i % 2 ? " alt" : "") + "' data-position-id='" + id + "'>" +
-      "<td class='check-col'><input type='checkbox' class='pp-check'" + (state.selectedPositionIds.has(id) ? " checked" : "") + "></td>" +
+      "<td class='check-col'><input type='checkbox' class='pp-check'" + (state.positionsAllSelected || state.selectedPositionIds.has(id) ? " checked" : "") + "></td>" +
       "<td>" + id + "</td><td>" + escapeHtml(p.IMAGE_NAME || "\u2014") + "</td><td class='num'>" + p.PARENT_IMAGE_ASSET_ID + "</td>" +
       "<td class='num'>" + (p.JOB_NUMBER != null ? "Job " + p.JOB_NUMBER : "\u2014") + "</td>" +
       "<td class='num'>" + fmtCoord(p.X_POSITION) + "</td><td class='num'>" + fmtCoord(p.Y_POSITION) + "</td>" +
@@ -8172,13 +8230,18 @@ From branch : <span id="versionBranch">—</span></p>
   els.ppListBody.addEventListener("change", function(e){
     if (!e.target.classList.contains("pp-check")) return;
     var id = Number(e.target.closest("tr").dataset.positionId);
+    if (state.positionsAllSelected){
+      // Unticking one row after Select All: the selection becomes the loaded rows, minus this one.
+      state.positionsAllSelected = false;
+      state.selectedPositionIds = new Set(ppVirtual.loaded().map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }));
+    }
     if (e.target.checked) state.selectedPositionIds.add(id); else state.selectedPositionIds.delete(id);
     updatePositionBulkButtons();
   });
   function selectPosition(id){
     state.selectedPositionId = id;
     ppVirtual.rows().forEach(function(tr){ tr.classList.toggle("selected", Number(tr.dataset.positionId) === id); });
-    updatePositionDetails((state.positions || []).filter(function(p){ return p.PARTICLE_POSITION_ASSET_ID === id; })[0] || null);
+    updatePositionDetails(ppVirtual.find(function(p){ return p.PARTICLE_POSITION_ASSET_ID === id; }));
   }
   function updatePositionDetails(p){
     els.ppDetailsLabel.textContent = p ? "Selected Position \u2014 " + p.PARTICLE_POSITION_ASSET_ID : "Selected Position";
@@ -8192,7 +8255,7 @@ From branch : <span id="versionBranch">—</span></p>
     els.ppDisplayBtn.title = p ? "Show this image's picks on the Results tab." : "Select a position first.";
   }
   function updatePositionBulkButtons(){
-    var count = state.selectedPositionIds.size, total = (state.positions || []).length;
+    var count = positionSelectionCount(), total = state.positionTotal || 0;
     var isAll = state.selectedPositionGroupId === 0;
     var verb = isAll ? "Delete" : "Remove", suffix = isAll ? " from the project." : " from this group (they stay in All Particle Positions).";
     els.ppRemoveBtn.disabled = count === 0;
@@ -8200,49 +8263,51 @@ From branch : <span id="versionBranch">—</span></p>
     els.ppAddToGroupBtn.disabled = count === 0;
     els.ppAddToGroupBtn.title = count === 0 ? "Select one or more positions first." : "Add " + count + " selected position" + (count === 1 ? "" : "s") + " to a group.";
     els.ppSelectAllCheckbox.disabled = total === 0;
-    els.ppSelectAllCheckbox.checked = total > 0 && count === total;
-    els.ppSelectAllCheckbox.indeterminate = count > 0 && count < total;
+    els.ppSelectAllCheckbox.checked = total > 0 && (state.positionsAllSelected || count === total);
+    els.ppSelectAllCheckbox.indeterminate = !state.positionsAllSelected && count > 0 && count < total;
+    els.ppSelectAllCheckbox.title = "Select all " + fmtCount(total) + " positions in this group";
     els.ppRemoveAllBtn.disabled = total === 0;
-    els.ppRemoveAllBtn.title = total === 0 ? "No positions in this group yet." : verb + " all " + total + " listed positions" + suffix;
+    els.ppRemoveAllBtn.title = total === 0 ? "No positions in this group yet." : verb + " all " + fmtCount(total) + " positions in this group" + suffix;
   }
   els.ppSelectAllCheckbox.addEventListener("change", function(){
-    var checked = els.ppSelectAllCheckbox.checked;
-    state.selectedPositionIds = new Set(checked ? (state.positions || []).map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }) : []);
+    state.positionsAllSelected = els.ppSelectAllCheckbox.checked;   // every position in the group, on the server
+    state.selectedPositionIds = new Set();
     ppVirtual.redraw();
     updatePositionBulkButtons();
   });
-  function removePositions(ids){
-    if (!ids.length || !state.projectId) return;
+  function removePositions(body){
+    if (!state.projectId) return;
     var url = state.selectedPositionGroupId === 0 ? projectApiUrl("/particle-positions/delete")
       : projectApiUrl("/particle-position-groups/" + state.selectedPositionGroupId + "/remove-particle-positions");
-    apiFetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({particle_position_ids: ids})})
+    apiFetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
       .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
-      .then(function(){ loadPositionGroups(); loadPositions(); loadResults("particle_picking"); })
+      .then(function(){ state.positionsAllSelected = false; state.selectedPositionIds = new Set(); loadPositionGroups(); loadPositions(); loadResults("particle_picking"); })
       .catch(function(err){ alert("Could not remove positions: " + err.message); });
   }
   els.ppRemoveBtn.addEventListener("click", function(){
-    var ids = Array.from(state.selectedPositionIds); if (!ids.length) return;
-    var msg = state.selectedPositionGroupId === 0 ? "Permanently delete " + ids.length + " selected position" + (ids.length === 1 ? "" : "s") + " from the project? This cannot be undone."
-      : "Remove " + ids.length + " selected position" + (ids.length === 1 ? "" : "s") + " from this group? They stay in All Particle Positions.";
-    if (confirm(msg)) removePositions(ids);
+    var n = positionSelectionCount(); if (!n) return;
+    var msg = state.selectedPositionGroupId === 0 ? "Permanently delete " + fmtCount(n) + " selected position" + (n === 1 ? "" : "s") + " from the project? This cannot be undone."
+      : "Remove " + fmtCount(n) + " selected position" + (n === 1 ? "" : "s") + " from this group? They stay in All Particle Positions.";
+    if (confirm(msg)) removePositions(positionSelectionBody());
   });
   els.ppRemoveAllBtn.addEventListener("click", function(){
-    var ids = (state.positions || []).map(function(p){ return p.PARTICLE_POSITION_ASSET_ID; }); if (!ids.length) return;
-    var msg = state.selectedPositionGroupId === 0 ? "Permanently delete all " + ids.length + " listed positions from the project? This cannot be undone."
-      : "Remove all " + ids.length + " listed positions from this group? They stay in All Particle Positions.";
-    if (confirm(msg)) removePositions(ids);
+    var n = state.positionTotal || 0; if (!n) return;
+    var msg = state.selectedPositionGroupId === 0 ? "Permanently delete all " + fmtCount(n) + " positions from the project? This cannot be undone."
+      : "Remove all " + fmtCount(n) + " positions from this group? They stay in All Particle Positions.";
+    if (confirm(msg)) removePositions({all_in_group: state.selectedPositionGroupId});
   });
   els.ppAddToGroupBtn.addEventListener("click", function(){
-    var ids = Array.from(state.selectedPositionIds); if (!ids.length || !state.projectId) return;
-    var name = prompt("Add " + ids.length + " selected position" + (ids.length === 1 ? "" : "s") + " to group (existing or new name):");
+    var n = positionSelectionCount(); if (!n || !state.projectId) return;
+    var name = prompt("Add " + fmtCount(n) + " selected position" + (n === 1 ? "" : "s") + " to group (existing or new name):");
     if (name === null || !name.trim()) return;
-    apiFetch(projectApiUrl("/particle-positions/add-to-group"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({particle_position_ids: ids, group_name: name})})
+    var body = positionSelectionBody(); body.group_name = name;
+    apiFetch(projectApiUrl("/particle-positions/add-to-group"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
       .then(function(r){ if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); }); return r.json(); })
       .then(function(){ loadPositionGroups(); })
       .catch(function(err){ alert("Could not add to group: " + err.message); });
   });
   els.ppDisplayBtn.addEventListener("click", function(){
-    var p = (state.positions || []).filter(function(x){ return x.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId; })[0];
+    var p = ppVirtual.find(function(x){ return x.PARTICLE_POSITION_ASSET_ID === state.selectedPositionId; });
     if (!p) return;
     showTab("results");
     showResultsStage("particle_picking");
@@ -8554,13 +8619,19 @@ From branch : <span id="versionBranch">—</span></p>
         els.dRpkgClasses.textContent = p.number_of_classes;
         els.dRpkgRefinements.textContent = p.number_of_refinements;
         els.dRpkgLastRef.textContent = p.last_refinement_id;
-        els.rpkgParticlesHead.textContent = "Contained Particles (" + p.particle_total + ")";
-        rpkgVirtual.setItems(p.particles || []);
-        els.rpkgParticlesNote.hidden = !(p.particle_total > (p.particles || []).length);
-        if (!els.rpkgParticlesNote.hidden) els.rpkgParticlesNote.textContent = "Showing the first " + p.particles.length + " of " + p.particle_total + " particles.";
+        els.rpkgParticlesHead.textContent = "Contained Particles (" + fmtCount(p.particle_total) + ")";
+        // The details carry the first page; the table fetches the rest as it is scrolled.
+        var pkgId = p.refinement_package_asset_id;
+        rpkgVirtual.setPaged(p.particle_total || 0, PACKAGE_PARTICLE_PAGE, function(offset, limit){
+          return apiFetch(projectApiUrl("/refinement-packages/" + pkgId + "/particles?offset=" + offset + "&limit=" + limit))
+            .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(d){ return (d && d.particles) || []; });
+        }, p.particles || []);
+        els.rpkgParticlesNote.hidden = true;
       }).catch(function(){});
   }
+  var PACKAGE_PARTICLE_PAGE = 5000;
   var rpkgVirtual = makeVirtualBody(els.rpkgParticlesBody, 13, function(c, i){
+    if (c === undefined) return "<tr class='vpending" + (i % 2 ? " alt" : "") + "'><td colspan='13'>Loading\u2026</td></tr>";
     return "<tr" + (i % 2 ? " class='alt'" : "") + ">" +
       ["original_particle_position_asset_id", "parent_image_asset_id"].map(function(k){ return "<td class='num'>" + c[k] + "</td>"; }).join("") +
       ["x_position", "y_position"].map(function(k){ return "<td class='num'>" + Number(c[k]).toFixed(1) + "</td>"; }).join("") +

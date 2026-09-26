@@ -778,12 +778,14 @@ def list_packages(conn):
     return out
 
 
-def package_particles(conn, package_id, limit=5000):
+def package_particles(conn, package_id, limit=5000, offset=0):
+    """A page of the package's contained particles in stack order, and the
+    full count."""
     table = "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(int(package_id))
     if not _table_exists(conn, table):
         return [], 0
     total = conn.execute("SELECT COUNT(*) FROM {}".format(table)).fetchone()[0]
-    rows = conn.execute("SELECT * FROM {} ORDER BY POSITION_IN_STACK LIMIT ?".format(table), (limit,)).fetchall()
+    rows = conn.execute("SELECT * FROM {} ORDER BY POSITION_IN_STACK LIMIT ? OFFSET ?".format(table), (int(limit), int(offset))).fetchall()
     return [{k.lower(): r[k] for k in r.keys()} for r in rows], total
 
 

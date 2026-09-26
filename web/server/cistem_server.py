@@ -1578,8 +1578,16 @@ def _invert_group(project_id, kind, group_id):
     return jsonify({"was": len(before), "now": len(after)})
 
 
-def _requested_asset_ids(kind):
-    body = request.get_json(force=True, silent=True) or {}
+def _requested_asset_ids(kind, conn, body=None):
+    """The assets a bulk action is about: the body's explicit id list, or,
+    with `all_in_group: <group id>`, every member of that group -- so the
+    page's Select All / Remove All act on the whole group, not only on the
+    rows it has loaded of a list it pages through."""
+    body = body if body is not None else (request.get_json(force=True, silent=True) or {})
+    if body.get("all_in_group") is not None:
+        return [r[0] for r in conn.execute(
+            "SELECT {id} FROM {m} WHERE GROUP_ID = ? ORDER BY {id}".format(m=kind.member_table, id=kind.id_column),
+            (int(body["all_in_group"]),)).fetchall()]
     return body.get(kind.ids_key) or []
 
 
@@ -1590,11 +1598,12 @@ def _delete_assets(project_id, kind):
     # those rows point at), matching this app's existing scope: only Align
     # Movies is wired to real project data end-to-end, and nothing here
     # reconciles derived results either.
-    asset_ids = _requested_asset_ids(kind)
+    conn = db.get_conn(project_id)
+    asset_ids = _requested_asset_ids(kind, conn)
     if not asset_ids:
+        conn.close()
         return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
 
-    conn = db.get_conn(project_id)
     with conn:
         placeholders = ",".join("?" * len(asset_ids))
         conn.execute(
@@ -1626,11 +1635,12 @@ def _remove_from_group(project_id, kind, group_id):
                 kind.all_group_name, kind.plural
             )
         }), 400
-    asset_ids = _requested_asset_ids(kind)
+    conn = db.get_conn(project_id)
+    asset_ids = _requested_asset_ids(kind, conn)
     if not asset_ids:
+        conn.close()
         return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
 
-    conn = db.get_conn(project_id)
     with conn:
         placeholders = ",".join("?" * len(asset_ids))
         cur = conn.execute(
@@ -1666,14 +1676,15 @@ def _rename_asset(project_id, kind, asset_id):
 
 def _add_to_group(project_id, kind):
     body = request.get_json(force=True, silent=True) or {}
-    asset_ids = body.get(kind.ids_key) or []
     group_name = (body.get("group_name") or "").strip()
-    if not asset_ids:
-        return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
     if not group_name:
         return jsonify({"error": "group_name is required"}), 400
-
     conn = db.get_conn(project_id)
+    asset_ids = _requested_asset_ids(kind, conn, body)
+    if not asset_ids:
+        conn.close()
+        return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
+
     with conn:
         row = conn.execute(
             "SELECT GROUP_ID FROM {} WHERE LOWER(GROUP_NAME) = LOWER(?)".format(kind.group_table),
@@ -1690,15 +1701,12 @@ def _add_to_group(project_id, kind):
             group_id = cur.lastrowid
             created = True
 
-        for asset_id in asset_ids:
-            conn.execute(
-                "INSERT OR IGNORE INTO {m}(GROUP_ID, {id}) VALUES (?, ?)".format(
-                    m=kind.member_table, id=kind.id_column
-                ),
-                (group_id, asset_id),
-            )
+        conn.executemany(
+            "INSERT OR IGNORE INTO {m}(GROUP_ID, {id}) VALUES (?, ?)".format(m=kind.member_table, id=kind.id_column),
+            [(group_id, asset_id) for asset_id in asset_ids],
+        )
     conn.close()
-    return jsonify({"group_id": group_id, "group_name": group_name, "created": created})
+    return jsonify({"group_id": group_id, "group_name": group_name, "created": created, "added": len(asset_ids)})
 
 
 def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
@@ -2310,19 +2318,24 @@ def add_images_to_group(project_id):
 # hold hundreds of thousands, so it is capped); everything else is shared.
 # ---------------------------------------------------------------------------
 
-POSITION_LIST_LIMIT = 5000
+POSITION_LIST_LIMIT = 5000       # positions per page of GET /particle-positions
+PACKAGE_PARTICLE_PAGE = 5000     # contained particles per page of GET /refinement-packages/:id/particles
 
 
 @app.route("/api/projects/<project_id>/particle-positions", methods=["GET"])
 @auth.project_access_required
 def list_particle_positions(project_id):
     """Positions in a group (`group_id`, default all), oldest first, with the
-    parent image's name and the pick job's number. `total` is the full
-    count; at most POSITION_LIST_LIMIT rows come back (`truncated` says so)
-    -- cisTEM's panel lists every position, but a browser table of 200k
-    rows isn't a table anyone reads."""
+    parent image's name and the pick job's number, a page at a time:
+    `offset` (default 0) and `limit` (default and at most
+    POSITION_LIST_LIMIT) pick the page, `total` is the full count, and
+    `truncated` says whether anything follows the page -- cisTEM's panel
+    lists every position, and the page's table scrolls through all of them
+    fetching the pages it reaches."""
     group_id = request.args.get("group_id", type=int)
     image_id = request.args.get("image_id", type=int)
+    offset = max(0, request.args.get("offset", default=0, type=int) or 0)
+    limit = min(POSITION_LIST_LIMIT, max(1, request.args.get("limit", default=POSITION_LIST_LIMIT, type=int) or POSITION_LIST_LIMIT))
     conn = db.get_conn(project_id)
     where, args = [], []
     if group_id is not None:
@@ -2337,9 +2350,10 @@ def list_particle_positions(project_id):
         "SELECT pp.*, ia.NAME AS IMAGE_NAME, j.JOB_NUMBER FROM PARTICLE_POSITION_ASSETS pp "
         "LEFT JOIN IMAGE_ASSETS ia ON ia.IMAGE_ASSET_ID = pp.PARENT_IMAGE_ASSET_ID "
         "LEFT JOIN JOBS j ON j.JOB_ID = pp.PICK_JOB_ID" + clause +
-        " ORDER BY pp.PARTICLE_POSITION_ASSET_ID LIMIT ?", args + [POSITION_LIST_LIMIT]).fetchall()
+        " ORDER BY pp.PARTICLE_POSITION_ASSET_ID LIMIT ? OFFSET ?", args + [limit, offset]).fetchall()
     conn.close()
-    return jsonify({"particle_positions": [dict(r) for r in rows], "total": total, "truncated": total > len(rows)})
+    return jsonify({"particle_positions": [dict(r) for r in rows], "total": total, "offset": offset, "limit": limit,
+                    "truncated": total > offset + len(rows)})
 
 
 def _import_particle_positions(conn, text):
@@ -2643,12 +2657,30 @@ def get_refinement_package(project_id, package_id):
         conn.close()
         return jsonify({"error": "no such refinement package"}), 404
     d = pkg[0]
-    d["particles"], d["particle_total"] = refinement_packages.package_particles(conn, package_id)
+    d["particles"], d["particle_total"] = refinement_packages.package_particles(conn, package_id)   # the first page; the rest via /particles
     d["refinements"] = [dict(r) for r in conn.execute(
         "SELECT REFINEMENT_ID, NAME, DATETIME_OF_RUN, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM REFINEMENT_LIST "
         "WHERE REFINEMENT_PACKAGE_ASSET_ID=? ORDER BY REFINEMENT_ID", (package_id,)).fetchall()]
     conn.close()
     return jsonify(d)
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/particles", methods=["GET"])
+@auth.project_access_required
+def refinement_package_particles(project_id, package_id):
+    """A page of the package's contained particles in stack order: `offset`
+    (default 0) and `limit` (default and at most PACKAGE_PARTICLE_PAGE);
+    {particles, total, offset, limit}."""
+    offset = max(0, request.args.get("offset", default=0, type=int) or 0)
+    limit = min(PACKAGE_PARTICLE_PAGE, max(1, request.args.get("limit", default=PACKAGE_PARTICLE_PAGE, type=int) or PACKAGE_PARTICLE_PAGE))
+    conn = db.get_conn(project_id)
+    try:
+        if not [p for p in refinement_packages.list_packages(conn) if p["refinement_package_asset_id"] == package_id]:
+            return jsonify({"error": "no such refinement package"}), 404
+        particles, total = refinement_packages.package_particles(conn, package_id, limit=limit, offset=offset)
+    finally:
+        conn.close()
+    return jsonify({"particles": particles, "total": total, "offset": offset, "limit": limit})
 
 
 @app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["PATCH"])

@@ -2587,7 +2587,8 @@ def create_refinement_package(project_id):
     if request.args.get("async") in ("1", "true", "yes"):
         task_id = secrets.token_hex(6)
         with _package_tasks_lock:
-            _package_tasks[task_id] = {"state": "running", "done": 0, "total": None, "message": "Starting\u2026", "project_id": project_id}
+            _package_tasks[task_id] = {"state": "running", "done": 0, "total": None, "message": "Starting\u2026", "project_id": project_id,
+                                       "started_at": time.time(), "name": body.get("name") or ""}
         threading.Thread(target=_run_package_task, args=(task_id, project_id, body), daemon=True, name="package-" + task_id).start()
         return jsonify({"task_id": task_id}), 202
     conn = db.get_conn(project_id)
@@ -2603,15 +2604,34 @@ def create_refinement_package(project_id):
         conn.close()
 
 
+def _package_task_json(task_id, task):
+    out = {k: v for k, v in task.items() if k != "project_id"}
+    out["task_id"] = task_id
+    out["elapsed"] = time.time() - task["started_at"] if task.get("started_at") else None
+    return out
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/tasks", methods=["GET"])
+@auth.project_access_required
+def refinement_package_tasks(project_id):
+    """The project's package creations still running, newest first -- so a page
+    that was reloaded (or reconnected) while one ran can pick its progress
+    dialog back up. {tasks: [{task_id, state, done, total, message, started_at, elapsed, name}]}."""
+    with _package_tasks_lock:
+        running = [(tid, t) for tid, t in _package_tasks.items() if t.get("project_id") == project_id and t.get("state") == "running"]
+    running.sort(key=lambda item: item[1].get("started_at") or 0, reverse=True)
+    return jsonify({"tasks": [_package_task_json(tid, t) for tid, t in running]})
+
+
 @app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>", methods=["GET"])
 @auth.project_access_required
 def refinement_package_task(project_id, task_id):
-    """A background package creation: {state: running|done|failed, done, total, message, result?, error?}."""
+    """A background package creation: {state: running|done|failed, done, total, message, started_at, elapsed, result?, error?}."""
     with _package_tasks_lock:
         task = _package_tasks.get(task_id)
         if task is None or task.get("project_id") != project_id:
             return jsonify({"error": "no such task (tasks are kept until the server restarts)"}), 404
-        return jsonify({k: v for k, v in task.items() if k != "project_id"})
+        return jsonify(_package_task_json(task_id, task))
 
 
 @app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["GET"])

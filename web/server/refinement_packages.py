@@ -27,6 +27,7 @@ does. Templates, and combining or importing packages, are not mirrored.
 """
 
 import math
+from concurrent.futures import ThreadPoolExecutor
 import os
 import random
 import struct
@@ -83,13 +84,20 @@ class MrcStackWriter:
         self._fh.write(b"\x00" * 1024)
 
     def append(self, image):
-        arr = np.ascontiguousarray(image, dtype="<f4")
-        if arr.shape != (self.box, self.box):
-            raise ValueError("particle is {}x{}, box is {}".format(arr.shape[1], arr.shape[0], self.box))
-        self._fh.write(arr.tobytes())
-        self.count += 1
-        self._sum += float(arr.sum()); self._sumsq += float((arr.astype(np.float64) ** 2).sum())
-        self._min = min(self._min, float(arr.min())); self._max = max(self._max, float(arr.max()))
+        self.append_many(np.asarray(image, dtype=np.float32)[np.newaxis])
+
+    def append_many(self, images):
+        """A (n, box, box) batch in one write, its statistics in one pass."""
+        arr = np.ascontiguousarray(images, dtype="<f4")
+        if arr.ndim != 3 or arr.shape[1:] != (self.box, self.box):
+            raise ValueError("particles are {}, box is {}".format(arr.shape, self.box))
+        if not arr.shape[0]:
+            return
+        self._fh.write(memoryview(arr).cast("B"))   # the array's own buffer, no copy
+        self.count += arr.shape[0]
+        flat = arr.reshape(-1)
+        self._sum += float(flat.sum()); self._sumsq += float(np.dot(flat, flat))   # float32 pairwise sums, accumulated in float64
+        self._min = min(self._min, float(flat.min())); self._max = max(self._max, float(flat.max()))
 
     def close(self):
         n = max(self.count, 1) * self.box * self.box
@@ -176,17 +184,73 @@ def assign_subsets(parent_image_ids):
     return [1 if pid % 2 else 2 for pid in parent_image_ids]
 
 
-def _cut_box(image, edge_value, cx, cy, box):
+def _cut_box(image, edge_value, cx, cy, box, out=None):
     """Image::ClipInto() for a real-space box centred on pixel (cx, cy) --
-    column, row -- padded with `edge_value` where it reaches past the image."""
+    column, row -- padded with `edge_value` where it reaches past the image.
+    `out`, a (box, box) float32 array, is filled in place when given."""
     half = box // 2
     r0, c0 = cy - half, cx - half
-    out = np.full((box, box), edge_value, dtype=np.float32)
+    if out is None:
+        out = np.empty((box, box), dtype=np.float32)
     ry0, ry1 = max(r0, 0), min(r0 + box, image.shape[0])
     rx0, rx1 = max(c0, 0), min(c0 + box, image.shape[1])
-    if ry1 > ry0 and rx1 > rx0:
+    inside = ry1 > ry0 and rx1 > rx0
+    if not inside or ry1 - ry0 < box or rx1 - rx0 < box:
+        out.fill(edge_value)
+    if inside:
         out[ry0 - r0:ry1 - r0, rx0 - c0:rx1 - c0] = image[ry0:ry1, rx0:rx1]
     return out
+
+
+def _normalize_batch(boxes):
+    """_zero_float_and_normalize() over a (n, box, box) batch, in place."""
+    n = boxes.shape[0]
+    flat = boxes.reshape(n, -1)
+    flat -= flat.mean(axis=1, keepdims=True)
+    var = np.einsum("ij,ij->i", flat, flat) / np.float32(flat.shape[1])
+    scale = np.where(var > 0.0, 1.0 / np.sqrt(np.where(var > 0.0, var, 1.0)), 1.0).astype(np.float32)
+    flat *= scale[:, np.newaxis]
+    return boxes
+
+
+def _load_image_for_cutting(path):
+    """One image as the cutting loop wants it: read, outliers replaced
+    (Image::ReplaceOutliersWithMean(6)), and its edge average. Runs on a
+    worker thread ahead of the loop so the file read overlaps the cutting."""
+    image = read_mrc_section(path, 1)
+    flat = image.reshape(-1)
+    mean = float(flat.mean(dtype=np.float64))
+    sigma = math.sqrt(max(float(np.dot(flat, flat)) / flat.size - mean * mean, 0.0))
+    if sigma > 0:
+        np.putmask(image, np.abs(image - np.float32(mean)) > np.float32(6.0 * sigma), np.float32(mean))
+    return image, _edge_average(image)
+
+
+def _record_particle(contained, p, image, position_in_stack):
+    """The contained-particles row for one cut pick: its CTF from the image's
+    estimate, the defocus following the particle's height on a tilted specimen."""
+    ps = float(p["PIXEL_SIZE"] or 1.0)
+    cx, cy = int(round(p["X_POSITION"] / ps)), int(round(p["Y_POSITION"] / ps))
+    tilt_angle, tilt_axis = p["TILT_ANGLE"] or 0.0, p["TILT_AXIS"] or 0.0
+    d1, d2 = float(p["DEFOCUS1"]), float(p["DEFOCUS2"])
+    if tilt_angle or tilt_axis:
+        x_rel = (cx - image.shape[1] // 2) * ps
+        y_rel = (cy - image.shape[0] // 2) * ps
+        a = math.radians(tilt_axis)
+        y_rot = math.sin(a) * x_rel + math.cos(a) * y_rel  # RotationMatrix::RotateCoords2D row 2
+        height = y_rot * math.tan(math.radians(tilt_angle))
+        d1, d2 = d1 + height, d2 + height
+    contained.append({
+        "position_id": p["PARTICLE_POSITION_ASSET_ID"], "image_id": p["PARENT_IMAGE_ASSET_ID"],
+        "position_in_stack": position_in_stack, "x": float(p["X_POSITION"]), "y": float(p["Y_POSITION"]),
+        "pixel_size": ps, "defocus1": d1, "defocus2": d2, "defocus_angle": float(p["DEFOCUS_ANGLE"] or 0.0),
+        "phase_shift": float(p["ADDITIONAL_PHASE_SHIFT"] or 0.0), "cs": float(p["SPHERICAL_ABERRATION"] or 2.7),
+        "voltage": float(p["VOLTAGE"] or 300.0), "amplitude_contrast": float(p["AMPLITUDE_CONTRAST"] or 0.07),
+    })
+
+
+_CUT_BATCH = 256        # particles cut and normalised together (a 256px box: 64 MB of float32)
+_READ_AHEAD = 2         # images read on worker threads while the current one is cut
 
 
 def _edge_average(image):
@@ -392,52 +456,56 @@ def create_package(conn, project_id, params, log=None, progress=None):
     stack_path = str(stack_dir / "particle_stack_{}.mrc".format(package_id))
 
     # ---- cut the particles ----
+    # Image by image (the particles come sorted by image): each image is read once,
+    # on a worker thread ahead of its turn so the file reads overlap the cutting,
+    # and its particles are cut and normalised in batches rather than one at a time.
     writer = MrcStackWriter(stack_path, box_size, output_pixel_size)
     contained = []
-    current_image_id, image, edge = None, None, 0.0
     total = len(particles)
+    by_image = []
+    for p in particles:
+        if not by_image or by_image[-1][0] != p["PARENT_IMAGE_ASSET_ID"]:
+            by_image.append((p["PARENT_IMAGE_ASSET_ID"], p["FILENAME"], []))
+        by_image[-1][2].append(p)
+    pool = ThreadPoolExecutor(max_workers=_READ_AHEAD, thread_name_prefix="package-read") if _READ_AHEAD > 0 else None
+    pending = {}
+    n = 0
     try:
-        for n, p in enumerate(particles, 1):
-            if progress and (n % 10 == 0 or n == total or n == 1):
-                progress(n, total, "Cutting particles from image {}".format(p["PARENT_IMAGE_ASSET_ID"]))
-            if p["PARENT_IMAGE_ASSET_ID"] != current_image_id:
-                image = read_mrc_section(p["FILENAME"], 1)
-                # Image::ReplaceOutliersWithMean(6)
-                mean, sigma = float(image.mean()), float(image.std())
-                if sigma > 0:
-                    image = np.where(np.abs(image - mean) > 6.0 * sigma, np.float32(mean), image)
-                edge = _edge_average(image)
-                current_image_id = p["PARENT_IMAGE_ASSET_ID"]
-                if log:
-                    log("cutting particles from image {}".format(current_image_id))
-            ps = float(p["PIXEL_SIZE"] or 1.0)
-            cx, cy = int(round(p["X_POSITION"] / ps)), int(round(p["Y_POSITION"] / ps))
-            box = _zero_float_and_normalize(_cut_box(image, edge, cx, cy, box_size))
-            if p["PROTEIN_IS_WHITE"]:
-                box = -box
-            writer.append(box)
-            tilt_angle, tilt_axis = p["TILT_ANGLE"] or 0.0, p["TILT_AXIS"] or 0.0
-            d1, d2 = float(p["DEFOCUS1"]), float(p["DEFOCUS2"])
-            if tilt_angle or tilt_axis:
-                # A tilted specimen: the defocus at this particle follows its height.
-                x_rel = (cx - image.shape[1] // 2) * ps
-                y_rel = (cy - image.shape[0] // 2) * ps
-                a = math.radians(tilt_axis)
-                y_rot = math.sin(a) * x_rel + math.cos(a) * y_rel  # RotationMatrix::RotateCoords2D row 2
-                height = y_rot * math.tan(math.radians(tilt_angle))
-                d1, d2 = d1 + height, d2 + height
-            contained.append({
-                "position_id": p["PARTICLE_POSITION_ASSET_ID"], "image_id": p["PARENT_IMAGE_ASSET_ID"],
-                "position_in_stack": writer.count, "x": float(p["X_POSITION"]), "y": float(p["Y_POSITION"]),
-                "pixel_size": ps, "defocus1": d1, "defocus2": d2, "defocus_angle": float(p["DEFOCUS_ANGLE"] or 0.0),
-                "phase_shift": float(p["ADDITIONAL_PHASE_SHIFT"] or 0.0), "cs": float(p["SPHERICAL_ABERRATION"] or 2.7),
-                "voltage": float(p["VOLTAGE"] or 300.0), "amplitude_contrast": float(p["AMPLITUDE_CONTRAST"] or 0.07),
-            })
+        for i, (image_id, filename, group) in enumerate(by_image):
+            if pool is not None:
+                for j in range(i, min(i + _READ_AHEAD + 1, len(by_image))):
+                    if j not in pending:
+                        pending[j] = pool.submit(_load_image_for_cutting, by_image[j][1])
+                image, edge = pending.pop(i).result()
+            else:
+                image, edge = _load_image_for_cutting(filename)
+            if log:
+                log("cutting particles from image {}".format(image_id))
+            for start in range(0, len(group), _CUT_BATCH):
+                chunk = group[start:start + _CUT_BATCH]
+                boxes = np.empty((len(chunk), box_size, box_size), dtype=np.float32)
+                for k, p in enumerate(chunk):
+                    ps = float(p["PIXEL_SIZE"] or 1.0)
+                    _cut_box(image, edge, int(round(p["X_POSITION"] / ps)), int(round(p["Y_POSITION"] / ps)), box_size, boxes[k])
+                _normalize_batch(boxes)
+                if chunk[0]["PROTEIN_IS_WHITE"]:
+                    np.negative(boxes, out=boxes)
+                first = writer.count + 1
+                writer.append_many(boxes)
+                for k, p in enumerate(chunk):
+                    _record_particle(contained, p, image, first + k)
+                n += len(chunk)
+                if progress:
+                    progress(n, total, "Cutting particles from image {}".format(image_id))
     finally:
+        if pool is not None:
+            pool.shutdown(wait=False, cancel_futures=True)
         writer.close()
     subsets = assign_subsets([c["image_id"] for c in contained])
     for c, s in zip(contained, subsets):
         c["subset"] = s
+    if progress:
+        progress(total, total, "Writing the package")
 
     # ---- the database: Database::AddRefinementPackageAsset() + AddRefinement() ----
     insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,

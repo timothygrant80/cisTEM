@@ -22,6 +22,8 @@ section 12. Options make it misbehave on purpose:
     --reconnect-delay S   backoff base between reconnect attempts (default 1)
     --workers N           how many fake workers to "connect" (default: the
                           profile's total copies, capped at the task count)
+    --no-features         say hello without a `features` list, like a
+                          controller built before there was one
 
 Exit codes follow section 12.
 """
@@ -57,7 +59,7 @@ class ConnectionDropped(Exception):
 class FakeController:
     def __init__(self, hosts, port, token, task_delay=0.0, fail_tasks=(), drop_after=None,
                  exit_before_hello=False, reconnect_delay=1.0, reconnect_window=600.0, workers=None,
-                 task_runner=None, log=None):
+                 task_runner=None, log=None, no_features=False):
         self.hosts = hosts
         self.port = port
         self.token = token
@@ -65,6 +67,7 @@ class FakeController:
         self.fail_tasks = set(fail_tasks)
         self.drop_after = drop_after
         self.exit_before_hello = exit_before_hello
+        self.no_features = no_features
         self.reconnect_delay = reconnect_delay
         self.reconnect_window = reconnect_window
         self.workers_override = workers
@@ -120,6 +123,8 @@ class FakeController:
         msg = jp.make(self.seq, "hello", protocol_versions=list(jp.SUPPORTED_VERSIONS), token=self.token,
                       controller={"name": "fake_controller", "version": "0.1", "host": socket.gethostname(),
                                   "pid": os.getpid()})
+        if not self.no_features:
+            msg["features"] = [jp.FEATURE_PROGRESS_COUNTS]
         if resume:
             msg["last_seq_sent"] = self.seq.last - 1  # everything before this hello
         # hello itself is never resent (a reconnect sends a fresh one), so it
@@ -378,10 +383,11 @@ def main(argv=None):
     ap.add_argument("--reconnect-delay", type=float, default=1.0)
     ap.add_argument("--reconnect-window", type=float, default=600.0)
     ap.add_argument("--workers", type=int, default=None)
+    ap.add_argument("--no-features", action="store_true")
     a = ap.parse_args(argv)
     ctl = FakeController(a.hosts.split(","), a.port, a.token, task_delay=a.task_delay, fail_tasks=a.fail_task,
                          drop_after=a.drop_after, exit_before_hello=a.exit_before_hello,
-                         reconnect_delay=a.reconnect_delay, reconnect_window=a.reconnect_window, workers=a.workers)
+                         reconnect_delay=a.reconnect_delay, reconnect_window=a.reconnect_window, workers=a.workers, no_features=a.no_features)
     return ctl.run()
 
 

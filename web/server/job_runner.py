@@ -605,6 +605,19 @@ class JobRunner:
         if mtype == "job_done" or session.unacked >= ACK_EVERY_N_FRAMES:
             self._ack(session)
 
+    @staticmethod
+    def _missing_features(spec, features):
+        """What the job asks of the controller that this controller's hello did
+        not announce -- one job-log line each, saying what the job loses and
+        what to do. A stale cistem_job_controller on a worker host used to
+        show up only as a progress bar that never moved within a round."""
+        lines = []
+        if spec.progress_counts and not spec.forward_progress and jp.FEATURE_PROGRESS_COUNTS not in features:
+            lines.append("this job controller is an older build that does not report progress counts: the progress bar "
+                         "will move per task rather than per particle. Rebuild cistem_job_controller from this tree and "
+                         "install it where the run profile's manager command finds it.")
+        return lines
+
     def _hello(self, conn, message):
         versions = message["protocol_versions"]
         token = message["token"]
@@ -640,6 +653,9 @@ class JobRunner:
         self.sink.on_log(session.job_id, "controller connected from {} ({} {} on {}, pid {}){}".format(
             conn.peer[0], info.get("name", "?"), info.get("version", "?"), info.get("host", "?"),
             info.get("pid", "?"), " -- resuming" if resume else ""))
+        if not resume:
+            for line in self._missing_features(session.spec, message.get("features") or []):
+                self.sink.on_log(session.job_id, line, level="warning")
 
         if resume:
             last_sent = message.get("last_seq_sent")

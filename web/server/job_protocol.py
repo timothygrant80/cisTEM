@@ -220,7 +220,12 @@ _CONDITIONAL = [
     ("task_done", "ref", _is_str_or_int, lambda m: "ref" in m),
     ("task_progress", "ref", _is_str_or_int, lambda m: "ref" in m),
     ("task_progress", "result", lambda v: isinstance(v, dict), lambda m: "result" in m),
+    ("hello", "features", lambda v: isinstance(v, list) and all(isinstance(x, str) for x in v), lambda m: "features" in m),
 ]
+
+# hello.features a current controller announces, and what each one is for -- the
+# runner checks a job's needs against the connected controller's list.
+FEATURE_PROGRESS_COUNTS = "progress_counts"
 
 KNOWN_TYPES = frozenset(_REQUIRED)
 

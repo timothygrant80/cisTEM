@@ -172,6 +172,8 @@ _live = {}  # job_id -> {"proc": Popen|None, "cancel_requested": bool}
 
 log = logging.getLogger("cistem_server")
 
+_LOG_PREFIX = {"error": "ERROR: ", "warning": "WARNING: "}   # how a job-log line's level shows in the log
+
 CONTROLLER_COMMAND = os.environ.get("CISTEM_JOB_CONTROLLER", "cistem_job_controller")
 _job_runner = None
 
@@ -282,7 +284,7 @@ class DbSink(job_runner.Sink):
         if project_id is None:
             return
         try:
-            append_log(project_id, job_id, "[{}] {}{}".format(now_iso(), "ERROR: " if level == "error" else "", text))
+            append_log(project_id, job_id, "[{}] {}{}".format(now_iso(), _LOG_PREFIX.get(level, ""), text))
         except Exception:  # noqa: BLE001 -- a log line that cannot be stored must not derail the protocol it describes
             log.exception("could not append to the log of job %s: %s", job_id, text)
 
@@ -399,7 +401,7 @@ def write_job_results(conn, project_id, row):
     # transaction, and a second connection would block on it.
     def log_here(text, level="info"):
         append_log(project_id, job_id, "[{}] {}{}".format(
-            now_iso(), "ERROR: " if level == "error" else "", text), conn=conn)
+            now_iso(), _LOG_PREFIX.get(level, ""), text), conn=conn)
 
     def progress(done, total, what):
         with _FINISHING_LOCK:
@@ -4251,7 +4253,7 @@ _driver_runtime = classification.Runtime(
     submit_child=_submit_child_job,
     cancel=lambda job_id: _job_runner is not None and _job_runner.cancel(job_id),
     append_log=lambda project_id, job_id, text, level="info": append_log(
-        project_id, job_id, "[{}] {}{}".format(now_iso(), "ERROR: " if level == "error" else "", text)),
+        project_id, job_id, "[{}] {}{}".format(now_iso(), _LOG_PREFIX.get(level, ""), text)),
     update_job=_update_job,
 )
 classification.configure(_driver_runtime)

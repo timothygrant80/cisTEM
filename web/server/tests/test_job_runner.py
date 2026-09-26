@@ -79,10 +79,10 @@ class RunnerHarness:
         self.runner.start()
         self.extra_args = extra_args
 
-    def submit(self, n_tasks=3, manager="$command"):
+    def submit(self, n_tasks=3, manager="$command", forward_progress=True):
         spec = jr.JobSpec("job-1", {"id": "job-1", "number": 1, "name": "Job 1", "project": "p"},
                           {"name": "unblur", "executable": "unblur"}, PROFILE, make_tasks(n_tasks),
-                          manager + (" " + self.extra_args if self.extra_args else ""))
+                          manager + (" " + self.extra_args if self.extra_args else ""), forward_progress=forward_progress)
         return self.runner.submit(spec)
 
     def wait(self, timeout=30):
@@ -94,6 +94,26 @@ class RunnerHarness:
 
 
 class HappyPathTests(unittest.TestCase):
+    def test_a_controller_without_progress_counts_is_called_out(self):
+        h = RunnerHarness(extra_args="--no-features")
+        try:
+            h.submit(1, forward_progress=False)   # as the server submits every stage but refine_ctf: counts wanted, results not
+            self.assertEqual(h.wait(), jr.COMPLETED, h.sink.events)
+            warnings = [e for e in h.sink.of("log") if "older build" in e[2]]
+            self.assertEqual(len(warnings), 1, h.sink.events)
+            self.assertEqual(warnings[0][1], "warning")
+        finally:
+            h.stop()
+
+    def test_a_current_controller_draws_no_warning(self):
+        h = RunnerHarness()
+        try:
+            h.submit(1, forward_progress=False)
+            self.assertEqual(h.wait(), jr.COMPLETED, h.sink.events)
+            self.assertFalse([e for e in h.sink.of("log") if "older build" in e[2]], h.sink.events)
+        finally:
+            h.stop()
+
     def test_three_tasks_complete(self):
         h = RunnerHarness()
         try:

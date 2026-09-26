@@ -197,6 +197,7 @@ number with no fractional part.
 | `token` | string | yes | the job token from the command line |
 | `controller` | object | yes | `{"name": "cistem_job_controller", "version": "<cisTEM version string>", "host": "<hostname>", "pid": 1234}` — informational, for the job log |
 | `last_seq_sent` | int | no | on reconnect: the highest `seq` this controller has sent so far, so the server can sanity-check its `resume_from_seq` |
+| `features` | string[] | no | what this controller can do beyond the baseline of the protocol version, so the server can tell a stale build from a current one and say so in the job log rather than let the job run without it. Absent means none. Known values: `progress_counts` — honours `package.progress_counts` (count-only `task_progress` frames). |
 
 **`welcome`** — server → controller, in reply to an accepted `hello`.
 

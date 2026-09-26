@@ -413,6 +413,7 @@ table.queue tbody tr.selected .progress-eta{color:var(--text-secondary);}
 
 .empty-note{font-family:var(--font-ui);color:var(--text-secondary);text-align:center;padding:30px 16px;font-size:16px;border:none;border-radius:4px;background:var(--surface-sunken);}
 .empty-note .hint{display:block;font-size:14.5px;margin-top:4px;}
+.empty-note.loading-note{color:var(--text-tertiary);}
 
 /* ---------- Settings ---------- */
 /* ---------- Results: Align Movies (MyMovieAlignResultsPanel) ----------
@@ -3391,6 +3392,11 @@ From branch : <span id="versionBranch">—</span></p>
         updateStartButton();
         return;
       }
+      if (input.disabled || !input.options.length){
+        // Nothing real to show yet: say so, rather than the "No … yet" the answer may not bring.
+        input.innerHTML = ""; input.disabled = true;
+        var loadingOpt = document.createElement("option"); loadingOpt.textContent = "Loading\u2026"; input.appendChild(loadingOpt);
+      }
       apiFetch(projectApiUrl(f.dynamicOptions.endpoint)).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
@@ -3723,6 +3729,9 @@ From branch : <span id="versionBranch">—</span></p>
     var empty = document.createElement("div"); empty.className = "empty-note";
     empty.textContent = cfg.emptyTitle; var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = cfg.emptyHint; empty.appendChild(hint);
     scroll.appendChild(empty);
+    var emptyHTML = empty.innerHTML;   // the "No … yet" title and hint, back once the first answer for the project is in
+    function emptyLoading(on){ if (on) empty.textContent = "Loading\u2026"; else if (!page.loadedProject) empty.innerHTML = emptyHTML; }
+    emptyLoading(true);
     var resultBox = document.createElement("div"); resultBox.className = "ra-result"; resultBox.hidden = true; scroll.appendChild(resultBox);
     var view = cfg.buildResult(resultBox);
     els.resultsPages.appendChild(root);
@@ -3791,10 +3800,12 @@ From branch : <span id="versionBranch">—</span></p>
 
     page.load = function(){
       if (!state.projectId || !state.connected) return Promise.resolve();
+      if (page.loadedProject !== state.projectId){ page.loadedProject = null; emptyLoading(true); }
       return apiFetch(projectApiUrl(cfg.listPath)).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       }).then(function(data){
+        emptyLoading(false); page.loadedProject = state.projectId;
         page.items = (data && data[cfg.listKey]) || [];
         page.entries = groupByRow(page.items);
         var e = entry(page.selectedRowId);
@@ -4637,6 +4648,9 @@ From branch : <span id="versionBranch">—</span></p>
     empty.textContent = "No 2D classifications in this project yet";
     var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run 2D Classification from the Actions tab on a refinement package; each round’s class averages appear here."; empty.appendChild(hint);
     scroll.appendChild(empty);
+    var emptyHTML = empty.innerHTML;   // the "No … yet" title and hint, back once the first answer for the project is in
+    function emptyLoading(on){ if (on) empty.textContent = "Loading\u2026"; else if (!page.loadedProject) empty.innerHTML = emptyHTML; }
+    emptyLoading(true);
     var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
     var averages = classMontageFigure("Class averages"); averages.frame.classList.add("selectable"); resultBox.appendChild(averages.root);
     var membersHead = document.createElement("div"); membersHead.className = "rpkg-particles-head"; membersHead.textContent = "Class Members"; resultBox.appendChild(membersHead);
@@ -4729,10 +4743,12 @@ From branch : <span id="versionBranch">—</span></p>
 
     page.load = function(){
       if (!state.projectId || !state.connected) return Promise.resolve();
+      if (page.loadedProject !== state.projectId){ page.loadedProject = null; emptyLoading(true); }
       return Promise.all([
         apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
         apiFetch(projectApiUrl("/classifications")).then(function(r){ return r.ok ? r.json() : {classifications: []}; })
       ]).then(function(res){
+        emptyLoading(false); page.loadedProject = state.projectId;
         page.packages = (res[0] && res[0].refinement_packages) || [];
         page.items = (res[1] && res[1].classifications) || [];
         var withResults = {};
@@ -4877,6 +4893,9 @@ From branch : <span id="versionBranch">—</span></p>
     var empty = document.createElement("div"); empty.className = "empty-note"; empty.textContent = "No ab-initio reconstructions in this project yet";
     var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Ab-Initio 3D from the Actions tab on a refinement package; each run’s volume appears here and under 3D Volumes on the Assets tab."; empty.appendChild(hint);
     scroll.appendChild(empty);
+    var emptyHTML = empty.innerHTML;   // the "No … yet" title and hint, back once the first answer for the project is in
+    function emptyLoading(on){ if (on) empty.textContent = "Loading\u2026"; else if (!page.loadedProject) empty.innerHTML = emptyHTML; }
+    emptyLoading(true);
     // The Find CTF page's arrangement: the picture(s) on the left with their
     // captions above, and beside them, in a box the same height, the run's
     // numbers as label - dotted leader - value.
@@ -4911,7 +4930,9 @@ From branch : <span id="versionBranch">—</span></p>
     function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
     page.load = function(){
       if (!state.projectId || !state.connected) return Promise.resolve();
+      if (page.loadedProject !== state.projectId){ page.loadedProject = null; emptyLoading(true); }
       return apiFetch(projectApiUrl("/startups")).then(function(r){ return r.ok ? r.json() : {startups: []}; }).then(function(d){
+        emptyLoading(false); page.loadedProject = state.projectId;
         page.items = (d && d.startups) || [];
         if (!page.items.some(function(r){ return r.startup_id === page.selectedId; })) page.selectedId = page.items.length ? page.items[page.items.length - 1].startup_id : null;
         render();
@@ -5231,6 +5252,9 @@ From branch : <span id="versionBranch">—</span></p>
     var empty = document.createElement("div"); empty.className = "empty-note"; empty.textContent = "No 3D refinements in this project yet";
     var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = "Run Refine 3D from the Actions tab; each round’s refinement appears here with its FSC curve and reconstruction."; empty.appendChild(hint);
     scroll.appendChild(empty);
+    var emptyHTML = empty.innerHTML;   // the "No … yet" title and hint, back once the first answer for the project is in
+    function emptyLoading(on){ if (on) empty.textContent = "Loading\u2026"; else if (!page.loadedProject) empty.innerHTML = emptyHTML; }
+    emptyLoading(true);
     var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
     var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
@@ -5257,10 +5281,12 @@ From branch : <span id="versionBranch">—</span></p>
     function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
     page.load = function(){
       if (!state.projectId || !state.connected) return Promise.resolve();
+      if (page.loadedProject !== state.projectId){ page.loadedProject = null; emptyLoading(true); }
       return Promise.all([
         apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ return r.ok ? r.json() : {refinement_packages: []}; }),
         apiFetch(projectApiUrl("/refinements")).then(function(r){ return r.ok ? r.json() : {refinements: []}; })
       ]).then(function(res){
+        emptyLoading(false); page.loadedProject = state.projectId;
         page.packages = (res[0] && res[0].refinement_packages) || [];
         page.items = ((res[1] && res[1].refinements) || []).filter(function(r){ return r.classes.some(function(c){ return c.reconstructed_volume_asset_id >= 0; }) || r.starting_refinement_id >= 0; });
         if (!page.packages.some(function(p){ return p.refinement_package_asset_id === page.packageId; })){
@@ -6071,6 +6097,7 @@ From branch : <span id="versionBranch">—</span></p>
   function openProject(projectId, projectName){
     state.projectId = projectId;
     state.projectName = projectName;
+    state.loaded = {};   // every list says "Loading…" until this project's answer is in
     localStorage.setItem("cryoem_last_project_id", projectId);
     state.lastProjectId = projectId;
     updateTopSub();
@@ -6116,10 +6143,12 @@ From branch : <span id="versionBranch">—</span></p>
 
   function loadProjectList(){
     if (!state.connected || !state.currentUser) return;
+    if (!state.projectsSeen) loadingRow(els.projectListBody, 5);
     apiFetch(apiUrl("/projects")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
+      state.projectsSeen = true;
       renderProjectList((data && data.projects) || []);
     }).catch(function(){
       renderProjectList([]);
@@ -6534,10 +6563,12 @@ From branch : <span id="versionBranch">—</span></p>
 
   function loadMovies(){
     if (!state.projectId) return;
+    var key = "movies:" + state.selectedGroupId;
+    if (!listLoaded(key)) loadingRow(els.movieListBody, 13);
     apiFetch(projectApiUrl("/movies?group_id=" + state.selectedGroupId)).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(data){ renderMovieList((data && data.movies) || []); }).catch(function(){});
+    }).then(function(data){ markLoaded(key); renderMovieList((data && data.movies) || []); }).catch(function(){});
   }
 
   function fmtNum(v){ return v != null ? v : "—"; }
@@ -7709,10 +7740,12 @@ From branch : <span id="versionBranch">—</span></p>
   // ---------- image list ----------
   function loadImages(){
     if (!state.projectId) return;
+    var key = "images:" + state.selectedImageGroupId;
+    if (!listLoaded(key)) loadingRow(els.imageListBody, 12);
     apiFetch(projectApiUrl("/images?group_id=" + state.selectedImageGroupId)).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(data){ renderImageList((data && data.images) || []); }).catch(function(){});
+    }).then(function(data){ markLoaded(key); renderImageList((data && data.images) || []); }).catch(function(){});
   }
 
   // PARENT_MOVIE_ID and ALIGNMENT_ID are -1 on an imported image -- cisTEM's
@@ -8097,10 +8130,12 @@ From branch : <span id="versionBranch">—</span></p>
   }
   function loadPositions(){
     if (!state.projectId) return;
+    var key = "positions:" + state.selectedPositionGroupId;
+    if (!listLoaded(key)) ppVirtual.clear(loadingRowHTML(8));
     apiFetch(projectApiUrl("/particle-positions?group_id=" + state.selectedPositionGroupId)).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(data){ renderPositionList((data && data.particle_positions) || [], data); }).catch(function(){});
+    }).then(function(data){ markLoaded(key); renderPositionList((data && data.particle_positions) || [], data); }).catch(function(){});
   }
   function renderPositionList(rows, data){
     state.positions = rows;
@@ -8359,8 +8394,10 @@ From branch : <span id="versionBranch">—</span></p>
   }
   function loadVolumes(){
     if (!state.projectId) return;
+    var key = "volumes:" + state.selectedVolumeGroupId;
+    if (!listLoaded(key)) loadingRow(els.volListBody, 9);
     apiFetch(projectApiUrl("/volumes?group_id=" + state.selectedVolumeGroupId)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function(data){ renderVolumeList((data && data.volumes) || []); }).catch(function(){});
+      .then(function(data){ markLoaded(key); renderVolumeList((data && data.volumes) || []); }).catch(function(){});
   }
   function renderVolumeList(rows){
     state.volumes = rows;
@@ -8476,10 +8513,12 @@ From branch : <span id="versionBranch">—</span></p>
   });
 
   // ---------- refinement packages (MyRefinementPackageAssetPanel) ----------
+  var rpkgEmptyHTML = els.rpkgEmpty.innerHTML;   // "No refinement packages yet" and its hint
   function loadPackages(){
     if (!state.projectId) return;
+    if (!listLoaded("packages")){ els.rpkgList.innerHTML = ""; els.rpkgEmpty.textContent = "Loading\u2026"; els.rpkgEmpty.hidden = false; els.rpkgDetails.hidden = true; }
     apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function(data){ renderPackageList((data && data.refinement_packages) || []); }).catch(function(){});
+      .then(function(data){ if (!listLoaded("packages")){ markLoaded("packages"); els.rpkgEmpty.innerHTML = rpkgEmptyHTML; } renderPackageList((data && data.refinement_packages) || []); }).catch(function(){});
   }
   function renderPackageList(pkgs){
     state.packages = pkgs;
@@ -9769,6 +9808,16 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   // ---------- rendering: Results ----------
+  // Lists say "Loading…" until their first answer for the open project (or the
+  // chosen group) is in, and "No …" only once that answer is empty: a fresh
+  // page or a project switch used to show the empty message while the request
+  // was still out. state.loaded (reset when a project opens) remembers which
+  // lists have answered; a background refresh of a list already shown keeps
+  // its rows rather than flashing "Loading…".
+  function listLoaded(key){ return !!(state.loaded && state.loaded[key]); }
+  function markLoaded(key){ (state.loaded || (state.loaded = {}))[key] = true; }
+  function loadingRowHTML(colspan){ return "<tr><td colspan='" + colspan + "'><div class='empty-note loading-note'>Loading\u2026</div></td></tr>"; }
+  function loadingRow(tbody, colspan){ tbody.innerHTML = loadingRowHTML(colspan); }
   function renderEmptyQueue(title, hint){
     els.queueBody.innerHTML = "";
     var tr = document.createElement("tr");
@@ -9806,7 +9855,8 @@ From branch : <span id="versionBranch">—</span></p>
 
   function renderQueue(){
     if (!state.jobs.length){
-      renderEmptyQueue("No jobs yet", "Submit one from the Actions tab — it will appear here once the API accepts it.");
+      if (!state.jobsSeen) renderEmptyQueue("Loading jobs\u2026");
+      else renderEmptyQueue("No jobs yet", "Submit one from the Actions tab — it will appear here once the API accepts it.");
       return;
     }
     var sorted = state.jobs.slice().sort(function(a,b){ return new Date(b.created_at || 0) - new Date(a.created_at || 0); });

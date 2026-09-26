@@ -3515,7 +3515,10 @@ From branch : <span id="versionBranch">—</span></p>
       return;
     }
     figLoading(img, status);
-    apiFetch(projectApiUrl(path), {cache: "no-cache"}).then(function(r){
+    // The browser's own cache applies: the server marks a picture reusable for a
+    // short while (and validated by ETag after), so stepping back to a picture just
+    // seen costs no round trip on a slow link.
+    apiFetch(projectApiUrl(path)).then(function(r){
       if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       if (onResponse) onResponse(r);
       return r.blob();

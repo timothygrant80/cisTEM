@@ -161,7 +161,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/display/info`, `/display/section`, `/display/range` | The Display panel's data for any image file on the server (`?path=`): header; `&count=` sections from `&section=` (0 = frame sum) binned to `&max_edge=` as concatenated float32 with the header in `X-Display-Info`; the stack's grey range |
 | `GET` | `/run-profiles` | The machine's run profiles (system-wide, any logged-in user) — feeds the Run Profile picker |
 | `POST` / `PATCH` / `DELETE` | `/run-profiles[/:rid]` | Admin only: add (empty body), duplicate (`{copy_of}`), import (full profile), edit, remove |
-| `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
+| `GET` | `/projects/:id/jobs` (without each job's `params`; `GET …/jobs/:jid` has them) | List jobs: `{ "jobs": [Job, ...] }` |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below). `400` if `params.run_profile` names a profile with no run commands |
 | `GET` | `/projects/:id/jobs/:id/latest-result` | Newest finished task's result for the Jobs tab's live panel (`result: null` + `reason` when there is none yet) |
 | `GET` | `/projects/:id/jobs/:id/tasks/:tidx/<name>.png` | PNG of one task's output picture (`sum`, `spectrum`, `diagnostic`), available mid-run |

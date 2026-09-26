@@ -31,6 +31,7 @@ HTTPS enforcement (see README.md's Security section for what that implies).
 """
 
 import glob as glob_module
+import gzip
 import inspect
 import json
 import logging
@@ -79,6 +80,47 @@ DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio, refin
            refinectf.STAGE: refinectf, generate3d.STAGE: generate3d}
 
 app = Flask(__name__)
+# Responses go gzipped to a browser that accepts it: the page is 770 KB (170 KB
+# gzipped) and the job list the Jobs tab polls every few seconds is mostly
+# repeated text, so on a slow link this is most of the difference between a
+# LAN and home. Pictures are PNGs already and are left alone. The page's own
+# bytes are compressed once per version (keyed on its ETag) rather than per
+# request; JSON is compressed as it goes, which is cheap at these sizes.
+_COMPRESSIBLE = ("text/html", "text/css", "text/javascript", "application/javascript", "application/json", "image/svg+xml", "text/plain")
+_GZIP_MIN_BYTES = 1024
+_gzip_cache = {}   # (path, etag) -> gzipped bytes, for the static files
+
+
+@app.after_request
+def _gzip_response(response):
+    if response.status_code != 200 or response.headers.get("Content-Encoding") or "gzip" not in (request.headers.get("Accept-Encoding") or ""):
+        return response
+    if not any(response.mimetype == m for m in _COMPRESSIBLE):
+        return response
+    if response.direct_passthrough:   # a file: read it so it can be compressed, and remember the result per version
+        key = (request.path, response.headers.get("ETag"))
+        body = _gzip_cache.get(key)
+        if body is None:
+            response.direct_passthrough = False
+            raw = response.get_data()
+            if len(raw) < _GZIP_MIN_BYTES:
+                return response
+            body = gzip.compress(raw, compresslevel=6)
+            if len(_gzip_cache) > 32:
+                _gzip_cache.clear()
+            _gzip_cache[key] = body
+    else:
+        raw = response.get_data()
+        if len(raw) < _GZIP_MIN_BYTES:
+            return response
+        body = gzip.compress(raw, compresslevel=5)
+    response.set_data(body)
+    response.headers["Content-Encoding"] = "gzip"
+    response.headers["Content-Length"] = str(len(body))
+    response.headers.add("Vary", "Accept-Encoding")
+    return response
+
+
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -525,15 +567,18 @@ def _task_progress(conn, row):  # noqa: D401 -- see _task_progress_for
     return info
 
 
-def _row_to_job(row, conn=None):
+def _row_to_job(row, conn=None, with_params=True):
     """`conn`, when given, adds the task counts a running job's time-remaining
-    estimate needs; the single-job routes don't bother."""
+    estimate needs; the single-job routes don't bother. The job list leaves
+    `params` out (`with_params=False`): the page polls that list every few
+    seconds and never reads a job's parameters from it -- GET /jobs/:id
+    carries them for whoever needs them."""
     return dict({
         "id": row["JOB_ID"],
         "stage": row["STAGE"],
         "number": row["JOB_NUMBER"],
         "name": row["NAME"],
-        "params": json.loads(row["PARAMS_JSON"]) if row["PARAMS_JSON"] else {},
+        "params": (json.loads(row["PARAMS_JSON"]) if row["PARAMS_JSON"] else {}) if with_params else None,
         "status": row["STATUS"],
         "progress": row["PROGRESS"],
         "created_at": row["CREATED_AT"],
@@ -1767,7 +1812,7 @@ def _preview_response(project_id, kind, asset_id, render, extra_headers=None):
 
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, no-cache"
+    response.headers["Cache-Control"] = "private, max-age=30"   # reuse for 30 s without a round trip; the ETag validates after that
     for header, value in (extra_headers or {}).items():
         response.headers[header] = str(meta[value])
     return response
@@ -2864,7 +2909,7 @@ def volume_preview(project_id, volume_id):
         return jsonify({"error": str(exc)}), 422
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, no-cache"
+    response.headers["Cache-Control"] = "private, max-age=30"   # reuse for 30 s without a round trip; the ETag validates after that
     return response
 
 
@@ -2934,7 +2979,7 @@ def abinitio_current_picture(project_id, job_id):
     stat = Path(path).stat()
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = '"r{}-abinitio-{}-{}-{}"'.format(preview.RENDER_VERSION, job_id, int(stat.st_mtime), stat.st_size)
-    response.headers["Cache-Control"] = "private, no-cache"
+    response.headers["Cache-Control"] = "private, no-cache"   # the same URL every round: always revalidate
     # how the picture relates to the map: the box in pixels and the factor each panel was scaled by
     response.headers["X-Picture-Box"] = str(meta.get("box", ""))
     response.headers["X-Picture-Scale"] = "{:.4f}".format(meta.get("scale", 1.0))
@@ -3332,7 +3377,7 @@ def _montage_response(path, sections, etag_key, what):
         return jsonify({"error": str(exc)}), 422
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, no-cache"
+    response.headers["Cache-Control"] = "private, max-age=30"   # reuse for 30 s without a round trip; the ETag validates after that
     return response
 
 
@@ -3878,7 +3923,7 @@ def _file_preview_response(path, etag_key, what):
         return jsonify({"error": str(exc)}), 422
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, no-cache"
+    response.headers["Cache-Control"] = "private, max-age=30"   # reuse for 30 s without a round trip; the ETag validates after that
     return response
 
 
@@ -4034,7 +4079,9 @@ def list_jobs(project_id):
     # The steps of a 2D classification are jobs to the runner but not to the
     # user: the parent row stands for the whole cycle.
     rows = conn.execute("SELECT * FROM JOBS WHERE PARENT_JOB_ID IS NULL ORDER BY CREATED_AT").fetchall()
-    jobs = [_row_to_job(r, conn) for r in rows]
+    jobs = [_row_to_job(r, conn, with_params=False) for r in rows]
+    for job in jobs:
+        del job["params"]
     conn.close()
     return jsonify({"jobs": jobs})
 

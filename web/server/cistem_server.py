@@ -511,23 +511,29 @@ def _forget_result_counts(job_id):
 
 def _expected_results(stage, tasks):
     """Per task index, how many intermediate results the program will send:
-    one per particle of its first_particle..last_particle range (refine2d:
-    of the percent_used share, as MyRefine2DPanel counts), or None for a
-    program that does not work through a particle range -- its tasks are
-    the only unit of progress there is."""
+    one per particle of its first_particle..last_particle range, or None
+    for a program that does not work through a particle range -- its tasks
+    are the only unit of progress there is. refine2d's start-up round (no
+    input class averages: "/dev/null") sends one per particle it *uses*,
+    the percent_used share -- passed to it as a fraction, 0.5 for 50% --
+    exactly as ClassificationManager::ProcessJobResult() counts for
+    STARTUP; a refinement round sends one for every particle in its range."""
     adapter = stages.ADAPTERS.get(stage)
     names = getattr(adapter, "ARGUMENT_NAMES", ())
     if "first_particle" not in names or "last_particle" not in names:
         return None
     fi, li = names.index("first_particle"), names.index("last_particle")
-    pi = names.index("percent_used") if "percent_used" in names and adapter.PROGRAM["name"] == "refine2d" else None
+    startup_share = adapter.PROGRAM["name"] == "refine2d" and "percent_used" in names and "input_class_averages" in names
     out = {}
     for t in tasks:
         try:
             args = t["args"]
             n = int(args[li]["value"]) - int(args[fi]["value"]) + 1
-            if pi is not None:
-                n = int(round(n * float(args[pi]["value"]) / 100.0))
+            if startup_share and args[names.index("input_class_averages")]["value"] == "/dev/null":
+                fraction = float(args[names.index("percent_used")]["value"])
+                if fraction > 1.0:   # tolerate a percentage where a fraction was meant
+                    fraction /= 100.0
+                n = int(round(n * fraction))
             out[int(t["index"])] = max(1, n)
         except (KeyError, IndexError, TypeError, ValueError):
             return None

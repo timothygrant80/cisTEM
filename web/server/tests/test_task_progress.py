@@ -17,8 +17,8 @@ import cistem_server  # noqa: E402
 from stages import refine2d, refine3d, ctffind  # noqa: E402
 
 
-def _particle_task(adapter, index, first, last, percent_used=100.0):
-    values = {"first_particle": first, "last_particle": last, "percent_used": percent_used}
+def _particle_task(adapter, index, first, last, percent_used=1.0, input_class_averages="averages.mrc"):
+    values = {"first_particle": first, "last_particle": last, "percent_used": percent_used, "input_class_averages": input_class_averages}
     kinds = {"t": "text", "i": "int", "f": "float", "b": "bool"}
     args = []
     for name, t in zip(adapter.ARGUMENT_NAMES, adapter.ARGUMENT_TYPES):
@@ -39,7 +39,7 @@ class TaskProgressTests(unittest.TestCase):
     def tearDown(self):
         self.conn.close()
         db.PROJECTS_ROOT = self._root
-        for job_id in ("r2d", "r3d", "ctf"):
+        for job_id in ("r2d", "r2d-half", "r3d", "ctf"):
             cistem_server._forget_result_counts(job_id)
 
     def _job(self, job_id, stage, tasks):
@@ -53,19 +53,25 @@ class TaskProgressTests(unittest.TestCase):
                           (job_id, index, cistem_server.now_iso()))
         self.conn.commit()
 
-    def test_refine2d_counts_the_percent_used_share_of_each_range(self):
-        row = self._job("r2d", "class2d_refine2d", [_particle_task(refine2d, 0, 1, 100, 50.0), _particle_task(refine2d, 1, 101, 200, 50.0)])
+    def test_refine2d_round_counts_every_particle_and_startup_the_used_share(self):
+        # a refinement round: percent_used (a fraction on the wire) does not reduce what refine2d sends
+        row = self._job("r2d", "class2d_refine2d", [_particle_task(refine2d, 0, 1, 100, 0.5), _particle_task(refine2d, 1, 101, 200, 0.5)])
         info = cistem_server._task_progress(self.conn, row)
         self.assertEqual((info["task_count"], info["tasks_done"]), (2, 0))
-        self.assertEqual((info["results_expected"], info["results_seen"]), (100, 0))
+        self.assertEqual((info["results_expected"], info["results_seen"]), (200, 0))
+        # the start-up round (no input averages) sends one result per particle it uses
+        self.assertEqual(cistem_server._expected_results("class2d_refine2d", [_particle_task(refine2d, 0, 1, 1000, 0.25, "/dev/null")]), {0: 250})
+        self.assertEqual(cistem_server._expected_results("class2d_refine2d", [_particle_task(refine2d, 0, 1, 1000, 25.0, "/dev/null")]), {0: 250})
+        row = self._job("r2d-half", "class2d_refine2d", [_particle_task(refine2d, 0, 1, 100, 0.5), _particle_task(refine2d, 1, 101, 200, 0.5)])
+        info = cistem_server._task_progress(self.conn, row)
         self.assertIsNone(info["first_result_at"])
         # counts arrive (the newest count wins, never a smaller resend), one task finishes
-        cistem_server._note_result_count("r2d", 0, 20)
-        cistem_server._note_result_count("r2d", 0, 17)
-        cistem_server._note_result_count("r2d", 1, 5)
-        self._finish("r2d", 1)
+        cistem_server._note_result_count("r2d-half", 0, 20)
+        cistem_server._note_result_count("r2d-half", 0, 17)
+        cistem_server._note_result_count("r2d-half", 1, 5)
+        self._finish("r2d-half", 1)
         info = cistem_server._task_progress(self.conn, row)
-        self.assertEqual((info["results_expected"], info["results_seen"]), (100, 70))
+        self.assertEqual((info["results_expected"], info["results_seen"]), (200, 120))
         self.assertEqual(info["tasks_done"], 1)
         self.assertIsNotNone(info["first_result_at"])
 

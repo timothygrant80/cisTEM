@@ -10080,10 +10080,13 @@ From branch : <span id="versionBranch">—</span></p>
   }
   function etaText(eta){ return eta == null ? "estimating\u2026" : (eta < 1 ? "finishing" : fmtDuration(eta) + " left"); }
   function progressNote(job){
+    // The server's own work on the job -- preparing it before its first step
+    // (a queued multi-run job), writing results after its last, a driver's
+    // bookkeeping between steps: what it has got to, from its progress notes.
+    if (job.finishing && (job.status === "running" || job.status === "queued")){
+      return job.finishing.what + (job.finishing.total ? ": " + fmtCount(job.finishing.done) + "/" + fmtCount(job.finishing.total) + (job.finishing.unit ? " " + job.finishing.unit : "") : "\u2026");
+    }
     if (job.status === "running"){
-      // Every task is back and the server is writing the results (a project's worth
-      // of picks takes a while): what it has got to, from the adapter's progress calls.
-      if (job.finishing) return job.finishing.what + (job.finishing.total ? ": " + fmtCount(job.finishing.done) + "/" + fmtCount(job.finishing.total) + (job.finishing.unit ? " " + job.finishing.unit : "") : "\u2026");
       if (job.step && job.step.task_count){
         // the running step's own count and time left (JobTracker's rule on its tasks or particles), with the parent's round count before it
         var st = job.step;

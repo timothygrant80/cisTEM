@@ -91,7 +91,17 @@ def validate(conn, params):
 # ---------------------------------------------------------------------------
 
 _runtime = None
-_lock = threading.Lock()
+_locks = {}
+_locks_guard = threading.Lock()
+
+
+def _job_lock(job_id):
+    """One lock per parent job: its steps run one at a time (a child ending
+    before start() has saved the state waits for it), but a job of this stage
+    being submitted or finishing a step is not held behind another job's
+    minutes of bookkeeping."""
+    with _locks_guard:
+        return _locks.setdefault(job_id, threading.Lock())
 
 
 def configure(runtime):
@@ -254,7 +264,7 @@ def child_finished(project_id, child_row, status, error=None):
 
 
 def _child_finished(project_id, child_id, parent_id, status, error):
-    with _lock:
+    with _job_lock(parent_id):
         conn = db.get_conn(project_id)
         try:
             state = _load_state(conn, parent_id)

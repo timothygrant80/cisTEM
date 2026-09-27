@@ -398,7 +398,17 @@ def package_defaults(pkg):
 # ---------------------------------------------------------------------------
 
 _runtime = None
-_lock = threading.Lock()
+_locks = {}
+_locks_guard = threading.Lock()
+
+
+def _job_lock(job_id):
+    """One lock per parent job: its steps run one at a time (a child ending
+    before start() has saved the state waits for it), but a job of this stage
+    being submitted or finishing a step is not held behind another job's
+    minutes of bookkeeping."""
+    with _locks_guard:
+        return _locks.setdefault(job_id, threading.Lock())
 
 
 def configure(runtime):
@@ -543,7 +553,7 @@ def start(conn, project_id, job_id, params, profile):
     before this returns (a controller that fails to launch does so inside
     submit()), and _child_finished() must then find the parent's state saved,
     not a parent that never hears of it and stays "running" forever."""
-    with _lock:
+    with _job_lock(job_id):
         return _start(conn, project_id, job_id, params, profile)
 
 def _start(conn, project_id, job_id, params, profile):
@@ -1049,7 +1059,7 @@ def _child_finished_cleared(project_id, child_id, parent_id, status, error):
 
 
 def _child_finished(project_id, child_id, parent_id, status, error):
-    with _lock:
+    with _job_lock(parent_id):
         conn = db.get_conn(project_id)
         try:
             state = _load_state(conn, parent_id)
@@ -1313,7 +1323,7 @@ def cancel(conn, project_id, parent_id):
 
 
 def _resume_alignment(project_id, parent_id):
-    with _lock:
+    with _job_lock(parent_id):
         conn = db.get_conn(project_id)
         try:
             state = _load_state(conn, parent_id)

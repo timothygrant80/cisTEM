@@ -4424,7 +4424,14 @@ generate3d.configure(_driver_runtime)
 
 def _start_driver(driver, project_id, job_id, params):
     """The multi-run path: no single task list to hand the runner -- the
-    driver launches the first step and follows up from the sink's callbacks."""
+    driver launches the first step and follows up from the sink's callbacks.
+    The cheap checks (the package, the starting refinement, the profile) are
+    done here so a bad form still gets a 400 for the panel; the preparation
+    itself -- every particle's rows out of the database, star files for all
+    of them, the masks -- runs on a thread, since on a large package it takes
+    tens of seconds and the page used to sit on "Submitting…" for all of it.
+    The answer is the queued job; the Jobs tab shows it preparing, and a
+    failure lands on the job the way a later step's would."""
     conn = db.get_conn(project_id)
     try:
         sys_conn = db.get_system_conn()
@@ -4433,9 +4440,9 @@ def _start_driver(driver, project_id, job_id, params):
         error = None
         if profile is None:
             error = "unknown run profile {!r}".format(params.get("run_profile"))
-        else:
+        elif hasattr(driver, "validate"):
             try:
-                driver.start(conn, project_id, job_id, params, profile)
+                driver.validate(conn, params)
             except ValueError as exc:
                 error = str(exc)
         if error is not None:
@@ -4445,7 +4452,23 @@ def _start_driver(driver, project_id, job_id, params):
             return jsonify({"error": error}), 400
     finally:
         conn.close()
+    threading.Thread(target=_start_driver_job, args=(driver, project_id, job_id, params, profile), daemon=True, name="start-" + job_id).start()
     return jsonify(_row_to_job(_fetch_job_row(project_id, job_id))), 201
+
+
+def _start_driver_job(driver, project_id, job_id, params, profile):
+    progress_store.note(job_id, 0, 0, "preparing the job")
+    conn = db.get_conn(project_id)
+    try:
+        driver.start(conn, project_id, job_id, params, profile)
+    except Exception as exc:  # noqa: BLE001 -- whatever stopped it is the job's error, not a lost thread
+        log.exception("could not start job %s", job_id)
+        with conn:
+            conn.execute("UPDATE JOBS SET STATUS='failed', ERROR=?, FINISHED_AT=? WHERE JOB_ID=?", (str(exc), now_iso(), job_id))
+        append_log(project_id, job_id, "[{}] ERROR: could not start the job: {}".format(now_iso(), exc))
+    finally:
+        conn.close()
+        progress_store.clear(job_id)
 
 
 @app.route("/api/projects/<project_id>/jobs/<job_id>")

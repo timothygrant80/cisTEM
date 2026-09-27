@@ -9025,8 +9025,15 @@ From branch : <span id="versionBranch">—</span></p>
   function resumePackageTasks(){
     var project = state.projectId;
     apiFetch(projectApiUrl("/refinement-packages/tasks")).then(function(r){ return r.ok ? r.json() : {tasks: []}; }).then(function(d){
-      var t = (d.tasks || [])[0];
-      if (!t || state.projectId !== project || els.newPackageModal.classList.contains("open")) return;
+      if (state.projectId !== project) return;
+      var tasks = d.tasks || [];
+      // Creations the server was restarted under: say so once, then let the server forget them.
+      tasks.filter(function(x){ return x.state === "failed"; }).forEach(function(x){
+        alert("The refinement package" + (x.name ? " \u201c" + x.name + "\u201d" : "") + " was not created: " + (x.error || "the creation failed") + ".");
+        apiFetch(projectApiUrl("/refinement-packages/tasks/" + encodeURIComponent(x.task_id) + "/ack"), {method: "POST"}).catch(function(){});
+      });
+      var t = tasks.filter(function(x){ return x.state === "running"; })[0];
+      if (!t || els.newPackageModal.classList.contains("open")) return;
       openNewPackageModal(null);
       if (t.name) els.npName.value = t.name;
       npCreating(true);

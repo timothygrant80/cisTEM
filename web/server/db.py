@@ -254,6 +254,17 @@ CREATE TABLE IF NOT EXISTS JOB_TASKS(
   PRIMARY KEY(JOB_ID, TASK_INDEX)
 );
 
+-- A refinement package being created (POST /refinement-packages?async=1),
+-- kept here as well as in the server's memory so a restart mid-creation can
+-- be told apart from a task nobody remembers: on start-up every row still
+-- 'running' becomes 'failed' with a reason, and the page reports it once
+-- (then acknowledges it, which deletes the row). Rows of finished tasks go
+-- when they finish.
+CREATE TABLE IF NOT EXISTS PACKAGE_TASKS(
+  TASK_ID TEXT PRIMARY KEY, STATE TEXT NOT NULL, DONE INTEGER, TOTAL INTEGER, MESSAGE TEXT,
+  ERROR TEXT, NAME TEXT, STARTED_AT REAL, UPDATED_AT REAL
+);
+
 CREATE TABLE IF NOT EXISTS JOB_LOG_LINES(
   JOB_ID TEXT NOT NULL, SEQ INTEGER NOT NULL, LINE TEXT,
   PRIMARY KEY(JOB_ID, SEQ)

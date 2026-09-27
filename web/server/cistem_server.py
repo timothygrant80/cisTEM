@@ -2609,15 +2609,78 @@ def refinement_package_defaults(project_id):
 
 
 # Package creation in the background: task id -> {state, done, total, message, result | error}.
-# The wizard's OneSecondProgressDialog, as a task the dialog polls.
+# The wizard's OneSecondProgressDialog, as a task the dialog polls. The live copy
+# is this dict; the project's PACKAGE_TASKS table mirrors it (progress at most
+# once a second) so that a server restart mid-creation leaves a 'failed' row with
+# the reason for the page to report, rather than a task id nobody knows.
 _package_tasks = {}
 _package_tasks_lock = threading.Lock()
+_PACKAGE_TASK_WRITE_INTERVAL = 1.0
+RESTART_ERROR = ("the server was restarted while this package was being created, so it was not created: "
+                 "nothing was written to the project -- create it again")
+
+
+def _package_task_row_write(conn, task_id, task):
+    conn.execute(
+        "INSERT OR REPLACE INTO PACKAGE_TASKS(TASK_ID, STATE, DONE, TOTAL, MESSAGE, ERROR, NAME, STARTED_AT, UPDATED_AT) VALUES (?,?,?,?,?,?,?,?,?)",
+        (task_id, task.get("state"), task.get("done"), task.get("total"), task.get("message"), task.get("error"),
+         task.get("name"), task.get("started_at"), time.time()))
+
+
+def _package_task_persist(project_id, task_id, remove=False):
+    """Mirror the in-memory task to its project's table (or drop the row)."""
+    with _package_tasks_lock:
+        task = dict(_package_tasks.get(task_id) or {})
+    conn = db.get_conn(project_id)
+    try:
+        with conn:
+            if remove:
+                conn.execute("DELETE FROM PACKAGE_TASKS WHERE TASK_ID=?", (task_id,))
+            else:
+                _package_task_row_write(conn, task_id, task)
+    finally:
+        conn.close()
+
+
+def _package_task_from_row(row):
+    d = {k.lower(): row[k] for k in row.keys()}
+    return {"state": d["state"], "done": d["done"], "total": d["total"], "message": d["message"], "error": d["error"],
+            "name": d["name"], "started_at": d["started_at"], "from_before_restart": True}
+
+
+def _recover_package_tasks():
+    """Start-up: a package creation still 'running' in a project's table died
+    with the last server process (its thread is gone, and its stack file, if
+    any, is overwritten by the next package to take that id). Mark it failed
+    with the reason so a page that comes back asking finds out."""
+    if not db.PROJECTS_ROOT.is_dir():
+        return
+    for entry in db.PROJECTS_ROOT.iterdir():
+        if not (entry / "project.db").is_file():
+            continue
+        conn = db.get_conn(entry.name)
+        try:
+            with conn:
+                n = conn.execute("UPDATE PACKAGE_TASKS SET STATE='failed', ERROR=?, UPDATED_AT=? WHERE STATE='running'",
+                                 (RESTART_ERROR, time.time())).rowcount
+            if n:
+                log.warning("project %s: %d package creation(s) were running when the server stopped; marked failed", entry.name, n)
+        finally:
+            conn.close()
 
 
 def _run_package_task(task_id, project_id, body):
+    last_write = [0.0]
+
     def progress(done, total, message):
         with _package_tasks_lock:
             _package_tasks[task_id].update({"done": done, "total": total, "message": message})
+        if time.time() - last_write[0] >= _PACKAGE_TASK_WRITE_INTERVAL:
+            last_write[0] = time.time()
+            try:
+                _package_task_persist(project_id, task_id)
+            except Exception:  # noqa: BLE001 -- the mirror is best effort; the creation must not fail over it
+                log.exception("could not record the progress of package task %s", task_id)
     conn = db.get_conn(project_id)
     try:
         result = refinement_packages.create_package(conn, project_id, body, progress=progress)
@@ -2631,6 +2694,15 @@ def _run_package_task(task_id, project_id, body):
             _package_tasks[task_id].update({"state": "failed", "error": "could not create the package: {}".format(exc)})
     finally:
         conn.close()
+        try:
+            # A finished task lives on in memory for the dialog to poll; the table only needs
+            # to know about ones that could be interrupted, so a done task's row goes and a
+            # failed one's stays until the page acknowledges it.
+            with _package_tasks_lock:
+                failed = _package_tasks[task_id].get("state") == "failed"
+            _package_task_persist(project_id, task_id, remove=not failed)
+        except Exception:  # noqa: BLE001
+            log.exception("could not record the end of package task %s", task_id)
 
 
 @app.route("/api/projects/<project_id>/refinement-packages", methods=["POST"])
@@ -2650,6 +2722,7 @@ def create_refinement_package(project_id):
         with _package_tasks_lock:
             _package_tasks[task_id] = {"state": "running", "done": 0, "total": None, "message": "Starting\u2026", "project_id": project_id,
                                        "started_at": time.time(), "name": body.get("name") or ""}
+        _package_task_persist(project_id, task_id)
         threading.Thread(target=_run_package_task, args=(task_id, project_id, body), daemon=True, name="package-" + task_id).start()
         return jsonify({"task_id": task_id}), 202
     conn = db.get_conn(project_id)
@@ -2677,11 +2750,24 @@ def _package_task_json(task_id, task):
 def refinement_package_tasks(project_id):
     """The project's package creations still running, newest first -- so a page
     that was reloaded (or reconnected) while one ran can pick its progress
-    dialog back up. {tasks: [{task_id, state, done, total, message, started_at, elapsed, name}]}."""
+    dialog back up -- and, after them, the ones that failed and have not been
+    acknowledged (a creation the server was restarted under: the page reports
+    it once and acknowledges it). {tasks: [{task_id, state, done, total,
+    message, started_at, elapsed, name, error?, from_before_restart?}]}."""
     with _package_tasks_lock:
         running = [(tid, t) for tid, t in _package_tasks.items() if t.get("project_id") == project_id and t.get("state") == "running"]
+        live_ids = set(_package_tasks)
     running.sort(key=lambda item: item[1].get("started_at") or 0, reverse=True)
-    return jsonify({"tasks": [_package_task_json(tid, t) for tid, t in running]})
+    out = [_package_task_json(tid, t) for tid, t in running]
+    conn = db.get_conn(project_id)
+    try:
+        rows = conn.execute("SELECT * FROM PACKAGE_TASKS WHERE STATE='failed' ORDER BY STARTED_AT").fetchall()
+    finally:
+        conn.close()
+    for row in rows:
+        if row["TASK_ID"] not in live_ids:   # a failure from before this server process; live ones the dialog already has
+            out.append(_package_task_json(row["TASK_ID"], _package_task_from_row(row)))
+    return jsonify({"tasks": out})
 
 
 @app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>", methods=["GET"])
@@ -2690,9 +2776,33 @@ def refinement_package_task(project_id, task_id):
     """A background package creation: {state: running|done|failed, done, total, message, started_at, elapsed, result?, error?}."""
     with _package_tasks_lock:
         task = _package_tasks.get(task_id)
-        if task is None or task.get("project_id") != project_id:
-            return jsonify({"error": "no such task (tasks are kept until the server restarts)"}), 404
-        return jsonify(_package_task_json(task_id, task))
+        if task is not None and task.get("project_id") == project_id:
+            return jsonify(_package_task_json(task_id, task))
+    conn = db.get_conn(project_id)
+    try:
+        row = conn.execute("SELECT * FROM PACKAGE_TASKS WHERE TASK_ID=?", (task_id,)).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return jsonify({"error": "no such task"}), 404
+    return jsonify(_package_task_json(task_id, _package_task_from_row(row)))
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>/ack", methods=["POST"])
+@auth.project_access_required
+def acknowledge_refinement_package_task(project_id, task_id):
+    """The page has told the user about a failed creation: forget it."""
+    with _package_tasks_lock:
+        task = _package_tasks.get(task_id)
+        if task is not None and task.get("project_id") == project_id and task.get("state") == "failed":
+            _package_tasks.pop(task_id, None)
+    conn = db.get_conn(project_id)
+    try:
+        with conn:
+            conn.execute("DELETE FROM PACKAGE_TASKS WHERE TASK_ID=?", (task_id,))
+    finally:
+        conn.close()
+    return jsonify({"acknowledged": task_id})
 
 
 @app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["GET"])
@@ -4484,4 +4594,5 @@ if __name__ == "__main__":
     auth.bootstrap_admin_if_needed()
     start_job_runner()
     _recover_interrupted_jobs()
+    _recover_package_tasks()
     app.run(host="0.0.0.0", port=configured_port(), threaded=True)

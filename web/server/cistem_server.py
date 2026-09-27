@@ -4178,6 +4178,54 @@ def delete_run_profile(run_profile_id):
 # Job routes (project-scoped)
 # ---------------------------------------------------------------------------
 
+def _internal_json(view, path, **kwargs):
+    """Call one of this app's own GET views as GET /open does: in a request
+    context of its own (its query string, the outer request's credentials),
+    so the view's `request.args` and auth check work unchanged. None when
+    it answered anything but 200 -- the page then fetches that part itself."""
+    headers = {k: v for k, v in (("Authorization", request.headers.get("Authorization")), ("Cookie", request.headers.get("Cookie"))) if v}
+    with app.test_request_context(path, headers=headers):
+        rv = view(**kwargs)
+        response = app.make_response(rv)
+        return response.get_json() if response.status_code == 200 else None
+
+
+@app.route("/api/projects/<project_id>/open", methods=["GET"])
+@auth.project_access_required
+def open_project(project_id):
+    """Everything the page asks for when a project opens, in one answer: the
+    fourteen requests openProject() used to fire at once each cost a round
+    trip, which on a slow link is most of the wait. Each part is exactly the
+    corresponding route's body (composed by calling it), keyed so the page's
+    loaders can take their part from here and fall back to their own request
+    for a part that is missing; the lists are for group 0."""
+    p = "/api/projects/{}/".format(project_id)
+    parts = {
+        "movies_import_defaults": (get_movie_import_defaults, p + "movies/import-defaults", {"project_id": project_id}),
+        "movie_groups": (list_movie_groups, p + "movie-groups", {"project_id": project_id}),
+        "movies:0": (list_movies, p + "movies?group_id=0", {"project_id": project_id}),
+        "images_import_defaults": (get_image_import_defaults, p + "images/import-defaults", {"project_id": project_id}),
+        "image_groups": (list_image_groups, p + "image-groups", {"project_id": project_id}),
+        "images:0": (list_images, p + "images?group_id=0", {"project_id": project_id}),
+        "particle_position_groups": (list_position_groups, p + "particle-position-groups", {"project_id": project_id}),
+        "particle_positions:0": (list_particle_positions, p + "particle-positions?group_id=0&offset=0&limit={}".format(POSITION_LIST_LIMIT), {"project_id": project_id}),
+        "refinement_packages": (list_refinement_packages, p + "refinement-packages", {"project_id": project_id}),
+        "volume_groups": (list_volume_groups, p + "volume-groups", {"project_id": project_id}),
+        "volumes:0": (list_volumes, p + "volumes?group_id=0", {"project_id": project_id}),
+        "run_profiles": (list_run_profiles, "/api/run-profiles", {}),
+        "jobs": (list_jobs, p + "jobs", {"project_id": project_id}),
+        "package_tasks": (refinement_package_tasks, p + "refinement-packages/tasks", {"project_id": project_id}),
+    }
+    out = {}
+    for key, (view, path, kwargs) in parts.items():
+        try:
+            out[key] = _internal_json(view, path, **kwargs)
+        except Exception:  # noqa: BLE001 -- one part failing must not cost the others; the page fetches it itself
+            log.exception("GET /open: part %s failed", key)
+            out[key] = None
+    return jsonify(out)
+
+
 @app.route("/api/projects/<project_id>/jobs", methods=["GET"])
 @auth.project_access_required
 def list_jobs(project_id):

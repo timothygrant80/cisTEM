@@ -165,6 +165,7 @@ Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/
 | `GET` | `/run-profiles` | The machine's run profiles (system-wide, any logged-in user) — feeds the Run Profile picker |
 | `POST` / `PATCH` / `DELETE` | `/run-profiles[/:rid]` | Admin only: add (empty body), duplicate (`{copy_of}`), import (full profile), edit, remove |
 | `GET` | `/projects/:id/jobs` (without each job's `params`; `GET …/jobs/:jid` has them) | List jobs: `{ "jobs": [Job, ...] }` |
+| `GET` | `/projects/:id/open` | Everything the page shows when a project opens, in one answer: each part is the corresponding route's body (`movie_groups`, `movies:0`, `images:0`, `particle_positions:0`, `refinement_packages`, `volume_groups`, `volumes:0`, `run_profiles`, `jobs`, `package_tasks`, the two import-defaults, the position and image groups), `null` for a part that failed |
 | `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "params": {...} }` → returns the created `Job`. The server assigns the job's number and name (`Job 3`) — there's no name in the body, and `params` carries no output path either (see `Job` below). `400` if `params.run_profile` names a profile with no run commands |
 | `GET` | `/projects/:id/jobs/:id/latest-result` | Newest finished task's result for the Jobs tab's live panel (`result: null` + `reason` when there is none yet) |
 | `GET` | `/projects/:id/jobs/:id/tasks/:tidx/<name>.png` | PNG of one task's output picture (`sum`, `spectrum`, `diagnostic`), available mid-run |

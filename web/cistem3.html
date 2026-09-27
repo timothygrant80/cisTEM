@@ -5395,10 +5395,7 @@ From branch : <span id="versionBranch">—</span></p>
       rpSetProfiles([]);
       return;
     }
-    apiFetch(apiUrl("/run-profiles")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){
+    openData("run_profiles", apiUrl("/run-profiles")).then(function(data){
       var rows = (data && data.run_profiles) || [];
       state.runProfiles = rows;
       els.runProfile.innerHTML = "";
@@ -6115,23 +6112,34 @@ From branch : <span id="versionBranch">—</span></p>
     state.selectedMovieId = null;
     state.selectedImageGroupId = 0;
     state.selectedImageId = null;
-    loadImportDefaults();
-    loadMovieGroups();
-    loadMovies();
-    loadImageImportDefaults();
-    loadImageGroups();
-    loadImages();
-    loadPositionGroups();
-    loadPositions();
-    loadPackages();
-    loadVolumeGroups();
-    loadVolumes();
-    loadRunProfiles();
     state.jobs = [];
     state.jobsSeen = false;
     startPolling();
-    fetchJobs();
-    resumePackageTasks();
+    // One request for all of it (GET /open), then every loader takes its part;
+    // if that request fails (an older server) the loaders fetch for themselves.
+    state.prefetch = null;
+    apiFetch(projectApiUrl("/open")).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }).then(function(o){
+      if (state.projectId !== projectId) return;
+      state.prefetch = o || null;
+      try {
+        loadImportDefaults();
+        loadMovieGroups();
+        loadMovies();
+        loadImageImportDefaults();
+        loadImageGroups();
+        loadImages();
+        loadPositionGroups();
+        loadPositions();
+        loadPackages();
+        loadVolumeGroups();
+        loadVolumes();
+        loadRunProfiles();
+        fetchJobs();
+        resumePackageTasks();
+      } finally {
+        state.prefetch = null;
+      }
+    });
   }
 
   function closeProject(){
@@ -6498,12 +6506,19 @@ From branch : <span id="versionBranch">—</span></p>
     else validateImportForm();
   });
 
+  // openProject() asks for everything the tabs show in one request (GET /open);
+  // each loader takes its part from that answer when there is one and fetches
+  // on its own otherwise -- a refresh, a group other than 0, or a part the
+  // summary could not provide. The part is used once.
+  function openData(key, url){
+    if (state.prefetch && Object.prototype.hasOwnProperty.call(state.prefetch, key) && state.prefetch[key] != null){
+      var d = state.prefetch[key]; delete state.prefetch[key]; return Promise.resolve(d);
+    }
+    return apiFetch(url).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+  }
   function loadImportDefaults(){
     if (!state.projectId) return;
-    apiFetch(projectApiUrl("/movies/import-defaults")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(d){
+    openData("movies_import_defaults", projectApiUrl("/movies/import-defaults")).then(function(d){
       if (!d) return;
       setImportFieldValue("voltage_kv", d.VOLTAGE);
       setImportFieldValue("cs_mm", d.SPHERICAL_ABERRATION);
@@ -6571,10 +6586,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (!state.projectId) return;
     var key = "movies:" + state.selectedGroupId;
     if (!listLoaded(key)) loadingRow(els.movieListBody, 13);
-    apiFetch(projectApiUrl("/movies?group_id=" + state.selectedGroupId)).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){ markLoaded(key); renderMovieList((data && data.movies) || []); }).catch(function(){});
+    openData("movies:" + state.selectedGroupId, projectApiUrl("/movies?group_id=" + state.selectedGroupId)).then(function(data){ markLoaded(key); renderMovieList((data && data.movies) || []); }).catch(function(){});
   }
 
   function fmtNum(v){ return v != null ? v : "—"; }
@@ -7375,10 +7387,7 @@ From branch : <span id="versionBranch">—</span></p>
 
   function loadMovieGroups(){
     if (!state.projectId) return;
-    apiFetch(projectApiUrl("/movie-groups")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){ renderMovieGroupList((data && data.movie_groups) || []); }).catch(function(){});
+    openData("movie_groups", projectApiUrl("/movie-groups")).then(function(data){ renderMovieGroupList((data && data.movie_groups) || []); }).catch(function(){});
   }
 
   function renderMovieGroupList(groups){
@@ -7579,10 +7588,7 @@ From branch : <span id="versionBranch">—</span></p>
 
   function loadImageImportDefaults(){
     if (!state.projectId) return;
-    apiFetch(projectApiUrl("/images/import-defaults")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(d){
+    openData("images_import_defaults", projectApiUrl("/images/import-defaults")).then(function(d){
       if (!d) return;
       setImageImportFieldValue("voltage_kv", d.VOLTAGE);
       setImageImportFieldValue("cs_mm", d.SPHERICAL_ABERRATION);
@@ -7748,10 +7754,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (!state.projectId) return;
     var key = "images:" + state.selectedImageGroupId;
     if (!listLoaded(key)) loadingRow(els.imageListBody, 12);
-    apiFetch(projectApiUrl("/images?group_id=" + state.selectedImageGroupId)).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){ markLoaded(key); renderImageList((data && data.images) || []); }).catch(function(){});
+    openData("images:" + state.selectedImageGroupId, projectApiUrl("/images?group_id=" + state.selectedImageGroupId)).then(function(data){ markLoaded(key); renderImageList((data && data.images) || []); }).catch(function(){});
   }
 
   // PARENT_MOVIE_ID and ALIGNMENT_ID are -1 on an imported image -- cisTEM's
@@ -8051,10 +8054,7 @@ From branch : <span id="versionBranch">—</span></p>
 
   function loadImageGroups(){
     if (!state.projectId) return;
-    apiFetch(projectApiUrl("/image-groups")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){ renderImageGroupList((data && data.image_groups) || []); }).catch(function(){});
+    openData("image_groups", projectApiUrl("/image-groups")).then(function(data){ renderImageGroupList((data && data.image_groups) || []); }).catch(function(){});
   }
 
   function renderImageGroupList(groups){
@@ -8174,10 +8174,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (!state.projectId) return;
     var key = "positions:" + state.selectedPositionGroupId, group = state.selectedPositionGroupId;
     if (!listLoaded(key)) ppVirtual.clear(loadingRowHTML(8));
-    apiFetch(positionPageUrl(0, POSITION_PAGE)).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){
+    openData("particle_positions:" + group, positionPageUrl(0, POSITION_PAGE)).then(function(data){
       if (group !== state.selectedPositionGroupId) return;
       var refresh = listLoaded(key);   // a refresh keeps the scroll position and the ticks; a group first shown starts at the top
       if (!refresh){ state.positionsAllSelected = false; state.selectedPositionIds = new Set(); }
@@ -8419,7 +8416,7 @@ From branch : <span id="versionBranch">—</span></p>
   });
   function loadPositionGroups(){
     if (!state.projectId) return;
-    apiFetch(projectApiUrl("/particle-position-groups")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    openData("particle_position_groups", projectApiUrl("/particle-position-groups"))
       .then(function(data){ renderPositionGroupList((data && data.particle_position_groups) || []); }).catch(function(){});
   }
   function renderPositionGroupList(groups){
@@ -8443,7 +8440,7 @@ From branch : <span id="versionBranch">—</span></p>
   state.selectedVolumeGroupId = 0; state.selectedVolumeId = null; state.selectedVolumeIds = new Set(); state.volumes = []; state.volumeGroups = [];
   function loadVolumeGroups(){
     if (!state.projectId) return;
-    apiFetch(projectApiUrl("/volume-groups")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    openData("volume_groups", projectApiUrl("/volume-groups"))
       .then(function(data){ renderVolumeGroupList((data && data.volume_groups) || []); }).catch(function(){});
   }
   function renderVolumeGroupList(groups){
@@ -8464,7 +8461,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (!state.projectId) return;
     var key = "volumes:" + state.selectedVolumeGroupId;
     if (!listLoaded(key)) loadingRow(els.volListBody, 9);
-    apiFetch(projectApiUrl("/volumes?group_id=" + state.selectedVolumeGroupId)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    openData("volumes:" + state.selectedVolumeGroupId, projectApiUrl("/volumes?group_id=" + state.selectedVolumeGroupId))
       .then(function(data){ markLoaded(key); renderVolumeList((data && data.volumes) || []); }).catch(function(){});
   }
   function renderVolumeList(rows){
@@ -8585,7 +8582,7 @@ From branch : <span id="versionBranch">—</span></p>
   function loadPackages(){
     if (!state.projectId) return;
     if (!listLoaded("packages")){ els.rpkgList.innerHTML = ""; els.rpkgEmpty.textContent = "Loading\u2026"; els.rpkgEmpty.hidden = false; els.rpkgDetails.hidden = true; }
-    apiFetch(projectApiUrl("/refinement-packages")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    openData("refinement_packages", projectApiUrl("/refinement-packages"))
       .then(function(data){ if (!listLoaded("packages")){ markLoaded("packages"); els.rpkgEmpty.innerHTML = rpkgEmptyHTML; } renderPackageList((data && data.refinement_packages) || []); }).catch(function(){});
   }
   function renderPackageList(pkgs){
@@ -9024,7 +9021,7 @@ From branch : <span id="versionBranch">—</span></p>
   // still running on the server: pick its dialog back up when the project opens.
   function resumePackageTasks(){
     var project = state.projectId;
-    apiFetch(projectApiUrl("/refinement-packages/tasks")).then(function(r){ return r.ok ? r.json() : {tasks: []}; }).then(function(d){
+    openData("package_tasks", projectApiUrl("/refinement-packages/tasks")).catch(function(){ return {tasks: []}; }).then(function(d){
       if (state.projectId !== project) return;
       var tasks = d.tasks || [];
       // Creations the server was restarted under: say so once, then let the server forget them.
@@ -9840,10 +9837,7 @@ From branch : <span id="versionBranch">—</span></p>
 
   function fetchJobs(){
     if (!state.connected || !state.projectId) return Promise.resolve();
-    return apiFetch(projectApiUrl("/jobs")).then(function(r){
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function(data){
+    return openData("jobs", projectApiUrl("/jobs")).then(function(data){
       var previous = {};
       state.jobs.forEach(function(j){ previous[j.id] = j.status; });
       var firstLoad = !state.jobsSeen;

@@ -179,16 +179,18 @@ def convert_to_auto_mask(volume, pixel_size, mask_radius_a, filter_resolution_a=
     if binned > n:
         binned = n
     work = fourier_resize(volume, binned) if binned != n else volume.astype(np.float32).copy()
-    r_b = mask_radius_a / binning / pixel_size if binned != n else mask_radius_a / pixel_size
-    if binned == n:
-        binning = 1.0
+    # Image::ConvertToAutoMask() divides the radius by binning_factor, and later
+    # smooths with binning_factor / pixel_size / 16, whether or not it resized --
+    # at a pixel size above filter_resolution / 2 the factor is below 1 and the
+    # radius grows. It used to be reset to 1 here for the unbinned case.
+    r_b = mask_radius_a / binning / pixel_size
     original_average = average_outside(work, r_b)
     work = np.maximum(work, original_average)                     # SetMinimumValue
     average = average_outside(work, r_b)
     n_top = max(5, int(work.size * 0.000005))
     average_of_max = _average_of_max_n(work, n_top, r_b)
     threshold = average + (average_of_max - average) * 0.05
-    work = cosine_mask(work, r_b, 1.0, value=-np.inf)
+    work = cosine_mask(work, r_b, 1.0, value=-3.4e38)   # cisTEM's -FLT_MAX; -inf makes the band's edge NaN
     binary = (work >= threshold)
     mask = _largest_component(binary)
     # GaussianLowPassFilter(binning / pixel_size / 16) in reciprocal pixels, then Resize back.

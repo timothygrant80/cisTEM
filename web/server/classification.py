@@ -1078,15 +1078,36 @@ def progress_info(state):
             "round": state["round"], "rounds": state["rounds"], "phase": state["phase"]}
 
 
+
+def _required_count(state, key):
+    """A count the launch step recorded for the merge step. Missing means the
+    state was overwritten in between (or this is a run from before the key
+    existed): failing is right, since defaulting to 1 would merge the wrong
+    files -- one dump file of N, or class k's rows from class 0's task k."""
+    value = state.get(key)
+    if not value:
+        raise ValueError("the job's state has no {}; the round cannot be merged".format(key))
+    return int(value)
+
 def child_progress(conn, parent_id, child_id, done_count, task_count):
-    """DbSink.on_task_done for a child: moves the parent's progress bar."""
-    state = _load_state(conn, parent_id)
-    if not state or state.get("child_job_id") != child_id:
-        return
-    state["child_done"] = done_count
-    state["child_task_count"] = task_count or state.get("child_task_count", 1)
+    """DbSink.on_task_done for a child: moves the parent's progress bar. The
+    two counters are written into STATE_JSON in place (json_set), not
+    load-modify-save: this runs on the runner's thread while _child_finished()
+    may be rewriting the whole state under the driver's lock."""
     with conn:
-        conn.execute("UPDATE JOBS SET STATE_JSON=?, PROGRESS=? WHERE JOB_ID=?", (json.dumps(state), _progress_percent(state), parent_id))
+        if task_count:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?, '$.child_task_count', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), int(task_count), parent_id, child_id)).rowcount
+        else:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), parent_id, child_id)).rowcount
+    if n:
+        state = _load_state(conn, parent_id)
+        if state:
+            with conn:
+                conn.execute("UPDATE JOBS SET PROGRESS=? WHERE JOB_ID=?", (_progress_percent(state), parent_id))
 
 
 def child_finished(project_id, child_row, status, error=None):
@@ -1158,7 +1179,7 @@ def _advance(conn, project_id, parent_id, state):
         scratch = db.project_dir(project_id) / "Scratch" / "class2d" / parent_id
         cid = output["classification_id"]
         rows_by_pos = {}
-        n_files = int(state.get("number_of_dump_files") or 1)
+        n_files = _required_count(state, "number_of_dump_files")
         for k in range(1, n_files + 1):
             progress_store.note(parent_id, k - 1, n_files, "reading the round's results", "files")
             p = scratch / "round_{}_{}.star".format(cid, k)

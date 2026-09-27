@@ -818,7 +818,7 @@ def _launch_merge(conn, project_id, job_id, state):
         stats.append(st)
         tasks.append(_task(merge3d, k, k + 1, ["/dev/null", "/dev/null", out, st, state["molecular_weight"], s["inner_mask_radius"], outer,
                                                 str(scratch / "startup_dump_file_{}_odd_.dump".format(k)), str(scratch / "startup_dump_file_{}_even_.dump".format(k)),
-                                                k + 1, False, "", int(state.get("number_of_dump_files") or 1), wiener, state["current_high_res"]]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"]]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge {}".format(parent["NAME"], "initial" if state["initial"] else n_out + 1), parent)
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
@@ -886,8 +886,7 @@ def _mask_then_refine(conn, project_id, job_id, state):
         _log(project_id, job_id, "Automasking reference reconstruction")
         masked = []
         for k, ref in enumerate(state["reference_files"]):
-            vol, ps = volumes.read_mrc_volume(ref)
-            ps = ps or state["active_pixel_size"]
+            vol, _ = volumes.read_mrc_volume(ref)   # the prepared stack's pixel size, not the file header's, is what the run works in
             out = str(Path(ref).with_suffix("")) + "_masked.mrc"
             volumes.write_mrc_volume(out, volumes.auto_mask(vol, state["active_pixel_size"], state["settings"]["mask_radius"]), state["active_pixel_size"])
             masked.append(out)
@@ -925,6 +924,7 @@ def _align_symmetry(project_id, job_id, state):
                 _log(project_id, job_id, "  " + line.strip())
         out_files.append(with_sym)
     state["reference_files"] = out_files
+    state["display_files"] = out_files
     state["apply_symmetry"] = True
     sched = round_schedule(state["round"], state["rounds"], state["settings"]["initial_resolution_limit"], state["settings"]["final_resolution_limit"], state["plan"], True)
     state["current_percent_used"] = sched["percent_used"]
@@ -934,7 +934,7 @@ def _merge_output_stars(state):
     """The per-task output star files of a refinement round -> one row list per class."""
     n_classes = state["number_of_classes"]
     inputs = _load_rows(state, "input")
-    jobs = int(state.get("refinement_jobs_this_round") or 1)
+    jobs = _required_count(state, "refinement_jobs_this_round")
     outputs = state.get("pending_output_stars") or []
     class_rows = []
     for k in range(n_classes):
@@ -947,16 +947,22 @@ def _merge_output_stars(state):
             for r in starfile.read_star(p):
                 by_pos[r["position_in_stack"]] = r
         rows = []
+        missing = 0
         for r in inputs[k]:
             o = by_pos.get(r["position_in_stack"])
             if o is None:
                 o = dict(r)
+                missing += 1
             else:
                 # refine3d writes what it refined; carry the imaging parameters it didn't.
                 merged = dict(r)
                 merged.update({kk: vv for kk, vv in o.items() if kk in starfile.REFINEMENT_KEYS})
                 o = merged
             rows.append(o)
+        if missing:
+            # A task that "completed" but wrote a short star (a crash after the write began, a
+            # full disk) used to leave those particles on last round's parameters, silently.
+            raise ValueError("the refine3d tasks of class {} returned {} of {} particles".format(k + 1, len(inputs[k]) - missing, len(inputs[k])))
         class_rows.append(rows)
     return class_rows
 
@@ -995,13 +1001,37 @@ def progress_info(state):
             "round": state["round"], "rounds": state["rounds"], "start": state["start"], "starts": state["starts"], "phase": state["phase"]}
 
 
+
+def _required_count(state, key):
+    """A count the launch step recorded for the merge step. Missing means the
+    state was overwritten in between (or this is a run from before the key
+    existed): failing is right, since defaulting to 1 would merge the wrong
+    files -- one dump file of N, or class k's rows from class 0's task k."""
+    value = state.get(key)
+    if not value:
+        raise ValueError("the job's state has no {}; the round cannot be merged".format(key))
+    return int(value)
+
 def child_progress(conn, parent_id, child_id, done_count, task_count):
-    state = _load_state(conn, parent_id)
-    if not state or state.get("child_job_id") != child_id:
-        return
-    state["child_done"] = done_count
-    state["child_task_count"] = task_count or state.get("child_task_count", 1)
-    _save(conn, parent_id, state, _progress_percent(state))
+    """One task of the running child done: its two counters written into
+    STATE_JSON in place (json_set), not load-modify-save -- this runs on the
+    runner's thread while _child_finished() may be rewriting the whole state
+    under the driver's lock, and a whole-state write here could put back a
+    stale copy of everything else (child ids, file lists, counts)."""
+    with conn:
+        if task_count:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?, '$.child_task_count', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), int(task_count), parent_id, child_id)).rowcount
+        else:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), parent_id, child_id)).rowcount
+    if n:
+        state = _load_state(conn, parent_id)
+        if state:
+            with conn:
+                conn.execute("UPDATE JOBS SET PROGRESS=? WHERE JOB_ID=?", (_progress_percent(state), parent_id))
 
 
 def child_finished(project_id, child_row, status, error=None):
@@ -1195,7 +1225,8 @@ def perform_action(conn, project_id, parent_id, name):
     if not any(a["name"] == name for a in available_actions(state)):
         raise ValueError("{} is not available right now".format(ACTIONS[name]))
     state["pending_action"] = name
-    _save(conn, parent_id, state)
+    with conn:   # the flag alone, in place: a whole-state write from this request thread could put back a stale step
+        conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.pending_action', ?) WHERE JOB_ID = ?", (name, parent_id))
     _log(project_id, parent_id, "Terminating job, and importing the {}.".format("current result" if name == "take_current" else "result at the end of the previous start"))
     child_id = state.get("child_job_id")
     if child_id and _runtime.cancel(child_id):
@@ -1292,6 +1323,7 @@ def _resume_alignment(project_id, parent_id):
             try:
                 _align_symmetry(project_id, parent_id, state)
                 _mask_then_refine(conn, project_id, parent_id, state)
+                _save(conn, parent_id, state, _progress_percent(state))   # the child it launched is only ours if the state says so
             except Exception as exc:  # noqa: BLE001
                 _finish(conn, project_id, parent_id, state, "failed", "could not continue after the restart: {}".format(exc))
         finally:

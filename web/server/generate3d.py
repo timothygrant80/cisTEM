@@ -227,12 +227,25 @@ def progress_info(state):
 
 
 def child_progress(conn, parent_id, child_id, done_count, task_count):
-    state = _load_state(conn, parent_id)
-    if not state or state.get("child_job_id") != child_id:
-        return
-    state["child_done"] = done_count
-    state["child_task_count"] = task_count or state.get("child_task_count", 1)
-    _save(conn, parent_id, state, _progress_percent(state))
+    """One task of the running child done: its two counters written into
+    STATE_JSON in place (json_set), not load-modify-save -- this runs on the
+    runner's thread while _child_finished() may be rewriting the whole state
+    under the driver's lock, and a whole-state write here could put back a
+    stale copy of everything else (child ids, file lists, counts)."""
+    with conn:
+        if task_count:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?, '$.child_task_count', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), int(task_count), parent_id, child_id)).rowcount
+        else:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), parent_id, child_id)).rowcount
+    if n:
+        state = _load_state(conn, parent_id)
+        if state:
+            with conn:
+                conn.execute("UPDATE JOBS SET PROGRESS=? WHERE JOB_ID=?", (_progress_percent(state), parent_id))
 
 
 def child_finished(project_id, child_row, status, error=None):

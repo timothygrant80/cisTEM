@@ -573,7 +573,7 @@ def _launch_merge(conn, project_id, job_id, state):
         stats.append(st)
         tasks.append(_task(merge3d, k, k + 1, ["/dev/null", "/dev/null", out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", int(state.get("number_of_dump_files") or 1), 1.0, 5.0]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge3d".format(parent["NAME"]), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
@@ -599,13 +599,37 @@ def progress_info(state):
             "last_task_finished_at": finished[-1] if finished else None, "round": 0, "rounds": 1, "phase": state["phase"]}
 
 
+
+def _required_count(state, key):
+    """A count the launch step recorded for the merge step. Missing means the
+    state was overwritten in between (or this is a run from before the key
+    existed): failing is right, since defaulting to 1 would merge the wrong
+    files -- one dump file of N, or class k's rows from class 0's task k."""
+    value = state.get(key)
+    if not value:
+        raise ValueError("the job's state has no {}; the round cannot be merged".format(key))
+    return int(value)
+
 def child_progress(conn, parent_id, child_id, done_count, task_count):
-    state = _load_state(conn, parent_id)
-    if not state or state.get("child_job_id") != child_id:
-        return
-    state["child_done"] = done_count
-    state["child_task_count"] = task_count or state.get("child_task_count", 1)
-    _save(conn, parent_id, state, _progress_percent(state))
+    """One task of the running child done: its two counters written into
+    STATE_JSON in place (json_set), not load-modify-save -- this runs on the
+    runner's thread while _child_finished() may be rewriting the whole state
+    under the driver's lock, and a whole-state write here could put back a
+    stale copy of everything else (child ids, file lists, counts)."""
+    with conn:
+        if task_count:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?, '$.child_task_count', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), int(task_count), parent_id, child_id)).rowcount
+        else:
+            n = conn.execute("UPDATE JOBS SET STATE_JSON = json_set(STATE_JSON, '$.child_done', ?) "
+                             "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.child_job_id') = ?",
+                             (int(done_count), parent_id, child_id)).rowcount
+    if n:
+        state = _load_state(conn, parent_id)
+        if state:
+            with conn:
+                conn.execute("UPDATE JOBS SET PROGRESS=? WHERE JOB_ID=?", (_progress_percent(state), parent_id))
 
 
 def child_finished(project_id, child_row, status, error=None):

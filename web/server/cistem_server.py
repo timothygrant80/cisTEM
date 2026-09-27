@@ -66,6 +66,7 @@ import refinectf
 import sharpen
 import refinements
 import job_runner
+import progress_store
 import refinement_packages
 import package_io
 import stages
@@ -372,15 +373,10 @@ class DbSink(job_runner.Sink):
 _db_sink = DbSink()
 
 
-# What a job's result write has got to, for the Jobs tab while the write runs
-# (the job is still "running" until it returns): job id -> {done, total, what}.
-_FINISHING = {}
-_FINISHING_LOCK = threading.Lock()
-
-
 def _finishing(job_id):
-    with _FINISHING_LOCK:
-        return _FINISHING.get(job_id)
+    """What the job's own bookkeeping has got to (progress_store), for the
+    job list's `finishing`."""
+    return progress_store.get(job_id)
 
 
 def write_job_results(conn, project_id, row):
@@ -403,9 +399,8 @@ def write_job_results(conn, project_id, row):
         append_log(project_id, job_id, "[{}] {}{}".format(
             now_iso(), _LOG_PREFIX.get(level, ""), text), conn=conn)
 
-    def progress(done, total, what):
-        with _FINISHING_LOCK:
-            _FINISHING[job_id] = {"done": int(done), "total": int(total), "what": what}
+    def progress(done, total, what, unit=""):
+        progress_store.note(job_id, done, total, what, unit)
 
     # An adapter that reports how far its write has got takes `progress`; the others do not.
     kwargs = {"progress": progress} if "progress" in inspect.signature(adapter.finalize).parameters else {}
@@ -419,8 +414,7 @@ def write_job_results(conn, project_id, row):
         log.exception("finalize() of job %s (%s) failed", job_id, row["STAGE"])   # the traceback, on the server's own output
         return None
     finally:
-        with _FINISHING_LOCK:
-            _FINISHING.pop(job_id, None)
+        progress_store.clear(job_id)
 
 
 def _driver_for_parent(project_id, parent_id):

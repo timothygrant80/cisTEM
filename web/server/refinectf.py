@@ -43,6 +43,7 @@ from pathlib import Path
 import numpy as np
 
 import db
+import progress_store
 import refinements
 import starfile
 import volumes
@@ -599,8 +600,17 @@ def child_progress(conn, parent_id, child_id, done_count, task_count):
 
 
 def child_finished(project_id, child_row, status, error=None):
-    threading.Thread(target=_child_finished, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
+    threading.Thread(target=_child_finished_cleared, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
                      daemon=True, name="refinectf-" + child_row["PARENT_JOB_ID"]).start()
+
+
+def _child_finished_cleared(project_id, child_id, parent_id, status, error):
+    """_child_finished() with the parent's progress note cleared however it ends:
+    the bookkeeping it does notes its phases in progress_store for the Jobs tab."""
+    try:
+        _child_finished(project_id, child_id, parent_id, status, error)
+    finally:
+        progress_store.clear(parent_id)
 
 
 def _child_finished(project_id, child_id, parent_id, status, error):
@@ -640,11 +650,13 @@ def _advance(conn, project_id, parent_id, state, child_id):
         else:
             _launch_reconstruction(conn, project_id, parent_id, state)
     elif phase == "beamtilt":
+        progress_store.note(parent_id, 0, 0, "applying the beam tilt")
         _apply_beam_tilt(conn, project_id, parent_id, state, child_id)
         _launch_reconstruction(conn, project_id, parent_id, state)
     elif phase == "recon":
         _launch_merge(conn, project_id, parent_id, state)
     elif phase == "merge":
+        progress_store.note(parent_id, 0, 0, "writing the refinement")
         _record(conn, project_id, parent_id, state)
         for p in Path(state["scratch"]).glob("dump_file_*.dump"):
             try:

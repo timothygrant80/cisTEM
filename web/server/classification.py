@@ -66,6 +66,7 @@ from pathlib import Path
 import numpy as np
 
 import db
+import progress_store
 import job_protocol as jp
 import preview
 import refinement_packages
@@ -1083,8 +1084,17 @@ def child_finished(project_id, child_row, status, error=None):
     """DbSink: a child reached a terminal status. Runs the next step of the
     cycle on a worker thread (the sink is called from the runner's
     listener thread, which must not block on file I/O or a submit)."""
-    threading.Thread(target=_child_finished, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
+    threading.Thread(target=_child_finished_cleared, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
                      daemon=True, name="class2d-" + child_row["PARENT_JOB_ID"]).start()
+
+
+def _child_finished_cleared(project_id, child_id, parent_id, status, error):
+    """_child_finished() with the parent's progress note cleared however it ends:
+    the bookkeeping it does notes its phases in progress_store for the Jobs tab."""
+    try:
+        _child_finished(project_id, child_id, parent_id, status, error)
+    finally:
+        progress_store.clear(parent_id)
 
 
 def _child_finished(project_id, child_id, parent_id, status, error):
@@ -1122,6 +1132,7 @@ def _advance(conn, project_id, parent_id, state):
     if state["phase"] == "startup":
         if not os.path.isfile(output["class_average_file"]):
             raise ValueError("refine2d did not write {}".format(output["class_average_file"]))
+        progress_store.note(parent_id, 0, 0, "writing the initial references")
         add_classification(conn, output, initial_rows(particles))
         state["startup_finished_at"] = now_iso()
         state["input_classification_id"] = output["classification_id"]
@@ -1138,7 +1149,9 @@ def _advance(conn, project_id, parent_id, state):
         scratch = db.project_dir(project_id) / "Scratch" / "class2d" / parent_id
         cid = output["classification_id"]
         rows_by_pos = {}
-        for k in range(1, int(state.get("number_of_dump_files") or 1) + 1):
+        n_files = int(state.get("number_of_dump_files") or 1)
+        for k in range(1, n_files + 1):
+            progress_store.note(parent_id, k - 1, n_files, "reading the round's results", "files")
             p = scratch / "round_{}_{}.star".format(cid, k)
             if not p.is_file():
                 raise ValueError("refine2d task {} left no output star file ({})".format(k, p))
@@ -1151,8 +1164,10 @@ def _advance(conn, project_id, parent_id, state):
             if r is None:
                 r = empty_result(p["POSITION_IN_STACK"])
             rows.append(r)
+        progress_store.note(parent_id, 0, 0, "computing the round's statistics")
         input_rows = classification_rows(conn, state["input_classification_id"], particles)
         stats = round_statistics(rows, input_rows)
+        progress_store.note(parent_id, 0, 0, "writing the round's results")
         add_classification(conn, output, rows)
         _remove_scratch(project_id, parent_id, state, dumps_only=True)
         for p in scratch.glob("round_{}_*.star".format(cid)):

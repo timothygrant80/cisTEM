@@ -254,7 +254,7 @@ def _replace_active_picks(conn, image_id, picking_id, job_id):
 
 
 def finalize(conn, project_id, job, sent_tasks, task_rows, log, progress=None):
-    """`progress(done, total, what)`, when given, is told after each image so
+    """`progress(done, total, what, unit)`, when given, is told after each image so
     the Jobs tab can show the write going on (a project's worth of picks is
     the one write long enough to watch)."""
     by_index = {t["index"]: t for t in sent_tasks}
@@ -265,7 +265,7 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log, progress=None):
         _ensure_results_table(conn, job["id"])
         for n, row in enumerate(task_rows):
             if progress is not None:
-                progress(n, len(task_rows), "writing picks")
+                progress(n, len(task_rows), "writing picks", "images")
             task = by_index.get(row["TASK_INDEX"])
             positions = _positions(row) if row["STATUS"] == "ok" and task is not None else None
             if positions is None:
@@ -294,7 +294,7 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log, progress=None):
             written += 1
             picked += len(positions)
         if progress is not None:
-            progress(len(task_rows), len(task_rows), "writing picks")
+            progress(len(task_rows), len(task_rows), "writing picks", "images")
     return {"pickings_written": written, "particles_picked": picked, "tasks_skipped": skipped}
 
 

@@ -61,6 +61,7 @@ from pathlib import Path
 import numpy as np
 
 import db
+import progress_store
 import job_protocol as jp
 import job_runner
 import refinement_packages
@@ -889,6 +890,7 @@ def _align_symmetry(project_id, job_id, state):
     if not exe:
         raise ValueError("align_symmetry was not found (looked for {!r}, from run profile {!r})".format(candidate, state["refinement_profile"]))
     _log(project_id, job_id, "Aligning to {} symmetry and applying it from here on".format(state["settings"]["symmetry"]))
+    progress_store.note(job_id, 0, 0, "aligning symmetry (align_symmetry)")
     out_files = []
     for k, ref in enumerate(state["reference_files"]):
         base = str(Path(ref).with_suffix(""))
@@ -987,8 +989,17 @@ def child_progress(conn, parent_id, child_id, done_count, task_count):
 
 
 def child_finished(project_id, child_row, status, error=None):
-    threading.Thread(target=_child_finished, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
+    threading.Thread(target=_child_finished_cleared, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
                      daemon=True, name="abinitio-" + child_row["PARENT_JOB_ID"]).start()
+
+
+def _child_finished_cleared(project_id, child_id, parent_id, status, error):
+    """_child_finished() with the parent's progress note cleared however it ends:
+    the bookkeeping it does notes its phases in progress_store for the Jobs tab."""
+    try:
+        _child_finished(project_id, child_id, parent_id, status, error)
+    finally:
+        progress_store.clear(parent_id)
 
 
 def _child_finished(project_id, child_id, parent_id, status, error):
@@ -1060,6 +1071,7 @@ def _advance(conn, project_id, parent_id, state):
                 p.unlink()
             except OSError:
                 pass
+        progress_store.note(parent_id, 0, 0, "recording the round")
         if not state["initial"]:
             class_rows = _load_rows(state, "output")
             stats = [read_statistics(p) if os.path.isfile(p) else [] for p in state["stats_files"]]
@@ -1072,6 +1084,7 @@ def _advance(conn, project_id, parent_id, state):
                         write_statistics(p, stats[k], state["active_pixel_size"])
         _cycle(conn, project_id, parent_id, state)
     elif phase == "refine":
+        progress_store.note(parent_id, 0, 0, "merging the round's results")
         class_rows = _merge_output_stars(state)
         update_occupancies(class_rows)
         _store_rows(state, "output", class_rows)

@@ -107,9 +107,9 @@ class WriteSpeedAndProgressTests(unittest.TestCase):
 
     def test_repicking_replaces_positions_and_memberships_and_reports_progress(self):
         seen = []
-        fp.finalize(self.conn, self.project, {"id": "jobA"}, self.tasks, self.rows, lambda *a, **k: None, progress=lambda d, t, w: seen.append((d, t, w)))
-        self.assertEqual(seen[0], (0, 20, "writing picks"))
-        self.assertEqual(seen[-1], (20, 20, "writing picks"))
+        fp.finalize(self.conn, self.project, {"id": "jobA"}, self.tasks, self.rows, lambda *a, **k: None, progress=lambda *a: seen.append(a))
+        self.assertEqual(seen[0], (0, 20, "writing picks", "images"))
+        self.assertEqual(seen[-1], (20, 20, "writing picks", "images"))
         count = lambda sql: self.conn.execute(sql).fetchone()[0]  # noqa: E731
         self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_ASSETS"), 600)
         self.assertEqual(count("SELECT COUNT(*) FROM PARTICLE_POSITION_GROUP_MEMBERS"), 600)

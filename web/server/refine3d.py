@@ -36,6 +36,7 @@ import threading
 from pathlib import Path
 
 import db
+import progress_store
 import refinements
 import starfile
 import volumes
@@ -459,8 +460,17 @@ def child_progress(conn, parent_id, child_id, done_count, task_count):
 
 
 def child_finished(project_id, child_row, status, error=None):
-    threading.Thread(target=_child_finished, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
+    threading.Thread(target=_child_finished_cleared, args=(project_id, child_row["JOB_ID"], child_row["PARENT_JOB_ID"], status, error),
                      daemon=True, name="refine3d-" + child_row["PARENT_JOB_ID"]).start()
+
+
+def _child_finished_cleared(project_id, child_id, parent_id, status, error):
+    """_child_finished() with the parent's progress note cleared however it ends:
+    the bookkeeping it does notes its phases in progress_store for the Jobs tab."""
+    try:
+        _child_finished(project_id, child_id, parent_id, status, error)
+    finally:
+        progress_store.clear(parent_id)
 
 
 def _child_finished(project_id, child_id, parent_id, status, error):
@@ -490,6 +500,7 @@ def _advance(conn, project_id, parent_id, state):
     phase = state["phase"]
     s = state["settings"]
     if phase == "refine":
+        progress_store.note(parent_id, 0, 0, "merging the round's results")
         class_rows = _merge_output_stars(conn, state)
         if s["refine_occupancies"]:
             update_occupancies(class_rows)
@@ -503,6 +514,7 @@ def _advance(conn, project_id, parent_id, state):
     elif phase in ("initial_recon", "recon"):
         _launch_merge(conn, project_id, parent_id, state)
     elif phase in ("initial_merge", "merge"):
+        progress_store.note(parent_id, 0, 0, "writing the refinement")
         _record_round(conn, project_id, parent_id, state)
         for p in Path(state["scratch"]).glob("dump_file_*.dump"):
             try:

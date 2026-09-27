@@ -18,6 +18,21 @@ import starfile  # noqa: E402
 import volumes as V  # noqa: E402
 
 
+class UpdateOccupanciesTests(unittest.TestCase):
+    def test_every_class_gets_the_particle_s_occupancy_weighted_sigma(self):
+        # Refinement::UpdateOccupancies(): occupancies from logP, then one sigma per particle --
+        # the occupancy-weighted average over the classes -- written back to every class.
+        a = [{"logp": 100.0, "occupancy": 50.0, "sigma": 2.0}, {"logp": 10.0, "occupancy": 50.0, "sigma": 1.0}]
+        b = [{"logp": 100.0, "occupancy": 50.0, "sigma": 4.0}, {"logp": 40.0, "occupancy": 50.0, "sigma": 3.0}]
+        ab.update_occupancies([a, b])
+        self.assertAlmostEqual(a[0]["occupancy"] + b[0]["occupancy"], 100.0)
+        self.assertAlmostEqual(a[0]["occupancy"], 50.0)   # equal logP, equal old average occupancy
+        self.assertAlmostEqual(a[0]["sigma"], 3.0); self.assertAlmostEqual(b[0]["sigma"], 3.0)
+        self.assertAlmostEqual(a[1]["occupancy"], 0.0)    # 30 logP units behind: out of the running
+        self.assertAlmostEqual(b[1]["occupancy"], 100.0)
+        self.assertAlmostEqual(a[1]["sigma"], 3.0); self.assertAlmostEqual(b[1]["sigma"], 3.0)
+
+
 class ScheduleTests(unittest.TestCase):
     def test_asymmetric_units(self):
         self.assertEqual([ab.asymmetric_units(s) for s in ("C1", "C4", "D2", "D7", "T", "O", "I", "I2")], [1, 4, 4, 14, 12, 24, 60, 60])

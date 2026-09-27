@@ -292,7 +292,16 @@ def _load_rows(state, tag):
     return [starfile.read_star(_class_star(state, tag, k)) for k in range(state["number_of_classes"])]
 
 
+
 def start(conn, project_id, job_id, params, profile):
+    """The first step, under the driver's lock: the child it launches can end
+    before this returns (a controller that fails to launch does so inside
+    submit()), and _child_finished() must then find the parent's state saved,
+    not a parent that never hears of it and stays "running" forever."""
+    with _lock:
+        return _start(conn, project_id, job_id, params, profile)
+
+def _start(conn, project_id, job_id, params, profile):
     """BeginRefinementCycle()."""
     pkg, ref, reference_ids, mask = validate(conn, params)
     recon_profile = _profile(params.get("reconstruction_run_profile") or params.get("run_profile")) or profile
@@ -540,7 +549,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       True, s["adjust_score_for_defocus"], state["invert_contrast"], False, s["autocrop_images"], False, False,
                       use_ref, True, True,
                       str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1]
-            tasks.append(_task(reconstruct3d, index, k * 1000 + j, values))
+            tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_RECON, "{} · reconstruct3d".format(parent["NAME"]), parent)

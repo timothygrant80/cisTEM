@@ -829,7 +829,16 @@ def validate(conn, params):
     return pkg, particles, start
 
 
+
 def start(conn, project_id, job_id, params, profile):
+    """The first step, under the driver's lock: the child it launches can end
+    before this returns (a controller that fails to launch does so inside
+    submit()), and _child_finished() must then find the parent's state saved,
+    not a parent that never hears of it and stays "running" forever."""
+    with _lock:
+        return _start(conn, project_id, job_id, params, profile)
+
+def _start(conn, project_id, job_id, params, profile):
     """BeginRefinementCycle(): called by the server once the parent JOBS row
     exists. Validates, records the plan in STATE_JSON and launches the
     first child. Raises ValueError with a message for the page."""

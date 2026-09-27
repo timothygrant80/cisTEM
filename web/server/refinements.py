@@ -25,6 +25,7 @@ coarser one otherwise.
 """
 import math
 import os
+import threading
 
 import db
 import symmetry as symmetry_module
@@ -61,12 +62,38 @@ def _table_exists(conn, name):
     return conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone() is not None
 
 
+# Ids are handed out before the row that would claim them is written -- a
+# refinement's id at the start of a round, its REFINEMENT_LIST row at the end
+# -- so "MAX + 1" alone lets two 3D jobs on one project take the same id and
+# overwrite each other's volumes and results. Handed-out ids are remembered
+# here until their row is written (or forever, if the job dies first: a
+# skipped number is the price). One server process, so a lock suffices.
+_ID_LOCK = threading.Lock()
+_RESERVED = {}   # kind -> set of ids handed out and not yet written
+
+
+def reserve_id(kind, conn, sql):
+    """The next free id of `kind`: above both the table's MAX (`sql`) and every
+    id handed out and not yet written."""
+    with _ID_LOCK:
+        in_table = conn.execute(sql).fetchone()[0] or 0
+        reserved = _RESERVED.setdefault(kind, set())
+        next_id = max([in_table] + list(reserved)) + 1
+        reserved.add(next_id)
+        return next_id
+
+
+def release_id(kind, id_):
+    with _ID_LOCK:
+        _RESERVED.get(kind, set()).discard(id_)
+
+
 def next_refinement_id(conn):
-    return conn.execute("SELECT COALESCE(MAX(REFINEMENT_ID), 0) + 1 FROM REFINEMENT_LIST").fetchone()[0]
+    return reserve_id("refinement", conn, "SELECT COALESCE(MAX(REFINEMENT_ID), 0) FROM REFINEMENT_LIST")
 
 
 def next_reconstruction_id(conn):
-    return conn.execute("SELECT COALESCE(MAX(RECONSTRUCTION_ID), 0) + 1 FROM RECONSTRUCTION_LIST").fetchone()[0]
+    return reserve_id("reconstruction", conn, "SELECT COALESCE(MAX(RECONSTRUCTION_ID), 0) FROM RECONSTRUCTION_LIST")
 
 
 def refinement_row(conn, refinement_id):
@@ -208,6 +235,7 @@ def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=Tr
     class_details[k] the REFINEMENT_DETAILS values for class k+1 (a dict
     keyed by column name; missing ones default); `symmetry` the package's
     point group, which the angular distributions are expanded by."""
+    release_id("refinement", ref["refinement_id"])
     rid = int(ref["refinement_id"])
     package_id = int(ref["refinement_package_asset_id"])
     with conn:
@@ -265,6 +293,7 @@ def update_details(conn, refinement_id, class_number, **fields):
 def add_reconstruction_job(conn, reconstruction_id, package_id, refinement_id, name, inner_mask, outer_mask, resolution_limit,
                            score_weight_conversion, adjust_scores, crop_images, save_half_maps, likelihood_blur, smoothing_factor,
                            class_number, volume_asset_id):
+    release_id("reconstruction", reconstruction_id)
     with conn:
         conn.execute("INSERT OR REPLACE INTO RECONSTRUCTION_LIST VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                      (int(reconstruction_id), int(package_id), int(refinement_id), name, float(inner_mask), float(outer_mask), float(resolution_limit),

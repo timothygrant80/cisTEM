@@ -241,9 +241,16 @@ def update_occupancies(class_rows, use_old_occupancies=True):
         logps = [class_rows[k][i].get("logp", 0.0) for k in range(n_classes)]
         max_logp = max(logps)
         total = sum(math.exp(lp - max_logp) * avg[k] for k, lp in enumerate(logps) if max_logp - lp < 10.0)
+        average_sigma = 0.0
         for k, lp in enumerate(logps):
             occ = math.exp(lp - max_logp) * avg[k] / total * 100.0 if (max_logp - lp < 10.0 and total > 0) else 0.0
             class_rows[k][i]["occupancy"] = occ
+            average_sigma += class_rows[k][i].get("sigma", 0.0) * occ / 100.0
+        # cisTEM then gives every class the particle's occupancy-weighted sigma: one noise
+        # estimate per particle, which refine3d and reconstruct3d weight by. Left per class,
+        # the classes' likelihoods drift apart round by round.
+        for k in range(n_classes):
+            class_rows[k][i]["sigma"] = average_sigma
 
 
 def pooled_part_ssnr(stats_per_class, class_rows):
@@ -530,7 +537,16 @@ def _store_rows(state, tag, class_rows):
         starfile.write_star(_class_star(state, tag, k), rows)
 
 
+
 def start(conn, project_id, job_id, params, profile):
+    """The first step, under the driver's lock: the child it launches can end
+    before this returns (a controller that fails to launch does so inside
+    submit()), and _child_finished() must then find the parent's state saved,
+    not a parent that never hears of it and stays "running" forever."""
+    with _lock:
+        return _start(conn, project_id, job_id, params, profile)
+
+def _start(conn, project_id, job_id, params, profile):
     """BeginRefinementCycle()."""
     pkg, contained = validate(conn, params)
     recon_profile = _profile(params.get("reconstruction_run_profile") or params.get("run_profile")) or profile
@@ -773,7 +789,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       use_ref, False, True,
                       str(scratch / "startup_dump_file_{}_odd_{}.dump".format(k, j)),
                       str(scratch / "startup_dump_file_{}_even_{}.dump".format(k, j)), 0, 1]
-            tasks.append(_task(reconstruct3d, index, k * 1000 + j, values))
+            tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
     label = "initial reconstruction" if initial else "reconstruction {}".format(_output_number(state) + 1)
@@ -853,7 +869,7 @@ def _launch_refinement(conn, project_id, job_id, state):
                       True, False, True, True, True, True, True, False, False, False,
                       (not state["stack_precomputed"]) or state.get("use_class_averages", False), state["invert_contrast"], False, not s["apply_blurring"], False,
                       1, False, k, False, False]
-            tasks.append(_task(refine3d, index, k * 1000 + j, values))
+            tasks.append(_task(refine3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_REFINE, "{} · start {} round {}".format(parent["NAME"], state["start"] + 1, state["round"] + 1), parent)

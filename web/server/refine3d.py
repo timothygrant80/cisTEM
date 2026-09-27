@@ -191,7 +191,16 @@ def _load_rows(state, tag):
     return [starfile.read_star(_class_star(state, tag, k)) for k in range(state["number_of_classes"])]
 
 
+
 def start(conn, project_id, job_id, params, profile):
+    """The first step, under the driver's lock: the child it launches can end
+    before this returns (a controller that fails to launch does so inside
+    submit()), and _child_finished() must then find the parent's state saved,
+    not a parent that never hears of it and stays "running" forever."""
+    with _lock:
+        return _start(conn, project_id, job_id, params, profile)
+
+def _start(conn, project_id, job_id, params, profile):
     """BeginRefinementCycle()."""
     pkg, ref, reference_ids, mask = validate(conn, params)
     recon_profile = _profile(params.get("reconstruction_run_profile") or params.get("run_profile")) or profile
@@ -281,7 +290,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       True, s["adjust_score_for_defocus"], state["invert_contrast"], False, s["autocrop_images"], False, s["autocenter"],
                       use_ref, True, True,
                       str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1]
-            tasks.append(_task(reconstruct3d, index, k * 1000 + j, values))
+            tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_RECON, "{} · {}reconstruction {}".format(parent["NAME"], "initial " if state["initial"] else "", rid), parent)
@@ -356,7 +365,7 @@ def _launch_refinement(conn, project_id, job_id, state):
                       s["global"], not s["global"], s["refine_psi"], s["refine_theta"], s["refine_phi"], s["refine_x_shift"], s["refine_y_shift"],
                       False, s["focused_classification"], s["refine_ctf"], True, state["invert_contrast"], False, not s["apply_blurring"], True,
                       1, False, k, not s["also_refine_input"], False]
-            tasks.append(_task(refine3d_adapter, index, k * 1000 + j, values))
+            tasks.append(_task(refine3d_adapter, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_REFINE, "{} · round {} refine3d".format(parent["NAME"], state["round"] + 1), parent)
@@ -591,7 +600,7 @@ def _record_round(conn, project_id, parent_id, state):
             "SPHERE_X_COORD": s["sphere_x_a"], "SPHERE_Y_COORD": s["sphere_y_a"], "SPHERE_Z_COORD": s["sphere_z_a"], "SPHERE_RADIUS": s["sphere_radius_a"],
             "SHOULD_REFINE_CTF": 1 if s["refine_ctf"] else 0, "DEFOCUS_SEARCH_RANGE": s["defocus_search_range_a"], "DEFOCUS_SEARCH_STEP": s["defocus_search_step_a"],
             "AVERAGE_OCCUPANCY": avg_occ, "ESTIMATED_RESOLUTION": est_res[k] or 0.0, "RECONSTRUCTED_VOLUME_ASSET_ID": volume_ids[k], "RECONSTRUCTION_ID": recon_ids[k],
-            "SHOULD_AUTOMASK": 1 if s["auto_mask"] else 0, "SHOULD_REFINE_INPUT_PARAMS": 1 if s["also_refine_input"] else 0,
+            "SHOULD_AUTOMASK": 1 if s["auto_mask"] else 0, "SHOULD_REFINE_INPUT_PARAMS": 0 if s["also_refine_input"] else 1,   # cisTEM stores AlsoRefineInputNoRadio: 1 = do not
             "SHOULD_USE_SUPPLIED_MASK": 1 if s["use_mask"] else 0, "MASK_ASSET_ID": state.get("mask_asset_id", -1), "MASK_EDGE_WIDTH": s["mask_edge_a"],
             "OUTSIDE_MASK_WEIGHT": s["outside_mask_weight"], "SHOULD_LOWPASS_OUTSIDE_MASK": 1 if s["low_pass_outside_mask"] else 0,
             "MASK_FILTER_RESOLUTION": s["mask_filter_resolution_a"],

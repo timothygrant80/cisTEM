@@ -449,8 +449,8 @@ def create_package(conn, project_id, params, log=None, progress=None):
     if box_size < 16:
         raise ValueError("box size must be at least 16 pixels")
 
-    package_id = conn.execute("SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) + 1 FROM REFINEMENT_PACKAGE_ASSETS").fetchone()[0]
-    refinement_id = conn.execute("SELECT COALESCE(MAX(REFINEMENT_ID), 0) + 1 FROM REFINEMENT_LIST").fetchone()[0]
+    package_id = next_package_id(conn)
+    refinement_id = _refinements().next_refinement_id(conn)
     name = (params.get("name") or "").strip() or "Refinement Package #{}".format(package_id)
     stack_dir = db.project_dir(project_id) / "Assets" / "ParticleStacks"
     stack_path = str(stack_dir / "particle_stack_{}.mrc".format(package_id))
@@ -633,8 +633,8 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
         if any(c < 1 or c > source_classes for c in src):
             raise ValueError("class_sources names a class the source refinement does not have")
 
-    package_id = conn.execute("SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) + 1 FROM REFINEMENT_PACKAGE_ASSETS").fetchone()[0]
-    refinement_id = conn.execute("SELECT COALESCE(MAX(REFINEMENT_ID), 0) + 1 FROM REFINEMENT_LIST").fetchone()[0]
+    package_id = next_package_id(conn)
+    refinement_id = _refinements().next_refinement_id(conn)
     name = (params.get("name") or "").strip() or "Refinement Package #{}".format(package_id)
     rng = random.Random()
 
@@ -694,8 +694,20 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
             "box_size": box_size, "output_pixel_size": output_pixel_size, "refinement_id": refinement_id, "source_package_id": src_id, "source_refinement_id": rid}
 
 
+def _refinements():
+    import refinements   # circular at import time: refinements reads packages too
+    return refinements
+
+
+def next_package_id(conn):
+    """The next free package id, reserved until insert_package() writes it --
+    two packages being cut at once used to take the same id and stack path."""
+    return _refinements().reserve_id("package", conn, "SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) FROM REFINEMENT_PACKAGE_ASSETS")
+
+
 def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
                    number_of_classes, contained, refinement_id, white_protein=False):
+    _refinements().release_id("package", package_id)
     """Database::AddRefinementPackageAsset(): the REFINEMENT_PACKAGE_ASSETS row
     and the package's four tables. `contained` are dicts with position_id,
     image_id, position_in_stack, x, y, pixel_size, defocus1/2, defocus_angle,

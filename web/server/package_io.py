@@ -496,7 +496,7 @@ def import_package(conn, project_id, params, log=None):
     if len({c["position_in_stack"] for c in contained}) != len(contained):
         raise ValueError("the parameter file repeats a position in the stack")
 
-    package_id = conn.execute("SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) + 1 FROM REFINEMENT_PACKAGE_ASSETS").fetchone()[0]
+    package_id = rp.next_package_id(conn)
     refinement_id = refinements.next_refinement_id(conn)
     name = (params.get("name") or "").strip() or "Refinement Package #{} ({})".format(package_id, label)
     rp.insert_package(conn, package_id, name, stack_path, box, pixel_size, symmetry, molecular_weight, largest_dimension, 1, contained,

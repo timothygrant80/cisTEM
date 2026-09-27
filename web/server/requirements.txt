@@ -6,3 +6,7 @@ flask-cors>=4.0
 #              renders the same movie in ~4min instead of ~7s
 numpy>=1.24
 pillow>=10.0
+# The auto-mask (server/volumes.py, ab-initio and the refinements): keeping the
+# largest connected piece of density is scipy.ndimage's connected-component
+# labelling. Imported where it is used, so everything else runs without it.
+scipy>=1.10

@@ -38,6 +38,7 @@ nobase_dist_pkgdata_DATA = \
 	web/server/job_runner.py \
 	web/server/package_io.py \
 	web/server/preview.py \
+	web/server/progress_store.py \
 	web/server/refine3d.py \
 	web/server/refinectf.py \
 	web/server/refinement_packages.py \
@@ -60,4 +61,5 @@ nobase_dist_pkgdata_DATA = \
 	web/server/starfile.py \
 	web/server/symmetry.py \
 	web/server/volumes.py \
-	web/tools/fake_controller.py
+	web/tools/fake_controller.py \
+	web/tools/write_job_results.py

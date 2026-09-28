@@ -405,14 +405,9 @@ def _mask_then_refine(conn, project_id, job_id, state):
         state["reference_files"] = masked
     elif s["auto_mask"]:
         _log(project_id, job_id, "Automasking reference reconstruction")
-        # Not mirrored, deliberately: cisTEM's AutoRefinementManager hands its
-        # AutoMaskerThread a filter resolution -- the input refinement's part-FSC
-        # estimate, capped at the class's current high-resolution limit -- so the
-        # mask is made from a map low-passed to what has been resolved. The mask
-        # here is made from the unfiltered map (volumes.auto_mask's fixed 7 A
-        # binning). Worth bringing across if masks look to be following noise
-        # and overfitting becomes a problem; the numbers to pass are
-        # resolution_at(stats, 0.143, ps, True) and state["class_high_res_limits"][k].
+        # As cisTEM's AutoMaskerThread::Entry: it is handed a filter resolution by
+        # DoMasking() but never reads it -- the mask comes from ConvertToAutoMask's
+        # fixed 7 A binning, which is what volumes.auto_mask does.
         masked = []
         for ref in state["reference_files"]:
             vol, _ps = volumes.read_mrc_volume(ref)
@@ -525,6 +520,23 @@ def _merge_output_stars(state):
     return class_rows
 
 
+def _rows_for_reconstruction(rows):
+    """The rows as reconstruct3d should rank them: a copy in which every
+    particle refine3d left inactive this round has a score one below the
+    lowest refined score, so the percentage threshold ranks only this
+    round's refined particles (reconstruct3d skips inactive rows regardless,
+    so the score is used for nothing else). The stored refinement keeps the
+    real scores."""
+    refined = [float(r.get("score") or 0.0) for r in rows if float(r.get("image_is_active") or 0) >= 0]
+    floor = (min(refined) if refined else 0.0) - 1.0
+    out = []
+    for r in rows:
+        if float(r.get("image_is_active") or 0) < 0:
+            r = dict(r); r["score"] = floor
+        out.append(r)
+    return out
+
+
 def _launch_reconstruction(conn, project_id, job_id, state):
     """SetupReconstructionJob() + RunReconstructionJob()."""
     s = state["settings"]
@@ -539,7 +551,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
             for r in rows:
                 r["sigma"] = 1.0
         p = str(Path(state["scratch"]) / "auto_output_par_{}_{}.star".format(rid, k + 1))
-        starfile.write_star(p, rows)
+        starfile.write_star(p, _rows_for_reconstruction(rows))
         written.append(p)
     _store_rows(state, "output", class_rows)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
@@ -561,8 +573,18 @@ def _launch_reconstruction(conn, project_id, job_id, state):
         state["last_round_reconstruction_resolution"] = rec_limit
         limits_rec.append(rec_limit)
         weights.append(2.0 if limit < 8.0 else 0.0)
+    # cisTEM passes 0.333 here while the round refines three times the percentage
+    # used: "the top third of what was refined". reconstruct3d's percentile, though,
+    # ranks every row, and the two thirds refine3d skipped keep the score of the round
+    # that last refined them -- at a different resolution limit, so not comparable.
+    # On a large dataset (a few percent used, so rounds 2-5 refine a minority) the
+    # stale majority set the cut and the map was built from a handful of particles,
+    # worse each round. With the inactive rows ranked below every refined one
+    # (_rows_for_reconstruction) the percentage of *all* rows that is meant is the
+    # percentage used itself, and the threshold picks the top third of the refined.
+    # The same departure abinitio.reconstruction_rows() makes, for the same reason.
     if state["current_percent_used"] * 3.0 < 100.0:
-        score_threshold = 0.333
+        score_threshold = max(state["current_percent_used"] / 100.0, 1e-4)
     else:
         score_threshold = min(1.0, state["current_percent_used"] / 100.0)
     state["reconstruction_limits"] = limits_rec
@@ -858,8 +880,9 @@ def plan_next_round(state, output_stats, input_rows, output_rows):
     if classes == 1:
         change = 0.0
     else:
-        def _avg(rows):
-            return sum(r.get("occupancy", 0.0) for r in rows) / max(len(rows), 1)
+        def _avg(rows):   # Refinement::UpdateAverageOccupancy(): over the active particles
+            active = [r for r in rows if r.get("image_is_active", 1) >= 0]
+            return sum(r.get("occupancy", 0.0) for r in active) / max(len(active), 1)
         change = sum(abs(_avg(output_rows[k]) - _avg(input_rows[k])) for k in range(classes))
     stop = should_stop(state["resolution_per_round"], state["max_percent_used"], change, classes)
     if state["final_round"]:

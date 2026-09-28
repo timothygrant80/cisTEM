@@ -583,7 +583,11 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     # (_rows_for_reconstruction) the percentage of *all* rows that is meant is the
     # percentage used itself, and the threshold picks the top third of the refined.
     # The same departure abinitio.reconstruction_rows() makes, for the same reason.
-    if state["current_percent_used"] * 3.0 < 100.0:
+    # Round one refined every particle, so its scores are on one scale and cisTEM's
+    # 0.333 -- the top third of all of them -- stands as it is.
+    if state["round"] == 0:
+        score_threshold = 0.333
+    elif state["current_percent_used"] * 3.0 < 100.0:
         score_threshold = max(state["current_percent_used"] / 100.0, 1e-4)
     else:
         score_threshold = min(1.0, state["current_percent_used"] / 100.0)

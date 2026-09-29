@@ -591,6 +591,16 @@ bool Refine3DApp::DoCalculation( ) {
 
     //input_par_file.ReadFile(false, input_stack.ReturnZSize());
     random_particle.SetSeed(int(10000.0 * fabsf(input_star_file.ReturnAverageSigma(true))) % 10000);
+    // The random draw that decides which particles are skipped when percent_used < 1 is made here, serially and in
+    // line order, exactly as the serial loop of cisTEM 1.0.0-beta drew it. Drawing inside the parallel loop shared one
+    // generator between the threads without a lock, so the skipped set depended on thread timing and differed between
+    // the classes of a classification; a particle skipped in one class keeps its stale logP there while the other
+    // classes compute a fresh one, and the occupancy update then compares the two.
+    std::vector<float> particle_selection_draws(input_star_file.ReturnNumberofLines( ), 0.0f);
+    for ( current_line = 0; current_line < input_star_file.ReturnNumberofLines( ); current_line++ ) {
+        if ( input_star_file.ReturnPositionInStack(current_line) >= first_particle && input_star_file.ReturnPositionInStack(current_line) <= last_particle )
+            particle_selection_draws[current_line] = random_particle.GetUniformRandom( );
+    }
     if ( defocus_bias ) {
         float* buffer_array = new float[input_star_file.ReturnNumberofLines( )];
         for ( current_line = 0; current_line < input_star_file.ReturnNumberofLines( ); current_line++ ) {
@@ -1002,7 +1012,7 @@ bool Refine3DApp::DoCalculation( ) {
                                                                    first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d,                                                                                           \
                                                                    refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, percent_used, output_shifts_file, local_refinement,                                                                                           \
                                                                    binning_factor_refine, low_resolution_limit, input_statistics, output_star_file, current_projection, local_global_refine, signed_CC_limit, defocus_bias,                                                                                                              \
-                                                                   random_particle, defocus_range_mean2, defocus_range_std, defocus_mean_score, current_class, mask_radius_search, search_reference_3d, high_resolution_limit_search,                                                                                                    \
+                                                                   particle_selection_draws, defocus_range_mean2, defocus_range_std, defocus_mean_score, current_class, mask_radius_search, search_reference_3d, high_resolution_limit_search,                                                                                                    \
                                                                    binning_factor_search, search_statistics, search_box_size, projection_cache, my_symmetry, angular_step, psi_max, psi_step, psi_start, take_random_best_parameter, refine_particle,                                                                                    \
                                                                    skip_local_refinement, calculate_matching_projections, classification_resolution_limit, output_file, best_parameters_to_keep, ignore_input_angles, global_random_number_generator,                                                                                    \
                                                                    global_euler_search, binned_image_box_size, binned_search_image_box_size, global_search) private(image_counter, refine_particle_local, current_line_local, input_parameters, temp_float, output_parameters, input_ctf, variance, average, comparison_object,          \
@@ -1058,7 +1068,7 @@ bool Refine3DApp::DoCalculation( ) {
 
             output_parameters = input_parameters;
 
-            temp_float = random_particle.GetUniformRandom( );
+            temp_float = particle_selection_draws[current_line_local];
             if ( defocus_bias ) {
                 defocus_score = expf(-powf(0.25 * (fabsf(input_parameters.defocus_1) + fabsf(input_parameters.defocus_2) - defocus_range_mean2) / defocus_range_std, 2.0));
                 temp_float *= defocus_score / defocus_mean_score;

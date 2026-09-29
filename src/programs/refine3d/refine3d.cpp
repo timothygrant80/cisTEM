@@ -876,11 +876,35 @@ bool Refine3DApp::DoCalculation( ) {
         current_line         = 0;
         random_reset_counter = 0;
 
+        // Choose the images that go into the noise power spectrum here, serially, in line order and from a generator
+        // with a fixed seed, so that every refine3d run over the same particle range whitens with the same curve. The
+        // choice used to be made inside the parallel loop from the clock-seeded global generator, in whatever order
+        // the threads reached it, so each run had its own subset and its own slightly different curve. logP compares
+        // classes by the residual after whitening times the number of pixels in the mask, so a curve that differs by
+        // a fraction of a percent shifts every particle of a task by several logP units towards one class: in a
+        // classification, each task's particles then went to whichever class that task's run happened to favour.
+        std::vector<char>     use_for_noise_spectrum(input_star_file.ReturnNumberofLines( ), 0);
+        RandomNumberGenerator noise_subset_generator(4711, true);
+        for ( current_line = 0; current_line < input_star_file.ReturnNumberofLines( ); current_line++ ) {
+            if ( input_star_file.ReturnPositionInStack(current_line) < first_particle || input_star_file.ReturnPositionInStack(current_line) > last_particle )
+                continue;
+            if ( random_reset_counter == 0 )
+                temp_float = noise_subset_generator.GetUniformRandom( );
+            if ( (temp_float >= 1.0 - 2.0f * percentage) || (random_reset_counter != 0) ) {
+                random_reset_counter++;
+                if ( random_reset_counter == random_reset_count )
+                    random_reset_counter = 0;
+                use_for_noise_spectrum[current_line] = 1;
+            }
+        }
+        current_line         = 0;
+        random_reset_counter = 0;
+
         noise_power_spectrum.MakeThreadSafeForNThreads(max_threads);
         number_of_terms.MakeThreadSafeForNThreads(max_threads);
 
 #pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack,                                                                                                                                                                                                                                  \
-                                                                   outer_mask_radius, mask_falloff, number_of_blank_edges, sum_power, current_line, global_random_number_generator, random_reset_count, random_reset_counter) private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
+                                                                   outer_mask_radius, mask_falloff, number_of_blank_edges, sum_power, current_line, use_for_noise_spectrum, random_reset_count, random_reset_counter) private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
                                                                                                                                                                                                                                       mask_radius_for_noise)
         {
 
@@ -894,24 +918,13 @@ bool Refine3DApp::DoCalculation( ) {
 
 #pragma omp for schedule(static, 1)
             for ( current_line_local = 0; current_line_local < input_star_file.ReturnNumberofLines( ); current_line_local++ ) {
+                input_parameters = input_star_file.ReturnLine(current_line_local);
+                file_read        = false;
+                if ( use_for_noise_spectrum[current_line_local] ) {
+// ReadSlice requires omp critical to avoid parallel reads, which may lead to the wrong slice being read
 #pragma omp critical
-                {
-                    input_parameters = input_star_file.ReturnLine(current_line);
-
-                    current_line++;
-                    if ( input_parameters.position_in_stack >= first_particle && input_parameters.position_in_stack <= last_particle ) {
-                        file_read = false;
-                        if ( random_reset_counter == 0 )
-                            temp_float = global_random_number_generator.GetUniformRandom( );
-                        if ( (temp_float >= 1.0 - 2.0f * percentage) || (random_reset_counter != 0) ) {
-                            random_reset_counter++;
-                            if ( random_reset_counter == random_reset_count )
-                                random_reset_counter = 0;
-                            //						Printf("reading %i\n", int(input_parameters[0] + 0.5f));
-                            input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
-                            file_read = true;
-                        }
-                    }
+                    input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+                    file_read = true;
                 }
                 if ( input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle )
                     continue;

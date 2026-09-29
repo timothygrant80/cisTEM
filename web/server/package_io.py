@@ -309,10 +309,27 @@ def stack_details(path):
         try:
             head = volumes.read_mrc_header(path)
         except Exception as exc:
-            raise ValueError("cannot read the stack file: {}".format(exc))
+            raise ValueError(_names_file("cannot read the stack file", path, exc))
     if head["nx"] <= 0 or head["ny"] <= 0 or head["nz"] <= 0:
         raise ValueError("cannot read the stack file - aborting")
     return head
+
+
+def _names_file(what, path, exc):
+    """`what`: `path`: `exc`, without repeating the path when the exception
+    already carries it (an open() failure does; a failed read() does not, so
+    "[Errno 5] Input/output error" alone never said which file was bad)."""
+    text = str(exc)
+    return "{}: {}".format(what, text) if path in text else "{} {}: {}".format(what, path, text)
+
+
+def _read_parameters(reader, path):
+    """`reader(path)`, with an operating-system failure reported as a
+    ValueError that names the file, like every other import complaint."""
+    try:
+        return reader(path)
+    except OSError as exc:
+        raise ValueError(_names_file("cannot read the parameter file", path, exc))
 
 
 def read_frealign_par(path):
@@ -438,7 +455,7 @@ def import_package(conn, project_id, params, log=None):
         return float(v)
 
     if fmt == "cistem":
-        star = starfile.read_star(metadata_path)
+        star = _read_parameters(starfile.read_star, metadata_path)
         if len(star) != n_images:
             raise ValueError("Number of images in stack ({}) is different from the number of lines in the star file ({}) - aborting".format(n_images, len(star)))
         pixel_size = float(star[0].get("pixel_size") or 0.0) or form_float("pixel_size_a", "pixel size")
@@ -463,12 +480,12 @@ def import_package(conn, project_id, params, log=None):
         voltage = form_float("voltage_kv", "microscope voltage")
         amplitude_contrast = form_float("amplitude_contrast", "amplitude contrast")
         if fmt == "frealign":
-            par = read_frealign_par(metadata_path)
+            par = _read_parameters(read_frealign_par, metadata_path)
             if len(par) != n_images:
                 raise ValueError("Number of images in stack ({}) is different from the number of lines in the par file ({}) - aborting".format(n_images, len(par)))
             label = "Frealign Import"
         else:
-            par, in_angst = read_relion_star(metadata_path)
+            par, in_angst = _read_parameters(read_relion_star, metadata_path)
             if len(par) != n_images:
                 raise ValueError("Number of images({}) in stack is different from the number of parameters read from the star file({}) - aborting".format(n_images, len(par)))
             label = "Relion Import"

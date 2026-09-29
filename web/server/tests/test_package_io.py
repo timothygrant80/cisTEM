@@ -1,6 +1,9 @@
 """Refinement package export and import (server/package_io.py) against a
 throwaway project: a small package written through the same helpers the
 wizard uses, exported in every format and imported back."""
+import contextlib
+import errno
+import io
 import os
 import shutil
 import sys
@@ -183,6 +186,51 @@ class PackageIOTests(unittest.TestCase):
                 pio.export_package(conn, 1, 1, 1, "frealign", os.path.join(self.tmp, "nodir", "a"), os.path.join(self.tmp, "b"))
         finally:
             conn.close()
+
+    def test_read_failure_names_the_file(self):
+        """A read() that fails at the operating-system level (a stale mount,
+        a bad disk) carries no filename; the import's complaint must."""
+        par, _stack = self._export("frealign", "eio")["files"]
+        real = pio.read_frealign_par
+
+        def failing(path):
+            raise OSError(errno.EIO, "Input/output error")
+        pio.read_frealign_par = failing
+        try:
+            with self.assertRaises(ValueError) as cm:
+                self._import(format="frealign", stack_path=self.stack, metadata_path=par, pixel_size_a=1.25, voltage_kv=300, amplitude_contrast=0.07)
+        finally:
+            pio.read_frealign_par = real
+        self.assertIn(par, str(cm.exception))
+        self.assertIn("Input/output error", str(cm.exception))
+        self.assertTrue(str(cm.exception).startswith("cannot read the parameter file"))
+
+    def test_route_import_survives_a_dead_terminal(self):
+        """The route's success note is printed to the server's terminal; when
+        that terminal is gone the print raises errno 5 and used to come back
+        as "could not read: [Errno 5] Input/output error" -- after the
+        package had already been committed."""
+        import auth
+        import cistem_server
+        par, stack = self._export("frealign", "tty")["files"]
+        auth_path = auth.AUTH_DB_PATH
+        auth.AUTH_DB_PATH = Path(self.tmp) / "auth.db"
+
+        class DeadTerminal(io.TextIOBase):
+            def write(self, text):
+                raise OSError(errno.EIO, "Input/output error")
+        try:
+            token = auth.create_session(auth.create_user("boss", "password123", "admin")["id"])
+            client = cistem_server.app.test_client()
+            body = {"format": "frealign", "stack_path": stack, "metadata_path": par, "pixel_size_a": 1.25,
+                    "voltage_kv": 300, "amplitude_contrast": 0.07, "cs_mm": 2.7}
+            with contextlib.redirect_stdout(DeadTerminal()):
+                resp = client.post("/api/projects/{}/refinement-packages/import".format(self.project), json=body,
+                                   headers={"Authorization": "Bearer " + token})
+            self.assertEqual(resp.status_code, 201, resp.data)
+            self.assertEqual(resp.get_json()["particles"], N)
+        finally:
+            auth.AUTH_DB_PATH = auth_path
 
 
 if __name__ == "__main__":

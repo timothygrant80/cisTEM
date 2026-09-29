@@ -173,6 +173,18 @@ _live = {}  # job_id -> {"proc": Popen|None, "cancel_requested": bool}
 
 log = logging.getLogger("cistem_server")
 
+
+def _console(message):
+    """A line on the server's terminal. When that terminal has gone away (the
+    shell that started the server was closed, or its pty detached) a print
+    fails with OSError errno 5, Input/output error -- which must not become
+    the answer to the request that was merely reporting its success. The
+    line goes to the module logger instead, whose handlers never raise."""
+    try:
+        print(message, flush=True)
+    except OSError:
+        log.info("%s", message)
+
 _LOG_PREFIX = {"error": "ERROR: ", "warning": "WARNING: "}   # how a job-log line's level shows in the log
 
 CONTROLLER_COMMAND = os.environ.get("CISTEM_JOB_CONTROLLER", "cistem_job_controller")
@@ -2905,11 +2917,12 @@ def import_refinement_package(project_id):
     conn = db.get_conn(project_id)
     try:
         try:
-            result = package_io.import_package(conn, project_id, body, log=lambda m: print("[import] " + m, flush=True))
+            result = package_io.import_package(conn, project_id, body, log=lambda m: _console("[import] " + m))
         except (ValueError, TypeError) as exc:
             return jsonify({"error": str(exc)}), 400
         except OSError as exc:
-            return jsonify({"error": "could not read: {}".format(exc)}), 400
+            # package_io names the file in its own errors; this is anything else
+            return jsonify({"error": "could not read {}: {}".format(exc.filename or "a file", exc.strerror or exc)}), 400
         return jsonify(result), 201
     finally:
         conn.close()

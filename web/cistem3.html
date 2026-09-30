@@ -10299,7 +10299,7 @@ From branch : <span id="versionBranch">—</span></p>
     var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); box.appendChild(plot.root);
     var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
-    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, null); });
+    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight); });
     var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; box.appendChild(pair);
     var card = document.createElement("div"); card.className = "live-orth-card"; pair.appendChild(card);
     card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
@@ -10308,6 +10308,8 @@ From branch : <span id="versionBranch">—</span></p>
         '<select data-role="rpick" title="Which round\u2019s refinement to show"></select>' +
         '<button class="small" data-role="rnext" title="The round after">&rarr;</button>' +
         '<button class="small" data-role="rlatest" title="Follow the newest round as the run goes on">Latest</button>' +
+        '<span class="live-orth-sep" data-role="csep" hidden></span>' +
+        '<select data-role="cpick" title="Which class to show" hidden></select>' +
         '<span class="live-orth-sep"></span>' +
         '<button class="small primary" data-role="rdownload" title="Save the shown reconstruction as an MRC file" disabled>Download</button>' +
       '</div></div>' +
@@ -10315,19 +10317,38 @@ From branch : <span id="versionBranch">—</span></p>
       '<div class="c2d-caption live-orth-caption"><span data-role="capleft"></span><span data-role="capright"></span></div>';
     var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.frame.classList.add("c2d-orth"); card.querySelector(".live-orth-stage").appendChild(fig.frame);
     var angular = makeAngularBlock(); pair.appendChild(angular.root);
-    var rpick = card.querySelector('[data-role="rpick"]'), capLeft = card.querySelector('[data-role="capleft"]'), capRight = card.querySelector('[data-role="capright"]'), dl = card.querySelector('[data-role="rdownload"]');
-    var last = null, chosen = null, cache = {}, shownVolume = null;   // chosen: a refinement id, or null for the newest
+    var rpick = card.querySelector('[data-role="rpick"]'), cpick = card.querySelector('[data-role="cpick"]'), csep = card.querySelector('[data-role="csep"]');
+    var capLeft = card.querySelector('[data-role="capleft"]'), capRight = card.querySelector('[data-role="capright"]'), dl = card.querySelector('[data-role="rdownload"]');
+    var last = null, chosen = null, cache = {}, shownVolume = null, classIndex = 0, shown = null;   // chosen: a refinement id, or null for the newest; classIndex: 0-based, kept across rounds
+    // The class picker (a multi-class refinement only): "#k (res, occupancy)", as the results page lists them.
+    function fillClassPicker(full){
+      var many = full.classes.length > 1;
+      cpick.hidden = csep.hidden = !many;
+      if (!many) return;
+      cpick.innerHTML = "";
+      full.classes.forEach(function(c, i){
+        var o = document.createElement("option"); o.value = String(i);
+        o.textContent = "#" + c.class_number + (c.estimated_resolution ? " (" + Number(c.estimated_resolution).toFixed(2) + " \u00c5, " + Number(c.average_occupancy).toFixed(1) + "%)" : "");
+        cpick.appendChild(o);
+      });
+      if (classIndex >= full.classes.length) classIndex = 0;
+      cpick.value = String(classIndex);
+    }
     function rounds(){ return ((last && last.result.history) || []).filter(function(h){ return h.refinement_id != null; }); }
     function currentRid(){ var rs = rounds(); if (chosen != null && rs.some(function(h){ return h.refinement_id === chosen; })) return chosen; chosen = null; return rs.length ? rs[rs.length - 1].refinement_id : last && last.result.refinement_id; }
     function render(full, rid){
-      var c = full.classes[0] || {};
-      // Every class's part FSC on the one plot (cisTEM's FSC panel); one class draws FSC and part FSC.
-      lastFsc = {stats: full.classes.length > 1 ? full.classes : (c.statistics || []), ps: full.resolution_statistics_pixel_size, title: "Fourier Shell Correlation \u2014 " + full.name};
+      shown = full;
+      fillClassPicker(full);
+      var many = full.classes.length > 1, c = full.classes[many ? classIndex : 0] || full.classes[0] || {};
+      var classTag = many ? " \u00b7 class #" + c.class_number : "";
+      // Every class's part FSC on the one plot, the shown class highlighted (cisTEM's FSC panel); one class draws FSC and part FSC.
+      lastFsc = {stats: many ? full.classes : (c.statistics || []), ps: full.resolution_statistics_pixel_size, highlight: many ? classIndex : null, title: "Fourier Shell Correlation \u2014 " + full.name + (many ? classTag + " highlighted" : "")};
       plot.setLegend(fscLegend(full.classes));
-      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps, null);
-      angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name);
+      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight);
+      angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name + classTag);
       var est = c.estimated_resolution ? " \u00b7 est. " + Number(c.estimated_resolution).toFixed(2) + " \u00c5" : "";
-      capLeft.textContent = full.name + (chosen != null ? " \u00b7 earlier round" : "") + (full.classes.length > 1 ? " \u00b7 class 1 of " + full.classes.length : "") + est;
+      var occ = many && c.average_occupancy != null ? " (" + Number(c.average_occupancy).toFixed(1) + "%)" : "";
+      capLeft.textContent = full.name + (chosen != null ? " \u00b7 earlier round" : "") + (many ? " \u00b7 class " + c.class_number + " of " + full.classes.length + occ : "") + est;
       figLoading(fig.img, fig.status, "Loading\u2026");
       shownVolume = c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists ? c.reconstructed_volume_asset_id : null;
       dl.disabled = shownVolume == null;
@@ -10358,6 +10379,7 @@ From branch : <span id="versionBranch">—</span></p>
       chosen = next >= rs.length - 1 ? null : rs[next].refinement_id; showRound();
     }
     rpick.addEventListener("change", function(){ chosen = rpick.value === "latest" ? null : Number(rpick.value); showRound(); });
+    cpick.addEventListener("change", function(){ classIndex = Number(cpick.value) || 0; if (shown) render(shown, currentRid()); });
     card.querySelector('[data-role="rlatest"]').addEventListener("click", function(){ chosen = null; showRound(); });
     card.querySelector('[data-role="rprev"]').addEventListener("click", function(){ stepRound(-1); });
     card.querySelector('[data-role="rnext"]').addEventListener("click", function(){ stepRound(1); });

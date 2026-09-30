@@ -549,11 +549,34 @@ bool Reconstruct3DApp::DoCalculation( ) {
         current_image        = 0;
         random_reset_counter = 0;
 
+        // Choose the images that go into the noise power spectrum here, serially, in line order and from a generator
+        // with a fixed seed, so that every reconstruct3d run over the same particle range whitens with the same
+        // curve. The choice used to be made inside the parallel loop from the clock-seeded global generator, in
+        // whatever order the threads reached it, so each run had its own subset and its own slightly different curve,
+        // and in a classification each class's map carried its own scale. refine3d's logP is sensitive enough to
+        // that to bias every particle towards one class (see the same change in refine3d).
+        std::vector<char>     use_for_noise_spectrum(input_star_file.ReturnNumberofLines( ), 0);
+        RandomNumberGenerator noise_subset_generator(4711, true);
+        for ( current_image = 0; current_image < input_star_file.ReturnNumberofLines( ); current_image++ ) {
+            if ( input_star_file.ReturnPositionInStack(current_image) < first_particle || input_star_file.ReturnPositionInStack(current_image) > last_particle )
+                continue;
+            if ( random_reset_counter == 0 )
+                temp_float = noise_subset_generator.GetUniformRandom( );
+            if ( (temp_float >= 1.0 - 2.0f * percentage) || (random_reset_counter != 0) ) {
+                random_reset_counter++;
+                if ( random_reset_counter == random_reset_count )
+                    random_reset_counter = 0;
+                use_for_noise_spectrum[current_image] = 1;
+            }
+        }
+        current_image        = 0;
+        random_reset_counter = 0;
+
         noise_power_spectrum.MakeThreadSafeForNThreads(max_threads);
         number_of_terms.MakeThreadSafeForNThreads(max_threads);
 
 #pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack,                                                                                                                                            \
-                                                                   outer_mask_radius, pixel_size, mask_falloff, number_of_blank_edges, sum_power, current_image, global_random_number_generator, random_reset_count, random_reset_counter,                                                                               \
+                                                                   outer_mask_radius, pixel_size, mask_falloff, number_of_blank_edges, sum_power, current_image, use_for_noise_spectrum, random_reset_count, random_reset_counter,                                                                               \
                                                                    outer_mask_in_pixels, apply_exposure_filter_during_reconstruction) private(current_image_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp3_image_local, sum_power_local, input_image_local, temp_float, file_read, \
                                                                                                                                               mask_radius_for_noise)
         {
@@ -568,23 +591,13 @@ bool Reconstruct3DApp::DoCalculation( ) {
 
 #pragma omp for schedule(static, 1)
             for ( current_image_local = 0; current_image_local < input_star_file.ReturnNumberofLines( ); current_image_local++ ) {
+                input_parameters = input_star_file.ReturnLine(current_image_local);
+                file_read        = false;
+                if ( use_for_noise_spectrum[current_image_local] ) {
+// ReadSlice requires omp critical to avoid parallel reads, which may lead to the wrong slice being read
 #pragma omp critical
-                {
-                    input_parameters = input_star_file.ReturnLine(current_image);
-                    //input_par_file.ReadLine(input_parameters, current_image);
-                    current_image++;
-                    if ( input_parameters.position_in_stack >= first_particle && input_parameters.position_in_stack <= last_particle ) {
-                        file_read = false;
-                        if ( random_reset_counter == 0 )
-                            temp_float = global_random_number_generator.GetUniformRandom( );
-                        if ( (temp_float >= 1.0 - 2.0f * percentage) || (random_reset_counter != 0) ) {
-                            random_reset_counter++;
-                            if ( random_reset_counter == random_reset_count )
-                                random_reset_counter = 0;
-                            input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
-                            file_read = true;
-                        }
-                    }
+                    input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+                    file_read = true;
                 }
                 if ( input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle )
                     continue;

@@ -201,14 +201,24 @@ class Refine3DTests(unittest.TestCase):
         self.assertEqual([i for i, v in enumerate(c1) if v], [18 * 6 + 4])  # phi 32 -> bin 6; theta 40 -> bin 4 (equal-area bins: 38.9-43.8 deg)
         self.assertTrue(all(d2[b] for b in (18 * 6 + 4, 18 * 42 + 4)))       # its C2 mate at phi 212
         self.assertEqual(sum(refinements.angular_histogram(rows, 1, "nonsense")), 1)  # unknown symbols fall back to C1
-        # Several classes: a particle counts only for its highest-occupancy class.
+        # Several classes: each particle adds its occupancy / 100 to every class's plot (cisTEM
+        # counts it once, in its highest-occupancy class), so a class's total is its average
+        # occupancy times the particle count, times the symmetry mates.
         cls1 = [{"position_in_stack": 1, "theta": 10.0, "phi": 0.0, "psi": 0.0, "occupancy": 80.0, "image_is_active": 1},
                 {"position_in_stack": 2, "theta": 10.0, "phi": 0.0, "psi": 0.0, "occupancy": 20.0, "image_is_active": 1}]
         cls2 = [{"position_in_stack": 1, "theta": 50.0, "phi": 0.0, "psi": 0.0, "occupancy": 20.0, "image_is_active": 1},
                 {"position_in_stack": 2, "theta": 50.0, "phi": 0.0, "psi": 0.0, "occupancy": 80.0, "image_is_active": 1}]
         self.assertEqual(refinements.best_class_per_particle([cls1, cls2]), {1: 1, 2: 2})
-        self.assertEqual(sum(refinements.angular_histogram([cls1, cls2], 1, "C1")), 1)
-        self.assertEqual(sum(refinements.angular_histogram([cls1, cls2], 2, "C3")), 3)
+        self.assertAlmostEqual(sum(refinements.angular_histogram([cls1, cls2], 1, "C1")), 1.0)
+        self.assertAlmostEqual(sum(refinements.angular_histogram([cls1, cls2], 2, "C3")), 3.0)
+        # Near-equal occupancies: both plots hold (nearly) every particle, where cisTEM's rule
+        # would give class 1 both of them.
+        even1 = [dict(r, occupancy=50.5) for r in cls1]
+        even2 = [dict(r, occupancy=49.5) for r in cls2]
+        self.assertAlmostEqual(sum(refinements.angular_histogram([even1, even2], 1)), 1.01)
+        self.assertAlmostEqual(sum(refinements.angular_histogram([even1, even2], 2)), 0.99)
+        # A zero-occupancy particle contributes nothing to that class.
+        self.assertAlmostEqual(sum(refinements.angular_histogram([[dict(cls1[0], occupancy=0.0)], [cls2[0]]], 1)), 0.0)
 
     def test_apply_mask_keeps_inside_and_replaces_outside(self):
         n = 32

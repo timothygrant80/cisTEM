@@ -177,39 +177,45 @@ def best_class_per_particle(class_rows):
 
 
 def angular_histogram(class_rows, wanted_class=1, symmetry="C1"):
-    """Refinement::FillAngularDistributionHistogram(): 18 theta bins
-    (equal-area in cos theta) x 72 phi bins over the northern hemisphere,
-    counting every symmetry-related view of each active particle whose
-    highest-occupancy class is `wanted_class` (1-based). `class_rows` is
-    the per-class list of particle rows; a flat list of rows is taken as a
-    single class."""
+    """Refinement::FillAngularDistributionHistogram()'s bins -- 18 theta bins
+    (equal-area in cos theta) x 72 phi bins over the northern hemisphere, every
+    symmetry-related view of each active particle -- but weighted by the
+    particle's occupancy in `wanted_class` (1-based) divided by 100, where
+    cisTEM counts each particle once, in its highest-occupancy class only.
+    The weighted plot shows where a class's reconstruction gets its views,
+    since reconstruct3d weights by occupancy too, and its total equals the
+    class's average occupancy times the particle count; cisTEM's rule puts
+    nearly every particle of a classification that has not separated yet
+    into whichever class is marginally ahead. One class (occupancy 100)
+    gives the plain counts. `class_rows` is the per-class list of particle
+    rows; a flat list of rows is taken as a single class."""
     if class_rows and isinstance(class_rows[0], dict):
         class_rows = [class_rows]
-    hist = [0] * (THETA_BINS * PHI_BINS)
+    hist = [0.0] * (THETA_BINS * PHI_BINS)
     if not class_rows or wanted_class < 1 or wanted_class > len(class_rows):
         return hist
     try:
         mats = symmetry_module.matrices(symmetry)
     except ValueError:
         mats = symmetry_module.matrices("C1")
-    best = best_class_per_particle(class_rows) if len(class_rows) > 1 else None
     for r in class_rows[wanted_class - 1]:
         if r.get("image_is_active", 1) < 0:
             continue
-        if best is not None and best.get(int(r.get("position_in_stack", 0))) != wanted_class:
+        weight = float(r.get("occupancy", 100.0)) / 100.0
+        if weight <= 0.0:
             continue
         em = symmetry_module.euler_matrix(float(r.get("phi", 0.0)), float(r.get("theta", 0.0)), float(r.get("psi", 0.0)))
         for rm in mats:
             x, y, z = symmetry_module.rotate(symmetry_module.matmul(rm, em), (0.0, 0.0, 1.0))
             if z < 0.0:
                 x, y = -x, -y
-            hist[_theta_phi_bin(symmetry_module.projection_theta_deg(x, y), symmetry_module.projection_phi_deg(x, y))] += 1
+            hist[_theta_phi_bin(symmetry_module.projection_theta_deg(x, y), symmetry_module.projection_phi_deg(x, y))] += weight
     return hist
 
 
 def write_angular_distribution(conn, rid, k, hist):
     conn.execute("DROP TABLE IF EXISTS REFINEMENT_ANGULAR_DISTRIBUTION_{}_{}".format(rid, k))
-    conn.execute("CREATE TABLE REFINEMENT_ANGULAR_DISTRIBUTION_{}_{}(BIN_NUMBER INTEGER PRIMARY KEY, NUMBER_IN_BIN INTEGER)".format(rid, k))
+    conn.execute("CREATE TABLE REFINEMENT_ANGULAR_DISTRIBUTION_{}_{}(BIN_NUMBER INTEGER PRIMARY KEY, NUMBER_IN_BIN REAL)".format(rid, k))
     conn.executemany("INSERT INTO REFINEMENT_ANGULAR_DISTRIBUTION_{}_{} VALUES (?, ?)".format(rid, k), list(enumerate(hist)))
 
 

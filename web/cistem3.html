@@ -499,6 +499,7 @@ tr.vpending td{color:var(--text-tertiary);font-style:italic;}   /* a paged table
 .ra-plot .axis-label{font-family:var(--font-ui);font-size:14px;fill:var(--text-secondary);}
 .ra-plot .line-x{fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linejoin:round;}
 .ra-plot .line-y{fill:none;stroke:var(--plot-y);stroke-width:1.8;stroke-linejoin:round;}
+.ra-plot .line-class{fill:none;stroke-width:1.8;stroke-linejoin:round;}   /* one class of a multi-class FSC plot; the colour is set inline */
 .ra-plot .dot-x{fill:var(--accent);} .ra-plot .dot-y{fill:var(--plot-y);}
 .ra-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px;}
 .ra-figure{margin:0;}
@@ -3567,15 +3568,22 @@ From branch : <span id="versionBranch">—</span></p>
     var head = document.createElement("div"); head.className = "ra-plot-head";
     var t = document.createElement("span"); t.className = "ra-plot-title"; t.textContent = title; head.appendChild(t);
     var lg = document.createElement("span"); lg.className = "ra-legend";
-    legend.forEach(function(item){
-      var sw = document.createElement("span"); sw.className = "ra-swatch " + item[0]; lg.appendChild(sw);
-      lg.appendChild(document.createTextNode(item[1]));
-    });
+    // Each item is [swatch, label]: the swatch a CSS class, or a colour ("#rrggbb") set inline.
+    function setLegend(items){
+      lg.innerHTML = "";
+      items.forEach(function(item){
+        var sw = document.createElement("span"); sw.className = "ra-swatch" + (item[0].charAt(0) === "#" ? "" : " " + item[0]);
+        if (item[0].charAt(0) === "#") sw.style.borderTopColor = item[0];
+        lg.appendChild(sw);
+        lg.appendChild(document.createTextNode(item[1]));
+      });
+    }
+    setLegend(legend);
     head.appendChild(lg);
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "ra-plot"); svg.setAttribute("viewBox", "0 0 640 240"); svg.setAttribute("role", "img");
     wrap.appendChild(head); wrap.appendChild(svg);
-    return {root: wrap, svg: svg, title: t};
+    return {root: wrap, svg: svg, title: t, setLegend: setLegend};
   }
 
   function niceStep(range, target){
@@ -3628,7 +3636,7 @@ From branch : <span id="versionBranch">—</span></p>
     el("text", {x: 12, y: T + ph / 2, "text-anchor": "middle", "class": "axis-label", transform: "rotate(-90 12 " + (T + ph / 2) + ")"}, opts.yLabel || "");
     series.forEach(function(sr){
       var d = sr.xs.map(function(x, i){ return (i ? "L" : "M") + sx(x).toFixed(1) + " " + sy(Math.max(yMin, Math.min(yMax, sr.ys[i]))).toFixed(1); }).join(" ");
-      el("path", {d: d, "class": sr.cls});
+      el("path", sr.style ? {d: d, "class": sr.cls, style: sr.style} : {d: d, "class": sr.cls});
       if (sr.dots && sr.xs.length <= 60) sr.xs.forEach(function(x, i){ el("circle", {cx: sx(x), cy: sy(sr.ys[i]), r: 1.8, "class": sr.dots}); });
     });
   }
@@ -4986,12 +4994,42 @@ From branch : <span id="versionBranch">—</span></p>
   }
   RESULT_PAGES.ab_initio_3d = makeStartupResultsPage();
 
+  // cisTEM's default_colormap (gui_functions.cpp), the class colours of its FSC plot; its
+  // pure yellow is unreadable on white and is darkened here.
+  var CLASS_COLOURS = ["#0000FF", "#800000", "#8BB6B6", "#000080", "#FF00FF", "#C9A800", "#73E5E5", "#800080", "#9CCE00", "#FFCE00", "#CE9CFF", "#00CEFF", "#FF9CCE"];
+  function classColour(i){ return CLASS_COLOURS[i % CLASS_COLOURS.length]; }
+  // The legend items for an FSC plot: FSC / Part. FSC for one class, a colour per class otherwise.
+  function fscLegend(classes){
+    if (!classes || classes.length <= 1) return [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]];
+    return classes.map(function(c, i){ return [classColour(i), "Class " + (c.class_number != null ? c.class_number : i + 1)]; });
+  }
+
   // FSC against spatial frequency (1/A), as cisTEM's FSCPanel draws it: the
-  // 0.143 and 0.5 lines, resolution ticks in A.
-  function drawFscPlot(svg, curve, pixelSize){
-    var pts = (curve || []).filter(function(s){ return s.resolution > 0; });
-    var xs = pts.map(function(s){ return 1 / s.resolution; });
-    var series = pts.length ? [{xs: xs, ys: pts.map(function(s){ return s.fsc; }), cls: "line-x"}, {xs: xs, ys: pts.map(function(s){ return s.part_fsc; }), cls: "line-y"}] : [];
+  // 0.143 and 0.5 lines, resolution ticks in A. `curve` is one class's
+  // statistics (FSC and part FSC drawn), or the refinement's classes array,
+  // which draws every class's part FSC on the one plot in the class colours,
+  // the class at `highlight` (0-based) full and the others faded, as
+  // MyFSCPanel::AddRefinement() + PlotFSCPanel::HighlightClass() do.
+  function drawFscPlot(svg, curve, pixelSize, highlight){
+    var classes = curve && curve.length && curve[0] && curve[0].statistics !== undefined ? curve : null;
+    if (classes && classes.length <= 1){ curve = classes[0].statistics || []; classes = null; }
+    var series = [], pts = [];
+    if (classes){
+      classes.forEach(function(c, i){
+        var cp = (c.statistics || []).filter(function(s){ return s.resolution > 0; });
+        if (!cp.length) return;
+        pts = pts.concat(cp);
+        var on = highlight == null || highlight === i;
+        series.push({xs: cp.map(function(s){ return 1 / s.resolution; }), ys: cp.map(function(s){ return s.part_fsc; }), cls: "line-class", classIndex: i,
+                     style: "stroke:" + classColour(i) + (on ? "" : ";stroke-opacity:.55;stroke-width:1.4")});
+      });
+      // The highlighted class last, so it is drawn on top of the faded ones.
+      series.sort(function(a, b){ return (a.classIndex === highlight ? 1 : 0) - (b.classIndex === highlight ? 1 : 0); });
+    } else {
+      pts = (curve || []).filter(function(s){ return s.resolution > 0; });
+      var xs = pts.map(function(s){ return 1 / s.resolution; });
+      if (pts.length) series = [{xs: xs, ys: pts.map(function(s){ return s.fsc; }), cls: "line-x"}, {xs: xs, ys: pts.map(function(s){ return s.part_fsc; }), cls: "line-y"}];
+    }
     drawLinePlot(svg, series, {xLabel: "spatial frequency (1/Å)", yLabel: "FSC", yMin: -0.1, yMax: 1.05, xMin: 0, emptyText: "No resolution statistics yet.",
       xTick: function(v){ return v > 0 ? (1 / v).toFixed(1) + " Å" : "∞"; }});
     if (!pts.length) return;
@@ -5266,7 +5304,7 @@ From branch : <span id="versionBranch">—</span></p>
     var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
     var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
-    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps); });
+    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight); });
     // The reconstruction and the angular distribution side by side at equal width, the
     // distribution with a zoom icon that opens it at window size; Download saves the shown map.
     var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
@@ -5354,8 +5392,11 @@ From branch : <span id="versionBranch">—</span></p>
       var full = page.current; if (!full) return;
       var c = full.classes[page.classIndex] || full.classes[0];
       DETAILS.forEach(function(d, i){ cells[i].textContent = d[1](full, c); });
-      lastFsc = {stats: c.statistics || [], ps: full.resolution_statistics_pixel_size, title: "Fourier Shell Correlation \u2014 " + full.name + (full.classes.length > 1 ? " \u00b7 class #" + c.class_number : "")};
-      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps);
+      // Every class's part FSC on the one plot, the shown class highlighted (cisTEM's FSC panel).
+      lastFsc = {stats: full.classes.length > 1 ? full.classes : (c.statistics || []), ps: full.resolution_statistics_pixel_size, highlight: full.classes.length > 1 ? full.classes.indexOf(c) : null,
+                 title: "Fourier Shell Correlation \u2014 " + full.name + (full.classes.length > 1 ? " \u00b7 class #" + c.class_number + " highlighted" : "")};
+      plot.setLegend(fscLegend(full.classes));
+      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight);
       angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name + (full.classes.length > 1 ? " \u00b7 class #" + c.class_number : ""));
       dlVolume = c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists ? c.reconstructed_volume_asset_id : null; dlBtn.disabled = dlVolume == null;
       paramsBtn.disabled = false;
@@ -10258,7 +10299,7 @@ From branch : <span id="versionBranch">—</span></p>
     var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); box.appendChild(plot.root);
     var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
-    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps); });
+    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, null); });
     var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; box.appendChild(pair);
     var card = document.createElement("div"); card.className = "live-orth-card"; pair.appendChild(card);
     card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
@@ -10280,8 +10321,10 @@ From branch : <span id="versionBranch">—</span></p>
     function currentRid(){ var rs = rounds(); if (chosen != null && rs.some(function(h){ return h.refinement_id === chosen; })) return chosen; chosen = null; return rs.length ? rs[rs.length - 1].refinement_id : last && last.result.refinement_id; }
     function render(full, rid){
       var c = full.classes[0] || {};
-      lastFsc = {stats: c.statistics || [], ps: full.resolution_statistics_pixel_size, title: "Fourier Shell Correlation \u2014 " + full.name};
-      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps);
+      // Every class's part FSC on the one plot (cisTEM's FSC panel); one class draws FSC and part FSC.
+      lastFsc = {stats: full.classes.length > 1 ? full.classes : (c.statistics || []), ps: full.resolution_statistics_pixel_size, title: "Fourier Shell Correlation \u2014 " + full.name};
+      plot.setLegend(fscLegend(full.classes));
+      drawFscPlot(plot.svg, lastFsc.stats, lastFsc.ps, null);
       angular.draw(c.angular_distribution, "Angular Distribution \u2014 " + full.name);
       var est = c.estimated_resolution ? " \u00b7 est. " + Number(c.estimated_resolution).toFixed(2) + " \u00c5" : "";
       capLeft.textContent = full.name + (chosen != null ? " \u00b7 earlier round" : "") + (full.classes.length > 1 ? " \u00b7 class 1 of " + full.classes.length : "") + est;

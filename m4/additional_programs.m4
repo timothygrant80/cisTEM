@@ -107,7 +107,18 @@ AC_DEFUN([NON_ESSENTIAL_PROGRAMS_TO_BE_COMPILED],
     CISTEM_OPTIONAL_PROGRAM([align_nmr_spectra], [ENABLE_ALIGNNMRSPECTRA], [align_nmr_spectra])
     CISTEM_OPTIONAL_PROGRAM([correlate_nmr_spectra], [ENABLE_CORRELATENMRSPECTRA], [correlate_nmr_spectra])
     CISTEM_OPTIONAL_PROGRAM([filter_images], [ENABLE_FILTERIMAGES], [filter_images])
-	CISTEM_OPTIONAL_PROGRAM([blush_refinement], [ENABLE_BLUSHREFINEMENT], [blush_refinement])
+
+    # Special case: blush_refinement (and its ipc_blush worker) require LibTorch and --enable-blush.
+    # Only record the request here; AX_LIBTORCH and --enable-blush are evaluated later in configure.ac,
+    # which makes the final decision and sets the ENABLE_BLUSHREFINEMENT_AM conditional.
+    AS_IF([test "x$build_all" = "xyes"],
+          [want_blush_refinement="yes"],
+          [want_blush_refinement="no"])
+
+    AC_ARG_ENABLE([build-blush_refinement],
+        AS_HELP_STRING([--enable-build-blush_refinement], [build blush_refinement (requires --enable-libtorch and --enable-blush) @<:@default="no"@:>@]),
+        [AS_IF([test "x$enableval" = "xyes"],
+               [want_blush_refinement="yes"])])
 
     # Special case: calculate_template_pvalue needs Eigen library check
     use_Eigen="no"

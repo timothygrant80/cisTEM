@@ -119,7 +119,7 @@ if test "x$CXX" = "xicpc"; then
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
   # This may only be needed for dynamic linking
   
-  LIBS="$LIBS -lz"
+#   LIBS="$LIBS -lz"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
@@ -201,11 +201,36 @@ AC_ARG_ENABLE(blush, AS_HELP_STRING([--enable-blush],[Compile with LibTorch for 
 [enable_blush="no"]
 )
 
+# Blush is only usable when it was requested AND LibTorch was requested and found.
+blush_available="no"
 if test "x$enable_blush" = "xyes" && test "x$use_libtorch" = "xyes"; then
-		AC_DEFINE([cisTEM_USING_BLUSH], [1], [Define the Blush flag])
-		AC_MSG_NOTICE([Blush: using LibTorch path: $libtorch_path])
+	blush_available="yes"
+	AC_DEFINE([cisTEM_USING_BLUSH], [1], [Define the Blush flag])
+	AC_MSG_NOTICE([Blush: using LibTorch path: $LIBTORCH_ROOT])
+fi
+AM_CONDITIONAL([ENABLE_BLUSH], [test "x$blush_available" = "xyes"])
+
+# blush_refinement/ipc_blush are built when requested (build-all, --enable-build-blush_refinement)
+# or when blush is enabled (the GUI launches blush_refinement when cisTEM_USING_BLUSH is defined),
+# but only if the LibTorch/blush prerequisites are satisfied. Otherwise warn and continue without them.
+build_blush_refinement="no"
+if test "x$want_blush_refinement" = "xyes" || test "x$enable_blush" = "xyes"; then
+	if test "x$blush_available" = "xyes"; then
+		build_blush_refinement="yes"
+		AC_MSG_NOTICE([Building blush_refinement])
+	else
+		blush_missing=""
+		if test "x$use_libtorch" != "xyes"; then
+			blush_missing="$blush_missing --enable-libtorch (LibTorch must also be found, see LIBTORCH_ROOT)"
+		fi
+		if test "x$enable_blush" != "xyes"; then
+			blush_missing="$blush_missing --enable-blush"
+		fi
+		AC_MSG_WARN([blush_refinement will NOT be built: missing required option(s):$blush_missing])
+		AC_MSG_WARN([Configuration and compilation will proceed without blush unless these options are enabled.])
 	fi
-	AM_CONDITIONAL([ENABLE_BLUSH], [test "x$enable_blush" = "xyes"])
+fi
+AM_CONDITIONAL([ENABLE_BLUSHREFINEMENT_AM], [test "x$build_blush_refinement" = "xyes"])
 
 # Specifically activate blush if needed.
 # submodule_Blush

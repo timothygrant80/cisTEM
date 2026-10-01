@@ -28,6 +28,8 @@ nobase_dist_pkgdata_DATA = \
 	web/server/abinitio.py \
 	web/server/auth.py \
 	web/server/autorefine.py \
+	web/server/blush.py \
+	web/server/blush_model.py \
 	web/server/cistem_server.py \
 	web/server/classification.py \
 	web/server/db.py \

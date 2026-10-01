@@ -321,6 +321,7 @@ button.link:hover{background:none;text-decoration:underline;}
    with the control, so the whole row dims, not just the input. */
 .field-disabled{opacity:.45;}
 .field-disabled input,.field-disabled select{cursor:not-allowed;}
+.field-unavailable-note{margin-left:8px;font-weight:400;font-size:13px;color:var(--text-tertiary);}   /* an option the server reported it cannot run */
 
 /* Per-stage info text (cisTEM's InfoText), in the column beside the form --
    cisTEM puts it to the right of the job panel too. The full SetInfo() text
@@ -2588,7 +2589,17 @@ From branch : <span id="versionBranch">—</span></p>
         {key:"low_pass_outside_mask", label:"Low-Pass Filter Outside Mask?", type:"checkbox", default:false, group:"Masking", enabledBy:"use_mask",
          tooltip:"Low-pass filter the density kept outside the mask."},
         {key:"mask_filter_resolution_a", label:"Filter Resolution", unit:"Å", type:"number", step:"1", min:1, default:"20", group:"Masking", enabledBy:"low_pass_outside_mask",
-         tooltip:"The resolution of the low-pass filter applied outside the mask."}
+         tooltip:"The resolution of the low-pass filter applied outside the mask."},
+        // Blush regularisation (Kimanius et al. 2024), not in cisTEM's panel: the reference is denoised by RELION's
+        // network between rounds (server/blush.py). Offered only when the server reports torch and the weights.
+        {key:"use_blush", label:"Use Blush Regularisation?", type:"checkbox", default:false, group:"Blush", feature:"blush",
+         tooltip:"Denoise each class's reference with RELION's Blush network before every round (Kimanius et al. 2024). Runs on the server, on its GPU when it has one; a few minutes per class per round on a CPU."},
+        {key:"blush_input", label:"Denoise", unit:"", type:"select", options:["Unfiltered half-map sum", "Filtered reference"], default:"Unfiltered half-map sum", group:"Blush", enabledBy:"use_blush",
+         tooltip:"What the network is given: the unfiltered reconstruction (the average of the two half maps, what RELION denoises; the result is then cut at the FSC resolution), or the Wiener-filtered reference the round would otherwise refine against."},
+        {key:"blush_batch_size", label:"Batch Size", unit:"blocks", type:"number", step:"1", min:1, max:16, default:"1", group:"Blush", enabledBy:"use_blush",
+         tooltip:"How many 64-voxel blocks go through the network at once. Larger batches are faster on a GPU with the memory for them; 1 is right for a CPU."},
+        {key:"blush_threads", label:"CPU Threads", unit:"", type:"number", step:"1", min:0, default:"0", group:"Blush", enabledBy:"use_blush",
+         tooltip:"Threads for CPU inference; 0 lets PyTorch choose (all cores)."}
       ],
       info: {
         title: "3D Refinement & Reconstruction (FrealignX)",
@@ -2969,6 +2980,7 @@ From branch : <span id="versionBranch">—</span></p>
     runProfile: localStorage.getItem("cryoem_run_profile") || null,
     runProfiles: [],
     connected: false,
+    features: {},      // optional server-side capabilities from GET /health (e.g. blush: {available, reason, device})
     screen: "connecting",
     projectId: null,
     projectName: null,
@@ -3263,6 +3275,16 @@ From branch : <span id="versionBranch">—</span></p>
       if (f.default !== undefined) input.value = f.default;
     }
     input.dataset.key = f.key;
+    // A field tied to an optional server capability (`feature`) is greyed, with the server's reason
+    // as its tooltip, when GET /health said the server cannot provide it; unknown means an older
+    // server that did not say, and the field is left usable (the server refuses with the reason).
+    if (f.feature && state.features[f.feature] && state.features[f.feature].available === false){
+      input.disabled = true;
+      if (f.type === "checkbox") input.checked = false;
+      wrap.classList.add("field-disabled", "field-unavailable");
+      wrap.title = "Not available on this server: " + (state.features[f.feature].reason || "the server cannot run it");
+      var why = document.createElement("span"); why.className = "field-unavailable-note"; why.textContent = "unavailable on this server"; label.appendChild(why);
+    }
     if (f.type === "checkbox"){
       wrap.appendChild(input);
       wrap.appendChild(label);
@@ -5842,7 +5864,8 @@ From branch : <span id="versionBranch">—</span></p>
     fetch(apiUrl("/health")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(){
+    }).then(function(data){
+      state.features = (data && data.features) || {};
       setConnected(true);
       showScreen("home");
       checkAuth();

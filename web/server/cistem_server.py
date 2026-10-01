@@ -55,6 +55,7 @@ from flask import Flask, abort, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 import abinitio
+import blush
 import starfile
 import auth
 import classification
@@ -1059,7 +1060,15 @@ def delete_user_route(user_id):
 
 @app.route("/api/health")
 def health():
-    return jsonify({"status": "ok", "time": now_iso()})
+    # `features` tells the page which optional server-side capabilities exist here, so a panel can
+    # grey an option with the reason instead of offering what the server cannot run: Blush needs
+    # torch and the published weights (blush.availability(); cached, re-checked on each health call
+    # only when it was unavailable, so copying the weights in is noticed without a restart).
+    info = blush.availability()
+    if not info["available"]:
+        info = blush.availability(refresh=True)
+    return jsonify({"status": "ok", "time": now_iso(),
+                    "features": {"blush": {"available": info["available"], "reason": info["reason"], "device": info["device"]}}})
 
 
 @app.route("/api/version")

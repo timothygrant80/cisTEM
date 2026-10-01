@@ -10,3 +10,6 @@ pillow>=10.0
 # largest connected piece of density is scipy.ndimage's connected-component
 # labelling. Imported where it is used, so everything else runs without it.
 scipy>=1.10
+# optional, Blush regularisation only (server/blush.py): torch>=2.0 -- install separately, e.g.
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu   (CPU-only build)
+# and copy blush_v1.0.ckpt.gz (Zenodo record 10072731) to server/data/models/

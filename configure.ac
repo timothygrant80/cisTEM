@@ -119,7 +119,7 @@ if test "x$CXX" = "xicpc"; then
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
   # This may only be needed for dynamic linking
   
-  LIBS="$LIBS -lz"
+#   LIBS="$LIBS -lz"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
@@ -195,6 +195,46 @@ AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]), [
 # Check for LibTorch support for ML-based tools (e.g., blush regularization)
 AX_LIBTORCH
 
+# Now check if blush was requested in addition to libtorch
+AC_ARG_ENABLE(blush, AS_HELP_STRING([--enable-blush],[Compile with LibTorch for 3D refinement [default=no]]),
+[enable_blush="$enableval"],
+[enable_blush="no"]
+)
+
+# Blush is only usable when it was requested AND LibTorch was requested and found.
+blush_available="no"
+if test "x$enable_blush" = "xyes" && test "x$use_libtorch" = "xyes"; then
+	blush_available="yes"
+	AC_DEFINE([cisTEM_USING_BLUSH], [1], [Define the Blush flag])
+	AC_MSG_NOTICE([Blush: using LibTorch path: $LIBTORCH_ROOT])
+fi
+AM_CONDITIONAL([ENABLE_BLUSH], [test "x$blush_available" = "xyes"])
+
+# blush_refinement/ipc_blush are built when requested (build-all, --enable-build-blush_refinement)
+# or when blush is enabled (the GUI launches blush_refinement when cisTEM_USING_BLUSH is defined),
+# but only if the LibTorch/blush prerequisites are satisfied. Otherwise warn and continue without them.
+build_blush_refinement="no"
+if test "x$want_blush_refinement" = "xyes" || test "x$enable_blush" = "xyes"; then
+	if test "x$blush_available" = "xyes"; then
+		build_blush_refinement="yes"
+		AC_MSG_NOTICE([Building blush_refinement])
+	else
+		blush_missing=""
+		if test "x$use_libtorch" != "xyes"; then
+			blush_missing="$blush_missing --enable-libtorch (LibTorch must also be found, see LIBTORCH_ROOT)"
+		fi
+		if test "x$enable_blush" != "xyes"; then
+			blush_missing="$blush_missing --enable-blush"
+		fi
+		AC_MSG_WARN([blush_refinement will NOT be built: missing required option(s):$blush_missing])
+		AC_MSG_WARN([Configuration and compilation will proceed without blush unless these options are enabled.])
+	fi
+fi
+AM_CONDITIONAL([ENABLE_BLUSHREFINEMENT_AM], [test "x$build_blush_refinement" = "xyes"])
+
+# Specifically activate blush if needed.
+# submodule_Blush
+
 # wx-config 
 
 WXCONFIG=wx-config
@@ -206,9 +246,6 @@ AS_HELP_STRING([--with-wx-config=FILE],[Use the given path to wx-config when det
         WXCONFIG=$withval
     fi
 ])
-
-
-
 
 
 # debugmode
@@ -232,7 +269,8 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
     # Action if not given
     AC_DEFINE([NDEBUG], [], [Define the nodebug flag for either g++ or clang builds])
 ])
-  
+
+
 
 ###############################
 # BEGIN CUDA CHECKS AND SETS
@@ -384,9 +422,6 @@ AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp],[Compile with OpenMP thre
   CXXFLAGS="$CXXFLAGS $OPENMP_CXXFLAGS"
   fi
   ])
-  
-
-
 #sqlite3-dir
 
 #AC_ARG_WITH(sqlite3-dir,
@@ -539,8 +574,18 @@ if test "x$use_mkl_threads" = "xyes" -o "x$use_gnu_threads" = "xyes"; then
             MKL_LIBS="$MKL_LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread "
         fi
     else
-        if test "x$static_link" = "xtrue" ; then
-            MKL_LIBS="$MKL_LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a  ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread "
+		if test "x$static_link" = "xtrue" ; then
+            # Mirroring the workaround for libtool's handling of circular dependencies
+			# GNU threads are required for threading library compatability with LibTorch
+            LIBTOOL_FLAGS="--preserve-dup-deps "
+            circular_deps="${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a "
+			
+			# Explicitly repeat the circular dependencies 3 times to ensure symbol resolution
+			# This is required because libmkl_core.a and libmkl_gnu_threads.a have circular dependencies, and libtool
+			# tries to do a single pass, which means that one of the libraries will not be defined before the other;
+			# therefore doing multiple passes ensures that the symbols are resolved by ensuring libtool is checking
+			# the deps each time it thinks it has encountered something that is undefined.
+			MKL_LIBS="$MKL_LIBS ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${circular_deps} ${circular_deps} ${circular_deps} -lpthread -lm -ldl"
         else
             MKL_LIBS="$MKL_LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread "
         fi

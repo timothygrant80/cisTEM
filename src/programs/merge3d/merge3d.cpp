@@ -83,6 +83,10 @@ bool Merge3DApp::DoCalculation( ) {
     // FOR LOCRES HACK..
     float alignment_res = my_current_job.arguments[14].ReturnFloatArgument( );
 
+    // Blush only:
+    // bool  apply_blush_denoising = my_current_job.arguments[15].ReturnBoolArgument( );
+    // float particle_diameter     = my_current_job.arguments[16].ReturnFloatArgument( );
+
     ResolutionStatistics* resolution_statistics = NULL;
     resolution_statistics                       = new ResolutionStatistics;
 

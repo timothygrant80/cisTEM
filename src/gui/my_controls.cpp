@@ -1,5 +1,10 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
+#ifdef cisTEM_USING_BLUSH
+#include "../programs/blush_refinement/blush_helpers.h"
+#include <atomic>
+#include <memory>
+#endif
 
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 extern MyRefinementResultsPanel*      refinement_results_panel;
@@ -8,6 +13,8 @@ extern Refine2DResultsPanel*          refine2d_results_panel;
 wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(EVT_UPDATE_MASK_THREAD_PROGRESS, wxThreadEvent);
+wxDEFINE_EVENT(EVT_WORKER_THREAD_MESSAGE, wxThreadEvent);
 
 MemoryComboBox::MemoryComboBox(wxWindow* parent, wxWindowID id, const wxString& value, const wxPoint& pos, const wxSize& size, int n, const wxString choices[], long style, const wxValidator& validator, const wxString& name)
     : wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name) {
@@ -1662,93 +1669,53 @@ CombinedPackageRefinementSelectPanel::~CombinedPackageRefinementSelectPanel( ) {
 
 wxThread::ExitCode AutoMaskerThread::Entry( ) {
     //  Read in the files, threshold them write them out again...
+    {
+        Image     input_image;
+        Image     buffer_image;
+        Image     size_image;
+        ImageFile input_file;
+        MRCFile   output_file;
 
-    Image     input_image;
-    Image     buffer_image;
-    Image     size_image;
-    ImageFile input_file;
-    MRCFile   output_file;
+        float original_average_value;
 
-    float original_average_value;
+        float average_value;
+        float average_of_100_max;
+        float threshold_value;
+        long  address;
+        bool  apply_size_mask = true;
 
-    float average_value;
-    float average_of_100_max;
-    float threshold_value;
-    long  address;
-    bool  apply_size_mask = true;
+        for ( int class_counter = 0; class_counter < input_files.GetCount( ); class_counter++ ) {
 
-    for ( int class_counter = 0; class_counter < input_files.GetCount( ); class_counter++ ) {
+            input_file.OpenFile(input_files.Item(class_counter).ToStdString( ), false);
+            input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
+            input_file.CloseFile( );
 
-        input_file.OpenFile(input_files.Item(class_counter).ToStdString( ), false);
-        input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
-        input_file.CloseFile( );
+            if ( ! apply_size_mask ) {
+                average_value = input_image.ReturnAverageOfRealValues( );
+                input_image.SetMinimumValue(average_value);
+                input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
+            }
+            else {
+                original_average_value = input_image.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
 
-        if ( ! apply_size_mask ) {
-            average_value = input_image.ReturnAverageOfRealValues( );
-            input_image.SetMinimumValue(average_value);
-            input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
-        }
-        else {
-            original_average_value = input_image.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
+                size_image.CopyFrom(&input_image);
+                size_image.ConvertToAutoMask(pixel_size, mask_radius, 7.0f, 0.1, true);
 
-            // remove disconnected density
+                for ( address = 0; address < input_image.real_memory_allocated; address++ ) {
+                    if ( size_image.real_values[address] == 0.0f )
+                        input_image.real_values[address] = original_average_value;
+                }
 
-            // OLD CODE...
-            /*
-			buffer_image.CopyFrom(&input_image);
-			buffer_image.SetMinimumValue(original_average_value);
-			buffer_image.ForwardFFT();
-			buffer_image.CosineMask(pixel_size / 50.0f, pixel_size / 10.0f);
-			buffer_image.BackwardFFT();
-
-			average_value = buffer_image.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
-			average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, mask_radius / pixel_size);
-			threshold_value = average_value + ((average_of_100_max - average_value) * 0.03);
-
-
-			buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
-			buffer_image.Binarise(threshold_value);
-
-		//	buffer_image.QuickAndDirtyWriteSlices("/tmp/new_bin.mrc", 1, buffer_image.logical_z_dimension);
-
-			rle3d my_rle3d(buffer_image);
-			size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
-			my_rle3d.ConnectedSizeDecodeTo(size_image);
-		//	size_image.QuickAndDirtyWriteSlices("/tmp/size.mrc", 1, size_image.logical_z_dimension);
-
-			//float maximum_size = kDa_to_Angstrom3(100.0f) / pixel_size;
-			//maximum_size = std::min(maximum_size, size_image.ReturnMaximumValue());
-			//size_image.Binarise(maximum_size - 1.0f);
-			size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
-			//size_image.DilateBinarizedMask(10.0 / pixel_size);
-			*/
-
-            // NEW CODE
-
-            size_image.CopyFrom(&input_image);
-            size_image.ConvertToAutoMask(pixel_size, mask_radius, 7.0f, 0.1, true);
-
-            //size_image.QuickAndDirtyWriteSlices("/tmp/mask.mrc", 1, size_image.logical_z_dimension);
-            //	input_image.ApplyMask(buffer_image, 20.0f / pixel_size, 0.0, 0.0, 0.0, true, original_average_value);
-
-            for ( address = 0; address < input_image.real_memory_allocated; address++ ) {
-                if ( size_image.real_values[address] == 0.0f )
-                    input_image.real_values[address] = original_average_value;
-                //else input_image.real_values[address] = significant_filtered_image.real_values[address];
+                input_image.SetMinimumValue(original_average_value);
+                input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
             }
 
-            input_image.SetMinimumValue(original_average_value);
-            input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
-            //input_image.QuickAndDirtyWriteSlices("/tmp/masked.mrc", 1, input_image.logical_z_dimension);
+            output_file.OpenFile(output_files.Item(class_counter).ToStdString( ), true);
+            input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
+            output_file.CloseFile( );
         }
-
-        output_file.OpenFile(output_files.Item(class_counter).ToStdString( ), true);
-        input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
-        output_file.CloseFile( );
     }
-
     // send finished event..
-
     wxThreadEvent* my_thread_event = new wxThreadEvent(wxEVT_AUTOMASKERTHREAD_COMPLETED);
     my_thread_event->SetInt(thread_id);
 
@@ -1778,9 +1745,7 @@ wxThread::ExitCode OrthDrawerThread::Entry( ) {
 
         Image current_output;
         current_output.AllocateAsPointingToSliceIn3D(new_image, 1);
-        //current_output.QuickAndDirtyWriteSlice("/tmp/before.mrc", 1);
         input_image.CreateOrthogonalProjectionsImage(&current_output, true, scale_factor, mask_radius_in_pixels);
-        //current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
 
         // if there are multiple classes, take care of it.
 
@@ -1799,24 +1764,6 @@ wxThread::ExitCode OrthDrawerThread::Entry( ) {
             input_image.CreateOrthogonalProjectionsImage(&current_output, true, scale_factor, mask_radius_in_pixels);
         }
 
-        /*	if (new_image->logical_x_dimension > 1500)
-		{
-			float downscale_factor = new_image->logical_x_dimension / 1500;
-			new_image->ForwardFFT();
-			new_image->Resize(myroundint(new_image->logical_x_dimension * downscale_factor), myroundint(new_image->logical_y_dimension * downscale_factor), 1);
-			new_image->BackwardFFT();
-		}
-		else
-		{
-			if (scale_factor != 1.0f)
-			{
-				new_image->ForwardFFT();
-				new_image->Resize(myroundint(new_image->logical_x_dimension * scale_factor), myroundint(new_image->logical_y_dimension * scale_factor), 1);
-				new_image->BackwardFFT();
-			}
-		}
-*/
-
         finished_event->SetImage(new_image);
         finished_event->SetString(tab_name);
     }
@@ -1831,30 +1778,31 @@ wxThread::ExitCode OrthDrawerThread::Entry( ) {
 
 wxThread::ExitCode Multiply3DMaskerThread::Entry( ) {
     //  Read in the files and mask, mask, then write out
+    {
+        Image input_image;
+        Image mask_image;
 
-    Image input_image;
-    Image mask_image;
+        ImageFile input_file;
+        MRCFile   output_file;
 
-    ImageFile input_file;
-    MRCFile   output_file;
-
-    // read the mask
-    input_file.OpenFile(mask_filename.ToStdString( ), false);
-    mask_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
-    input_file.CloseFile( );
-
-    // loop through and mask
-
-    for ( int class_counter = 0; class_counter < input_files.GetCount( ); class_counter++ ) {
-        input_file.OpenFile(input_files.Item(class_counter).ToStdString( ), false);
-        input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
+        // read the mask
+        input_file.OpenFile(mask_filename.ToStdString( ), false);
+        mask_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
         input_file.CloseFile( );
 
-        input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 40.0);
+        // loop through and mask
 
-        output_file.OpenFile(output_files.Item(class_counter).ToStdString( ), true);
-        input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
-        output_file.CloseFile( );
+        for ( int class_counter = 0; class_counter < input_files.GetCount( ); class_counter++ ) {
+
+            input_file.OpenFile(input_files.Item(class_counter).ToStdString( ), false);
+            input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
+            input_file.CloseFile( );
+
+            input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 40.0);
+            output_file.OpenFile(output_files.Item(class_counter).ToStdString( ), true);
+            input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
+            output_file.CloseFile( );
+        }
     }
 
     // send finished event..

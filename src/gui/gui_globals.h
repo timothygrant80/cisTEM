@@ -1,9 +1,14 @@
+#include <atomic>
+#include <memory>
+
 class ReturnProcessedImageEvent;
 class ReturnSharpeningResultsEvent;
 wxDECLARE_EVENT(RETURN_PROCESSED_IMAGE_EVT, ReturnProcessedImageEvent);
 wxDECLARE_EVENT(RETURN_SHARPENING_RESULTS_EVT, ReturnSharpeningResultsEvent);
 wxDECLARE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 wxDECLARE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
+wxDECLARE_EVENT(EVT_UPDATE_MASK_THREAD_PROGRESS, wxThreadEvent);
+wxDECLARE_EVENT(EVT_WORKER_THREAD_MESSAGE, wxThreadEvent);
 wxDECLARE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
 
 class ReturnProcessedImageEvent : public wxCommandEvent {
@@ -105,7 +110,7 @@ class OrthDrawerThread : public wxThread {
 
 class AutoMaskerThread : public wxThread {
   public:
-    AutoMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1, float wanted_max_resolution = -1) : wxThread(wxTHREAD_DETACHED) {
+    AutoMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1, float wanted_max_resolution = -1) : wxThread(wxTHREAD_JOINABLE) {
         main_thread_pointer = parent;
         input_files         = wanted_input_files;
         output_files        = wanted_output_files;
@@ -131,7 +136,7 @@ class AutoMaskerThread : public wxThread {
 
 class Multiply3DMaskerThread : public wxThread {
   public:
-    Multiply3DMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_pixel_size, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED) {
+    Multiply3DMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1) : wxThread(wxTHREAD_JOINABLE) {
         main_thread_pointer    = parent;
         input_files            = wanted_input_files;
         output_files           = wanted_output_files;
@@ -141,6 +146,7 @@ class Multiply3DMaskerThread : public wxThread {
         low_pass_filter_radius = wanted_low_pass_filter_radius;
         pixel_size             = wanted_pixel_size;
         thread_id              = wanted_thread_id;
+        mask_radius            = wanted_mask_radius;
     }
 
   protected:
@@ -154,6 +160,7 @@ class Multiply3DMaskerThread : public wxThread {
     float weight_outside_mask;
     float low_pass_filter_radius;
     float pixel_size;
+    float mask_radius;
 
     virtual ExitCode Entry( );
 };

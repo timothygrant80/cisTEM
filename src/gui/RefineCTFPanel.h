@@ -141,6 +141,14 @@ class RefineCTFPanel : public RefineCTFPanelParent {
     int active_mask_thread_id;
     int next_thread_id;
 
+    /* Because Blush inference and automasking are spawned on a wxThread, and processes in the GUI can be
+	terminated, it is necessary to have a method to be able to properly terminate this potentially 
+	long-running process to avoid memory leaks and segfaults. By giving the GUI panel access to the thread,
+	it can issue a destroy command that will clean up resources being used by the thread.
+	*/
+    // Use polymorphism to allow this pointer to store both the AutoMaskerThread as well as the Multiply3DMaskThread
+    wxThread* masking_thread = nullptr;
+
   public:
     wxStopWatch stopwatch;
 

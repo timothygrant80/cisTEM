@@ -2598,8 +2598,10 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"What the network is given: the unfiltered reconstruction (the average of the two half maps, what RELION denoises; the result is then cut at the FSC resolution), or the Wiener-filtered reference the round would otherwise refine against."},
         {key:"blush_batch_size", label:"Batch Size", unit:"blocks", type:"number", step:"1", min:1, max:16, default:"1", group:"Blush", enabledBy:"use_blush",
          tooltip:"How many 64-voxel blocks go through the network at once. Larger batches are faster on a GPU with the memory for them; 1 is right for a CPU."},
-        {key:"blush_threads", label:"CPU Threads", unit:"", type:"number", step:"1", min:0, default:"0", group:"Blush", enabledBy:"use_blush",
-         tooltip:"Threads for CPU inference; 0 lets PyTorch choose (all cores)."}
+        {key:"blush_processes", label:"Processes", unit:"", type:"number", step:"1", min:1, max:128, default:"1", group:"Blush", enabledBy:"use_blush",
+         tooltip:"CPU only: how many worker processes share the blocks of a map, each with its own copy of the network. One PyTorch process cannot use more than about 16 cores on a block, so a large machine wants several: 8 processes of 16 threads on 128 cores, for example. Ignored on a GPU."},
+        {key:"blush_threads", label:"Threads per Process", unit:"", type:"number", step:"1", min:0, default:"0", group:"Blush", enabledBy:"use_blush",
+         tooltip:"CPU only: PyTorch threads in each process; 0 lets PyTorch choose (all cores, right for one process). Processes x threads should not exceed the machine's cores."}
       ],
       info: {
         title: "3D Refinement & Reconstruction (FrealignX)",

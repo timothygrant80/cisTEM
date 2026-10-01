@@ -42,6 +42,7 @@ import gzip
 import io
 import math
 import os
+import sys
 import threading
 from pathlib import Path
 
@@ -270,57 +271,243 @@ def local_std(volume_t, size=10):
     return torch.sqrt(torch.clip(grid2 - grid.square(), min=0))[0, 0]
 
 
-def apply_model(model, volume, input_mask, device, stride=DEFAULT_STRIDE, block_size=BLOCK_SIZE, batch_size=1, progress=None):
+def _standardise(volume, input_mask, block_size, stride):
+    """The network's two input channels for a whole volume (standardised
+    density and normalised local standard deviation, both masked), the mask and
+    the padding RELION applies when the volume is smaller than a block; numpy."""
+    import torch
+    vol = torch.as_tensor(np.ascontiguousarray(volume, dtype=np.float32))
+    mask = torch.as_tensor(np.ascontiguousarray(input_mask, dtype=np.float32))
+    shape = list(vol.shape)
+    pad = None
+    if any(n <= block_size for n in shape):   # the block must fit: pad small volumes
+        new_shape = [max(n, block_size + stride) for n in shape]
+        si = [n // 2 for n in shape]
+        so = [n // 2 for n in new_shape]
+        pad = [so[i] - si[i] for i in range(3)]
+        v = torch.zeros(new_shape); v[pad[0]:so[0] + si[0], pad[1]:so[1] + si[1], pad[2]:so[2] + si[2]] = vol; vol = v
+        m = torch.zeros(new_shape); m[pad[0]:so[0] + si[0], pad[1]:so[1] + si[1], pad[2]:so[2] + si[2]] = mask; mask = m
+        shape = new_shape
+    std_layer = local_std(vol, 10)
+    std_layer = std_layer / std_layer.mean()
+    mean, std = float(vol.mean()), float(vol.std())
+    vol = (vol - mean) / (std + 1e-8) * mask
+    std_layer = std_layer * mask
+    inputs = torch.stack([vol, std_layer], 0).numpy()
+    return inputs, mask.numpy(), mean, std, pad, shape
+
+
+def _wanted_blocks(mask, shape, block_size, stride):
+    """The block origins RELION processes: every block whose mask mean is at least 0.3."""
+    starts = [(z, y, x) for z in block_starts(shape[0], block_size, stride) for y in block_starts(shape[1], block_size, stride) for x in block_starts(shape[2], block_size, stride)]
+    return [c for c in starts if mask[c[0]:c[0] + block_size, c[1]:c[1] + block_size, c[2]:c[2] + block_size].mean() >= 0.3]
+
+
+def _run_blocks(model, inputs, coords, weight, block_size, batch_size, device, infer, count, on_batch=None):
+    """The network over `coords` in batches, each block's output blended into
+    `infer` and the weights into `count` (torch tensors on `device`).
+    `on_batch(n)` after each batch may return False to stop."""
+    import torch
+    with torch.no_grad():
+        for b in range(0, len(coords), batch_size):
+            batch = coords[b:b + batch_size]
+            blocks = torch.stack([inputs[:, z:z + block_size, y:y + block_size, x:x + block_size] for (z, y, x) in batch], 0)
+            out, _mask_logit = model(blocks[:, 0], blocks[:, 1])
+            for i, (z, y, x) in enumerate(batch):
+                infer[z:z + block_size, y:y + block_size, x:x + block_size] += out[i] * weight
+                count[z:z + block_size, y:y + block_size, x:x + block_size] += weight
+            if on_batch is not None and on_batch(len(batch)) is False:
+                return False
+    return True
+
+
+def _attach_shared(name):
+    """Attach to a shared-memory block another process created, without this
+    process's resource tracker unlinking it at exit (Python's issue 38119:
+    SharedMemory(name=) registers the block as this process's own)."""
+    from multiprocessing import shared_memory, resource_tracker
+    shm = shared_memory.SharedMemory(name=name)
+    try:
+        resource_tracker.unregister(shm._name, "shared_memory")
+    except Exception:  # noqa: BLE001
+        pass
+    return shm
+
+
+def _worker_main(spec_path):
+    """`python3 blush.py --worker <spec.json>`: one process of the CPU pool.
+    Its share of the blocks goes into its own shared-memory sums; progress is
+    one line per batch on stdout, then `done`, or `error <message>`."""
+    import json
+    import torch
+    with open(spec_path) as fh:
+        spec = json.load(fh)
+    shms = []
+    try:
+        if spec["threads"] > 0:
+            torch.set_num_threads(int(spec["threads"]))
+        shape = tuple(spec["shape"])
+        shm = _attach_shared(spec["inputs"]); shms.append(shm)
+        inputs = torch.from_numpy(np.ndarray((2,) + shape, dtype=np.float32, buffer=shm.buf))
+        out_shm = _attach_shared(spec["out"]); shms.append(out_shm)
+        count_shm = _attach_shared(spec["count"]); shms.append(count_shm)
+        infer = torch.from_numpy(np.ndarray(shape, dtype=np.float32, buffer=out_shm.buf))
+        count = torch.from_numpy(np.ndarray(shape, dtype=np.float32, buffer=count_shm.buf))
+        infer.zero_(); count.zero_()
+        model = load_model("cpu", spec["weights"])
+        weight = torch.as_tensor(make_weight_box(spec["block_size"], 10))
+        coords = [tuple(c) for c in spec["coords"]]
+
+        def on_batch(n):
+            sys.stdout.write("progress {}\n".format(n)); sys.stdout.flush()
+            return True
+
+        _run_blocks(model, inputs, coords, weight, spec["block_size"], spec["batch_size"], "cpu", infer, count, on_batch)
+        sys.stdout.write("done\n"); sys.stdout.flush()
+    except Exception as exc:  # noqa: BLE001
+        sys.stdout.write("error {}: {}\n".format(type(exc).__name__, exc)); sys.stdout.flush()
+    finally:
+        for m in shms:
+            try:
+                m.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def _apply_model_processes(inputs, coords, shape, block_size, batch_size, processes, threads, weights, progress):
+    """The blocks shared out over `processes` worker processes (`python3
+    blush.py --worker`, each with its own copy of the model and `threads`
+    PyTorch threads), their weighted sums added up here. One PyTorch process
+    cannot use a large machine's cores on one 64-voxel block, so this is how a
+    128-core server is kept busy. Plain subprocesses rather than the
+    multiprocessing module's spawn, which re-imports the launching program's
+    main module in every worker (the Flask server, here)."""
+    import json
+    import queue as queue_module
+    import subprocess
+    import tempfile
+    from multiprocessing import shared_memory
+    processes = max(1, min(int(processes), max(1, math.ceil(len(coords) / batch_size))))
+    chunks = [coords[i::processes] for i in range(processes)]
+    n_vox = int(np.prod(shape))
+    shm = shared_memory.SharedMemory(create=True, size=inputs.nbytes)
+    np.ndarray(inputs.shape, dtype=np.float32, buffer=shm.buf)[...] = inputs
+    outs, counts, procs, readers = [], [], [], []
+    messages = queue_module.Queue()
+    tmp = tempfile.mkdtemp(prefix="blush_")
+    infer = np.zeros(shape, dtype=np.float32)
+    count = np.zeros(shape, dtype=np.float32)
+
+    def read(index, proc):
+        for line in proc.stdout:
+            messages.put((index, line.decode("utf-8", "replace").strip()))
+        messages.put((index, "exit {}".format(proc.wait())))
+
+    try:
+        for i, chunk in enumerate(chunks):
+            o = shared_memory.SharedMemory(create=True, size=n_vox * 4)
+            c = shared_memory.SharedMemory(create=True, size=n_vox * 4)
+            outs.append(o); counts.append(c)
+            spec = os.path.join(tmp, "worker_{}.json".format(i))
+            with open(spec, "w") as fh:
+                json.dump({"inputs": shm.name, "out": o.name, "count": c.name, "shape": list(shape), "coords": [list(map(int, cc)) for cc in chunk],
+                           "block_size": block_size, "batch_size": batch_size, "threads": int(threads), "weights": str(weights)}, fh)
+            proc = subprocess.Popen([sys.executable, os.path.abspath(__file__), "--worker", spec], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    cwd=os.path.dirname(os.path.abspath(__file__)))
+            procs.append(proc)
+            t = threading.Thread(target=read, args=(i, proc), daemon=True, name="blush-reader-{}".format(i)); t.start(); readers.append(t)
+        total, done, finished, error, cancelled = len(coords), 0, set(), None, False
+        while len(finished) < len(procs) and error is None:
+            try:
+                index, line = messages.get(timeout=1.0)
+            except queue_module.Empty:
+                dead = [i for i, pr in enumerate(procs) if pr.poll() is not None and i not in finished and not readers[i].is_alive()]
+                if dead:
+                    error = "worker {} exited with code {}".format(dead[0], procs[dead[0]].returncode)
+                continue
+            if line.startswith("progress "):
+                done += int(line.split()[1])
+                if progress is not None and progress(done, total) is False:
+                    cancelled = True
+                    break
+            elif line == "done":
+                finished.add(index)
+            elif line.startswith("error "):
+                error = "worker {}: {}".format(index, line[6:])
+            elif line.startswith("exit ") and index not in finished:
+                err = procs[index].stderr.read().decode("utf-8", "replace").strip() if procs[index].stderr else ""
+                error = "worker {} exited with code {}{}".format(index, line.split()[1], ": " + err[-500:] if err else "")
+        if cancelled:
+            raise BlushCancelled()
+        if error:
+            raise RuntimeError("Blush: " + error)
+        for o, c in zip(outs, counts):
+            infer += np.ndarray(shape, dtype=np.float32, buffer=o.buf)
+            count += np.ndarray(shape, dtype=np.float32, buffer=c.buf)
+        return infer, count
+    finally:
+        for pr in procs:
+            if pr.poll() is None:
+                pr.terminate()
+        for pr in procs:
+            try:
+                pr.wait(timeout=10)
+            except Exception:  # noqa: BLE001
+                pr.kill()
+        for m in [shm] + outs + counts:
+            try:
+                m.close(); m.unlink()
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            for f in os.listdir(tmp):
+                os.remove(os.path.join(tmp, f))
+            os.rmdir(tmp)
+        except OSError:
+            pass
+
+
+def apply_model(model, volume, input_mask, device, stride=DEFAULT_STRIDE, block_size=BLOCK_SIZE, batch_size=1, progress=None,
+                processes=1, threads=0, weights=None):
     """RELION's apply_model(): the network over every block whose mask mean is
     at least 0.3, blended with the weight box; the volume is standardised on
     the way in and restored on the way out. `progress(done, total)` is called
-    after each batch and may return False to stop (BlushCancelled)."""
+    after each batch and may return False to stop (BlushCancelled). On the CPU
+    with `processes` > 1 the blocks are shared out over that many spawned
+    processes of `threads` PyTorch threads each (_apply_model_processes); a
+    GPU takes every block itself."""
     import torch
-    with torch.no_grad():
-        vol = torch.as_tensor(np.ascontiguousarray(volume, dtype=np.float32)).to(device)
-        mask = torch.as_tensor(np.ascontiguousarray(input_mask, dtype=np.float32)).to(device)
-        shape = list(vol.shape)
-        pad = None
-        if any(n <= block_size for n in shape):   # the block must fit: pad small volumes
-            new_shape = [max(n, block_size + stride) for n in shape]
-            si = [n // 2 for n in shape]
-            so = [n // 2 for n in new_shape]
-            pad = [so[i] - si[i] for i in range(3)]
-            v = torch.zeros(new_shape, device=device); v[pad[0]:so[0] + si[0], pad[1]:so[1] + si[1], pad[2]:so[2] + si[2]] = vol; vol = v
-            m = torch.zeros(new_shape, device=device); m[pad[0]:so[0] + si[0], pad[1]:so[1] + si[1], pad[2]:so[2] + si[2]] = mask; mask = m
-            shape = new_shape
+    inputs, mask, mean, std, pad, shape = _standardise(volume, input_mask, block_size, stride)
+    coords = _wanted_blocks(mask, shape, block_size, stride)
+    if device == "cpu" and processes > 1 and len(coords) > 1:
+        infer_np, count_np = _apply_model_processes(inputs, coords, shape, block_size, batch_size, processes, threads, weights or weights_path(), progress)
+        infer = torch.from_numpy(infer_np)
+        count = torch.from_numpy(count_np)
+        mask_t = torch.from_numpy(mask)
+    else:
+        inputs_t = torch.from_numpy(inputs).to(device)
+        mask_t = torch.from_numpy(mask).to(device)
         weight = torch.as_tensor(make_weight_box(block_size, 10)).to(device)
-        infer = torch.zeros_like(vol)
-        count = torch.zeros_like(vol)
-        std_layer = local_std(vol, 10)
-        std_layer = std_layer / std_layer.mean()
-        mean, std = vol.mean(), vol.std()
-        vol = (vol - mean) / (std + 1e-8) * mask
-        std_layer = std_layer * mask
-        inputs = torch.stack([vol, std_layer], 0)
-        starts = [(z, y, x) for z in block_starts(shape[0], block_size, stride) for y in block_starts(shape[1], block_size, stride) for x in block_starts(shape[2], block_size, stride)]
-        wanted = [c for c in starts if mask[c[0]:c[0] + block_size, c[1]:c[1] + block_size, c[2]:c[2] + block_size].mean() >= 0.3]
-        total = len(wanted)
-        done = 0
-        for b in range(0, total, batch_size):
-            coords = wanted[b:b + batch_size]
-            blocks = torch.stack([inputs[:, z:z + block_size, y:y + block_size, x:x + block_size] for (z, y, x) in coords], 0)
-            out, _mask_logit = model(blocks[:, 0], blocks[:, 1])
-            for i, (z, y, x) in enumerate(coords):
-                infer[z:z + block_size, y:y + block_size, x:x + block_size] += out[i] * weight
-                count[z:z + block_size, y:y + block_size, x:x + block_size] += weight
-            done += len(coords)
-            if progress is not None and progress(done, total) is False:
-                raise BlushCancelled()
-        covered = count > 0
-        infer[covered] /= count[covered]
-        infer[count < 1e-1] = 0.0
-        infer = infer * mask * (std + 1e-8) + mean
-        if pad is not None:
-            si = [n // 2 for n in volume.shape]
-            so = [n // 2 for n in shape]
-            infer = infer[pad[0]:so[0] + si[0], pad[1]:so[1] + si[1], pad[2]:so[2] + si[2]]
-        return infer.cpu().numpy().astype(np.float32)
+        infer = torch.zeros(shape, device=device)
+        count = torch.zeros(shape, device=device)
+        total = len(coords)
+        done = [0]
+
+        def on_batch(n):
+            done[0] += n
+            return progress(done[0], total) if progress is not None else True
+
+        if _run_blocks(model, inputs_t, coords, weight, block_size, batch_size, device, infer, count, on_batch) is False:
+            raise BlushCancelled()
+    covered = count > 0
+    infer[covered] /= count[covered]
+    infer[count < 1e-1] = 0.0
+    infer = infer * mask_t * (std + 1e-8) + mean
+    if pad is not None:
+        si = [n // 2 for n in volume.shape]
+        so = [n // 2 for n in shape]
+        infer = infer[pad[0]:so[0] + si[0], pad[1]:so[1] + si[1], pad[2]:so[2] + si[2]]
+    return infer.cpu().numpy().astype(np.float32)
 
 
 class BlushCancelled(RuntimeError):
@@ -328,7 +515,7 @@ class BlushCancelled(RuntimeError):
 
 
 def denoise(volume, pixel_size, mask_radius_a, fsc=None, input_is_filtered=False, stride=DEFAULT_STRIDE, batch_size=1,
-            threads=0, device=None, model=None, progress=None):
+            threads=0, processes=1, device=None, model=None, progress=None):
     """RELION's refine3d() on one cisTEM map. `volume` (z, y, x) at `pixel_size`
     A; `mask_radius_a` the refinement's mask radius; `fsc` the round's FSC
     indexed by shell (fsc_by_shell), None for no spectral trailing. Returns the
@@ -340,12 +527,16 @@ def denoise(volume, pixel_size, mask_radius_a, fsc=None, input_is_filtered=False
     and in practice clips to the box). With `input_is_filtered` the trailing
     cut is skipped, as the Wiener filter has already applied one; the mixing
     of the input's frequencies beyond the denoiser's 3 A Nyquist applies in
-    both modes, since the network cannot produce them."""
+    both modes, since the network cannot produce them. On the CPU, `processes`
+    > 1 shares the blocks over that many spawned processes of `threads`
+    PyTorch threads each (0: PyTorch's default); on a GPU both are ignored."""
     import torch
-    if threads and threads > 0:
-        torch.set_num_threads(int(threads))
     device = device or availability()["device"] or "cpu"
-    model = model or load_model(device)
+    pooled = device == "cpu" and processes > 1 and model is None   # the blocks run in worker processes
+    if threads and threads > 0 and not pooled:
+        torch.set_num_threads(int(threads))
+    if not pooled:
+        model = model or load_model(device)
     volume = np.asarray(volume, dtype=np.float32)
     n = volume.shape[0]
     denoise_input, voxel_nv = resample_fourier(volume, pixel_size, MODEL_VOXEL_SIZE)
@@ -358,7 +549,8 @@ def denoise(volume, pixel_size, mask_radius_a, fsc=None, input_is_filtered=False
 
     mask_nv = mask_for(n_nv, voxel_nv)
     mask_orig = mask_for(n, pixel_size)
-    denoised_nv = apply_model(model, denoise_input, mask_nv, device, stride=stride, block_size=BLOCK_SIZE, batch_size=batch_size, progress=progress)
+    denoised_nv = apply_model(model, denoise_input, mask_nv, device, stride=stride, block_size=BLOCK_SIZE, batch_size=batch_size, progress=progress,
+                              processes=processes if pooled else 1, threads=threads)
     denoised_nv *= mask_nv
     denoised_df_nv = fft(denoised_nv)
     denoised_df = rescale_fourier(denoised_df_nv, n) * (n / n_nv) ** 3
@@ -394,3 +586,11 @@ def denoise_file(input_paths, output_path, pixel_size, mask_radius_a, fsc_stats=
     out = denoise(vol, ps, mask_radius_a, fsc=fsc, input_is_filtered=input_is_filtered, **kwargs)
     volumes.write_mrc_volume(output_path, out, ps)
     return out
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--worker":
+        _worker_main(sys.argv[2])
+    else:
+        sys.stderr.write("usage: blush.py --worker <spec.json>   (a worker of the CPU pool; the module is otherwise imported)\n")
+        sys.exit(2)

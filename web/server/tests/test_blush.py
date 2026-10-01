@@ -130,6 +130,19 @@ class PipelineTests(unittest.TestCase):
             blush.denoise(vol, 2.0, mask_radius_a=60.0, model=self.Identity(), device="cpu", progress=lambda d, t: False)
 
     @unittest.skipUnless(blush.availability()["available"], "Blush weights not installed")
+    def test_process_pool_matches_single_process(self):
+        vol, _ = self._blob(48)
+        rng = np.random.default_rng(4)
+        noisy = vol + 0.5 * rng.standard_normal(vol.shape).astype(np.float32)
+        single = blush.denoise(noisy, 2.0, mask_radius_a=40.0, fsc=None, batch_size=2)
+        seen = []
+        pooled = blush.denoise(noisy, 2.0, mask_radius_a=40.0, fsc=None, batch_size=2, processes=2, threads=2, progress=lambda d, t: seen.append((d, t)))
+        self.assertLess(float(np.abs(single - pooled).max()), 1e-4 * float(np.abs(single).max()))
+        self.assertTrue(seen and seen[-1][0] == seen[-1][1] > 0)
+        with self.assertRaises(blush.BlushCancelled):
+            blush.denoise(noisy, 2.0, mask_radius_a=40.0, fsc=None, processes=2, threads=1, progress=lambda d, t: False)
+
+    @unittest.skipUnless(blush.availability()["available"], "Blush weights not installed")
     def test_real_model_runs(self):
         vol, r = self._blob(48)
         rng = np.random.default_rng(2)
@@ -144,10 +157,11 @@ class DriverSettingsTests(unittest.TestCase):
     def test_blush_settings_parse(self):
         import refine3d
         pkg = {"PARTICLE_SIZE": 150.0, "OUTPUT_PIXEL_SIZE": 1.0}
-        s = refine3d.settings_from_params({"use_blush": True, "blush_input": "Filtered reference", "blush_batch_size": "0"}, pkg)
+        s = refine3d.settings_from_params({"use_blush": True, "blush_input": "Filtered reference", "blush_batch_size": "0", "blush_processes": "8", "blush_threads": "16"}, pkg)
         self.assertTrue(s["use_blush"])
         self.assertFalse(s["blush_unfiltered"])
         self.assertEqual(s["blush_batch_size"], 1)
+        self.assertEqual((s["blush_processes"], s["blush_threads"]), (8, 16))
         s = refine3d.settings_from_params({}, pkg)
         self.assertFalse(s["use_blush"])
         self.assertTrue(s["blush_unfiltered"])

@@ -33,10 +33,12 @@ import logging
 import math
 import os
 import random
+import sys
 import threading
 from pathlib import Path
 
 import blush
+import blush_phase
 import db
 import progress_store
 import refinements
@@ -409,40 +411,9 @@ def _prepare_references_then_refine(conn, project_id, job_id, state):
         _mask_then_refine(conn, project_id, job_id, state)
 
 
-_blush_cancel = {}
-
-
 def blushed_file(project_id, reference_file):
-    """Where the Blush companion of a volume lives: Assets/Volumes/Blushed/<volume name>_blushed.mrc."""
-    name = os.path.basename(str(reference_file))
-    stem = name[:-4] if name.lower().endswith(".mrc") else name
-    return str(Path(db.project_dir(project_id)) / "Assets" / "Volumes" / "Blushed" / (stem + "_blushed.mrc"))
-
-
-def _blush_then_mask(conn, project_id, job_id, state):
-    """Before a round: every class refines against the Blush companion of its
-    reference. One that exists (written at the end of the round or run that
-    made the reference, from its half maps) is used as it is; one that does
-    not is made now from the filtered reference, which is all there is for a
-    reference made without Blush. Runs on a thread of its own (minutes on a
-    CPU when something has to be made); resumable, as `phase: blush`."""
-    _start_blush_phase(conn, project_id, job_id, state, "blush")
-
-
-def _blush_after_merge(conn, project_id, job_id, state):
-    """After a round's merge, with Blush on: the new volume's companion is
-    computed from the half maps the merge kept, RELION's unfiltered input with
-    the round's FSC cut, and written to Assets/Volumes/Blushed for the next
-    round or run to find. `phase: blush_post`, resumable; the half maps are
-    removed afterwards."""
-    _start_blush_phase(conn, project_id, job_id, state, "blush_post")
-
-
-def _start_blush_phase(conn, project_id, job_id, state, phase):
-    state.update({"phase": phase, "child_job_id": None, "child_task_count": 0, "child_done": 0})
-    _save(conn, job_id, state)
-    _blush_cancel[job_id] = threading.Event()
-    threading.Thread(target=_blush_worker, args=(project_id, job_id, phase), daemon=True, name="blush-" + job_id).start()
+    """Where the Blush companion of a volume asset lives (blush_phase.assets_companion)."""
+    return blush_phase.assets_companion(project_id, reference_file)
 
 
 def _round_statistics(conn, state, k):
@@ -454,88 +425,32 @@ def _round_statistics(conn, state, k):
     return refinements.load_statistics(conn, state["input_refinement_id"], k + 1)
 
 
-def _blush_worker(project_id, job_id, phase):
-    conn = db.get_conn(project_id)
-    try:
-        with _job_lock(job_id):
-            state = _load_state(conn, job_id)
-            parent = _parent_row(conn, job_id)
-            if not state or parent is None or state.get("phase") != phase or parent["STATUS"] not in ("queued", "running"):
-                return
-        s = state["settings"]
-        classes = state["number_of_classes"]
-        info = blush.availability()
-        rt = blush.runtime_settings()   # the machine's Blush settings, set by an administrator on the home page
-        layout = info["device"] if info["device"] != "cpu" else "{} process{} x {} threads".format(
-            rt["processes"], "es" if rt["processes"] != 1 else "", rt["threads"] if rt["threads"] else "default")
-        cancel = _blush_cancel.get(job_id) or threading.Event()
-        Path(db.project_dir(project_id), "Assets", "Volumes", "Blushed").mkdir(parents=True, exist_ok=True)
-        references = []
-        for k in range(classes):
-            ref = state["reference_files"][k]
-            out = blushed_file(project_id, ref)
-            label = "Blush: class {} of {}".format(k + 1, classes) if classes > 1 else "Blush"
-            if phase == "blush":
-                if os.path.isfile(out):
-                    _log(project_id, job_id, "Blush: class {} refines against {} (made when that volume was reconstructed)".format(k + 1, os.path.basename(out)))
-                    references.append(out)
-                    continue
-                paths, filtered, note = [ref], True, "the filtered reference (no Blush companion for this volume yet)"
-            else:
-                halves = (state.get("pending_half_maps") or [])
-                halves = halves[k] if k < len(halves) else []
-                if s["blush_unfiltered"] and halves and all(os.path.isfile(h) for h in halves):
-                    paths, filtered, note = halves, False, "the half maps (unfiltered), cut at the FSC"
-                else:
-                    paths, filtered, note = [ref], True, "the filtered volume"
+def _half_maps(state, k):
+    halves = state.get("pending_half_maps") or []
+    return halves[k] if k < len(halves) else []
 
-            def progress(done, total, _label=label):
-                progress_store.note(job_id, done, total, _label, "blocks")
-                return not cancel.is_set()
 
-            progress_store.note(job_id, 0, 0, label + ": preparing ({})".format(layout))
-            blush.denoise_file(paths, out, state["pixel_size"], s["mask_radius_a"], fsc_stats=_round_statistics(conn, state, k), input_is_filtered=filtered,
-                               batch_size=rt["batch_size"], threads=rt["threads"], processes=rt["processes"], progress=progress)
-            _log(project_id, job_id, "Blush: class {} denoised from {} -> {} ({}, batch {})".format(k + 1, note, os.path.basename(out), layout, rt["batch_size"]))
-            references.append(out)
-        if phase == "blush_post":
-            for half in state.get("pending_half_maps") or []:
-                for h in half:
-                    try:
-                        os.remove(h)
-                    except OSError:
-                        pass
-        with _job_lock(job_id):
-            state = _load_state(conn, job_id)
-            parent = _parent_row(conn, job_id)
-            if not state or parent is None or state.get("phase") != phase or parent["STATUS"] not in ("queued", "running"):
-                return
-            if parent["CANCEL_REQUESTED"] or cancel.is_set():
-                _finish(conn, project_id, job_id, state, "cancelled", "cancelled during Blush")
-                return
-            if phase == "blush":
-                state["reference_files"] = references
-                _mask_then_refine(conn, project_id, job_id, state)
-            else:
-                state["pending_half_maps"] = []
-                _cycle(conn, project_id, job_id, state)
-            if state["phase"] != "finished":
-                _save(conn, job_id, state, _progress_percent(state))
-    except blush.BlushCancelled:
-        with _job_lock(job_id):
-            state = _load_state(conn, job_id)
-            if state and state.get("phase") == phase:
-                _finish(conn, project_id, job_id, state, "cancelled", "cancelled during Blush")
-    except Exception as exc:  # noqa: BLE001
-        log.exception("Blush failed for job %s", job_id)
-        with _job_lock(job_id):
-            state = _load_state(conn, job_id)
-            if state and state.get("phase") == phase:
-                _finish(conn, project_id, job_id, state, "failed", "Blush failed: {}".format(exc))
-    finally:
-        _blush_cancel.pop(job_id, None)
-        progress_store.clear(job_id)
-        conn.close()
+# How this driver describes itself to blush_phase: the companions live beside the volume
+# assets (Assets/Volumes/Blushed), the FSC is the round's or the input refinement's.
+_BLUSH = blush_phase.Host(module=sys.modules[__name__],
+                          continue_pre=lambda conn, project_id, job_id, state: _mask_then_refine(conn, project_id, job_id, state),
+                          continue_post=lambda conn, project_id, job_id, state: _cycle(conn, project_id, job_id, state),
+                          pixel_size=lambda state: state["pixel_size"],
+                          mask_radius=lambda state: state["settings"]["mask_radius_a"],
+                          statistics=_round_statistics,
+                          companion_path=lambda project_id, state, ref: blush_phase.assets_companion(project_id, ref),
+                          half_maps=_half_maps,
+                          unfiltered=lambda state: state["settings"]["blush_unfiltered"])
+
+
+def _blush_then_mask(conn, project_id, job_id, state):
+    """Before a round (blush_phase.PRE): each class refines against its reference's Blush companion, made now if there is none."""
+    blush_phase.start(_BLUSH, conn, project_id, job_id, state, blush_phase.PRE)
+
+
+def _blush_after_merge(conn, project_id, job_id, state):
+    """After a round's merge (blush_phase.POST): the new volume's companion from the half maps, for the next round or run."""
+    blush_phase.start(_BLUSH, conn, project_id, job_id, state, blush_phase.POST)
 
 
 def _mask_then_refine(conn, project_id, job_id, state):
@@ -888,9 +803,8 @@ def cancel(conn, project_id, parent_id):
     if child_id and _runtime.cancel(child_id):
         _log(project_id, parent_id, "cancel requested; stopping child job {}".format(child_id))
         return True
-    if state is not None and state.get("phase") in ("blush", "blush_post") and parent_id in _blush_cancel:
-        _blush_cancel[parent_id].set()   # the Blush thread finishes the job as cancelled at its next block
-        _log(project_id, parent_id, "cancel requested; stopping Blush")
+    if state is not None and state.get("phase") in blush_phase.PHASES and blush_phase.cancel(parent_id):
+        _log(project_id, parent_id, "cancel requested; stopping Blush")   # the Blush thread finishes the job as cancelled at its next block
         return True
     if state is not None:
         _finish(conn, project_id, parent_id, state, "cancelled", "cancelled")
@@ -906,10 +820,8 @@ def resume(project_id, parent_row):
                 conn.execute("UPDATE JOBS SET STATUS='failed', ERROR='Server restarted before this run recorded its plan', FINISHED_AT=? WHERE JOB_ID=?",
                              (now_iso(), parent_row["JOB_ID"]))
             return
-        if state.get("phase") in ("blush", "blush_post"):
-            _log(project_id, parent_row["JOB_ID"], "server restarted during Blush (round {}); starting it again".format(state["round"] + 1))
-            _blush_cancel[parent_row["JOB_ID"]] = threading.Event()
-            threading.Thread(target=_blush_worker, args=(project_id, parent_row["JOB_ID"], state["phase"]), daemon=True, name="blush-" + parent_row["JOB_ID"]).start()
+        if state.get("phase") in blush_phase.PHASES:
+            blush_phase.resume(_BLUSH, project_id, parent_row["JOB_ID"], state["phase"])
             return
         child_id = state.get("child_job_id")
         child = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (child_id,)).fetchone() if child_id else None

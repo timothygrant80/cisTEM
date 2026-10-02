@@ -48,9 +48,12 @@ import json
 import math
 import os
 import random
+import sys
 import threading
 from pathlib import Path
 
+import blush
+import blush_phase
 import db
 import refinements
 import starfile
@@ -70,6 +73,8 @@ DEFAULTS = {
     "autocrop_images": False, "apply_blurring": False, "smoothing_factor": 1.0, "autocenter": True,
     "use_mask": False, "auto_mask": True, "mask_edge_a": 10.0, "outside_mask_weight": 0.0, "low_pass_outside_mask": False,
     "mask_filter_resolution_a": 20.0,
+    # Blush regularisation of the reference between rounds (blush.py / blush_phase.py); not in cisTEM's panel.
+    "use_blush": False, "blush_input": "Unfiltered half-map sum",
 }
 ASYM_UNITS_CONSTANT = 8000.0  # estimated_required_asym_units = 8000 * exp(75 / res^2)
 
@@ -87,6 +92,8 @@ def settings_from_params(params, pkg):
     for k, v in DEFAULTS.items():
         if isinstance(v, bool):
             s[k] = _flag(params, k, v)
+        elif isinstance(v, str):
+            s[k] = str(params.get(k) or v)
         elif isinstance(v, int):
             s[k] = _num(params, k, v, int)
         else:
@@ -96,6 +103,7 @@ def settings_from_params(params, pkg):
     if s["use_mask"]:
         s["auto_mask"] = False  # OnUseMaskCheckBox(): a supplied mask switches auto-masking off
         s["autocenter"] = False
+    s["blush_unfiltered"] = not s["blush_input"].strip().lower().startswith("filtered")
     return s
 
 
@@ -244,6 +252,10 @@ def validate(conn, params):
             raise ValueError("the mask volume has a different box size from the particle stack")
     if _num(params, "high_resolution_limit_a", DEFAULTS["high_resolution_limit_a"]) <= 0:
         raise ValueError("the initial resolution limit must be positive")
+    if _flag(params, "use_blush", False):
+        info = blush.availability()
+        if not info["available"]:
+            raise ValueError("Blush cannot run on this server: {}".format(info["reason"]))
     return pkg, ref, vol, mask
 
 
@@ -383,9 +395,44 @@ def _start(conn, project_id, job_id, params, profile):
         conn.execute("UPDATE JOBS SET STATUS='running', STARTED_AT=?, PROGRESS=0 WHERE JOB_ID=?", (now_iso(), job_id))
     _log(project_id, job_id, "Auto Refine of {!r} from volume #{} {!r}: {} particles, {} class{}, initial limit {:.1f} Å, starting with {:.1f}% of the particles; refinement profile {!r}, reconstruction profile {!r}".format(
         pkg["NAME"], vol["VOLUME_ASSET_ID"], vol["NAME"], n, classes, "" if classes == 1 else "es", s["high_resolution_limit_a"], start_percent, profile["name"], recon_profile["name"]))
-    _mask_then_refine(conn, project_id, job_id, state)
+    _prepare_references_then_refine(conn, project_id, job_id, state)
     _save(conn, job_id, state)
     return state
+
+
+def _prepare_references_then_refine(conn, project_id, job_id, state):
+    """Between a merge and the next refine3d: Blush (its own phase) when asked for, then masking."""
+    if state["settings"]["use_blush"]:
+        blush_phase.start(_BLUSH, conn, project_id, job_id, state, blush_phase.PRE)
+    else:
+        _mask_then_refine(conn, project_id, job_id, state)
+
+
+def _round_statistics(conn, state, k):
+    """Class k's statistics for the volumes the state points at: this round's merge, else the input's (none for the starting reference)."""
+    stats_files = state.get("pending_stats_files") or []
+    if stats_files and k < len(stats_files) and os.path.isfile(stats_files[k]) and state["reference_files"] == state.get("pending_volume_files"):
+        return read_statistics(stats_files[k])
+    try:
+        return _load_stats(state, "input")[k]
+    except (IndexError, TypeError, OSError, ValueError):
+        return []
+
+
+def _half_maps(state, k):
+    halves = state.get("pending_half_maps") or []
+    return halves[k] if k < len(halves) else []
+
+
+_BLUSH = blush_phase.Host(module=sys.modules[__name__],
+                          continue_pre=lambda conn, project_id, job_id, state: _mask_then_refine(conn, project_id, job_id, state),
+                          continue_post=lambda conn, project_id, job_id, state: _cycle(conn, project_id, job_id, state),
+                          pixel_size=lambda state: state["pixel_size"],
+                          mask_radius=lambda state: state["settings"]["mask_radius_a"],
+                          statistics=_round_statistics,
+                          companion_path=lambda project_id, state, ref: blush_phase.assets_companion(project_id, ref),
+                          half_maps=_half_maps,
+                          unfiltered=lambda state: state["settings"]["blush_unfiltered"])
 
 
 def _mask_then_refine(conn, project_id, job_id, state):
@@ -624,19 +671,22 @@ def _launch_merge(conn, project_id, job_id, state):
     rid = state["output_refinement_id"]
     scratch = Path(state["scratch"])
     vol_dir = volumes.volume_dir(project_id)
-    tasks, outputs, stats = [], [], []
+    tasks, outputs, stats, halves = [], [], [], []
+    keep_halves = s["use_blush"] and s["blush_unfiltered"]   # after the merge, Blush denoises the half maps' average
     for k in range(classes):
         out = str(vol_dir / "volume_{}_{}.mrc".format(rid, k + 1))
         st = str(scratch / "volume_stats_{}_{}.txt".format(rid, k + 1))
+        half = [str(scratch / "half_{}_{}_{}.mrc".format(rid, k + 1, h)) for h in (1, 2)] if keep_halves else ["/dev/null", "/dev/null"]
         outputs.append(out)
         stats.append(st)
-        tasks.append(_task(merge3d, k, k + 1, ["/dev/null", "/dev/null", out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
+        halves.append(half)
+        tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
                                                 k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, state["class_high_res_limits"][k]]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · round {} merge3d".format(parent["NAME"], state["round"] + 1), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
-                  "pending_volume_files": outputs, "pending_stats_files": stats})
+                  "pending_volume_files": outputs, "pending_stats_files": stats, "pending_half_maps": halves if keep_halves else []})
     _log(project_id, job_id, "Merging and filtering {} — child job {}".format("reconstructions" if classes > 1 else "reconstruction", child))
     _runtime.submit_child(project_id, child, merge3d, tasks, _profile(state["reconstruction_profile"]))
 
@@ -762,7 +812,10 @@ def _advance(conn, project_id, parent_id, state):
                 p.unlink()
             except OSError:
                 pass
-        _cycle(conn, project_id, parent_id, state)
+        if state["settings"]["use_blush"]:
+            blush_phase.start(_BLUSH, conn, project_id, parent_id, state, blush_phase.POST)
+        else:
+            _cycle(conn, project_id, parent_id, state)
     else:
         raise ValueError("unexpected phase {!r}".format(phase))
     if state["phase"] != "finished":
@@ -949,7 +1002,7 @@ def _cycle(conn, project_id, parent_id, state):
     _store_rows(state, "input", output_rows)
     _store_stats(state, "input", output_stats)
     state["input_refinement_id"] = state["output_refinement_id"]
-    _mask_then_refine(conn, project_id, parent_id, state)
+    _prepare_references_then_refine(conn, project_id, parent_id, state)
 
 
 def _remove_scratch(state):
@@ -990,6 +1043,9 @@ def cancel(conn, project_id, parent_id):
     if child_id and _runtime.cancel(child_id):
         _log(project_id, parent_id, "cancel requested; stopping child job {}".format(child_id))
         return True
+    if state is not None and state.get("phase") in blush_phase.PHASES and blush_phase.cancel(parent_id):
+        _log(project_id, parent_id, "cancel requested; stopping Blush")
+        return True
     if state is not None:
         _finish(conn, project_id, parent_id, state, "cancelled", "cancelled")
     return False
@@ -1003,6 +1059,9 @@ def resume(project_id, parent_row):
             with conn:
                 conn.execute("UPDATE JOBS SET STATUS='failed', ERROR='Server restarted before this run recorded its plan', FINISHED_AT=? WHERE JOB_ID=?",
                              (now_iso(), parent_row["JOB_ID"]))
+            return
+        if state.get("phase") in blush_phase.PHASES:
+            blush_phase.resume(_BLUSH, project_id, parent_row["JOB_ID"], state["phase"])
             return
         child_id = state.get("child_job_id")
         child = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (child_id,)).fetchone() if child_id else None

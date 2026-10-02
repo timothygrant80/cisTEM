@@ -224,7 +224,42 @@ class CompanionDeleteTests(unittest.TestCase):
         self.assertTrue(refine3d.blushed_file("p", "/a/b/startup_volume_3_2.mrc").endswith("/Assets/Volumes/Blushed/startup_volume_3_2_blushed.mrc"))
 
 
+class PhaseHelperTests(unittest.TestCase):
+    def test_companion_paths_and_currency(self):
+        import tempfile, time
+        import blush_phase
+        self.assertTrue(blush_phase.sibling_companion("/scratch/startup3d_4_0.mrc").endswith("/scratch/startup3d_4_0_blushed.mrc"))
+        self.assertTrue(blush_phase.assets_companion("p", "/x/volume_7_1.mrc").endswith("/Assets/Volumes/Blushed/volume_7_1_blushed.mrc"))
+        d = tempfile.mkdtemp()
+        ref = os.path.join(d, "v.mrc"); comp = blush_phase.sibling_companion(ref)
+        open(ref, "wb").write(b"1")
+        self.assertFalse(blush_phase.companion_is_current(comp, ref))            # no companion
+        open(comp, "wb").write(b"2")
+        self.assertTrue(blush_phase.companion_is_current(comp, ref))             # made after the volume
+        time.sleep(1.1); open(ref, "wb").write(b"3")                              # the volume rewritten under its name
+        os.utime(comp, (time.time() - 10, time.time() - 10))
+        self.assertFalse(blush_phase.companion_is_current(comp, ref))            # a stale companion is not used
+
+    def test_every_driver_describes_itself(self):
+        import abinitio, autorefine, refine3d
+        for mod in (refine3d, autorefine, abinitio):
+            host = mod._BLUSH
+            self.assertIs(host.module, mod)
+            for name in ("_job_lock", "_load_state", "_save", "_finish", "_parent_row", "_log", "_progress_percent"):
+                self.assertTrue(callable(getattr(mod, name)), "{} lacks {}".format(mod.__name__, name))
+
+
 class DriverSettingsTests(unittest.TestCase):
+    def test_autorefine_and_abinitio_settings_parse(self):
+        import autorefine, abinitio
+        pkg = {"PARTICLE_SIZE": 150.0, "OUTPUT_PIXEL_SIZE": 1.0, "SYMMETRY": "C1", "MOLECULAR_WEIGHT": 300.0, "NUMBER_OF_CLASSES": 1, "STACK_BOX_SIZE": 128}
+        s = autorefine.settings_from_params({"use_blush": True, "blush_input": "Filtered reference"}, pkg)
+        self.assertTrue(s["use_blush"]); self.assertFalse(s["blush_unfiltered"])
+        self.assertFalse(autorefine.settings_from_params({}, pkg)["use_blush"])
+        s = abinitio.settings_from_params({"use_blush": "true"}, pkg)
+        self.assertTrue(s["use_blush"])
+        self.assertFalse(abinitio.settings_from_params({}, pkg)["use_blush"])
+
     def test_blush_settings_parse(self):
         import refine3d
         pkg = {"PARTICLE_SIZE": 150.0, "OUTPUT_PIXEL_SIZE": 1.0}

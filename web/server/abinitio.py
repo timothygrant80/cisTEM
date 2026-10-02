@@ -52,6 +52,7 @@ import re
 import random
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -60,6 +61,8 @@ from pathlib import Path
 
 import numpy as np
 
+import blush
+import blush_phase
 import db
 import progress_store
 import job_protocol as jp
@@ -84,6 +87,7 @@ DEFAULTS = {
     "final_resolution_limit_a": 8.0,
     "inner_mask_radius_a": 0.0,
     "auto_mask": True,
+    "use_blush": False,   # Blush regularisation of the reference between rounds (blush.py / blush_phase.py); not in cisTEM's panel
     "auto_percent_used": True,
     "start_percent_used": 10.0,
     "end_percent_used": 10.0,
@@ -372,6 +376,7 @@ def settings_from_params(params, pkg):
         "search_range_x": _num(params, "search_range_x_a", size * 0.4),
         "search_range_y": _num(params, "search_range_y_a", size * 0.4),
         "auto_mask": _flag(params, "auto_mask", DEFAULTS["auto_mask"]),
+        "use_blush": _flag(params, "use_blush", DEFAULTS["use_blush"]),
         "auto_percent_used": _flag(params, "auto_percent_used", DEFAULTS["auto_percent_used"]),
         "start_percent_used": _num(params, "start_percent_used", DEFAULTS["start_percent_used"]),
         "end_percent_used": _num(params, "end_percent_used", DEFAULTS["end_percent_used"]),
@@ -513,6 +518,10 @@ def validate(conn, params):
     sym = str(params.get("symmetry") or pkg["SYMMETRY"] or "C1").strip().upper()
     if sym not in refinement_packages.SYMMETRIES:
         raise ValueError("unknown symmetry {!r}".format(sym))
+    if _flag(params, "use_blush", False):
+        info = blush.availability()
+        if not info["available"]:
+            raise ValueError("Blush cannot run on this server: {}".format(info["reason"]))
     return pkg, contained
 
 
@@ -819,20 +828,23 @@ def _launch_merge(conn, project_id, job_id, state):
     n_out = _output_number(state)
     outer = min(s["mask_radius"], state["active_box"] * 0.45 * state["active_pixel_size"])
     wiener = wiener_nominator(state["round"], state["rounds"], state["start"])
-    tasks, outputs, stats = [], [], []
+    tasks, outputs, stats, halves = [], [], [], []
     for k in range(classes):
         name = "startup3d_initial_{}_{}.mrc".format(n_out, k) if state["initial"] else "startup3d_{}_{}.mrc".format(n_out, k)
         out = str(scratch / name)
         st = str(scratch / "startup3d_stats_{}_{}.txt".format(n_out, k))
+        # With Blush on, the half maps are kept for the round: their average is the unfiltered reconstruction it denoises.
+        half = [str(scratch / "startup3d_half_{}_{}_{}.mrc".format(n_out, k, h)) for h in (1, 2)] if s["use_blush"] else ["/dev/null", "/dev/null"]
         outputs.append(out)
         stats.append(st)
-        tasks.append(_task(merge3d, k, k + 1, ["/dev/null", "/dev/null", out, st, state["molecular_weight"], s["inner_mask_radius"], outer,
+        halves.append(half)
+        tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius"], outer,
                                                 str(scratch / "startup_dump_file_{}_odd_.dump".format(k)), str(scratch / "startup_dump_file_{}_even_.dump".format(k)),
                                                 k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"]]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge {}".format(parent["NAME"], "initial" if state["initial"] else n_out + 1), parent)
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
-                  "pending_reference_files": outputs, "pending_stats_files": stats})
+                  "pending_reference_files": outputs, "pending_stats_files": stats, "pending_half_maps": halves if s["use_blush"] else []})
     _log(project_id, job_id, "Merging and filtering {} (Wiener nominator {:.0f}) — child job {}".format("reconstructions" if classes > 1 else "reconstruction", wiener, child))
     _runtime.submit_child(project_id, child, merge3d, tasks, _profile(state["reconstruction_profile"]))
 
@@ -888,6 +900,46 @@ def _launch_refinement(conn, project_id, job_id, state):
     _log(project_id, job_id, "Running refinement round {:2d} of {:2d} ({:.2f} Å / {:.2f} %) - Start {:2d} of {:2d} — child job {}".format(
         state["round"] + 1, state["rounds"], state["current_high_res"], state["current_percent_used"], state["start"] + 1, state["starts"], child))
     _runtime.submit_child(project_id, child, refine3d, tasks, _profile(state["refinement_profile"]))
+
+
+def _prepare_references_then_refine(conn, project_id, job_id, state):
+    """Between a merge and the next refine3d: Blush (its own phase) when asked for, then masking."""
+    if state["settings"]["use_blush"]:
+        blush_phase.start(_BLUSH, conn, project_id, job_id, state, blush_phase.PRE)
+    else:
+        _mask_then_refine(conn, project_id, job_id, state)
+
+
+def _round_statistics(conn, state, k):
+    """Class k's statistics for the volumes the state points at (the merge's file, set at the same time as the references)."""
+    files = state.get("stats_files") or []
+    if k < len(files) and files[k] and os.path.isfile(files[k]):
+        return read_statistics(files[k])
+    return []
+
+
+def _half_maps(state, k):
+    halves = state.get("pending_half_maps") or []
+    return halves[k] if k < len(halves) else []
+
+
+def _blush_mask_radius(state):
+    s = state["settings"]
+    return min(s["mask_radius"], state["active_box"] * 0.45 * state["active_pixel_size"])
+
+
+# Ab-initio's round volumes live in scratch and are rewritten under the same name every round, so a
+# companion sits beside its volume (blush_phase.sibling_companion) and counts only while it is newer
+# than the volume; the exported startup volume gets one in Assets/Volumes/Blushed (_take_files).
+_BLUSH = blush_phase.Host(module=sys.modules[__name__],
+                          continue_pre=lambda conn, project_id, job_id, state: _mask_then_refine(conn, project_id, job_id, state),
+                          continue_post=lambda conn, project_id, job_id, state: _cycle(conn, project_id, job_id, state),
+                          pixel_size=lambda state: state["active_pixel_size"],
+                          mask_radius=_blush_mask_radius,
+                          statistics=_round_statistics,
+                          companion_path=lambda project_id, state, ref: blush_phase.sibling_companion(ref),
+                          half_maps=_half_maps,
+                          unfiltered=lambda state: True)
 
 
 def _mask_then_refine(conn, project_id, job_id, state):
@@ -1138,7 +1190,10 @@ def _advance(conn, project_id, parent_id, state):
                 for k, p in enumerate(state["stats_files"]):
                     if stats[k]:
                         write_statistics(p, stats[k], state["active_pixel_size"])
-        _cycle(conn, project_id, parent_id, state)
+        if s["use_blush"]:
+            blush_phase.start(_BLUSH, conn, project_id, parent_id, state, blush_phase.POST)
+        else:
+            _cycle(conn, project_id, parent_id, state)
     elif phase == "refine":
         progress_store.note(parent_id, 0, 0, "merging the round's results")
         class_rows = _merge_output_stars(state)
@@ -1163,7 +1218,7 @@ def _cycle(conn, project_id, parent_id, state):
         state["initial"] = False
         state["history"].append({"iteration": 0, "label": "Random Start", "average_sigma": None, "finished_at": now_iso(),
                                  "high_res": state["current_high_res"], "percent_used": state["current_percent_used"]})
-        _mask_then_refine(conn, project_id, parent_id, state)
+        _prepare_references_then_refine(conn, project_id, parent_id, state)
         return
     state["round"] += 1
     class_rows = _load_rows(state, "output")
@@ -1185,7 +1240,7 @@ def _cycle(conn, project_id, parent_id, state):
             state["phase"] = "align_symmetry"; state["child_job_id"] = None
             _save(conn, parent_id, state)
             _align_symmetry(project_id, parent_id, state)
-        _mask_then_refine(conn, project_id, parent_id, state)
+        _prepare_references_then_refine(conn, project_id, parent_id, state)
         return
     state["start"] += 1
     if state["start"] < state["starts"]:
@@ -1194,7 +1249,7 @@ def _cycle(conn, project_id, parent_id, state):
         sched = round_schedule(0, state["rounds"], s["initial_resolution_limit"], s["final_resolution_limit"], state["plan"], state["apply_symmetry"])
         state.update({"current_high_res": sched["high_res"], "next_high_res": sched["next_high_res"], "current_percent_used": sched["percent_used"]})
         _log(project_id, parent_id, "Start {} of {} finished; restarting from its result".format(state["start"], state["starts"]))
-        _mask_then_refine(conn, project_id, parent_id, state)
+        _prepare_references_then_refine(conn, project_id, parent_id, state)
         return
     state["start"] -= 1
     _take_current(conn, project_id, parent_id, state)
@@ -1280,6 +1335,14 @@ def _take_files(conn, project_id, parent_id, state, files, what):
         resampled = volumes.fourier_resize(vol, state["box_size"])
         out = str(vol_dir / "startup_volume_{}_{}.mrc".format(startup_id, k + 1))
         volumes.write_mrc_volume(out, resampled, state["pixel_size"])
+        companion = blush_phase.sibling_companion(ref)
+        if s.get("use_blush") and blush_phase.companion_is_current(companion, ref):
+            # The round's Blush companion goes with the exported volume, resampled the same way, so a
+            # refinement started from this volume with Blush on finds it ready.
+            cvol, _cps = volumes.read_mrc_volume(companion)
+            cout = blush_phase.assets_companion(project_id, out)
+            Path(cout).parent.mkdir(parents=True, exist_ok=True)
+            volumes.write_mrc_volume(cout, volumes.fourier_resize(cvol, state["box_size"]), state["pixel_size"])
         vid = volumes.add_volume_asset(conn, "Volume From Startup #{} - Class #{}".format(startup_id, k + 1), out, state["pixel_size"],
                                        state["box_size"], state["box_size"], state["box_size"])
         volume_ids.append(vid)
@@ -1317,6 +1380,9 @@ def cancel(conn, project_id, parent_id):
     if child_id and _runtime.cancel(child_id):
         _log(project_id, parent_id, "cancel requested; stopping child job {}".format(child_id))
         return True
+    if state is not None and state.get("phase") in blush_phase.PHASES and blush_phase.cancel(parent_id):
+        _log(project_id, parent_id, "cancel requested; stopping Blush")
+        return True
     if state is not None:
         _finish(conn, project_id, parent_id, state, "cancelled", "cancelled")
     return False
@@ -1332,7 +1398,7 @@ def _resume_alignment(project_id, parent_id):
                 return
             try:
                 _align_symmetry(project_id, parent_id, state)
-                _mask_then_refine(conn, project_id, parent_id, state)
+                _prepare_references_then_refine(conn, project_id, parent_id, state)
                 _save(conn, parent_id, state, _progress_percent(state))   # the child it launched is only ours if the state says so
             except Exception as exc:  # noqa: BLE001
                 _finish(conn, project_id, parent_id, state, "failed", "could not continue after the restart: {}".format(exc))
@@ -1348,6 +1414,9 @@ def resume(project_id, parent_row):
             with conn:
                 conn.execute("UPDATE JOBS SET STATUS='failed', ERROR='Server restarted before this run recorded its plan', FINISHED_AT=? WHERE JOB_ID=?",
                              (now_iso(), parent_row["JOB_ID"]))
+            return
+        if state.get("phase") in blush_phase.PHASES:
+            blush_phase.resume(_BLUSH, project_id, parent_row["JOB_ID"], state["phase"])
             return
         if state.get("phase") == "align_symmetry":
             # Died while align_symmetry ran (its round is already recorded): run it again and carry on.

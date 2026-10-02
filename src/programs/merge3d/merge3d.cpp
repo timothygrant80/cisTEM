@@ -37,6 +37,13 @@ void Merge3DApp::DoInteractiveUserInput( ) {
     dump_file_seed_1               = my_input->GetFilenameFromUser("Seed for input dump filenames for odd particles", "The seed name of the first dump files with the intermediate reconstruction arrays", "dump_file_seed_1_.dat", false);
     dump_file_seed_2               = my_input->GetFilenameFromUser("Seed for input dump filenames for even particles", "The seed name of the second dump files with the intermediate reconstruction arrays", "dump_file_seed_2_.dat", false);
     number_of_dump_files           = my_input->GetIntFromUser("Number of dump files", "The number of dump files that should be read from disk and merged", "1", 1);
+    // The sampling-aware Wiener filter (ReconstructedVolume::FinalizeOptimalDirectional): the filter constant of each
+    // Fourier voxel comes from the FSC measured in a cone of directions about it rather than from its whole shell, so
+    // directions sampled by rare or badly aligned views are damped harder. Off by default: the shell filter is cisTEM's.
+    bool use_directional_wiener = my_input->GetYesNoFromUser("Use directional (3D FSC) Wiener filter", "Damp each Fourier direction by the FSC measured in a cone about it, not by its shell's", "No");
+    int  number_of_cones        = 36;
+    if ( use_directional_wiener )
+        number_of_cones = my_input->GetIntFromUser("Number of cones", "How many directions the sphere is divided into for the directional FSC", "36", 4, 400);
 
     delete my_input;
 
@@ -46,7 +53,7 @@ void Merge3DApp::DoInteractiveUserInput( ) {
     float    weiner_nominator            = 1.0f;
     float    alignment_res               = 5.0f;
     //	my_current_job.Reset(14);
-    my_current_job.ManualSetArguments("ttttfffttibtiff", output_reconstruction_1.c_str(),
+    my_current_job.ManualSetArguments("ttttfffttibtiffbi", output_reconstruction_1.c_str(),
                                       output_reconstruction_2.c_str(),
                                       output_reconstruction_filtered.c_str(),
                                       output_resolution_statistics.c_str(),
@@ -60,7 +67,9 @@ void Merge3DApp::DoInteractiveUserInput( ) {
                                       orthogonal_views_filename.c_str(),
                                       number_of_dump_files,
                                       weiner_nominator,
-                                      alignment_res);
+                                      alignment_res,
+                                      use_directional_wiener,
+                                      number_of_cones);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -82,6 +91,9 @@ bool Merge3DApp::DoCalculation( ) {
     float    weiner_nominator               = my_current_job.arguments[13].ReturnFloatArgument( );
     // FOR LOCRES HACK..
     float alignment_res = my_current_job.arguments[14].ReturnFloatArgument( );
+    // Arguments 15 and 16 are newer than the GUI's and the web server's older argument lists: absent means the shell filter.
+    bool use_directional_wiener = my_current_job.number_of_arguments > 15 ? my_current_job.arguments[15].ReturnBoolArgument( ) : false;
+    int  number_of_cones        = my_current_job.number_of_arguments > 16 ? my_current_job.arguments[16].ReturnIntegerArgument( ) : 36;
 
     ResolutionStatistics* resolution_statistics = NULL;
     resolution_statistics                       = new ResolutionStatistics;
@@ -195,9 +207,17 @@ bool Merge3DApp::DoCalculation( ) {
     my_reconstruction_1 += my_reconstruction_2;
     my_reconstruction_2.FreeMemory( );
 
-    output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
-                              original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-                              center_mass, output_reconstruction_filtered, output_statistics_file, resolution_statistics, weiner_nominator);
+    if ( use_directional_wiener ) {
+        Printf("\nUsing the directional (3D FSC) Wiener filter with %i cones\n", number_of_cones);
+        output_3d.FinalizeOptimalDirectional(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
+                                             original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
+                                             center_mass, output_reconstruction_filtered, output_statistics_file, resolution_statistics, weiner_nominator, number_of_cones);
+    }
+    else {
+        output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
+                                  original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
+                                  center_mass, output_reconstruction_filtered, output_statistics_file, resolution_statistics, weiner_nominator);
+    }
 
     //float orientation_distribution_efficiency = output_3d.ComputeOrientationDistributionEfficiency(my_reconstruction_1);
     //SendInfo(Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));

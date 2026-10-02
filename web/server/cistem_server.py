@@ -4108,6 +4108,28 @@ def alignment_spectrum_preview(project_id, alignment_id):
 # the server runs on, which is the same for every project.
 # ---------------------------------------------------------------------------
 
+@app.route("/api/blush-settings", methods=["GET"])
+@auth.login_required
+def get_blush_settings():
+    """How Blush runs on this machine (batch size, processes, threads; blush.runtime_settings())
+    with its availability, for the home page's Blush box. Not project-scoped: like the run
+    profiles, it describes the machine."""
+    info = blush.availability()
+    return jsonify(dict(blush.runtime_settings(), available=info["available"], reason=info["reason"], device=info["device"], weights=info["weights"]))
+
+
+@app.route("/api/blush-settings", methods=["PUT"])
+@auth.admin_required
+def put_blush_settings():
+    body = request.get_json(silent=True) or {}
+    try:
+        saved = blush.save_runtime_settings(body)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    info = blush.availability()
+    return jsonify(dict(saved, available=info["available"], reason=info["reason"], device=info["device"], weights=info["weights"]))
+
+
 @app.route("/api/run-profiles", methods=["GET"])
 @auth.login_required
 def list_run_profiles():

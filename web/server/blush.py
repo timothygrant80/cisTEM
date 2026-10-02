@@ -68,6 +68,49 @@ class BlushUnavailable(RuntimeError):
     pass
 
 
+# How Blush runs on this machine: set once by an administrator (the home page's Blush box,
+# PUT /blush-settings) and used by every Blush job on it, as the run profiles are. On the
+# CPU one PyTorch process cannot use more than about 16 cores on a block, so a large machine
+# wants several processes of a modest thread count each (8 x 16 on 128 cores); a GPU takes
+# every block itself and ignores processes and threads.
+RUNTIME_DEFAULTS = {"batch_size": 1, "processes": 1, "threads": 0}
+RUNTIME_LIMITS = {"batch_size": (1, 64), "processes": (1, 256), "threads": (0, 1024)}
+RUNTIME_KEY = "blush"
+
+
+def validate_runtime(values):
+    """The three settings as ints within their ranges; ValueError names the first bad one."""
+    out = dict(RUNTIME_DEFAULTS)
+    for key, (lo, hi) in RUNTIME_LIMITS.items():
+        if key not in values or values[key] in (None, ""):
+            continue
+        try:
+            v = int(values[key])
+        except (TypeError, ValueError):
+            raise ValueError("{} must be a whole number".format(key.replace("_", " ")))
+        if not lo <= v <= hi:
+            raise ValueError("{} must be between {} and {}".format(key.replace("_", " "), lo, hi))
+        out[key] = v
+    return out
+
+
+def runtime_settings():
+    """The saved settings over the defaults (anything unsaved or out of range falls back)."""
+    import db
+    saved = db.get_system_setting(RUNTIME_KEY, {}) or {}
+    try:
+        return validate_runtime(saved)
+    except ValueError:
+        return dict(RUNTIME_DEFAULTS)
+
+
+def save_runtime_settings(values):
+    import db
+    out = validate_runtime(values)
+    db.set_system_setting(RUNTIME_KEY, out)
+    return out
+
+
 def weights_path():
     env = os.environ.get("CISTEM_BLUSH_WEIGHTS")
     if env:

@@ -66,7 +66,7 @@ DEFAULTS = {
     "autocrop_images": False, "apply_blurring": False, "smoothing_factor": 1.0, "autocenter": False,
     "use_mask": False, "auto_mask": True, "mask_edge_a": 10.0, "outside_mask_weight": 0.0, "low_pass_outside_mask": False, "mask_filter_resolution_a": 20.0,
     # Blush regularisation of the reference between rounds (blush.py); not in cisTEM's panel.
-    "use_blush": False, "blush_input": "Unfiltered half-map sum", "blush_batch_size": 1, "blush_processes": 1, "blush_threads": 0,
+    "use_blush": False, "blush_input": "Unfiltered half-map sum",
 }
 PLEASE_CREATE_PACKAGE_MESSAGE = ("Please create a refinement package (in the assets panel) in order to perform a "
                                  "3D refinement.")
@@ -119,9 +119,6 @@ def settings_from_params(params, pkg):
     s["global"] = s["refinement_type"].strip().lower().startswith("global")
     s["number_of_rounds"] = max(1, s["number_of_rounds"])
     s["blush_unfiltered"] = not s["blush_input"].strip().lower().startswith("filtered")
-    s["blush_batch_size"] = max(1, s["blush_batch_size"])
-    s["blush_processes"] = max(1, s["blush_processes"])
-    s["blush_threads"] = max(0, s["blush_threads"])
     return s
 
 
@@ -468,8 +465,9 @@ def _blush_worker(project_id, job_id, phase):
         s = state["settings"]
         classes = state["number_of_classes"]
         info = blush.availability()
+        rt = blush.runtime_settings()   # the machine's Blush settings, set by an administrator on the home page
         layout = info["device"] if info["device"] != "cpu" else "{} process{} x {} threads".format(
-            s["blush_processes"], "es" if s["blush_processes"] != 1 else "", s["blush_threads"] if s["blush_threads"] else "default")
+            rt["processes"], "es" if rt["processes"] != 1 else "", rt["threads"] if rt["threads"] else "default")
         cancel = _blush_cancel.get(job_id) or threading.Event()
         Path(db.project_dir(project_id), "Assets", "Volumes", "Blushed").mkdir(parents=True, exist_ok=True)
         references = []
@@ -497,8 +495,8 @@ def _blush_worker(project_id, job_id, phase):
 
             progress_store.note(job_id, 0, 0, label + ": preparing ({})".format(layout))
             blush.denoise_file(paths, out, state["pixel_size"], s["mask_radius_a"], fsc_stats=_round_statistics(conn, state, k), input_is_filtered=filtered,
-                               batch_size=s["blush_batch_size"], threads=s["blush_threads"], processes=s["blush_processes"], progress=progress)
-            _log(project_id, job_id, "Blush: class {} denoised from {} -> {} ({}, batch {})".format(k + 1, note, os.path.basename(out), layout, s["blush_batch_size"]))
+                               batch_size=rt["batch_size"], threads=rt["threads"], processes=rt["processes"], progress=progress)
+            _log(project_id, job_id, "Blush: class {} denoised from {} -> {} ({}, batch {})".format(k + 1, note, os.path.basename(out), layout, rt["batch_size"]))
             references.append(out)
         if phase == "blush_post":
             for half in state.get("pending_half_maps") or []:

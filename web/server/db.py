@@ -26,6 +26,7 @@ import datetime
 import os
 import re
 import shutil
+import json
 import sqlite3
 import subprocess
 import threading
@@ -777,7 +778,34 @@ CREATE TABLE IF NOT EXISTS RUN_PROFILES(
   RUN_PROFILE_ID INTEGER PRIMARY KEY, PROFILE_NAME TEXT, MANAGER_RUN_COMMAND TEXT,
   GUI_ADDRESS TEXT, CONTROLLER_ADDRESS TEXT, COMMANDS_ID INTEGER
 );
+CREATE TABLE IF NOT EXISTS SYSTEM_SETTINGS(
+  KEY TEXT PRIMARY KEY, VALUE TEXT
+);
 """
+
+
+def get_system_setting(key, default=None):
+    """One machine-wide setting (SYSTEM_SETTINGS in the system database), JSON-decoded; `default` when unset."""
+    conn = get_system_conn()
+    try:
+        row = conn.execute("SELECT VALUE FROM SYSTEM_SETTINGS WHERE KEY=?", (key,)).fetchone()
+    finally:
+        conn.close()
+    if row is None or row["VALUE"] is None:
+        return default
+    try:
+        return json.loads(row["VALUE"])
+    except ValueError:
+        return default
+
+
+def set_system_setting(key, value):
+    conn = get_system_conn()
+    try:
+        with conn:
+            conn.execute("INSERT INTO SYSTEM_SETTINGS(KEY, VALUE) VALUES (?, ?) ON CONFLICT(KEY) DO UPDATE SET VALUE=excluded.VALUE", (key, json.dumps(value)))
+    finally:
+        conn.close()
 
 
 def get_system_conn():

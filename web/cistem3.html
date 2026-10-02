@@ -763,6 +763,10 @@ table.rp-commands-table td:not(:first-child),table.rp-commands-table th:not(:fir
 .settings-row .field{flex:1;margin-bottom:0;}
 .settings-note{font-size:14.5px;color:var(--text-tertiary);margin-top:10px;line-height:1.6;}
 .settings-note code{font-family:var(--font-mono);background:var(--surface-sunken);padding:1px 4px;border:1px solid var(--border);}
+.blush-settings{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:8px;}
+.blush-settings .field{margin-bottom:0;min-width:150px;}
+.blush-settings button{margin-bottom:0;}
+.settings-note.is-unavailable{color:var(--critical);}
 
 /* ---------- log drawer (docked pane, not a floating card) ---------- */
 .log-drawer{
@@ -1045,6 +1049,30 @@ From branch : <span id="versionBranch">—</span></p>
             <p class="form-note" id="rpNote">Changes to the manager command, addresses and run commands are kept here until you click Save.</p>
           </div>
         </div>
+      </div>
+
+      <!-- Blush, like the run profiles, is set up per machine: how the network runs here
+           (batch size, worker processes, threads) is an administrator's choice, used by
+           every Blush job on this server. The job panels only switch Blush on. -->
+      <div class="groupbox" id="homeBlush" hidden>
+        <span class="groupbox-label">Blush Regularisation</span>
+        <p class="settings-note" id="blushStatus">Checking…</p>
+        <div class="blush-settings">
+          <div class="field">
+            <label for="blushBatchSize">Batch Size <span class="unit">(blocks)</span></label>
+            <input type="number" id="blushBatchSize" min="1" max="64" step="1" value="1" title="How many 64-voxel blocks go through the network at once. Larger batches are faster on a GPU with the memory for them; 1 is right for a CPU process.">
+          </div>
+          <div class="field">
+            <label for="blushProcesses">Processes</label>
+            <input type="number" id="blushProcesses" min="1" max="256" step="1" value="1" title="CPU only: worker processes sharing a map's blocks, each with its own copy of the network. One PyTorch process cannot use more than about 16 cores on a block, so a large machine wants several: 8 processes of 16 threads on 128 cores. Ignored on a GPU.">
+          </div>
+          <div class="field">
+            <label for="blushThreads">Threads per Process</label>
+            <input type="number" id="blushThreads" min="0" max="1024" step="1" value="0" title="CPU only: PyTorch threads in each process; 0 lets PyTorch choose (every core, right for one process). Processes x threads should not exceed the machine's cores.">
+          </div>
+          <button class="primary" id="blushSaveBtn">Save</button>
+        </div>
+        <p class="settings-note" id="blushNote">These settings are used by every Blush job on this server. Blush needs PyTorch in the server's Python and the weights file (blush_v1.0.ckpt.gz, Zenodo record 10072731) under <code>server/data/models/</code>.</p>
       </div>
     </div>
   </div>
@@ -2593,15 +2621,9 @@ From branch : <span id="versionBranch">—</span></p>
         // Blush regularisation (Kimanius et al. 2024), not in cisTEM's panel: the reference is denoised by RELION's
         // network between rounds (server/blush.py). Offered only when the server reports torch and the weights.
         {key:"use_blush", label:"Use Blush Regularisation?", type:"checkbox", default:false, group:"Blush", feature:"blush",
-         tooltip:"Denoise each class's reference with RELION's Blush network before every round (Kimanius et al. 2024). Runs on the server, on its GPU when it has one; a few minutes per class per round on a CPU."},
+         tooltip:"Refine each class against a reference denoised by RELION's Blush network (Kimanius et al. 2024): at the end of every round the new volume's denoised companion is computed from the half maps for the next round or run to use. Runs on the server, on its GPU when it has one, with the batch, process and thread settings an administrator chose on the home page."},
         {key:"blush_input", label:"Denoise", unit:"", type:"select", options:["Unfiltered half-map sum", "Filtered reference"], default:"Unfiltered half-map sum", group:"Blush", enabledBy:"use_blush",
-         tooltip:"What the network is given: the unfiltered reconstruction (the average of the two half maps, what RELION denoises; the result is then cut at the FSC resolution), or the Wiener-filtered reference the round would otherwise refine against."},
-        {key:"blush_batch_size", label:"Batch Size", unit:"blocks", type:"number", step:"1", min:1, max:16, default:"1", group:"Blush", enabledBy:"use_blush",
-         tooltip:"How many 64-voxel blocks go through the network at once. Larger batches are faster on a GPU with the memory for them; 1 is right for a CPU."},
-        {key:"blush_processes", label:"Processes", unit:"", type:"number", step:"1", min:1, max:128, default:"1", group:"Blush", enabledBy:"use_blush",
-         tooltip:"CPU only: how many worker processes share the blocks of a map, each with its own copy of the network. One PyTorch process cannot use more than about 16 cores on a block, so a large machine wants several: 8 processes of 16 threads on 128 cores, for example. Ignored on a GPU."},
-        {key:"blush_threads", label:"Threads per Process", unit:"", type:"number", step:"1", min:0, default:"0", group:"Blush", enabledBy:"use_blush",
-         tooltip:"CPU only: PyTorch threads in each process; 0 lets PyTorch choose (all cores, right for one process). Processes x threads should not exceed the machine's cores."}
+         tooltip:"What the network is given at the end of each round: the unfiltered reconstruction (the average of the two half maps, what RELION denoises; the result is then cut at the FSC resolution), or the Wiener-filtered volume. How Blush runs on this machine (batch size, processes, threads) is set by an administrator on the home page."}
       ],
       info: {
         title: "3D Refinement & Reconstruction (FrealignX)",
@@ -2912,7 +2934,7 @@ From branch : <span id="versionBranch">—</span></p>
    "changePasswordToggleBtn","changePasswordForm","currentPassword","newPassword","confirmPassword",
    "savePasswordBtn","changePasswordNote",
    "homeProjectPanels",
-   "homeManageUsers","homeRunProfiles","homeInner","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
+   "homeManageUsers","homeRunProfiles","homeInner","homeBlush","blushStatus","blushBatchSize","blushProcesses","blushThreads","blushSaveBtn","blushNote","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
    "topConnStatus","topConnDot","topConnLabel","topSub",
    "stageTabs","actionFormLabel","paramFields","expertToggle","expertFields","submitBtn",
@@ -5450,6 +5472,28 @@ From branch : <span id="versionBranch">—</span></p>
   // RunProfileComboBox is filled from the run profiles panel -- except that
   // cisTEM's are per project and these are per machine, edited by an
   // administrator on the home page. The last choice is remembered by name.
+  // The machine's Blush settings (GET/PUT /blush-settings): the home page's Blush box, admins only.
+  function loadBlushSettings(){
+    apiFetch(apiUrl("/blush-settings")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(d){
+      els.blushBatchSize.value = d.batch_size; els.blushProcesses.value = d.processes; els.blushThreads.value = d.threads;
+      els.blushStatus.textContent = d.available
+        ? "Blush is available on this server (" + (d.device === "cuda" ? "GPU" : "CPU") + "; weights at " + d.weights + ")." + (d.device === "cuda" ? " On a GPU the processes and threads are not used." : "")
+        : "Blush is not available on this server: " + d.reason;
+      els.blushStatus.classList.toggle("is-unavailable", !d.available);
+    }).catch(function(err){ els.blushStatus.textContent = "Could not read the Blush settings: " + err.message; });
+  }
+  function saveBlushSettings(){
+    var body = {batch_size: Number(els.blushBatchSize.value), processes: Number(els.blushProcesses.value), threads: Number(els.blushThreads.value)};
+    els.blushSaveBtn.disabled = true;
+    apiFetch(apiUrl("/blush-settings"), {method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}).then(function(r){
+      return r.json().then(function(d){ if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); return d; });
+    }).then(function(d){
+      els.blushBatchSize.value = d.batch_size; els.blushProcesses.value = d.processes; els.blushThreads.value = d.threads;
+      els.blushNote.textContent = "Saved: batch " + d.batch_size + ", " + d.processes + " process" + (d.processes === 1 ? "" : "es") + " x " + (d.threads || "default") + " threads. Used by every Blush job on this server from now on.";
+    }).catch(function(err){ els.blushNote.textContent = "Not saved: " + err.message; }).finally(function(){ els.blushSaveBtn.disabled = false; });
+  }
+  els.blushSaveBtn.addEventListener("click", saveBlushSettings);
+
   function loadRunProfiles(){
     if (!state.currentUser){
       els.runProfile.innerHTML = "";
@@ -5914,7 +5958,9 @@ From branch : <span id="versionBranch">—</span></p>
     els.homeProjectPanels.hidden = !loggedIn;
     els.homeManageUsers.hidden = !isAdmin;
     els.homeRunProfiles.hidden = !isAdmin;
+    els.homeBlush.hidden = !isAdmin;
     els.homeInner.classList.toggle("wide", isAdmin);
+    if (isAdmin) loadBlushSettings();
 
     if (loggedIn){
       els.homeUserLabel.textContent = state.currentUser.display_name || state.currentUser.username;

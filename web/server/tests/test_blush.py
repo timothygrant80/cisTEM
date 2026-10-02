@@ -197,6 +197,28 @@ class CompanionDeleteTests(unittest.TestCase):
         self.assertTrue(self.volume.is_file())      # the asset's own file stays, as for every asset kind
         self.assertTrue(self.other.is_file())       # another volume's companion is untouched
 
+    def test_runtime_settings_are_machine_wide_and_admin_only(self):
+        import auth
+        # Defaults until an administrator saves; readable by any user.
+        r = self.client.get("/api/blush-settings", headers=self.headers)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual({k: r.get_json()[k] for k in ("batch_size", "processes", "threads")}, blush.RUNTIME_DEFAULTS)
+        self.assertIn("available", r.get_json())
+        # A plain user may read but not write.
+        user_token = auth.create_session(auth.create_user("ann", "password123", "user")["id"])
+        r = self.client.put("/api/blush-settings", json={"processes": 8}, headers={"Authorization": "Bearer " + user_token})
+        self.assertEqual(r.status_code, 403)
+        # An administrator saves; the driver reads the saved values; bad values are refused with the reason.
+        r = self.client.put("/api/blush-settings", json={"batch_size": 2, "processes": 8, "threads": 16}, headers=self.headers)
+        self.assertEqual(r.status_code, 200, r.get_data(as_text=True))
+        self.assertEqual(blush.runtime_settings(), {"batch_size": 2, "processes": 8, "threads": 16})
+        r = self.client.put("/api/blush-settings", json={"processes": 0}, headers=self.headers)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("processes", r.get_json()["error"])
+        r = self.client.put("/api/blush-settings", json={"threads": "many"}, headers=self.headers)
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(blush.runtime_settings()["processes"], 8)   # the refused saves changed nothing
+
     def test_companion_name(self):
         import refine3d
         self.assertTrue(refine3d.blushed_file("p", "/a/b/startup_volume_3_2.mrc").endswith("/Assets/Volumes/Blushed/startup_volume_3_2_blushed.mrc"))
@@ -206,11 +228,10 @@ class DriverSettingsTests(unittest.TestCase):
     def test_blush_settings_parse(self):
         import refine3d
         pkg = {"PARTICLE_SIZE": 150.0, "OUTPUT_PIXEL_SIZE": 1.0}
-        s = refine3d.settings_from_params({"use_blush": True, "blush_input": "Filtered reference", "blush_batch_size": "0", "blush_processes": "8", "blush_threads": "16"}, pkg)
+        s = refine3d.settings_from_params({"use_blush": True, "blush_input": "Filtered reference"}, pkg)
         self.assertTrue(s["use_blush"])
         self.assertFalse(s["blush_unfiltered"])
-        self.assertEqual(s["blush_batch_size"], 1)
-        self.assertEqual((s["blush_processes"], s["blush_threads"]), (8, 16))
+        self.assertNotIn("blush_processes", s)   # how Blush runs is the machine's setting, not the job's
         s = refine3d.settings_from_params({}, pkg)
         self.assertFalse(s["use_blush"])
         self.assertTrue(s["blush_unfiltered"])

@@ -1672,6 +1672,15 @@ def _delete_assets(project_id, kind):
         conn.close()
         return jsonify({"error": "{} is required".format(kind.ids_key)}), 400
 
+    # A volume's Blush companion (Assets/Volumes/Blushed/<name>_blushed.mrc, refine3d.blushed_file())
+    # goes with the asset; the volume file itself is left, as every asset's file is here.
+    companions = []
+    if kind is VOLUME_KIND:
+        placeholders = ",".join("?" * len(asset_ids))
+        for r in conn.execute("SELECT FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID IN ({})".format(placeholders), asset_ids).fetchall():
+            if r["FILENAME"]:
+                companions.append(refine3d.blushed_file(project_id, r["FILENAME"]))
+
     with conn:
         placeholders = ",".join("?" * len(asset_ids))
         conn.execute(
@@ -1688,6 +1697,11 @@ def _delete_assets(project_id, kind):
         )
         deleted = cur.rowcount
     conn.close()
+    for path in companions:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
     return jsonify({"deleted": deleted})
 
 

@@ -153,6 +153,55 @@ class PipelineTests(unittest.TestCase):
         self.assertLess(out[(r > 14) & (r < 22)].std(), noisy[(r > 14) & (r < 22)].std())   # quieter solvent
 
 
+class CompanionDeleteTests(unittest.TestCase):
+    """Deleting a volume asset removes its Blush companion, and leaves the volume file as before."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        import auth
+        import db
+        import cistem_server
+        import refine3d
+        self.tmp = tempfile.mkdtemp()
+        self._root, self._auth, self._sys = db.PROJECTS_ROOT, auth.AUTH_DB_PATH, db.SYSTEM_DB_PATH
+        db.PROJECTS_ROOT = Path(self.tmp) / "projects"; auth.AUTH_DB_PATH = Path(self.tmp) / "auth.db"; db.SYSTEM_DB_PATH = Path(self.tmp) / "system.db"
+        self.project = "t-blush"
+        vol_dir = db.PROJECTS_ROOT / self.project / "Assets" / "Volumes"
+        (vol_dir / "Blushed").mkdir(parents=True)
+        self.volume = vol_dir / "volume_7_1.mrc"
+        self.volume.write_bytes(b"x")
+        self.companion = Path(refine3d.blushed_file(self.project, str(self.volume)))
+        self.companion.write_bytes(b"y")
+        self.other = Path(refine3d.blushed_file(self.project, str(vol_dir / "volume_7_2.mrc")))
+        self.other.write_bytes(b"z")
+        conn = db.get_conn(self.project)
+        with conn:
+            conn.execute("INSERT INTO VOLUME_ASSETS(VOLUME_ASSET_ID, NAME, FILENAME, PIXEL_SIZE, X_SIZE, Y_SIZE, Z_SIZE, RECONSTRUCTION_JOB_ID) VALUES (1, 'v', ?, 1.0, 8, 8, 8, -1)", (str(self.volume),))
+        conn.close()
+        token = auth.create_session(auth.create_user("boss", "password123", "admin")["id"])
+        self.client = cistem_server.app.test_client()
+        self.headers = {"Authorization": "Bearer " + token}
+
+    def tearDown(self):
+        import auth
+        import db
+        db.PROJECTS_ROOT, auth.AUTH_DB_PATH, db.SYSTEM_DB_PATH = self._root, self._auth, self._sys
+
+    def test_delete_removes_the_companion_only(self):
+        self.assertTrue(self.companion.is_file())
+        r = self.client.post("/api/projects/{}/volumes/delete".format(self.project), json={"volume_ids": [1]}, headers=self.headers)
+        self.assertEqual(r.status_code, 200, r.get_data(as_text=True))
+        self.assertEqual(r.get_json()["deleted"], 1)
+        self.assertFalse(self.companion.exists())
+        self.assertTrue(self.volume.is_file())      # the asset's own file stays, as for every asset kind
+        self.assertTrue(self.other.is_file())       # another volume's companion is untouched
+
+    def test_companion_name(self):
+        import refine3d
+        self.assertTrue(refine3d.blushed_file("p", "/a/b/startup_volume_3_2.mrc").endswith("/Assets/Volumes/Blushed/startup_volume_3_2_blushed.mrc"))
+
+
 class DriverSettingsTests(unittest.TestCase):
     def test_blush_settings_parse(self):
         import refine3d

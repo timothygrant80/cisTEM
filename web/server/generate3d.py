@@ -42,6 +42,7 @@ DEFAULTS = {
     "inner_mask_radius_a": 0.0, "score_to_weight_constant": 2.0, "adjust_score_for_defocus": True, "score_threshold": 0.0,
     "reconstruction_resolution_limit_a": 0.0, "autocrop_images": False, "save_half_maps": False, "overwrite_statistics": True,
     "apply_ewald_correction": False, "ewald_inverse_hand": False,
+    "directional_wiener": False, "directional_cones": 36,   # merge3d's sampling-aware Wiener filter; not in cisTEM's panel
 }
 
 
@@ -207,7 +208,8 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half if s["save_half_maps"] else ["", ""])
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", int(state.get("number_of_dump_files") or 1), 1.0, 5.0]))
+                                                k + 1, False, "", int(state.get("number_of_dump_files") or 1), 1.0, 5.0,
+                                                s["directional_wiener"], int(s["directional_cones"])]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge3d".format(parent["NAME"]), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

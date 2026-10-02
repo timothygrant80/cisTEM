@@ -2389,6 +2389,13 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"Apply the symmetry from the first cycle rather than aligning to the symmetry axes three quarters of the way through the first start."},
         {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"3D Reconstruction",
          tooltip:"Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."},
+        // merge3d's sampling-aware Wiener filter (ReconstructedVolume::FinalizeOptimalDirectional), not in cisTEM's panel: each
+        // Fourier direction is damped by the FSC measured in a cone about it rather than by its shell's, so directions sampled
+        // by rare or badly aligned views are damped harder. Off by default: the shell filter is cisTEM's.
+        {key:"directional_wiener", label:"Directional Wiener Filter?", type:"checkbox", default:false, group:"3D Reconstruction",
+         tooltip:"Filter the merged reconstruction with a Wiener constant per direction (the FSC in a cone about each Fourier direction) instead of per shell. With preferred orientations the sparsely sampled directions carry mostly noise that the shell filter lets through; this damps them. Off is cisTEM's filter."},
+        {key:"directional_cones", label:"Directional FSC Cones", unit:"", type:"number", step:"1", min:4, max:400, default:"36", group:"3D Reconstruction", enabledBy:"directional_wiener",
+         tooltip:"How many cones of directions the FSC is measured in. More cones follow the sampling more closely but each has fewer voxels; 36 is a reasonable start."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"3D Reconstruction", enabledBy:"apply_blurring",
          tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."},
         {key:"images_per_class", label:"Images per Class", unit:"", type:"number", step:"1", min:1, max:500, default:"5", group:"Class Averages",
@@ -2474,6 +2481,13 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The global search can be limited in Y (measured from the box centre); 0.15 x the largest dimension by default."},
         {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Crop the particle images to a minimum size determined by the mask radius to accelerate 3D reconstruction. Usually not recommended, as it increases interpolation artifacts."},
+        // merge3d's sampling-aware Wiener filter (ReconstructedVolume::FinalizeOptimalDirectional), not in cisTEM's panel: each
+        // Fourier direction is damped by the FSC measured in a cone about it rather than by its shell's, so directions sampled
+        // by rare or badly aligned views are damped harder. Off by default: the shell filter is cisTEM's.
+        {key:"directional_wiener", label:"Directional Wiener Filter?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Filter the merged reconstruction with a Wiener constant per direction (the FSC in a cone about each Fourier direction) instead of per shell. With preferred orientations the sparsely sampled directions carry mostly noise that the shell filter lets through; this damps them. Off is cisTEM's filter."},
+        {key:"directional_cones", label:"Directional FSC Cones", unit:"", type:"number", step:"1", min:4, max:400, default:"36", group:"Reconstruction", enabledBy:"directional_wiener",
+         tooltip:"How many cones of directions the FSC is measured in. More cones follow the sampling more closely but each has fewer voxels; 36 is a reasonable start."},
         {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Insert each particle at multiple orientations weighted by a likelihood function; enable if the refinement appears to over-fit."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
@@ -2612,6 +2626,13 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The reconstruction can be accelerated by limiting its resolution; keep it higher than the refinement resolution of the following cycle. 0 = maximum."},
         {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality; do not use when finalising."},
+        // merge3d's sampling-aware Wiener filter (ReconstructedVolume::FinalizeOptimalDirectional), not in cisTEM's panel: each
+        // Fourier direction is damped by the FSC measured in a cone about it rather than by its shell's, so directions sampled
+        // by rare or badly aligned views are damped harder. Off by default: the shell filter is cisTEM's.
+        {key:"directional_wiener", label:"Directional Wiener Filter?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Filter the merged reconstruction with a Wiener constant per direction (the FSC in a cone about each Fourier direction) instead of per shell. With preferred orientations the sparsely sampled directions carry mostly noise that the shell filter lets through; this damps them. Off is cisTEM's filter."},
+        {key:"directional_cones", label:"Directional FSC Cones", unit:"", type:"number", step:"1", min:4, max:400, default:"36", group:"Reconstruction", enabledBy:"directional_wiener",
+         tooltip:"How many cones of directions the FSC is measured in. More cones follow the sampling more closely but each has fewer voxels; 36 is a reasonable start."},
         {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Insert each particle at multiple orientations weighted by a likelihood function."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
@@ -2812,6 +2833,13 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The reconstruction can be accelerated by limiting its resolution. 0 = maximum."},
         {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality; do not use when finalising."},
+        // merge3d's sampling-aware Wiener filter (ReconstructedVolume::FinalizeOptimalDirectional), not in cisTEM's panel: each
+        // Fourier direction is damped by the FSC measured in a cone about it rather than by its shell's, so directions sampled
+        // by rare or badly aligned views are damped harder. Off by default: the shell filter is cisTEM's.
+        {key:"directional_wiener", label:"Directional Wiener Filter?", type:"checkbox", default:false, group:"Reconstruction",
+         tooltip:"Filter the merged reconstruction with a Wiener constant per direction (the FSC in a cone about each Fourier direction) instead of per shell. With preferred orientations the sparsely sampled directions carry mostly noise that the shell filter lets through; this damps them. Off is cisTEM's filter."},
+        {key:"directional_cones", label:"Directional FSC Cones", unit:"", type:"number", step:"1", min:4, max:400, default:"36", group:"Reconstruction", enabledBy:"directional_wiener",
+         tooltip:"How many cones of directions the FSC is measured in. More cones follow the sampling more closely but each has fewer voxels; 36 is a reasonable start."},
         {key:"save_half_maps", label:"Also Save Half-Maps?", type:"checkbox", default:false, group:"Output",
          tooltip:"If yes, the reconstruction half maps are also saved as '_map1' and '_map2' beside the map in Assets/Volumes."},
         {key:"overwrite_statistics", label:"Overwrite Statistics?", type:"checkbox", default:true, group:"Output",

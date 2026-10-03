@@ -140,3 +140,25 @@ class BinaryParameterFileTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FieldSubsetTableTests(unittest.TestCase):
+    def test_a_field_subset_view_is_written_packed_and_in_column_order(self):
+        """table[["a", "b"]] keeps the parent's itemsize and offsets; the file must carry
+        packed records in cisTEM's column order, with the columns matched by name."""
+        import tempfile
+        import numpy as np
+        keys = ("position_in_stack", "psi", "best_2d_class", "sigma")
+        t = np.zeros(10, dtype=starfile.table_dtype(keys))
+        t["position_in_stack"] = np.arange(1, 11)
+        t["psi"] = np.arange(10) * 1.5
+        t["best_2d_class"] = 7
+        t["sigma"] = 2.0
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "v.cistem")
+            starfile.write_cistem_binary(path, t[["position_in_stack", "best_2d_class", "psi"]], ("position_in_stack", "best_2d_class", "psi"))
+            back = starfile.read_cistem_binary(path, as_table=True)
+        self.assertEqual(list(back.dtype.names), ["position_in_stack", "psi", "best_2d_class"])
+        self.assertEqual(back["psi"].tolist(), t["psi"].tolist())
+        self.assertEqual(back["best_2d_class"].tolist(), [7] * 10)
+        self.assertEqual(back["position_in_stack"].tolist(), list(range(1, 11)))

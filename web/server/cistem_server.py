@@ -3473,7 +3473,7 @@ def class2d_defaults(project_id):
         pkg = classification.package_row(conn, package_id) if package_id is not None else None
         if pkg is None:
             return jsonify({"error": "no such refinement package"}), 404
-        particles = len(classification.package_particles(conn, package_id))
+        particles = classification.package_particle_count(conn, package_id)
         return jsonify({
             "refinement_package_id": package_id,
             "particle_count": particles,

@@ -290,16 +290,17 @@ def phase_difference_dir(project_id):
 
 
 def _class_star(state, tag, k):
-    return str(Path(state["scratch"]) / "refinement_{}_class{}.star".format(tag, k + 1))
+    return str(Path(state["scratch"]) / "refinement_{}_class{}.cistem".format(tag, k + 1))
 
 
 def _store_rows(state, tag, class_rows):
     for k, rows in enumerate(class_rows):
-        starfile.write_star(_class_star(state, tag, k), rows)
+        starfile.write_params(_class_star(state, tag, k), refinements.as_table(rows))
 
 
 def _load_rows(state, tag):
-    return [starfile.read_star(_class_star(state, tag, k)) for k in range(state["number_of_classes"])]
+    """The per-class parameter tables stored under `tag`."""
+    return [starfile.read_params(_class_star(state, tag, k), as_table=True) for k in range(state["number_of_classes"])]
 
 
 
@@ -329,7 +330,7 @@ def _start(conn, project_id, job_id, params, profile):
         except OSError:
             pass
     reference_files = [conn.execute("SELECT FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (vid,)).fetchone()["FILENAME"] for vid in reference_ids]
-    class_rows = [refinements.load_rows(conn, ref["REFINEMENT_ID"], k) for k in range(1, classes + 1)]
+    class_rows = [refinements.load_table(conn, ref["REFINEMENT_ID"], k) for k in range(1, classes + 1)]
     first = class_rows[0][0] if class_rows and class_rows[0] else {}
     state = {
         "phase": None, "round": 0, "rounds": 1, "settings": s,
@@ -387,15 +388,20 @@ def _mask_then_refine(conn, project_id, job_id, state):
 
 def merged_input_rows(class_rows, reference_files):
     """SetupRefinementJob(): one row per particle from its highest-occupancy
-    class, naming that class's reference."""
-    if len(class_rows) == 1:
-        return [dict(r, reference_3d_filename=reference_files[0]) for r in class_rows[0]]
-    n = min(len(rows) for rows in class_rows)
-    out = []
-    for i in range(n):
-        best = max(range(len(class_rows)), key=lambda k: class_rows[k][i].get("occupancy", 0.0))
-        out.append(dict(class_rows[best][i], reference_3d_filename=reference_files[best]))
-    return out
+    class, naming that class's reference. Returns (table, reference filename
+    per row) -- the filename is a string column the binary writer takes
+    separately (starfile.write_params(..., string_columns=...))."""
+    tables = [refinements.as_table(c) for c in class_rows]
+    if len(tables) == 1:
+        return tables[0].copy(), [reference_files[0]] * len(tables[0])
+    n = min(len(t) for t in tables)
+    occ = np.stack([t["occupancy"][:n].astype(float) for t in tables], 0)
+    best = np.argmax(occ, axis=0)
+    merged = tables[0][:n].copy()
+    for k in range(1, len(tables)):
+        pick = best == k
+        merged[pick] = tables[k][:n][pick]
+    return merged, [reference_files[k] for k in best.tolist()]
 
 
 def _launch_refinement(conn, project_id, job_id, state):
@@ -407,9 +413,9 @@ def _launch_refinement(conn, project_id, job_id, state):
     state["output_refinement_id"] = rid
     scratch = Path(state["scratch"])
     class_rows = _load_rows(state, "input")
-    merged = merged_input_rows(class_rows, state["reference_files"])
-    star = str(scratch / "refine_ctf_input_star_{}.star".format(input_id))
-    starfile.write_star(star, merged, keys=starfile.REFINEMENT_KEYS + ("reference_3d_filename",))
+    merged, references = merged_input_rows(class_rows, state["reference_files"])
+    star = str(scratch / "refine_ctf_input_star_{}.cistem".format(input_id))
+    starfile.write_params(star, merged, string_columns={"reference_3d_filename": references})
     stats = [st for st in refinements.load_statistics(conn, input_id, 1) if 1 <= st["shell"] <= state["box_size"] // 2] \
         or default_statistics(state["molecular_weight"], state["pixel_size"], state["box_size"])
     stats_file = str(scratch / "input_stats_{}_1.txt".format(input_id))
@@ -449,16 +455,23 @@ def _collect_defocus(state):
     if s["refine_defocus"]:
         if not results:
             raise ValueError("refine_ctf reported no refined defocus values (were its intermediate results forwarded?)")
+        got_positions = np.array(sorted(results), dtype=np.int64)
+        got_df1 = np.array([results[p][0] for p in got_positions.tolist()], dtype=float)
+        got_df2 = np.array([results[p][1] for p in got_positions.tolist()], dtype=float)
         for k, rows in enumerate(class_rows):
-            for r in rows:
-                got = results.get(int(r["position_in_stack"]))
-                if got is None:
-                    continue
-                if k == 0:
-                    changes.append(got[0] - float(r.get("defocus_1", 0.0)))
-                r["defocus_1"], r["defocus_2"] = got[0], got[1]
-                if len(class_rows) == 1:
-                    r["logp"], r["score"] = got[2], got[3]
+            positions = rows["position_in_stack"].astype(np.int64)
+            idx = np.searchsorted(got_positions, positions)
+            idx = np.clip(idx, 0, max(len(got_positions) - 1, 0))
+            found = (len(got_positions) > 0) & (got_positions[idx] == positions) if len(got_positions) else np.zeros(len(positions), dtype=bool)
+            if k == 0:
+                changes.extend((got_df1[idx[found]] - rows["defocus_1"][found].astype(float)).tolist())
+            rows["defocus_1"][found] = got_df1[idx[found]]
+            rows["defocus_2"][found] = got_df2[idx[found]]
+            if len(class_rows) == 1:
+                got_logp = np.array([results[p][2] for p in got_positions.tolist()], dtype=float)
+                got_score = np.array([results[p][3] for p in got_positions.tolist()], dtype=float)
+                rows["logp"][found] = got_logp[idx[found]]
+                rows["score"][found] = got_score[idx[found]]
     centres, counts = defocus_histogram(changes, s["defocus_search_range_a"], s["defocus_search_step_a"])
     state["defocus_histogram"] = {"centres": centres, "counts": counts, "n": len(changes)}
     _store_rows(state, "output", class_rows)
@@ -526,9 +539,8 @@ def _apply_beam_tilt(conn, project_id, job_id, state, child_id):
         best[1] * 1000.0, best[2] * 1000.0, best[3], best[4], significance, "" if significant else " — below {:.0f}, set to zero".format(MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE)))
     class_rows = _load_rows(state, "output")
     for rows in class_rows:
-        for r in rows:
-            r["beam_tilt_x"], r["beam_tilt_y"] = btx * 1000.0, bty * 1000.0
-            r["image_shift_x"], r["image_shift_y"] = shx, shy
+        rows["beam_tilt_x"], rows["beam_tilt_y"] = btx * 1000.0, bty * 1000.0
+        rows["image_shift_x"], rows["image_shift_y"] = shx, shy
     _store_rows(state, "output", class_rows)
 
 
@@ -541,8 +553,8 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     class_rows = _load_rows(state, "output")
     written = []
     for k, rows in enumerate(class_rows):
-        p = str(scratch / "beam_tilt_output_par_{}_{}.star".format(rid, k + 1))
-        starfile.write_star(p, rows)
+        p = str(scratch / "beam_tilt_output_par_{}_{}.cistem".format(rid, k + 1))
+        starfile.write_params(p, rows)
         written.append(p)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
     tasks = []
@@ -856,10 +868,10 @@ def _live_histogram(state):
     if not results:
         return None
     try:
-        rows = starfile.read_star(_class_star(state, "input", 0))
+        rows = starfile.read_params(_class_star(state, "input", 0), as_table=True)
     except (OSError, ValueError):
         return None
-    changes = [results[int(r["position_in_stack"])][0] - float(r.get("defocus_1", 0.0)) for r in rows if int(r["position_in_stack"]) in results]
+    changes = [results[int(p)][0] - float(d) for p, d in zip(rows["position_in_stack"].tolist(), rows["defocus_1"].tolist()) if int(p) in results]
     centres, counts = defocus_histogram(changes, s["defocus_search_range_a"], s["defocus_search_step_a"])
     return {"centres": centres, "counts": counts, "n": len(changes)}
 

@@ -65,6 +65,7 @@ import blush
 import blush_phase
 import db
 import progress_store
+import refinements
 import job_protocol as jp
 import job_runner
 import refinement_packages
@@ -227,34 +228,48 @@ def random_angles(rng):
             rng.uniform(-1.0, 1.0) * 180.0)
 
 
+def _tables(class_rows):
+    """The per-class parameter tables from either form (dict rows are converted once)."""
+    return [refinements.as_table(c) for c in class_rows]
+
+
 def update_occupancies(class_rows, use_old_occupancies=True):
-    """Refinement::UpdateOccupancies() for class_rows[k][i] (class k,
-    particle i), in place: each particle's occupancies from its per-class
-    logP, weighted by the classes' old average occupancies (or equally,
-    when `use_old_occupancies` is off -- Auto Refine's choice while it
-    still refines a subset of the particles)."""
+    """Refinement::UpdateOccupancies() for class_rows[k] (class k's table, the
+    same particles in the same order in every class), in place: each
+    particle's occupancies from its per-class logP, weighted by the classes'
+    old average occupancies (or equally, when `use_old_occupancies` is off --
+    Auto Refine's choice while it still refines a subset of the particles).
+    cisTEM then gives every class the particle's occupancy-weighted sigma:
+    one noise estimate per particle, which refine3d and reconstruct3d weight
+    by; left per class, the classes' likelihoods drift apart round by round.
+    Vectorised over particles; `class_rows` must hold tables (the drivers do)."""
     n_classes = len(class_rows)
     if n_classes <= 1:
         return
-    n = len(class_rows[0])
+    if class_rows and not isinstance(class_rows[0], np.ndarray):
+        # Dict rows (tests, older callers): compute on tables and write the two columns back.
+        tables = _tables(class_rows)
+        update_occupancies(tables, use_old_occupancies)
+        for rows, t in zip(class_rows, tables):
+            for r, occ, sig in zip(rows, t["occupancy"].tolist(), t["sigma"].tolist()):
+                r["occupancy"] = occ
+                r["sigma"] = sig
+        return
+    logp = np.stack([t["logp"].astype(float) for t in class_rows], 0)          # classes x particles
+    sigma = np.stack([t["sigma"].astype(float) for t in class_rows], 0)
     if use_old_occupancies:
-        avg = [sum(r.get("occupancy", 0.0) for r in rows) / max(len(rows), 1) for rows in class_rows]
+        avg = np.array([t["occupancy"].astype(float).mean() if len(t) else 0.0 for t in class_rows])
     else:
-        avg = [100.0 / n_classes] * n_classes
-    for i in range(n):
-        logps = [class_rows[k][i].get("logp", 0.0) for k in range(n_classes)]
-        max_logp = max(logps)
-        total = sum(math.exp(lp - max_logp) * avg[k] for k, lp in enumerate(logps) if max_logp - lp < 10.0)
-        average_sigma = 0.0
-        for k, lp in enumerate(logps):
-            occ = math.exp(lp - max_logp) * avg[k] / total * 100.0 if (max_logp - lp < 10.0 and total > 0) else 0.0
-            class_rows[k][i]["occupancy"] = occ
-            average_sigma += class_rows[k][i].get("sigma", 0.0) * occ / 100.0
-        # cisTEM then gives every class the particle's occupancy-weighted sigma: one noise
-        # estimate per particle, which refine3d and reconstruct3d weight by. Left per class,
-        # the classes' likelihoods drift apart round by round.
-        for k in range(n_classes):
-            class_rows[k][i]["sigma"] = average_sigma
+        avg = np.full(n_classes, 100.0 / n_classes)
+    max_logp = logp.max(axis=0)
+    within = (max_logp - logp) < 10.0
+    prob = np.where(within, np.exp(np.minimum(logp - max_logp, 0.0)) * avg[:, None], 0.0)
+    total = prob.sum(axis=0)
+    occ = np.where(total > 0, prob / np.where(total > 0, total, 1.0) * 100.0, 0.0)
+    average_sigma = (sigma * occ / 100.0).sum(axis=0)
+    for k, t in enumerate(class_rows):
+        t["occupancy"] = occ[k]
+        t["sigma"] = average_sigma
 
 
 def pooled_part_ssnr(stats_per_class, class_rows):
@@ -264,9 +279,9 @@ def pooled_part_ssnr(stats_per_class, class_rows):
     if len(class_rows) <= 1:
         return [100.0]
     avgs = []
-    for rows in class_rows:
-        active = [r for r in rows if r.get("image_is_active", 1) >= 0]
-        avgs.append(sum(r.get("occupancy", 0.0) for r in active) / max(len(active), 1))
+    for t in _tables(class_rows):
+        active = t["image_is_active"] >= 0
+        avgs.append(float(t["occupancy"][active].astype(float).mean()) if active.any() else 0.0)
     total = sum(avgs) or 1.0
     n_points = min(len(s) for s in stats_per_class)
     for i in range(n_points):
@@ -277,22 +292,16 @@ def pooled_part_ssnr(stats_per_class, class_rows):
 
 
 def average_sigma(class_rows):
-    """UpdatePlotPanel(): occupancy-weighted mean sigma over active particles."""
+    """The occupancy-weighted mean sigma over the active particles of every class (None when none)."""
     n_active = 0.0
     total = 0.0
-    for rows in class_rows:
-        for r in rows:
-            if r.get("image_is_active", 1) >= 0:
-                w = r.get("occupancy", 100.0) * 0.01
-                n_active += w
-                total += r.get("sigma", 0.0) * w
+    for t in _tables(class_rows):
+        active = t["image_is_active"] >= 0
+        w = t["occupancy"][active].astype(float) * 0.01
+        n_active += float(w.sum())
+        total += float((t["sigma"][active].astype(float) * w).sum())
     return total / n_active if n_active > 0 else None
 
-
-# ---------------------------------------------------------------------------
-# Resolution statistics files (ResolutionStatistics::WriteStatisticsToFile /
-# ReadStatisticsFromFile)
-# ---------------------------------------------------------------------------
 
 def default_statistics(molecular_weight_kda, pixel_size, box_size):
     """[{shell, resolution, fsc, part_fsc, part_ssnr, rec_ssnr}] for shells 1..number_of_bins-1."""
@@ -545,16 +554,18 @@ def _initial_rows(contained, pixel_size, rng):
 
 
 def _class_star(state, tag, k):
-    return str(Path(state["scratch"]) / "refinement_{}_class{}.star".format(tag, k + 1))
+    """The scratch copy of class k's parameters under `tag`: cisTEM's binary form, read and written in one call."""
+    return str(Path(state["scratch"]) / "refinement_{}_class{}.cistem".format(tag, k + 1))
 
 
 def _load_rows(state, tag):
-    return [starfile.read_star(_class_star(state, tag, k)) for k in range(state["number_of_classes"])]
+    """The per-class parameter tables stored under `tag`."""
+    return [starfile.read_params(_class_star(state, tag, k), as_table=True) for k in range(state["number_of_classes"])]
 
 
 def _store_rows(state, tag, class_rows):
     for k, rows in enumerate(class_rows):
-        starfile.write_star(_class_star(state, tag, k), rows)
+        starfile.write_params(_class_star(state, tag, k), refinements.as_table(rows))
 
 
 
@@ -675,9 +686,9 @@ def _launch_prepare_classaverages(conn, project_id, job_id, state):
     with open(selection_file, "w") as fh:
         for k in classes:
             fh.write("{:f}\n".format(float(k)))
-    particles = classification.package_particles(conn, state["package_id"])
-    star = classification.write_star(scratch / "classification_star_{}.star".format(state["classification_id"]),
-                                     classification.classification_rows(conn, state["classification_id"], particles))
+    particles = classification.package_particle_table(conn, state["package_id"])
+    star = classification.write_params(scratch / "classification_star_{}.cistem".format(state["classification_id"]),
+                                       classification.classification_rows(conn, state["classification_id"], particles))
     binning = (s["final_resolution_limit"] / 2.0) / state["pixel_size"]
     wanted_box = binned_box_size(state["box_size"], binning)
     resample = wanted_box < state["box_size"]
@@ -705,8 +716,8 @@ def _launch_prepare_stack(conn, project_id, job_id, state):
     binning = (s["final_resolution_limit"] / 2.0) / state["pixel_size"]
     wanted_box = binned_box_size(state["box_size"], binning)
     # ONLY WRITING FIRST CLASS FOR PIXEL SIZES (cisTEM's own comment).
-    star = str(Path(state["scratch"]) / "prepare_stack_input.star")
-    starfile.write_star(star, _load_rows(state, "input")[0])
+    star = str(Path(state["scratch"]) / "prepare_stack_input.cistem")
+    starfile.write_params(star, _load_rows(state, "input")[0])
     out_stack = str(Path(state["scratch"]) / "temp_stack.mrc")
     if os.path.exists(out_stack):
         os.remove(out_stack)
@@ -744,22 +755,25 @@ def reconstruction_rows(rows, initial, current_percent_used, rng):
     the threshold ranks only this round's refined particles, as the comment
     beside cisTEM's 0.2 says it means to. (reconstruct3d skips inactive
     rows regardless, so their score is never used for anything else.)"""
-    out = []
-    for r in rows:
-        r = dict(r)
-        if initial:
-            r["image_is_active"] = -1 if rng.uniform(-1.0, 1.0) < 1.0 - 2.0 * current_percent_used / 100.0 else 1
-            r["sigma"] = 10.0
-        else:
-            r["sigma"] = 1.0
-        out.append(r)
-    if not initial:
-        refined = [float(r.get("score") or 0.0) for r in out if float(r.get("image_is_active") or 0) >= 0]
-        floor = (min(refined) if refined else 0.0) - 1.0
-        for r in out:
-            if float(r.get("image_is_active") or 0) < 0:
-                r["score"] = floor
-    return out
+    table = refinements.as_table(rows).copy()
+    n = len(table)
+    if initial:
+        draws = _uniform_draws(rng, n)
+        table["image_is_active"] = np.where(draws < 1.0 - 2.0 * current_percent_used / 100.0, -1, 1)
+        table["sigma"] = 10.0
+    else:
+        table["sigma"] = 1.0
+        active = table["image_is_active"] >= 0
+        floor = (float(table["score"][active].min()) if active.any() else 0.0) - 1.0
+        table["score"][~active] = floor
+    return table
+
+
+def _uniform_draws(rng, n):
+    """n draws in [-1, 1) from `rng`: a numpy Generator, or a random.Random seeding one (the drivers' choice)."""
+    if isinstance(rng, np.random.Generator):
+        return rng.uniform(-1.0, 1.0, n)
+    return np.random.default_rng(rng.getrandbits(64)).uniform(-1.0, 1.0, n)
 
 
 def reconstruction_score_threshold(current_percent_used, initial=False):
@@ -788,8 +802,8 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     written = []
     for k, rows in enumerate(class_rows):
         out = reconstruction_rows(rows, initial, state["current_percent_used"], rng)
-        p = str(Path(state["scratch"]) / "recon_input_{}_class{}.star".format(_output_number(state), k + 1))
-        starfile.write_star(p, out)
+        p = str(Path(state["scratch"]) / "recon_input_{}_class{}.cistem".format(_output_number(state), k + 1))
+        starfile.write_params(p, out)
         written.append(p)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
     score_threshold = reconstruction_score_threshold(state["current_percent_used"], initial)
@@ -864,8 +878,8 @@ def _launch_refinement(conn, project_id, job_id, state):
             r["occupancy"] = 100.0 if classes == 1 else 100.0 / classes
             r["phi"], r["theta"], r["psi"] = rng.uniform(-1, 1) * 180.0, rng.uniform(-1, 1) * 180.0, rng.uniform(-1, 1) * 180.0
             r["x_shift"] = r["y_shift"] = 0.0
-        p = str(scratch / "refine_input_{}_class{}.star".format(_output_number(state), k + 1))
-        starfile.write_star(p, rows)
+        p = str(scratch / "refine_input_{}_class{}.cistem".format(_output_number(state), k + 1))
+        starfile.write_params(p, rows)
         star_files.append(p)
         if state["round"] < 3 or not state["stats_files"][k] or not os.path.isfile(state["stats_files"][k]):
             stats = defaults
@@ -882,7 +896,7 @@ def _launch_refinement(conn, project_id, job_id, state):
     for k in range(classes):
         for j in range(1, jobs + 1):
             first, last = particle_range(j, jobs, n)
-            out_star = str(scratch / "refine_output_{}_class{}_{}.star".format(_output_number(state), k + 1, j))
+            out_star = str(scratch / "refine_output_{}_class{}_{}.cistem".format(_output_number(state), k + 1, j))
             outputs.append(out_star)
             values = [state["active_stack"], star_files[k], state["reference_files"][k], stats_files[k], True, "", out_star, "/dev/null",
                       symmetry, first, last, percent, state["active_pixel_size"], state["molecular_weight"], s["inner_mask_radius"], s["mask_radius"],
@@ -994,39 +1008,18 @@ def _align_symmetry(project_id, job_id, state):
 
 
 def _merge_output_stars(state):
-    """The per-task output star files of a refinement round -> one row list per class."""
+    """The per-task output parameter files of a refinement round -> one table per class."""
     n_classes = state["number_of_classes"]
     inputs = _load_rows(state, "input")
     jobs = _required_count(state, "refinement_jobs_this_round")
     outputs = state.get("pending_output_stars") or []
     class_rows = []
     for k in range(n_classes):
-        by_pos = {}
-        for j in range(jobs):
-            idx = k * jobs + j
-            p = outputs[idx] if idx < len(outputs) else None
-            if not p or not os.path.isfile(p):
-                raise ValueError("refine3d task {} of class {} left no output star file".format(j + 1, k + 1))
-            for r in starfile.read_star(p):
-                by_pos[r["position_in_stack"]] = r
-        rows = []
-        missing = 0
-        for r in inputs[k]:
-            o = by_pos.get(r["position_in_stack"])
-            if o is None:
-                o = dict(r)
-                missing += 1
-            else:
-                # refine3d writes what it refined; carry the imaging parameters it didn't.
-                merged = dict(r)
-                merged.update({kk: vv for kk, vv in o.items() if kk in starfile.REFINEMENT_KEYS})
-                o = merged
-            rows.append(o)
-        if missing:
-            # A task that "completed" but wrote a short star (a crash after the write began, a
-            # full disk) used to leave those particles on last round's parameters, silently.
-            raise ValueError("the refine3d tasks of class {} returned {} of {} particles".format(k + 1, len(inputs[k]) - missing, len(inputs[k])))
-        class_rows.append(rows)
+        paths = [outputs[k * jobs + j] if k * jobs + j < len(outputs) else None for j in range(jobs)]
+        try:
+            class_rows.append(starfile.merge_task_outputs(inputs[k], paths))
+        except ValueError as exc:
+            raise ValueError("{} (class {})".format(exc, k + 1)) if "class" not in str(exc) else exc
     return class_rows
 
 

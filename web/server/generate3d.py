@@ -162,8 +162,8 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     scratch = Path(state["scratch"])
     written = []
     for k in range(1, classes + 1):
-        p = str(scratch / "generate3d_par_{}_{}.star".format(rid, k))
-        starfile.write_star(p, refinements.load_rows(conn, rid, k))
+        p = str(scratch / "generate3d_par_{}_{}.cistem".format(rid, k))
+        starfile.write_params(p, refinements.load_table(conn, rid, k))
         written.append(p)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
     ewald = ewald_flag(s["apply_ewald_correction"], s["ewald_inverse_hand"])
@@ -303,7 +303,7 @@ def _record(conn, project_id, parent_id, state):
     for p in state["pending_volume_files"]:
         if not os.path.isfile(p):
             raise ValueError("merge3d did not write {}".format(p))
-    class_rows = [refinements.load_rows(conn, rid, k) for k in range(1, classes + 1)]
+    class_rows = [refinements.load_table(conn, rid, k) for k in range(1, classes + 1)]
     stats = [read_statistics(p) if os.path.isfile(p) else [] for p in state["pending_stats_files"]]
     avgs = pooled_part_ssnr(stats, class_rows)
     volume_ids, est_res = [], []

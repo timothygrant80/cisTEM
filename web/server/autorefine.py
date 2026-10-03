@@ -52,6 +52,8 @@ import sys
 import threading
 from pathlib import Path
 
+import numpy as np
+
 import blush
 import blush_phase
 import db
@@ -293,7 +295,7 @@ def scratch_dir(project_id, job_id):
 
 
 def _class_star(state, tag, k):
-    return str(Path(state["scratch"]) / "refinement_{}_class{}.star".format(tag, k + 1))
+    return str(Path(state["scratch"]) / "refinement_{}_class{}.cistem".format(tag, k + 1))
 
 
 def _class_stats(state, tag, k):
@@ -302,11 +304,12 @@ def _class_stats(state, tag, k):
 
 def _store_rows(state, tag, class_rows):
     for k, rows in enumerate(class_rows):
-        starfile.write_star(_class_star(state, tag, k), rows)
+        starfile.write_params(_class_star(state, tag, k), refinements.as_table(rows))
 
 
 def _load_rows(state, tag):
-    return [starfile.read_star(_class_star(state, tag, k)) for k in range(state["number_of_classes"])]
+    """The per-class parameter tables stored under `tag`."""
+    return [starfile.read_params(_class_star(state, tag, k), as_table=True) for k in range(state["number_of_classes"])]
 
 
 def _store_stats(state, tag, class_stats):
@@ -319,17 +322,18 @@ def _load_stats(state, tag):
 
 
 def _tracking_path(state):
-    return str(Path(state["scratch"]) / "tracking.json")
+    return str(Path(state["scratch"]) / "tracking.npz")
 
 
 def _load_tracking(state):
-    with open(_tracking_path(state)) as fh:
-        return json.load(fh)
+    """The per-particle bookkeeping (global-alignment count, rounds since, resolution of the last one) as arrays."""
+    with np.load(_tracking_path(state)) as data:
+        return {k: data[k] for k in ("globals", "since_global", "last_global_res")}
 
 
 def _store_tracking(state, tracking):
-    with open(_tracking_path(state), "w") as fh:
-        json.dump(tracking, fh)
+    np.savez(_tracking_path(state), globals=np.asarray(tracking["globals"], dtype=np.int64), since_global=np.asarray(tracking["since_global"], dtype=np.int64),
+             last_global_res=np.asarray(tracking["last_global_res"], dtype=np.float64))
 
 
 
@@ -380,14 +384,14 @@ def _start(conn, project_id, job_id, params, profile):
     }
     # The input refinement: the package's first parameters with random
     # angles, zero shifts, equal occupancies and default statistics.
-    rng = random.Random()
+    rng = np.random.default_rng()
     class_rows = []
     for k in range(1, classes + 1):
-        rows = refinements.load_rows(conn, ref["REFINEMENT_ID"], k)
-        for r in rows:
-            r.update({"occupancy": 100.0 / classes, "phi": rng.uniform(-1.0, 1.0) * 180.0, "theta": rng.uniform(-1.0, 1.0) * 180.0,
-                      "psi": rng.uniform(-1.0, 1.0) * 180.0, "x_shift": 0.0, "y_shift": 0.0, "score": 0.0, "image_is_active": 1, "sigma": 1.0})
-        class_rows.append(rows)
+        table = refinements.load_table(conn, ref["REFINEMENT_ID"], k)
+        table["occupancy"] = 100.0 / classes
+        table["phi"] = rng.uniform(-180.0, 180.0, len(table)); table["theta"] = rng.uniform(-180.0, 180.0, len(table)); table["psi"] = rng.uniform(-180.0, 180.0, len(table))
+        table["x_shift"] = 0.0; table["y_shift"] = 0.0; table["score"] = 0.0; table["image_is_active"] = 1; table["sigma"] = 1.0
+        class_rows.append(table)
     _store_rows(state, "input", class_rows)
     _store_stats(state, "input", [default_statistics(state["molecular_weight"], state["pixel_size"], state["box_size"]) for _ in range(classes)])
     _store_tracking(state, {"globals": [0] * n, "since_global": [0] * n, "last_global_res": [100.0] * n})
@@ -478,15 +482,13 @@ def _launch_refinement(conn, project_id, job_id, state):
     n, classes = state["number_of_particles"], state["number_of_classes"]
     first_round = state["round"] == 0
     tracking = _load_tracking(state)
-    rng = random.Random()
     lowest = min(state["class_high_res_limits"])
     last_res = state["resolution_per_round"][-1] if state["resolution_per_round"] else 100.0
-    flags = [choose_global(state["round"], last_res, lowest, tracking["last_global_res"][i], tracking["globals"][i], tracking["since_global"][i],
-                           state["reference_contains_all"], state["final_round"], rng) for i in range(n)]
+    flags = choose_global_array(state["round"], last_res, lowest, tracking["last_global_res"], tracking["globals"], tracking["since_global"],
+                                state["reference_contains_all"], state["final_round"], np.random.default_rng())
     class_rows = _load_rows(state, "input")
-    for rows in class_rows:
-        for i, r in enumerate(rows):
-            r["image_is_active"] = flags[i] if i < n else 1
+    for table in class_rows:
+        table["image_is_active"] = flags[:len(table)] if len(flags) >= len(table) else np.concatenate([flags, np.ones(len(table) - len(flags), dtype=int)])
     _store_rows(state, "input", class_rows)
     class_stats = _load_stats(state, "input")
     rid = refinements.next_refinement_id(conn)
@@ -496,8 +498,8 @@ def _launch_refinement(conn, project_id, job_id, state):
     classes_to_run = 1 if first_round else classes
     star_files, stats_files = [], []
     for k in range(classes_to_run):
-        p = str(scratch / "auto_input_par_{}_{}.star".format(rid, k + 1))
-        starfile.write_star(p, class_rows[k])
+        p = str(scratch / "auto_input_par_{}_{}.cistem".format(rid, k + 1))
+        starfile.write_params(p, class_rows[k])
         star_files.append(p)
         sp = str(scratch / "auto_input_stats_{}_{}.txt".format(rid, k + 1))
         write_statistics(sp, [st for st in class_stats[k] if 1 <= st["shell"] <= state["box_size"] // 2], state["pixel_size"])
@@ -512,7 +514,7 @@ def _launch_refinement(conn, project_id, job_id, state):
         step = max(calculate_angular_step(limit, s["mask_radius_a"]), calculate_angular_step(8.0, s["mask_radius_a"]))
         for j in range(1, jobs + 1):
             first, last = particle_range(j, jobs, n)
-            out_star = str(scratch / "refine_output_{}_class{}_{}.star".format(rid, k + 1, j))
+            out_star = str(scratch / "refine_output_{}_class{}_{}.cistem".format(rid, k + 1, j))
             outputs.append(out_star)
             values = [state["stack_filename"], star_files[k], state["reference_files"][k], stats_files[k], True, "", out_star, "/dev/null",
                       state["symmetry"], first, last, percent_used, state["pixel_size"], state["molecular_weight"],
@@ -534,54 +536,71 @@ def _launch_refinement(conn, project_id, job_id, state):
     _runtime.submit_child(project_id, child, refine3d_adapter, tasks, _profile(state["refinement_profile"]))
 
 
+def choose_global_array(rounds_run, last_resolution, lowest_alignment_res, last_global_res, globals_so_far, rounds_since_global,
+                        reference_contains_all, final_round, rng):
+    """choose_global() for every particle at once (arrays in, int array of image_is_active out)."""
+    last_global_res = np.asarray(last_global_res, dtype=float)
+    globals_so_far = np.asarray(globals_so_far, dtype=float)
+    rounds_since_global = np.asarray(rounds_since_global, dtype=float)
+    n = len(globals_so_far)
+    flags = np.ones(n, dtype=np.int64)
+    never = globals_so_far == 0
+    if rounds_run == 0:
+        do_global = np.ones(n, dtype=bool)
+    else:
+        forced = (last_resolution < 5.0 and lowest_alignment_res <= 8.0 and bool(reference_contains_all) and rounds_run > 2)
+        round_adjust = np.maximum(1.0, (globals_so_far - np.floor(rounds_since_global / 3.0)) ** 2)
+        res_adjust = last_global_res - lowest_alignment_res
+        with np.errstate(divide="ignore", invalid="ignore"):
+            likelihood = np.where(last_global_res <= 5.0, -5.0, np.where(res_adjust == 0.0, 0.0, lowest_alignment_res ** 2 / ((1000.0 / np.where(res_adjust == 0.0, 1.0, res_adjust)) * round_adjust)))
+        do_global = np.abs(rng.uniform(-1.0, 1.0, n)) < likelihood
+        if forced:
+            do_global |= last_global_res > 9.0
+    flags[do_global] = 0
+    if final_round:
+        flags[:] = 1
+    else:
+        flags[rounds_since_global == 0] = 1
+    flags[never] = 0
+    return flags
+
+
 def _merge_output_stars(state):
-    """The refinement results back into every particle's row, from the
-    per-task output star files."""
+    """The refinement results back into every particle's table, from the
+    per-task output parameter files (abinitio.merge_task_outputs)."""
     inputs = _load_rows(state, "input")
     jobs = _required_count(state, "refinement_jobs_this_round")
     outputs = state.get("pending_output_stars") or []
     classes_run = _required_count(state, "classes_this_round")
     class_rows = []
     for k in range(classes_run):
-        by_pos = {}
-        for j in range(jobs):
-            idx = k * jobs + j
-            p = outputs[idx] if idx < len(outputs) else None
-            if not p or not os.path.isfile(p):
-                raise ValueError("refine3d task {} of class {} left no output star file".format(j + 1, k + 1))
-            for r in starfile.read_star(p):
-                by_pos[r["position_in_stack"]] = r
-        rows = []
-        missing = 0
-        for r in inputs[k]:
-            merged = dict(r)
-            o = by_pos.get(r["position_in_stack"])
-            if o is not None:
-                merged.update({kk: vv for kk, vv in o.items() if kk in starfile.REFINEMENT_KEYS})
-            else:
-                missing += 1
-            rows.append(merged)
-        if missing:
-            raise ValueError("the refine3d tasks of class {} returned {} of {} particles".format(k + 1, len(inputs[k]) - missing, len(inputs[k])))
-        class_rows.append(rows)
+        paths = [outputs[k * jobs + j] if k * jobs + j < len(outputs) else None for j in range(jobs)]
+        try:
+            class_rows.append(starfile.merge_task_outputs(inputs[k], paths))
+        except ValueError as exc:
+            raise ValueError("{} (class {})".format(exc, k + 1))
     return class_rows
 
 
+def _average_occupancy(rows):
+    """Refinement::UpdateAverageOccupancy(): the mean occupancy over the active particles (0 when none)."""
+    table = refinements.as_table(rows)
+    active = table["image_is_active"] >= 0
+    return float(table["occupancy"][active].astype(float).mean()) if active.any() else 0.0
+
+
 def _rows_for_reconstruction(rows):
-    """The rows as reconstruct3d should rank them: a copy in which every
+    """The table as reconstruct3d should rank it: a copy in which every
     particle refine3d left inactive this round has a score one below the
     lowest refined score, so the percentage threshold ranks only this
     round's refined particles (reconstruct3d skips inactive rows regardless,
     so the score is used for nothing else). The stored refinement keeps the
     real scores."""
-    refined = [float(r.get("score") or 0.0) for r in rows if float(r.get("image_is_active") or 0) >= 0]
-    floor = (min(refined) if refined else 0.0) - 1.0
-    out = []
-    for r in rows:
-        if float(r.get("image_is_active") or 0) < 0:
-            r = dict(r); r["score"] = floor
-        out.append(r)
-    return out
+    table = refinements.as_table(rows).copy()
+    active = table["image_is_active"] >= 0
+    floor = (float(table["score"][active].min()) if active.any() else 0.0) - 1.0
+    table["score"][~active] = floor
+    return table
 
 
 def _launch_reconstruction(conn, project_id, job_id, state):
@@ -595,10 +614,9 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     written = []
     for k, rows in enumerate(class_rows):
         if state["class_high_res_limits"][k] > 10.0:
-            for r in rows:
-                r["sigma"] = 1.0
-        p = str(Path(state["scratch"]) / "auto_output_par_{}_{}.star".format(rid, k + 1))
-        starfile.write_star(p, _rows_for_reconstruction(rows))
+            rows["sigma"] = 1.0
+        p = str(Path(state["scratch"]) / "auto_output_par_{}_{}.cistem".format(rid, k + 1))
+        starfile.write_params(p, _rows_for_reconstruction(rows))
         written.append(p)
     _store_rows(state, "output", class_rows)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
@@ -784,16 +802,13 @@ def _advance(conn, project_id, parent_id, state):
         class_rows = _merge_output_stars(state)
         if state["round"] == 0 and classes > 1:
             # Random occupancies around the one refined class, so classification starts from noise.
-            rng = random.Random()
-            seed = class_rows[0]
+            rng = np.random.default_rng()
+            seed = refinements.as_table(class_rows[0])
             class_rows = []
             for k in range(classes):
-                rows = []
-                for r in seed:
-                    r = dict(r)
-                    r["occupancy"] = abs(rng.uniform(-1.0, 1.0) * (200.0 / classes))
-                    rows.append(r)
-                class_rows.append(rows)
+                table = seed.copy()
+                table["occupancy"] = np.abs(rng.uniform(-1.0, 1.0, len(table)) * (200.0 / classes))
+                class_rows.append(table)
         elif classes > 1:
             update_occupancies(class_rows, use_old_occupancies=state["current_percent_used"] >= 99.99)
         _store_rows(state, "output", class_rows)
@@ -863,8 +878,7 @@ def _record_round(conn, project_id, parent_id, state):
             _log(project_id, parent_id, "Est. Res. = {:.2f} Å".format(est_res[k]))
     details = []
     for k in range(classes):
-        active = [r for r in class_rows[k] if r.get("image_is_active", 1) >= 0]
-        avg_occ = sum(r.get("occupancy", 100.0) for r in active) / max(len(active), 1)
+        avg_occ = _average_occupancy(class_rows[k])
         limit = state["class_high_res_limits"][k]
         details.append({
             "REFERENCE_VOLUME_ASSET_ID": previous_refs[k], "LOW_RESOLUTION_LIMIT": s["low_resolution_limit_a"], "HIGH_RESOLUTION_LIMIT": limit,
@@ -937,10 +951,7 @@ def plan_next_round(state, output_stats, input_rows, output_rows):
     if classes == 1:
         change = 0.0
     else:
-        def _avg(rows):   # Refinement::UpdateAverageOccupancy(): over the active particles
-            active = [r for r in rows if r.get("image_is_active", 1) >= 0]
-            return sum(r.get("occupancy", 0.0) for r in active) / max(len(active), 1)
-        change = sum(abs(_avg(output_rows[k]) - _avg(input_rows[k])) for k in range(classes))
+        change = sum(abs(_average_occupancy(output_rows[k]) - _average_occupancy(input_rows[k])) for k in range(classes))
     stop = should_stop(state["resolution_per_round"], state["max_percent_used"], change, classes)
     if state["final_round"]:
         return True, False

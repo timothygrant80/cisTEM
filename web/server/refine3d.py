@@ -37,6 +37,8 @@ import sys
 import threading
 from pathlib import Path
 
+import numpy as np
+
 import blush
 import blush_phase
 import db
@@ -202,16 +204,18 @@ def scratch_dir(project_id, job_id):
 
 
 def _class_star(state, tag, k):
-    return str(Path(state["scratch"]) / "refinement_{}_class{}.star".format(tag, k + 1))
+    """The scratch copy of class k's parameters under `tag`: cisTEM's binary form."""
+    return str(Path(state["scratch"]) / "refinement_{}_class{}.cistem".format(tag, k + 1))
 
 
 def _store_rows(state, tag, class_rows):
     for k, rows in enumerate(class_rows):
-        starfile.write_star(_class_star(state, tag, k), rows)
+        starfile.write_params(_class_star(state, tag, k), refinements.as_table(rows))
 
 
 def _load_rows(state, tag):
-    return [starfile.read_star(_class_star(state, tag, k)) for k in range(state["number_of_classes"])]
+    """The per-class parameter tables stored under `tag`."""
+    return [starfile.read_params(_class_star(state, tag, k), as_table=True) for k in range(state["number_of_classes"])]
 
 
 
@@ -265,7 +269,7 @@ def _start(conn, project_id, job_id, params, profile):
         pkg["NAME"], ref["NAME"], n, classes, "" if classes == 1 else "es", "global search" if s["global"] else "local", s["number_of_rounds"],
         "" if s["number_of_rounds"] == 1 else "s", s["high_resolution_limit_a"], profile["name"], recon_profile["name"]))
     if state["initial"]:
-        rows = [refinements.load_rows(conn, ref["REFINEMENT_ID"], k) for k in range(1, classes + 1)]
+        rows = [refinements.load_table(conn, ref["REFINEMENT_ID"], k) for k in range(1, classes + 1)]
         _store_rows(state, "output", rows)
         state["output_refinement_id"] = ref["REFINEMENT_ID"]
         _log(project_id, job_id, "A class has no reference volume yet: reconstructing one from the input parameters first")
@@ -281,21 +285,18 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     s = state["settings"]
     n, classes = state["number_of_particles"], state["number_of_classes"]
     rid = state["output_refinement_id"]
-    rng = random.Random()
+    rng = np.random.default_rng()
     class_rows = _load_rows(state, "output")
     written = []
     for k, rows in enumerate(class_rows):
-        out = []
-        for r in rows:
-            r = dict(r)
-            if state["initial"]:
-                # WritecisTEMStarFiles(percent_used / 100, sigma_override = 1)
-                if s["percent_used"] < 100.0:
-                    r["image_is_active"] = -1 if rng.uniform(-1.0, 1.0) < 1.0 - 2.0 * s["percent_used"] / 100.0 else 1
-                r["sigma"] = 1.0
-            out.append(r)
-        p = str(Path(state["scratch"]) / "recon_input_{}_class{}.star".format(rid, k + 1))
-        starfile.write_star(p, out)
+        out = refinements.as_table(rows).copy()
+        if state["initial"]:
+            # WritecisTEMStarFiles(percent_used / 100, sigma_override = 1)
+            if s["percent_used"] < 100.0:
+                out["image_is_active"] = np.where(rng.uniform(-1.0, 1.0, len(out)) < 1.0 - 2.0 * s["percent_used"] / 100.0, -1, 1)
+            out["sigma"] = 1.0
+        p = str(Path(state["scratch"]) / "recon_input_{}_class{}.cistem".format(rid, k + 1))
+        starfile.write_params(p, out)
         written.append(p)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
     scratch = Path(state["scratch"])
@@ -362,9 +363,9 @@ def _launch_refinement(conn, project_id, job_id, state):
     defaults = default_statistics(state["molecular_weight"], state["pixel_size"], state["box_size"])
     star_files, stats_files = [], []
     for k in range(1, classes + 1):
-        rows = refinements.load_rows(conn, input_id, k)
-        p = str(scratch / "input_par_{}_{}.star".format(input_id, k))
-        starfile.write_star(p, rows)
+        rows = refinements.load_table(conn, input_id, k)
+        p = str(scratch / "input_par_{}_{}.cistem".format(input_id, k))
+        starfile.write_params(p, rows)
         star_files.append(p)
         # WriteStatisticsToFile() writes shells 1..box/2 only; the stored
         # curve (and a package's synthetic one) also has shell 0 and the
@@ -379,7 +380,7 @@ def _launch_refinement(conn, project_id, job_id, state):
     for k in range(classes):
         for j in range(1, jobs + 1):
             first, last = particle_range(j, jobs, n)
-            out_star = str(scratch / "refine_output_{}_class{}_{}.star".format(rid, k + 1, j))
+            out_star = str(scratch / "refine_output_{}_class{}_{}.cistem".format(rid, k + 1, j))
             outputs.append(out_star)
             values = [state["stack_filename"], star_files[k], state["reference_files"][k], stats_files[k], True, "", out_star, "/dev/null",
                       state["symmetry"], first, last, s["percent_used"] / 100.0, state["pixel_size"], state["molecular_weight"],
@@ -487,28 +488,12 @@ def _merge_output_stars(conn, state):
     outputs = state.get("pending_output_stars") or []
     class_rows = []
     for k in range(1, n_classes + 1):
-        inputs = refinements.load_rows(conn, state["input_refinement_id"], k)
-        by_pos = {}
-        for j in range(jobs):
-            idx = (k - 1) * jobs + j
-            p = outputs[idx] if idx < len(outputs) else None
-            if not p or not os.path.isfile(p):
-                raise ValueError("refine3d task {} of class {} left no output star file".format(j + 1, k))
-            for r in starfile.read_star(p):
-                by_pos[r["position_in_stack"]] = r
-        rows = []
-        missing = 0
-        for r in inputs:
-            o = by_pos.get(r["position_in_stack"])
-            merged = dict(r)
-            if o is not None:
-                merged.update({kk: vv for kk, vv in o.items() if kk in starfile.REFINEMENT_KEYS})
-            else:
-                missing += 1
-            rows.append(merged)
-        if missing:
-            raise ValueError("the refine3d tasks of class {} returned {} of {} particles".format(k, len(inputs) - missing, len(inputs)))
-        class_rows.append(rows)
+        inputs = refinements.load_table(conn, state["input_refinement_id"], k)
+        paths = [outputs[(k - 1) * jobs + j] if (k - 1) * jobs + j < len(outputs) else None for j in range(jobs)]
+        try:
+            class_rows.append(starfile.merge_task_outputs(inputs, paths))
+        except ValueError as exc:
+            raise ValueError("{} (class {})".format(exc, k))
     return class_rows
 
 

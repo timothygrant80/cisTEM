@@ -511,8 +511,14 @@ class Generate3DAndRefineCTFTests(unittest.TestCase):
         self.assertFalse(s["auto_mask"]); self.assertEqual(s["mask_radius_a"], 65.0); self.assertEqual(s["defocus_search_step_a"], 20.0)
         cls1 = [{"position_in_stack": 1, "occupancy": 80.0, "defocus_1": 1.0}, {"position_in_stack": 2, "occupancy": 20.0, "defocus_1": 2.0}]
         cls2 = [{"position_in_stack": 1, "occupancy": 20.0, "defocus_1": 3.0}, {"position_in_stack": 2, "occupancy": 80.0, "defocus_1": 4.0}]
-        merged = refinectf.merged_input_rows([cls1, cls2], ["a.mrc", "b.mrc"])
-        self.assertEqual([(r["defocus_1"], r["reference_3d_filename"]) for r in merged], [(1.0, "a.mrc"), (4.0, "b.mrc")])
+        merged, references = refinectf.merged_input_rows([cls1, cls2], ["a.mrc", "b.mrc"])
+        self.assertEqual(list(zip(merged["defocus_1"].tolist(), references)), [(1.0, "a.mrc"), (4.0, "b.mrc")])
+        # The one input file refine_ctf reads carries the reference name per row, as a string column of the binary file.
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), "in.cistem")
+        starfile.write_params(path, merged, string_columns={"reference_3d_filename": references})
+        back = starfile.read_params(path)
+        self.assertEqual([(r["defocus_1"], r["reference_3d_filename"]) for r in back], [(1.0, "a.mrc"), (4.0, "b.mrc")])
 
     def test_beam_tilt_phase_image_and_significance(self):
         import refinectf

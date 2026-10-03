@@ -216,3 +216,88 @@ class StatisticsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TableRoundTests(unittest.TestCase):
+    """The 2D driver's round on parameter tables and binary files."""
+
+    def _particles(self, n):
+        import numpy as np
+        import starfile
+        pt = np.zeros(n, dtype=starfile.table_dtype(c._PARTICLE_KEYS))
+        pt["position_in_stack"] = np.arange(1, n + 1)
+        pt["pixel_size"] = 1.1
+        pt["voltage"] = 300.0
+        pt["defocus_1"] = 10000.0 + np.arange(n)
+        return pt
+
+    def test_initial_rows_is_unclassified_with_the_package_imaging(self):
+        import numpy as np
+        t = c.initial_rows(self._particles(4))
+        self.assertEqual(t["sigma"].tolist(), [10.0] * 4)
+        self.assertEqual(t["best_2d_class"].tolist(), [0] * 4)
+        np.testing.assert_allclose(t["pixel_size"], [1.1] * 4, rtol=1e-6)   # float32 columns
+        self.assertEqual(t["defocus_1"].tolist(), [10000.0, 10001.0, 10002.0, 10003.0])
+        # the same from the dict rows package_particles() returns
+        rows = [{"POSITION_IN_STACK": 1, "DEFOCUS_1": 5.0, "DEFOCUS_2": None, "DEFOCUS_ANGLE": 0.0, "PHASE_SHIFT": 0.0,
+                 "PIXEL_SIZE": 2.0, "MICROSCOPE_VOLTAGE": 200.0, "SPHERICAL_ABERRATION": 2.7, "AMPLITUDE_CONTRAST": 0.07}]
+        t2 = c.initial_rows(rows)
+        self.assertEqual(t2["defocus_1"].tolist(), [5.0])
+        self.assertEqual(t2["defocus_2"].tolist(), [0.0])
+        self.assertEqual(t2["voltage"].tolist(), [200.0])
+
+    def test_round_merge_keeps_unwritten_particles_unclassified(self):
+        import tempfile
+        import numpy as np
+        import starfile
+        pt = self._particles(6)
+        init = c.initial_rows(pt)
+        keys = ("position_in_stack", "best_2d_class", "psi", "x_shift", "y_shift", "logp", "sigma", "pixel_size")
+        with tempfile.TemporaryDirectory() as d:
+            paths = []
+            for k, positions in enumerate(([1, 2], [3, 4]), 1):   # particles 5 and 6 written by no task
+                rt = np.zeros(len(positions), dtype=starfile.table_dtype(keys))
+                rt["position_in_stack"] = positions
+                rt["best_2d_class"] = k
+                rt["psi"] = 30.0 * k
+                rt["sigma"] = 1.0
+                rt["pixel_size"] = 1.1
+                paths.append(c.write_params(os.path.join(d, "round_1_{}.cistem".format(k)), rt))
+            merged = starfile.merge_task_outputs(init, paths, what="refine2d", require_all=False)
+            with self.assertRaises(ValueError):
+                starfile.merge_task_outputs(init, paths, what="refine2d")
+        self.assertEqual(merged["best_2d_class"].tolist(), [1, 1, 2, 2, 0, 0])
+        self.assertEqual(merged["psi"].tolist(), [30.0, 30.0, 60.0, 60.0, 0.0, 0.0])
+        self.assertEqual(merged["sigma"].tolist(), [1.0, 1.0, 1.0, 1.0, 10.0, 10.0])
+        self.assertEqual(merged["defocus_1"].tolist(), init["defocus_1"].tolist())   # a column the tasks did not write
+        stats = c.round_statistics(merged, init)
+        self.assertEqual(stats["active_particles"], 4)
+        self.assertEqual(stats["percent_moved"], 100.0)
+
+    def test_results_table_round_trip_as_tables(self):
+        import numpy as np
+        conn = db.get_conn(self.project_id) if hasattr(self, "project_id") else None
+        if conn is None:
+            import tempfile
+            d = tempfile.mkdtemp()
+            import sqlite3
+            conn = sqlite3.connect(os.path.join(d, "p.db"))
+            conn.row_factory = sqlite3.Row
+            conn.execute("CREATE TABLE CLASSIFICATION_RESULT_3 ({})".format(", ".join(
+                col + (" INTEGER" if col in ("POSITION_IN_STACK", "BEST_CLASS") else " REAL") for col in c.RESULT_COLUMNS)))
+        pt = self._particles(3)
+        t = c.initial_rows(pt)
+        t["best_2d_class"] = [1, -2, 0]
+        t["psi"] = [10.0, 20.0, 30.0]
+        t["pixel_size"][2] = 0.0   # never took part: refilled from the package
+        dt = t.dtype
+        columns = [(t[k].astype(int).tolist() if dt[k].kind in "iu" else t[k].astype(float).tolist()) for k in c._RESULT_KEYS]
+        conn.executemany("INSERT INTO CLASSIFICATION_RESULT_3 VALUES ({})".format(",".join("?" * len(c.RESULT_COLUMNS))), list(zip(*columns)))
+        conn.commit()
+        back = c.load_result_table(conn, 3)
+        self.assertEqual(back["best_2d_class"].tolist(), [1, -2, 0])
+        self.assertEqual(back["psi"].tolist(), [10.0, 20.0, 30.0])
+        rows = c.classification_rows(conn, 3, pt)
+        np.testing.assert_allclose(rows["pixel_size"], [1.1, 1.1, 1.1], rtol=1e-6)
+        self.assertEqual(rows["defocus_1"].tolist(), [10000.0, 10001.0, 10002.0])
+        self.assertEqual(c.round_statistics(rows, rows)["active_particles"], 1)

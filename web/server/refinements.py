@@ -27,7 +27,10 @@ import math
 import os
 import threading
 
+import numpy as np
+
 import db
+import starfile
 import symmetry as symmetry_module
 
 RESULT_COLUMNS = ("POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT",
@@ -100,15 +103,38 @@ def refinement_row(conn, refinement_id):
     return conn.execute("SELECT * FROM REFINEMENT_LIST WHERE REFINEMENT_ID=?", (int(refinement_id),)).fetchone()
 
 
-def load_rows(conn, refinement_id, class_number):
-    """REFINEMENT_RESULT_<id>_<k> as star rows."""
+def load_table(conn, refinement_id, class_number):
+    """REFINEMENT_RESULT_<id>_<k> as a parameter table (starfile.table_dtype(RESULT_KEYS), ordered by position).
+    One fetch into a structured array: the drivers hold a class's particles this way."""
     table = "REFINEMENT_RESULT_{}_{}".format(int(refinement_id), int(class_number))
     if not _table_exists(conn, table):
         raise ValueError("refinement {} has no results for class {}".format(refinement_id, class_number))
-    rows = []
-    for r in conn.execute("SELECT * FROM {} ORDER BY POSITION_IN_STACK".format(table)).fetchall():
-        rows.append({k: (r[c] if r[c] is not None else 0) for k, c in zip(RESULT_KEYS, RESULT_COLUMNS)})
-    return rows
+    dt = starfile.table_dtype(RESULT_KEYS)
+    cur = conn.cursor()
+    cur.row_factory = None   # plain tuples: a million rows in about a second rather than four as sqlite3.Row objects
+    rows = cur.execute("SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in RESULT_COLUMNS), table)).fetchall()
+    out = np.zeros(len(rows), dtype=dt)
+    if rows:
+        plain = np.array(rows, dtype=float)   # one conversion, then per column
+        for i, k in enumerate(RESULT_KEYS):
+            out[k] = plain[:, i]
+    return out
+
+
+def load_rows(conn, refinement_id, class_number):
+    """REFINEMENT_RESULT_<id>_<k> as star rows (dicts); load_table() is the array form the drivers use."""
+    return starfile.table_to_rows(load_table(conn, refinement_id, class_number))
+
+
+def as_table(rows_or_table, keys=RESULT_KEYS):
+    """A parameter table from either form. Dict rows that lack a column get 0, except
+    occupancy (100: a particle wholly in its class) and image_is_active (1: active)."""
+    if isinstance(rows_or_table, np.ndarray):
+        return rows_or_table
+    rows = rows_or_table
+    if rows and ("occupancy" not in rows[0] or "image_is_active" not in rows[0]):
+        rows = [dict({"occupancy": 100.0, "image_is_active": 1}, **r) for r in rows]
+    return starfile.rows_to_table(rows, keys)
 
 
 def load_statistics(conn, refinement_id, class_number):
@@ -160,20 +186,21 @@ def _theta_phi_bin(theta, phi):
 
 _THETA_BOUNDS = [math.degrees(math.acos(t / 90.0)) for t in (90.0 - 90.0 / THETA_BINS * i for i in range(1, THETA_BINS)) if t > 0]
 _PHI_BOUNDS = [360.0 / PHI_BINS * i for i in range(1, PHI_BINS)]
+_THETA_BOUNDS_ARRAY = np.array(_THETA_BOUNDS)   # bin = number of bounds the value is >= : searchsorted(side="right")
+_PHI_BOUNDS_ARRAY = np.array(_PHI_BOUNDS)
 
 
 def best_class_per_particle(class_rows):
     """Refinement::ReturnClassWithHighestOccupanyForGivenParticle() for
     every particle: the 1-based class with the highest occupancy, matched
-    across classes by position in the stack."""
-    best = {}
-    for k, rows in enumerate(class_rows, start=1):
-        for r in rows:
-            pos = int(r.get("position_in_stack", 0))
-            occ = float(r.get("occupancy", 0.0))
-            if pos not in best or occ > best[pos][0]:
-                best[pos] = (occ, k)
-    return {pos: k for pos, (occ, k) in best.items()}
+    across classes by position in the stack (ties to the lower class)."""
+    tables = [as_table(c) for c in class_rows]
+    if not tables:
+        return {}
+    positions = tables[0]["position_in_stack"]
+    occ = np.stack([t["occupancy"] for t in tables], 0)      # classes x particles (same order in every class)
+    best = np.argmax(occ, axis=0) + 1                          # argmax takes the first maximum: the lower class on a tie
+    return {int(p): int(b) for p, b in zip(positions, best)}
 
 
 def angular_histogram(class_rows, wanted_class=1, symmetry="C1"):
@@ -188,29 +215,40 @@ def angular_histogram(class_rows, wanted_class=1, symmetry="C1"):
     nearly every particle of a classification that has not separated yet
     into whichever class is marginally ahead. One class (occupancy 100)
     gives the plain counts. `class_rows` is the per-class list of particle
-    rows; a flat list of rows is taken as a single class."""
-    if class_rows and isinstance(class_rows[0], dict):
+    tables (or dict rows); a flat list of rows or one table is a single class.
+    Vectorised: the pole of every particle under every symmetry mate at once."""
+    if isinstance(class_rows, np.ndarray) or (class_rows and isinstance(class_rows[0], dict)):
         class_rows = [class_rows]
-    hist = [0.0] * (THETA_BINS * PHI_BINS)
+    hist = np.zeros(THETA_BINS * PHI_BINS)
     if not class_rows or wanted_class < 1 or wanted_class > len(class_rows):
-        return hist
+        return hist.tolist()
+    table = as_table(class_rows[wanted_class - 1])
+    if len(table) == 0:
+        return hist.tolist()
     try:
         mats = symmetry_module.matrices(symmetry)
     except ValueError:
         mats = symmetry_module.matrices("C1")
-    for r in class_rows[wanted_class - 1]:
-        if r.get("image_is_active", 1) < 0:
-            continue
-        weight = float(r.get("occupancy", 100.0)) / 100.0
-        if weight <= 0.0:
-            continue
-        em = symmetry_module.euler_matrix(float(r.get("phi", 0.0)), float(r.get("theta", 0.0)), float(r.get("psi", 0.0)))
-        for rm in mats:
-            x, y, z = symmetry_module.rotate(symmetry_module.matmul(rm, em), (0.0, 0.0, 1.0))
-            if z < 0.0:
-                x, y = -x, -y
-            hist[_theta_phi_bin(symmetry_module.projection_theta_deg(x, y), symmetry_module.projection_phi_deg(x, y))] += weight
-    return hist
+    active = table["image_is_active"] >= 0
+    weight = np.where(active, table["occupancy"].astype(float) / 100.0, 0.0)
+    keep = weight > 0.0
+    if not keep.any():
+        return hist.tolist()
+    weight = weight[keep]
+    phi = np.radians(table["phi"][keep].astype(float)); theta = np.radians(table["theta"][keep].astype(float))
+    # The north pole under the Euler rotation is the matrix's third column: (sin t cos p, sin t sin p, cos t); psi does not move it.
+    pole = np.stack([np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)], 1)   # particles x 3
+    for rm in mats:
+        v = pole @ np.asarray(rm, dtype=float).T                 # rotate every pole by this symmetry mate
+        flip = v[:, 2] < 0.0
+        v[flip, 0] = -v[flip, 0]; v[flip, 1] = -v[flip, 1]
+        x, y = v[:, 0], v[:, 1]
+        t_deg = np.degrees(np.arcsin(np.minimum(1.0, np.sqrt(x * x + y * y))))
+        p_deg = np.where((x == 0) & (y == 0), 0.0, np.degrees(np.arctan2(y, x))) % 360.0
+        tb = np.searchsorted(_THETA_BOUNDS_ARRAY, t_deg, side="right")
+        pb = np.searchsorted(_PHI_BOUNDS_ARRAY, p_deg, side="right")
+        hist += np.bincount(THETA_BINS * pb + tb, weights=weight, minlength=THETA_BINS * PHI_BINS)
+    return hist.tolist()
 
 
 def write_angular_distribution(conn, rid, k, hist):
@@ -261,8 +299,9 @@ def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=Tr
             conn.execute("INSERT INTO REFINEMENT_DETAILS_{} VALUES ({})".format(rid, ",".join("?" * len(DETAIL_COLUMNS))), values)
             conn.execute("DROP TABLE IF EXISTS REFINEMENT_RESULT_{}_{}".format(rid, k))
             conn.execute("CREATE TABLE REFINEMENT_RESULT_{}_{}({})".format(rid, k, RESULT_DDL))
+            table = as_table(class_rows[k - 1])
             conn.executemany("INSERT OR REPLACE INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(rid, k, ",".join("?" * len(RESULT_KEYS))),
-                             [tuple(r.get(key, 0) for key in RESULT_KEYS) for r in class_rows[k - 1]])
+                             _result_tuples(table))
             write_statistics(conn, rid, k, class_stats[k - 1] if k - 1 < len(class_stats) else [])
             if angular:
                 write_angular_distribution(conn, rid, k, angular_histogram(class_rows, k, symmetry))
@@ -277,6 +316,15 @@ def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=Tr
 
 _DETAIL_DEFAULTS = {"REFERENCE_VOLUME_ASSET_ID": -1, "RECONSTRUCTED_VOLUME_ASSET_ID": -1, "RECONSTRUCTION_ID": -1, "MASK_ASSET_ID": -1,
                     "AVERAGE_OCCUPANCY": 100.0, "MASK_EDGE_WIDTH": 10.0, "MASK_FILTER_RESOLUTION": 20.0, "SHOULD_REFINE_INPUT_PARAMS": 1}
+
+
+def _result_tuples(table):
+    """The rows of a parameter table in RESULT_KEYS order as Python tuples for executemany (ints as int)."""
+    cols = []
+    for k in RESULT_KEYS:
+        col = table[k] if k in table.dtype.names else np.zeros(len(table))
+        cols.append(col.astype(int).tolist() if starfile.table_dtype(RESULT_KEYS)[k].kind in "iu" else col.astype(float).tolist())
+    return list(zip(*cols))
 
 
 def write_statistics(conn, refinement_id, class_number, stats):

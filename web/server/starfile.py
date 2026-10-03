@@ -125,22 +125,53 @@ def table_to_rows(table):
     return [{n: c(v) for n, c, v in zip(names, casts, values)} for values in zip(*columns)]
 
 
-def write_cistem_binary(path, rows_or_table, keys=REFINEMENT_KEYS):
-    """Write cisTEM's binary parameter file: dict rows or a structured array, the columns in cisTEM's order."""
+def write_cistem_binary(path, rows_or_table, keys=REFINEMENT_KEYS, string_columns=None):
+    """Write cisTEM's binary parameter file: dict rows or a structured array, the columns in
+    cisTEM's order. `string_columns` ({key: list of str, one per row}) adds variable-length
+    string columns such as reference_3d_filename, which have no fixed-width form; a file with
+    them is written row by row (refine_ctf's one input file), the rest in one call."""
     if isinstance(rows_or_table, np.ndarray):
+        # cisTEM's column order, packed: a field-subset view (table[["a", "b"]]) keeps its parent's
+        # itemsize and offsets, and tobytes() of that would write the padding into the file. Copied
+        # column by column: astype() between structured dtypes matches fields by position, not name.
         table = rows_or_table
-        if set(table.dtype.names) != set(table_dtype(table.dtype.names).names) or list(table.dtype.names) != list(table_dtype(table.dtype.names).names):
-            table = table[list(table_dtype(table.dtype.names).names)]   # cisTEM's column order
+        dt = table_dtype(table.dtype.names)
+        if table.dtype != dt:
+            packed = np.empty(len(table), dtype=dt)
+            for k in dt.names:
+                packed[k] = table[k]
+            table = packed
     else:
-        table = rows_to_table(rows_or_table, keys)
-    names = table.dtype.names
-    header = [np.array([len(names), len(table)], dtype="<i4").tobytes()]
-    for k in names:
+        numeric = [k for k in keys if _BY_KEY[k][3] is not str]
+        strings = [k for k in keys if _BY_KEY[k][3] is str]
+        if strings and string_columns is None:
+            string_columns = {k: [str(r.get(k, "")) for r in rows_or_table] for k in strings}
+        table = rows_to_table(rows_or_table, numeric)
+    string_columns = string_columns or {}
+    names = list(table.dtype.names)
+    all_keys = sorted(names + list(string_columns), key=lambda k: _ORDER[k])
+    header = [np.array([len(all_keys), len(table)], dtype="<i4").tobytes()]
+    for k in all_keys:
         header.append(np.array([_BITMASK[k]], dtype="<i8").tobytes())
         header.append(bytes([_BINARY_TYPE[k]]))
     with open(path, "wb") as fh:
         fh.write(b"".join(header))
-        fh.write(np.ascontiguousarray(table).tobytes())
+        if not string_columns:
+            fh.write(np.ascontiguousarray(table).tobytes())
+            return
+        # Row by row: each numeric column's bytes, each string as an int32 length and its bytes, in column order.
+        numeric_bytes = {k: np.ascontiguousarray(table[k]).tobytes() for k in names}
+        sizes = {k: table.dtype[k].itemsize for k in names}
+        encoded = {k: [str(v).encode("utf-8") for v in vals] for k, vals in string_columns.items()}
+        out = []
+        for i in range(len(table)):
+            for k in all_keys:
+                if k in numeric_bytes:
+                    out.append(numeric_bytes[k][i * sizes[k]:(i + 1) * sizes[k]])
+                else:
+                    b = encoded[k][i]
+                    out.append(len(b).to_bytes(4, "little", signed=True)); out.append(b)
+        fh.write(b"".join(out))
 
 
 def read_cistem_binary(path, as_table=False):
@@ -196,13 +227,20 @@ def read_params(path, as_table=False):
     return rows
 
 
-def write_params(path, rows_or_table, keys=REFINEMENT_KEYS, comments=()):
-    """Write a parameter file, binary or text by extension."""
+def write_params(path, rows_or_table, keys=REFINEMENT_KEYS, comments=(), string_columns=None):
+    """Write a parameter file, binary or text by extension (`string_columns` as for write_cistem_binary)."""
     if is_binary_path(path):
-        write_cistem_binary(path, rows_or_table, keys)
+        write_cistem_binary(path, rows_or_table, keys, string_columns)
     else:
-        rows = table_to_rows(rows_or_table) if isinstance(rows_or_table, np.ndarray) else rows_or_table
-        write_star(path, rows, keys if not isinstance(rows_or_table, np.ndarray) else rows_or_table.dtype.names, comments)
+        if isinstance(rows_or_table, np.ndarray):
+            rows = table_to_rows(rows_or_table)
+            keys = tuple(rows_or_table.dtype.names) + tuple(string_columns or ())
+            for k, vals in (string_columns or {}).items():
+                for r, v in zip(rows, vals):
+                    r[k] = v
+        else:
+            rows = rows_or_table
+        write_star(path, rows, keys, comments)
 
 
 
@@ -269,3 +307,42 @@ def read_star(path):
                     row[key] = 0
             rows.append(row)
     return rows
+
+
+def merge_task_outputs(input_table, output_paths, what="refine3d", require_all=True):
+    """One class's parameter table after a refinement round: the input table with every
+    column the program wrote taken from its task outputs, matched by position in the stack.
+    `output_paths` are the tasks' output parameter files (binary or text, by extension); a
+    task that left no file or returned fewer particles than it was given fails the round
+    rather than leaving those particles on last round's values. Vectorised: the outputs are
+    concatenated and placed by a sorted lookup of positions."""
+    input_table = rows_to_table(input_table) if not isinstance(input_table, np.ndarray) else input_table
+    tables = []
+    for j, p in enumerate(output_paths):
+        if not p or not os.path.isfile(p):
+            raise ValueError("{} task {} left no output parameter file".format(what, j + 1))
+        t = read_params(p, as_table=True)
+        if len(t):
+            tables.append(t)
+    merged = input_table.copy()
+    if not tables:
+        if len(input_table):
+            raise ValueError("the {} tasks returned 0 of {} particles".format(what, len(input_table)))
+        return merged
+    # The outputs may carry fewer or more columns than the input; take the columns both have.
+    columns = [k for k in tables[0].dtype.names if k in merged.dtype.names and k != "position_in_stack"]
+    out = np.concatenate([t[["position_in_stack"] + columns] if set(t.dtype.names) >= set(columns) else t for t in tables])
+    positions = merged["position_in_stack"].astype(np.int64)
+    order = np.argsort(positions, kind="stable")
+    sorted_positions = positions[order]
+    idx = np.searchsorted(sorted_positions, out["position_in_stack"].astype(np.int64))
+    idx = np.clip(idx, 0, len(positions) - 1)
+    found = sorted_positions[idx] == out["position_in_stack"].astype(np.int64)
+    target = order[idx[found]]
+    for k in columns:
+        merged[k][target] = out[k][found]
+    returned = np.zeros(len(merged), dtype=bool)
+    returned[target] = True
+    if require_all and not returned.all():
+        raise ValueError("the {} tasks returned {} of {} particles".format(what, int(returned.sum()), len(merged)))
+    return merged

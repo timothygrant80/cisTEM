@@ -70,6 +70,7 @@ import progress_store
 import job_protocol as jp
 import preview
 import refinement_packages
+import starfile
 from stages import merge2d, refine2d
 
 STAGE = "class2d"
@@ -198,6 +199,25 @@ _STAR_SHORT_HEADER = ("     POS     PSI       SHX       SHY      DF1      DF2  A
                       "   VOLT      Cs    AmpC  BTILTX  BTILTY  ISHFTX  ISHFTY 2DCLS")
 _STAR_LABEL_TO_KEY = {label: key for key, label, _fmt, _cast in STAR_COLUMNS}
 _STAR_CASTS = {key: cast for key, _label, _fmt, cast in STAR_COLUMNS}
+CLASS2D_KEYS = tuple(key for key, _label, _fmt, _cast in STAR_COLUMNS)
+
+
+def as_table(rows_or_table):
+    """A 2D parameter table (starfile.table_dtype(CLASS2D_KEYS)) from dict rows or a table."""
+    if isinstance(rows_or_table, np.ndarray):
+        return rows_or_table
+    return starfile.rows_to_table(rows_or_table, CLASS2D_KEYS)
+
+
+def write_params(path, rows_or_table, comments=()):
+    """A 2D parameter file, binary or text by extension (the programs read either; .cistem is what the driver writes)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if starfile.is_binary_path(path):
+        starfile.write_cistem_binary(str(path), as_table(rows_or_table), CLASS2D_KEYS)
+    else:
+        write_star(path, starfile.table_to_rows(rows_or_table) if isinstance(rows_or_table, np.ndarray) else rows_or_table, comments)
+    return str(path)
 
 
 def empty_result(position_in_stack):
@@ -270,22 +290,25 @@ def round_statistics(output_rows, input_rows):
     """CycleRefinement()'s per-round numbers: mean logP and sigma over the
     particles that took part (best class > 0), and the percentage of those
     whose class changed from the input classification."""
-    input_class = {r["position_in_stack"]: abs(int(r.get("best_2d_class", 0))) for r in input_rows}
-    active = moved = 0
-    sum_logp = sum_sigma = 0.0
-    for r in output_rows:
-        bc = int(r.get("best_2d_class", 0))
-        if bc <= 0:
-            continue
-        active += 1
-        sum_logp += float(r.get("logp", 0.0))
-        sum_sigma += float(r.get("sigma", 0.0))
-        if bc != input_class.get(r["position_in_stack"], 0):
-            moved += 1
+    out = as_table(output_rows)
+    inp = as_table(input_rows)
+    bc = out["best_2d_class"].astype(np.int64)
+    took_part = bc > 0
+    active = int(took_part.sum())
     if active == 0:
         return {"active_particles": 0, "average_logp": None, "average_sigma": None, "percent_moved": None}
-    return {"active_particles": active, "average_logp": sum_logp / active, "average_sigma": sum_sigma / active,
-            "percent_moved": 100.0 * moved / active}
+    # The input class of each output particle, matched by position (0 for one the input does not have).
+    in_pos = inp["position_in_stack"].astype(np.int64)
+    order = np.argsort(in_pos, kind="stable")
+    sorted_pos = in_pos[order]
+    out_pos = out["position_in_stack"].astype(np.int64)
+    idx = np.clip(np.searchsorted(sorted_pos, out_pos), 0, max(len(sorted_pos) - 1, 0))
+    found = (len(sorted_pos) > 0) & (sorted_pos[idx] == out_pos) if len(sorted_pos) else np.zeros(len(out_pos), dtype=bool)
+    input_class = np.zeros(len(out), dtype=np.int64)
+    input_class[found] = np.abs(inp["best_2d_class"].astype(np.int64)[order][idx[found]])
+    moved = int((took_part & (bc != input_class)).sum())
+    return {"active_particles": active, "average_logp": float(out["logp"][took_part].astype(float).mean()),
+            "average_sigma": float(out["sigma"][took_part].astype(float).mean()), "percent_moved": 100.0 * moved / active}
 
 
 # ---------------------------------------------------------------------------
@@ -366,18 +389,64 @@ def package_particles(conn, package_id):
     return conn.execute("SELECT * FROM {} ORDER BY POSITION_IN_STACK".format(table)).fetchall()
 
 
+_PARTICLE_COLUMNS = ("POSITION_IN_STACK", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE",
+                     "SPHERICAL_ABERRATION", "AMPLITUDE_CONTRAST")
+_PARTICLE_KEYS = ("position_in_stack", "defocus_1", "defocus_2", "defocus_angle", "phase_shift", "pixel_size", "voltage", "cs", "amplitude_contrast")
+
+
+def package_particle_count(conn, package_id):
+    """How many particles the package contains, without reading them."""
+    table = "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(int(package_id))
+    if not _table_exists(conn, table):
+        return 0
+    return int(conn.execute("SELECT COUNT(*) FROM {}".format(table)).fetchone()[0])
+
+
+def package_particle_table(conn, package_id):
+    """The package's contained particles in stack order as a table of the imaging columns the 2D files take
+    (one fetch, no dict per particle: a five-million-particle package reads in seconds rather than minutes)."""
+    table = "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(int(package_id))
+    dt = starfile.table_dtype(_PARTICLE_KEYS)
+    if not _table_exists(conn, table):
+        return np.zeros(0, dtype=dt)
+    return _fetch_table(conn, "SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in _PARTICLE_COLUMNS), table),
+                        _PARTICLE_KEYS, dt)
+
+
+def _fetch_table(conn, sql, keys, dt):
+    """A query's rows (one numeric column per key, in order) as a table. A plain-tuple cursor
+    rather than sqlite3.Row objects: a million rows take about a second instead of four."""
+    cur = conn.cursor()
+    cur.row_factory = None
+    rows = cur.execute(sql).fetchall()
+    out = np.zeros(len(rows), dtype=dt)
+    if rows:
+        plain = np.array(rows, dtype=float)
+        for i, k in enumerate(keys):
+            out[k] = plain[:, i]
+    return out
+
+
+def _particles_as_table(particles):
+    """Rows from package_particles(), or a table from package_particle_table(), as the table."""
+    if isinstance(particles, np.ndarray):
+        return particles
+    dt = starfile.table_dtype(_PARTICLE_KEYS)
+    out = np.zeros(len(particles), dtype=dt)
+    for k, c in zip(_PARTICLE_KEYS, _PARTICLE_COLUMNS):
+        out[k] = [p[c] or 0 for p in particles]
+    return out
+
+
 def initial_rows(particles):
     """RunInitialStartJob()'s output_classification before anything ran:
     every particle unclassified, with its imaging parameters from the package."""
-    rows = []
-    for p in particles:
-        r = empty_result(p["POSITION_IN_STACK"])
-        r.update({"defocus_1": p["DEFOCUS_1"] or 0.0, "defocus_2": p["DEFOCUS_2"] or 0.0,
-                  "defocus_angle": p["DEFOCUS_ANGLE"] or 0.0, "phase_shift": p["PHASE_SHIFT"] or 0.0,
-                  "pixel_size": p["PIXEL_SIZE"] or 0.0, "voltage": p["MICROSCOPE_VOLTAGE"] or 0.0,
-                  "cs": p["SPHERICAL_ABERRATION"] or 0.0, "amplitude_contrast": p["AMPLITUDE_CONTRAST"] or 0.0})
-        rows.append(r)
-    return rows
+    pt = _particles_as_table(particles)
+    table = np.zeros(len(pt), dtype=starfile.table_dtype(CLASS2D_KEYS))
+    table["sigma"] = 10.0   # ClassificationResult's constructor: unclassified, sigma 10, class 0
+    for k in _PARTICLE_KEYS:
+        table[k] = pt[k]
+    return table
 
 
 def classification_rows(conn, classification_id, particles):
@@ -387,21 +456,33 @@ def classification_rows(conn, classification_id, particles):
     table = results_table(classification_id)
     if not _table_exists(conn, table):
         raise ValueError("classification {} has no results table".format(classification_id))
-    by_pos = {p["POSITION_IN_STACK"]: p for p in particles}
-    rows = []
-    for r in conn.execute("SELECT * FROM {} ORDER BY POSITION_IN_STACK".format(table)).fetchall():
-        row = {k: (r[c] if r[c] is not None else 0) for k, c in zip(_RESULT_KEYS, RESULT_COLUMNS)}
-        p = by_pos.get(r["POSITION_IN_STACK"])
-        if p is not None:
-            row.update({"defocus_1": p["DEFOCUS_1"] or 0.0, "defocus_2": p["DEFOCUS_2"] or 0.0,
-                        "defocus_angle": p["DEFOCUS_ANGLE"] or 0.0, "phase_shift": p["PHASE_SHIFT"] or 0.0})
-            # A particle that never took part has zeros here; refine2d
-            # divides by the pixel size, so give it the package's values.
-            if not row["pixel_size"]:
-                row.update({"pixel_size": p["PIXEL_SIZE"] or 0.0, "voltage": p["MICROSCOPE_VOLTAGE"] or 0.0,
-                            "cs": p["SPHERICAL_ABERRATION"] or 0.0, "amplitude_contrast": p["AMPLITUDE_CONTRAST"] or 0.0})
-        rows.append(row)
-    return rows
+    out = load_result_table(conn, classification_id)
+    pt = _particles_as_table(particles)
+    # Match the package's particles to the results by position; refresh the CTF from the package, and give a
+    # particle that never took part (pixel size 0; refine2d divides by it) the package's imaging values.
+    ppos = pt["position_in_stack"].astype(np.int64)
+    order = np.argsort(ppos, kind="stable")
+    sorted_pos = ppos[order]
+    rpos = out["position_in_stack"].astype(np.int64)
+    idx = np.clip(np.searchsorted(sorted_pos, rpos), 0, max(len(sorted_pos) - 1, 0))
+    found = (len(sorted_pos) > 0) & (sorted_pos[idx] == rpos) if len(sorted_pos) else np.zeros(len(rpos), dtype=bool)
+    src = order[idx[found]]
+    for k in ("defocus_1", "defocus_2", "defocus_angle", "phase_shift"):
+        out[k][found] = pt[k][src]
+    never = found & (out["pixel_size"] == 0)
+    src_never = order[idx[never]]
+    for k in ("pixel_size", "voltage", "cs", "amplitude_contrast"):
+        out[k][never] = pt[k][src_never]
+    return out
+
+
+def load_result_table(conn, classification_id):
+    """CLASSIFICATION_RESULT_<id> as a 2D parameter table, ordered by position."""
+    table = results_table(classification_id)
+    if not _table_exists(conn, table):
+        raise ValueError("classification {} has no results table".format(classification_id))
+    return _fetch_table(conn, "SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in RESULT_COLUMNS), table),
+                        _RESULT_KEYS, starfile.table_dtype(CLASS2D_KEYS))
 
 
 def add_classification(conn, cls, rows):
@@ -429,8 +510,10 @@ def add_classification(conn, cls, rows):
         conn.execute("CREATE TABLE {}(POSITION_IN_STACK INTEGER PRIMARY KEY, PSI REAL, XSHIFT REAL, YSHIFT REAL, BEST_CLASS INTEGER, "
                      "SIGMA REAL, LOGP REAL, PIXEL_SIZE REAL, VOLTAGE REAL, CS REAL, AMPLITUDE_CONTRAST REAL, DEFOCUS_1 REAL, DEFOCUS_2 REAL, "
                      "DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, BEAM_TILT_X REAL, BEAM_TILT_Y REAL, IMAGE_SHIFT_X REAL, IMAGE_SHIFT_Y REAL)".format(table))
-        conn.executemany("INSERT OR REPLACE INTO {} VALUES ({})".format(table, ",".join("?" * len(RESULT_COLUMNS))),
-                         [tuple(r.get(k, 0) for k in _RESULT_KEYS) for r in rows])
+        t = as_table(rows)
+        dt = starfile.table_dtype(CLASS2D_KEYS)
+        columns = [(t[k].astype(int).tolist() if dt[k].kind in "iu" else t[k].astype(float).tolist()) for k in _RESULT_KEYS]
+        conn.executemany("INSERT OR REPLACE INTO {} VALUES ({})".format(table, ",".join("?" * len(RESULT_COLUMNS))), list(zip(*columns)))
         list_table = "REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_{}".format(package_id)
         conn.execute("CREATE TABLE IF NOT EXISTS {}(CLASSIFICATION_NUMBER INTEGER PRIMARY KEY, CLASSIFICATION_ID INTEGER)".format(list_table))
         if conn.execute("SELECT 1 FROM {} WHERE CLASSIFICATION_ID=?".format(list_table), (cid,)).fetchone() is None:
@@ -819,8 +902,8 @@ def validate(conn, params):
     pkg = package_row(conn, package_id)
     if pkg is None:
         raise ValueError("refinement package {} does not exist".format(package_id))
-    particles = package_particles(conn, package_id)
-    if not particles:
+    particles = package_particle_table(conn, package_id)
+    if len(particles) == 0:
         raise ValueError("refinement package {!r} contains no particles".format(pkg["NAME"]))
     if not pkg["STACK_FILENAME"] or not os.path.isfile(pkg["STACK_FILENAME"]):
         raise ValueError("the particle stack {} is missing".format(pkg["STACK_FILENAME"]))
@@ -859,7 +942,7 @@ def _start(conn, project_id, job_id, params, profile):
     state = {
         "phase": None, "round": 0, "rounds": s["number_of_rounds"], "settings": s,
         "package_id": pkg["REFINEMENT_PACKAGE_ASSET_ID"], "package_name": pkg["NAME"],
-        "stack_filename": pkg["STACK_FILENAME"], "pixel_size": float(pkg["OUTPUT_PIXEL_SIZE"] or particles[0]["PIXEL_SIZE"] or 1.0),
+        "stack_filename": pkg["STACK_FILENAME"], "pixel_size": float(pkg["OUTPUT_PIXEL_SIZE"] or particles["pixel_size"][0] or 1.0),
         "box_size": int(pkg["STACK_BOX_SIZE"] or 0), "invert_contrast": bool(pkg["STACK_HAS_WHITE_PROTEIN"]),
         "number_of_particles": len(particles), "profile_name": profile["name"], "profile_total_jobs": int(profile["total_jobs"]),
         "start_with_random": start_cls is None, "first_round_id": None, "input_classification_id": None,
@@ -932,8 +1015,7 @@ def _launch_startup(conn, project_id, job_id, state, particles):
         "auto_percent_used": s["auto_percent_used"], "percent_used": startup_percent_used(s["number_of_classes"], n),
         "job_id": job_id,
     }
-    star = write_star(scratch_dir(project_id, job_id) / "classification_input_star_{}.star".format(cid), initial_rows(particles),
-                      comments=["Input for Random Start #{}".format(cid)])
+    star = write_params(scratch_dir(project_id, job_id) / "classification_input_star_{}.cistem".format(cid), initial_rows(particles))
     values = [state["stack_filename"], star, "/dev/null", "/dev/null", output["class_average_file"],
               s["number_of_classes"], 1, n, output["percent_used"] / 100.0, state["pixel_size"], s["mask_radius"],
               output["low_resolution_limit"], output["high_resolution_limit"], s["angular_step"], s["max_search_range"],
@@ -979,8 +1061,7 @@ def _launch_refine(conn, project_id, job_id, state, particles):
         "auto_percent_used": s["auto_percent_used"], "percent_used": percent, "job_id": job_id,
     }
     scratch = scratch_dir(project_id, job_id)
-    star = write_star(scratch / "classification_input_star_{}.star".format(cid), classification_rows(conn, input_id, particles),
-                      comments=["Input for {}".format(output["name"])])
+    star = write_params(scratch / "classification_input_star_{}.cistem".format(cid), classification_rows(conn, input_id, particles))
     number_of_jobs = max(1, min(int(state["profile_total_jobs"]), n))
     project_scratch = db.project_dir(project_id) / "Scratch"
     project_scratch.mkdir(parents=True, exist_ok=True)
@@ -988,7 +1069,7 @@ def _launch_refine(conn, project_id, job_id, state, particles):
     for k in range(1, number_of_jobs + 1):
         first, last = particle_range(k, number_of_jobs, n)
         values = [state["stack_filename"], star, input_cls["CLASS_AVERAGE_FILE"],
-                  str(scratch / "round_{}_{}.star".format(cid, k)), output["class_average_file"],
+                  str(scratch / "round_{}_{}.cistem".format(cid, k)), output["class_average_file"],
                   0, first, last, percent / 100.0, state["pixel_size"], s["mask_radius"],
                   output["low_resolution_limit"], high_res, s["angular_step"], s["max_search_range"],
                   s["smoothing_factor"], 2, True, state["invert_contrast"], s["exclude_blank_edges"], True,
@@ -1167,7 +1248,7 @@ def _child_finished(project_id, child_id, parent_id, status, error):
 
 def _advance(conn, project_id, parent_id, state):
     """ProcessAllJobsFinished() + CycleRefinement()."""
-    particles = package_particles(conn, state["package_id"])
+    particles = package_particle_table(conn, state["package_id"])
     output = state["output"]
     if state["phase"] == "startup":
         if not os.path.isfile(output["class_average_file"]):
@@ -1188,29 +1269,22 @@ def _advance(conn, project_id, parent_id, state):
             raise ValueError("merge2d did not write {}".format(output["class_average_file"]))
         scratch = db.project_dir(project_id) / "Scratch" / "class2d" / parent_id
         cid = output["classification_id"]
-        rows_by_pos = {}
         n_files = _required_count(state, "number_of_dump_files")
-        for k in range(1, n_files + 1):
-            progress_store.note(parent_id, k - 1, n_files, "reading the round's results", "files")
-            p = scratch / "round_{}_{}.star".format(cid, k)
-            if not p.is_file():
-                raise ValueError("refine2d task {} left no output star file ({})".format(k, p))
-            for r in read_star(p):
-                rows_by_pos[r["position_in_stack"]] = r
-        # A particle no task wrote (there shouldn't be any) stays unclassified.
-        rows = []
-        for p in particles:
-            r = rows_by_pos.get(p["POSITION_IN_STACK"])
-            if r is None:
-                r = empty_result(p["POSITION_IN_STACK"])
-            rows.append(r)
+        progress_store.note(parent_id, 0, n_files, "reading the round's results", "files")
+        paths = [str(scratch / "round_{}_{}.cistem".format(cid, k)) for k in range(1, n_files + 1)]
+        for k, p in enumerate(paths, 1):
+            if not os.path.isfile(p):
+                raise ValueError("refine2d task {} left no output parameter file ({})".format(k, p))
+        # Every particle starts unclassified (sigma 10, class 0); the tasks' outputs are placed by position.
+        # A particle no task wrote (there shouldn't be any) stays so, rather than failing the round as a 3D round does.
+        rows = starfile.merge_task_outputs(initial_rows(particles), paths, what="refine2d", require_all=False)
         progress_store.note(parent_id, 0, 0, "computing the round's statistics")
         input_rows = classification_rows(conn, state["input_classification_id"], particles)
         stats = round_statistics(rows, input_rows)
         progress_store.note(parent_id, 0, 0, "writing the round's results")
         add_classification(conn, output, rows)
         _remove_scratch(project_id, parent_id, state, dumps_only=True)
-        for p in scratch.glob("round_{}_*.star".format(cid)):
+        for p in scratch.glob("round_{}_*.cistem".format(cid)):
             try:
                 p.unlink()
             except OSError:

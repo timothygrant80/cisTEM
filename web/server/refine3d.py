@@ -69,8 +69,6 @@ DEFAULTS = {
     "use_mask": False, "auto_mask": True, "mask_edge_a": 10.0, "outside_mask_weight": 0.0, "low_pass_outside_mask": False, "mask_filter_resolution_a": 20.0,
     # Blush regularisation of the reference between rounds (blush.py); not in cisTEM's panel.
     "use_blush": False, "blush_input": "Unfiltered half-map sum",
-    # merge3d's sampling-aware Wiener filter (the FSC per cone of directions); not in cisTEM's panel.
-    "directional_wiener": False, "directional_cones": 36,
 }
 PLEASE_CREATE_PACKAGE_MESSAGE = ("Please create a refinement package (in the assets panel) in order to perform a "
                                  "3D refinement.")
@@ -344,8 +342,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half)
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0,
-                                                s["directional_wiener"], int(s["directional_cones"])]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge {}".format(parent["NAME"], rid), parent)
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

@@ -88,8 +88,6 @@ DEFAULTS = {
     "inner_mask_radius_a": 0.0,
     "auto_mask": True,
     "use_blush": False,   # Blush regularisation of the reference between rounds (blush.py / blush_phase.py); not in cisTEM's panel
-    "directional_wiener": False,   # merge3d's sampling-aware Wiener filter; not in cisTEM's panel
-    "directional_cones": 36,
     "auto_percent_used": True,
     "start_percent_used": 10.0,
     "end_percent_used": 10.0,
@@ -379,8 +377,6 @@ def settings_from_params(params, pkg):
         "search_range_y": _num(params, "search_range_y_a", size * 0.4),
         "auto_mask": _flag(params, "auto_mask", DEFAULTS["auto_mask"]),
         "use_blush": _flag(params, "use_blush", DEFAULTS["use_blush"]),
-        "directional_wiener": _flag(params, "directional_wiener", DEFAULTS["directional_wiener"]),
-        "directional_cones": _num(params, "directional_cones", DEFAULTS["directional_cones"], int),
         "auto_percent_used": _flag(params, "auto_percent_used", DEFAULTS["auto_percent_used"]),
         "start_percent_used": _num(params, "start_percent_used", DEFAULTS["start_percent_used"]),
         "end_percent_used": _num(params, "end_percent_used", DEFAULTS["end_percent_used"]),
@@ -844,8 +840,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half)
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius"], outer,
                                                 str(scratch / "startup_dump_file_{}_odd_.dump".format(k)), str(scratch / "startup_dump_file_{}_even_.dump".format(k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"],
-                                                s["directional_wiener"], int(s["directional_cones"])]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"]]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge {}".format(parent["NAME"], "initial" if state["initial"] else n_out + 1), parent)
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

@@ -1,6 +1,6 @@
 """`merge3d` as a step of an ab-initio 3D reconstruction.
 
-The merge leg of a 3D round: merge3d adds the reconstruct3d dumps into the filtered reconstruction and its resolution statistics (AbInitioManager::SetupMerge3dJob, format ttttfffttibtiff, plus the two directional-filter arguments this branch's merge3d reads when present).
+The merge leg of a 3D round: merge3d adds the reconstruct3d dumps into the filtered reconstruction and its resolution statistics (AbInitioManager::SetupMerge3dJob, format ttttfffttibtiff).
 Not a stage of its own: server/abinitio.py submits these as hidden child
 jobs (STAGE "abinitio_merge3d") of an ab_initio_3d job; this module is what the
 runner needs of an adapter -- the program, and a finalize() with nothing to
@@ -10,7 +10,7 @@ The argument list is built in abinitio.py next to the values.
 
 PROGRAM = {"name": "merge3d", "executable": "merge3d"}
 
-ARGUMENT_TYPES = "ttttfffttibtiffbi"
+ARGUMENT_TYPES = "ttttfffttibtiff"
 ARGUMENT_NAMES = (
     "output_reconstruction_1",
     "output_reconstruction_2",
@@ -27,8 +27,6 @@ ARGUMENT_NAMES = (
     "number_of_dump_files",
     "wiener_nominator",
     "alignment_res",
-    "use_directional_wiener",   # the sampling-aware (3D FSC) Wiener filter, ReconstructedVolume::FinalizeOptimalDirectional
-    "number_of_cones",
 )
 assert len(ARGUMENT_NAMES) == len(ARGUMENT_TYPES)
 

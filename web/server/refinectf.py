@@ -583,7 +583,7 @@ def _launch_merge(conn, project_id, job_id, state):
         stats.append(st)
         tasks.append(_task(merge3d, k, k + 1, ["/dev/null", "/dev/null", out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0, False, 36]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge3d".format(parent["NAME"]), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

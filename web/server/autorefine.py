@@ -75,7 +75,6 @@ DEFAULTS = {
     "mask_filter_resolution_a": 20.0,
     # Blush regularisation of the reference between rounds (blush.py / blush_phase.py); not in cisTEM's panel.
     "use_blush": False, "blush_input": "Unfiltered half-map sum",
-    "directional_wiener": False, "directional_cones": 36,   # merge3d's sampling-aware Wiener filter; not in cisTEM's panel
 }
 ASYM_UNITS_CONSTANT = 8000.0  # estimated_required_asym_units = 8000 * exp(75 / res^2)
 
@@ -683,8 +682,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half)
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, state["class_high_res_limits"][k],
-                                                s["directional_wiener"], int(s["directional_cones"])]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, state["class_high_res_limits"][k]]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · round {} merge3d".format(parent["NAME"], state["round"] + 1), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

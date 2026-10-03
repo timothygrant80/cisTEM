@@ -249,26 +249,6 @@ class PhaseHelperTests(unittest.TestCase):
                 self.assertTrue(callable(getattr(mod, name)), "{} lacks {}".format(mod.__name__, name))
 
 
-class DirectionalWienerTests(unittest.TestCase):
-    """merge3d's sampling-aware Wiener filter: the two trailing arguments and the drivers' settings."""
-
-    def test_merge3d_adapter_carries_the_two_arguments(self):
-        from stages import merge3d
-        self.assertEqual(merge3d.ARGUMENT_TYPES, "ttttfffttibtiffbi")
-        self.assertEqual(merge3d.ARGUMENT_NAMES[-2:], ("use_directional_wiener", "number_of_cones"))
-
-    def test_settings_default_off_and_parse(self):
-        import refine3d, autorefine, abinitio, generate3d
-        pkg = {"PARTICLE_SIZE": 150.0, "OUTPUT_PIXEL_SIZE": 1.0, "SYMMETRY": "C1", "MOLECULAR_WEIGHT": 300.0, "NUMBER_OF_CLASSES": 1, "STACK_BOX_SIZE": 128}
-        for mod in (refine3d, autorefine, abinitio, generate3d):
-            s = mod.settings_from_params({}, pkg)
-            self.assertFalse(s["directional_wiener"], mod.__name__)
-            self.assertEqual(int(s["directional_cones"]), 36, mod.__name__)
-            s = mod.settings_from_params({"directional_wiener": True, "directional_cones": "48"}, pkg)
-            self.assertTrue(s["directional_wiener"], mod.__name__)
-            self.assertEqual(int(s["directional_cones"]), 48, mod.__name__)
-
-
 class DriverSettingsTests(unittest.TestCase):
     def test_autorefine_and_abinitio_settings_parse(self):
         import autorefine, abinitio

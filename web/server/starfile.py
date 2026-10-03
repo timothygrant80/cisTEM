@@ -216,10 +216,28 @@ def _read_binary_with_strings(data, offset, n_lines, columns, as_table):
     return rows
 
 
+def is_binary_file(path):
+    """Whether the file's content is the binary form: it opens with the int32 column count (a
+    small number, so bytes 1-3 are zero), where a text star opens with '#', a newline or 'data_'
+    and has no NUL in its first bytes. Sniffed rather than trusted from the extension because a
+    program built before the writer dispatched on the extension writes text to a .cistem name."""
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(4)
+    except OSError:
+        return False
+    return len(head) == 4 and head[1:4] == b"\0\0\0" and 0 < head[0] < 128
+
+
 def read_params(path, as_table=False):
-    """Rows (or a table) from a parameter file, binary or text by extension."""
-    if is_binary_path(path):
+    """Rows (or a table) from a parameter file, binary or text by its content (the extension says
+    what was asked for; a text file under a .cistem name is read as text with a warning)."""
+    if is_binary_file(path):
         return read_cistem_binary(path, as_table=as_table)
+    if is_binary_path(path):
+        import logging
+        logging.getLogger(__name__).warning("%s was asked for as a binary parameter file but holds text: the program that wrote it "
+                                            "predates the binary writer (rebuild cisTEM's programs from this branch)", path)
     rows = read_star(path)
     if as_table:
         keys = [k for k in (rows[0].keys() if rows else REFINEMENT_KEYS) if _BY_KEY[k][3] is not str]

@@ -162,3 +162,20 @@ class FieldSubsetTableTests(unittest.TestCase):
         self.assertEqual(back["psi"].tolist(), t["psi"].tolist())
         self.assertEqual(back["best_2d_class"].tolist(), [7] * 10)
         self.assertEqual(back["position_in_stack"].tolist(), list(range(1, 11)))
+
+
+class ContentSniffTests(unittest.TestCase):
+    def test_a_text_star_under_a_cistem_name_is_read_as_text(self):
+        import tempfile
+        rows = [{"position_in_stack": 1, "psi": 10.0, "sigma": 2.0}, {"position_in_stack": 2, "psi": 20.0, "sigma": 3.0}]
+        with tempfile.TemporaryDirectory() as d:
+            text_as_cistem = os.path.join(d, "out.cistem")
+            starfile.write_star(text_as_cistem, rows, ("position_in_stack", "psi", "sigma"))   # an old program's output
+            self.assertFalse(starfile.is_binary_file(text_as_cistem))
+            with self.assertLogs("starfile", level="WARNING"):
+                back = starfile.read_params(text_as_cistem, as_table=True)
+            self.assertEqual(back["psi"].tolist(), [10.0, 20.0])
+            binary = os.path.join(d, "b.cistem")
+            starfile.write_params(binary, rows, ("position_in_stack", "psi", "sigma"))
+            self.assertTrue(starfile.is_binary_file(binary))
+            self.assertEqual(starfile.read_params(binary, as_table=True)["sigma"].tolist(), [2.0, 3.0])

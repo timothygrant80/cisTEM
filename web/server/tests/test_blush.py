@@ -258,7 +258,9 @@ class DriverSettingsTests(unittest.TestCase):
         self.assertFalse(autorefine.settings_from_params({}, pkg)["use_blush"])
         s = abinitio.settings_from_params({"use_blush": "true"}, pkg)
         self.assertTrue(s["use_blush"])
-        self.assertFalse(abinitio.settings_from_params({}, pkg)["use_blush"])
+        # Ab-initio defaults to Blush on, but only where the server can run it.
+        self.assertEqual(abinitio.settings_from_params({}, pkg)["use_blush"], blush.availability()["available"])
+        self.assertFalse(abinitio.settings_from_params({"use_blush": False}, pkg)["use_blush"])
 
     def test_blush_settings_parse(self):
         import refine3d

@@ -2377,8 +2377,8 @@ From branch : <span id="versionBranch">—</span></p>
         // Blush regularisation (Kimanius et al. 2024), not in cisTEM's panel: the reference of every round is
         // denoised from the round's half maps (the companion sits beside the scratch map; the final volume's goes to
         // Assets/Volumes/Blushed for a refinement to find). Always the unfiltered input here.
-        {key:"use_blush", label:"Use Blush Regularisation?", type:"checkbox", default:false, group:"Refinement", feature:"blush",
-         tooltip:"Refine each round against a reference denoised by RELION's Blush network (Kimanius et al. 2024), computed from the round's half maps. Runs on the server with the settings an administrator chose on the home page."},
+        {key:"use_blush", label:"Use Blush Regularisation?", type:"checkbox", default:true, group:"Refinement", feature:"blush",
+         tooltip:"Refine each round against a reference denoised by RELION's Blush network (Kimanius et al. 2024), computed from the round's half maps. On by default for ab-initio, where the early references are noisiest; runs on the server with the settings an administrator chose on the home page."},
         {key:"auto_percent_used", label:"Auto Percent Used?", type:"checkbox", default:true, group:"Refinement",
          tooltip:"Should the percentage of particles used in each refinement cycle be set automatically? By default, the initial percentage is set to include an equivalent of 2500 asymmetric units and the final percentage corresponds to 10,000 asymmetric units used."},
         {key:"start_percent_used", label:"Initial % Used", unit:"%", type:"number", step:"0.1", min:0.001, max:100, default:"10", group:"Refinement", enabledByNot:"auto_percent_used",

@@ -87,7 +87,7 @@ DEFAULTS = {
     "final_resolution_limit_a": 8.0,
     "inner_mask_radius_a": 0.0,
     "auto_mask": True,
-    "use_blush": False,   # Blush regularisation of the reference between rounds (blush.py / blush_phase.py); not in cisTEM's panel
+    "use_blush": True,   # Blush regularisation of the reference between rounds (blush.py / blush_phase.py); not in cisTEM's panel. On by default here, when the server can run it
     "auto_percent_used": True,
     "start_percent_used": 10.0,
     "end_percent_used": 10.0,
@@ -376,7 +376,8 @@ def settings_from_params(params, pkg):
         "search_range_x": _num(params, "search_range_x_a", size * 0.4),
         "search_range_y": _num(params, "search_range_y_a", size * 0.4),
         "auto_mask": _flag(params, "auto_mask", DEFAULTS["auto_mask"]),
-        "use_blush": _flag(params, "use_blush", DEFAULTS["use_blush"]),
+        # The default applies only where Blush can run, so a request that leaves the field out is not refused on a server without torch or the weights.
+        "use_blush": _flag(params, "use_blush", DEFAULTS["use_blush"] and blush.availability()["available"]),
         "auto_percent_used": _flag(params, "auto_percent_used", DEFAULTS["auto_percent_used"]),
         "start_percent_used": _num(params, "start_percent_used", DEFAULTS["start_percent_used"]),
         "end_percent_used": _num(params, "end_percent_used", DEFAULTS["end_percent_used"]),

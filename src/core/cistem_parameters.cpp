@@ -1146,6 +1146,15 @@ void cisTEMParameters::WriteTocisTEMStarFile(std::string wanted_filename, int fi
     if ( wanted_filename == "/dev/null" )
         return; // if the user gave us /dev/null, they didn't intend to write anything - let's stop here. This saves trouble later on -some OSes will throw errors when we try to write to /dev/null
 
+    // A ".cistem" name asks for the binary form, as it does on reading (ReadFromcisTEMStarFile): the programs'
+    // output parameter files (refine3d, refine2d, refine_ctf) are then binary when the caller names them so.
+    // The binary writer selects by image number only; the line range is for the text form.
+    if ( ReturnFileExtension(cisTEM_star_filename.string( )) == "cistem" ) {
+        MyDebugAssertTrue(first_line_to_write == -1 && last_line_to_write == -1, "A line range cannot be written to a binary parameter file");
+        WriteTocisTEMBinaryFile(wanted_filename, first_image_to_write, last_image_to_write);
+        return;
+    }
+
     //cisTEM_star_filename.SetExt("star");
     long particle_counter;
 

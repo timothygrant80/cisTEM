@@ -461,67 +461,6 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D& reconstruction, Reso
     delete[] wiener_constant;
 }
 
-void ReconstructedVolume::Calculate3DOptimalDirectional(Reconstruct3D& reconstruction, ResolutionStatistics& statistics, float weiner_filter_nominator) {
-    // Calculate3DOptimal() with the Wiener constant looked up per (cone, shell) instead of per shell:
-    //   D(k) = sum w c F / ( sum w c^2 + nominator / (correction * cone_part_SSNR[cone(k)][shell(k)]) ).
-    // The shell's part_SSNR still decides which shells carry signal at all (a zero shell is zeroed, as before).
-    MyDebugAssertTrue(density_map != NULL, "Error: reconstruction volume has not been initialized");
-    MyDebugAssertTrue(int((reconstruction.image_reconstruction.ReturnSmallestLogicalDimension( ) / 2 + 1) * sqrtf(3.0)) + 1 == statistics.part_SSNR.NumberOfPoints( ), "Error: part_SSNR table incompatible with volume");
-    MyDebugAssertTrue(statistics.number_of_cones > 0 && statistics.cone_part_SSNR.size( ) == size_t(statistics.number_of_cones), "Error: conical part_SSNR not calculated");
-
-    int   i, j, k, c;
-    int   bin;
-    long  pixel_counter = 0;
-    float x, y, z;
-    float frequency_squared;
-    float particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
-    float pssnr_correction_factor = float(density_map->ReturnVolumeInRealSpace( )) / (kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size, 3)) * particle_area_in_pixels / float(density_map->logical_x_dimension * density_map->logical_y_dimension);
-    int   number_of_bins2         = reconstruction.image_reconstruction.ReturnSmallestLogicalDimension( );
-    int   number_of_points        = statistics.part_SSNR.NumberOfPoints( );
-
-    std::vector<float> wiener_constant(size_t(statistics.number_of_cones) * number_of_points, 0.0f);
-    for ( c = 0; c < statistics.number_of_cones; c++ ) {
-        for ( i = 0; i < number_of_points; i++ ) {
-            float value = (i < statistics.cone_part_SSNR[c].NumberOfPoints( )) ? statistics.cone_part_SSNR[c].data_y[i] : 0.0f;
-            if ( value > 0.0 )
-                wiener_constant[size_t(c) * number_of_points + i] = weiner_filter_nominator / pssnr_correction_factor / value;
-        }
-    }
-
-    reconstruction.CompleteEdges( );
-
-    for ( k = 0; k <= reconstruction.image_reconstruction.physical_upper_bound_complex_z; k++ ) {
-        z = reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * reconstruction.image_reconstruction.fourier_voxel_size_z;
-        for ( j = 0; j <= reconstruction.image_reconstruction.physical_upper_bound_complex_y; j++ ) {
-            y = reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * reconstruction.image_reconstruction.fourier_voxel_size_y;
-            for ( i = 0; i <= reconstruction.image_reconstruction.physical_upper_bound_complex_x; i++ ) {
-                if ( reconstruction.ctf_reconstruction[pixel_counter] != 0.0 ) {
-                    x                 = i * reconstruction.image_reconstruction.fourier_voxel_size_x;
-                    frequency_squared = x * x + y * y + z * z;
-                    bin               = int(sqrtf(frequency_squared) * number_of_bins2);
-                    if ( bin < number_of_points && statistics.part_SSNR.data_y[bin] != 0.0 ) {
-                        c              = statistics.ReturnConeIndex(x, y, z);
-                        float constant = wiener_constant[size_t(c) * number_of_points + bin];
-                        if ( constant > 0.0f )
-                            density_map->complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + constant);
-                        else
-                            density_map->complex_values[pixel_counter] = 0.0; // the cone carries no signal in this shell
-                    }
-                    else {
-                        density_map->complex_values[pixel_counter] = 0.0;
-                    }
-                }
-                else {
-                    density_map->complex_values[pixel_counter] = 0.0;
-                }
-                pixel_counter++;
-            }
-        }
-    }
-
-    density_map->is_in_real_space = false;
-}
-
 /*
  * Compute the efficiency of the orientation distribution, following
  * Naydenova & Russo (2017)
@@ -690,22 +629,6 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D& reconstruction, int& ori
 void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
                                           float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
                                           bool center_mass, std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics, float weiner_filter_nominator) {
-    FinalizeOptimalImpl(reconstruction, density_map_1, density_map_2, original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-                        center_mass, output_volume, output_statistics, copy_of_statistics, weiner_filter_nominator, false, 0);
-}
-
-void ReconstructedVolume::FinalizeOptimalDirectional(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
-                                                     float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
-                                                     bool center_mass, std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics,
-                                                     float weiner_filter_nominator, int number_of_cones) {
-    FinalizeOptimalImpl(reconstruction, density_map_1, density_map_2, original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-                        center_mass, output_volume, output_statistics, copy_of_statistics, weiner_filter_nominator, true, number_of_cones);
-}
-
-void ReconstructedVolume::FinalizeOptimalImpl(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
-                                              float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
-                                              bool center_mass, std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics,
-                                              float weiner_filter_nominator, bool directional, int number_of_cones) {
     int                  original_box_size     = density_map_1->logical_x_dimension;
     int                  intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
     int                  box_size              = reconstruction.logical_x_dimension;
@@ -726,8 +649,6 @@ void ReconstructedVolume::FinalizeOptimalImpl(Reconstruct3D& reconstruction, Ima
         resolution_limit = 2.0 * pixel_size;
 
     statistics.CalculateFSC(*density_map_1, *density_map_2, true);
-    if ( directional )
-        statistics.CalculateConicalFSC(*density_map_1, *density_map_2, number_of_cones, true);
     // TESTING OF LOCAL FILTERING
     const bool test_locres_filtering = false;
     if ( ! test_locres_filtering ) {
@@ -742,19 +663,11 @@ void ReconstructedVolume::FinalizeOptimalImpl(Reconstruct3D& reconstruction, Ima
     if ( intermediate_box_size != box_size && binning_factor != 1.0 ) {
         temp_statistics.CopyFrom(statistics);
         cropped_statistics.ResampleFrom(temp_statistics);
-        if ( directional ) {
-            temp_statistics.CopyConesFrom(statistics);
-            cropped_statistics.ResampleConesFrom(temp_statistics);
-        }
     }
     else {
         cropped_statistics.CopyFrom(statistics);
-        if ( directional )
-            cropped_statistics.CopyConesFrom(statistics);
     }
     cropped_statistics.CalculateParticleSSNR(reconstruction.image_reconstruction, reconstruction.ctf_reconstruction, mask_volume_fraction);
-    if ( directional )
-        cropped_statistics.CalculateConicalParticleSSNR(reconstruction.image_reconstruction, reconstruction.ctf_reconstruction, mask_volume_fraction);
     if ( intermediate_box_size != box_size && binning_factor != 1.0 ) {
         temp_statistics.ResampleParticleSSNR(cropped_statistics);
         statistics.CopyParticleSSNR(temp_statistics);
@@ -764,8 +677,6 @@ void ReconstructedVolume::FinalizeOptimalImpl(Reconstruct3D& reconstruction, Ima
     }
     statistics.ZeroToResolution(resolution_limit);
     statistics.PrintStatistics( );
-    if ( directional )
-        statistics.PrintConicalStatistics( );
 
     statistics.WriteStatisticsToFile(output_statistics);
     if ( copy_of_statistics != NULL ) {
@@ -773,10 +684,7 @@ void ReconstructedVolume::FinalizeOptimalImpl(Reconstruct3D& reconstruction, Ima
         copy_of_statistics->CopyFrom(statistics);
     }
 
-    if ( directional )
-        Calculate3DOptimalDirectional(reconstruction, cropped_statistics, weiner_filter_nominator);
-    else
-        Calculate3DOptimal(reconstruction, cropped_statistics, weiner_filter_nominator);
+    Calculate3DOptimal(reconstruction, cropped_statistics, weiner_filter_nominator);
     density_map->SwapRealSpaceQuadrants( );
     // Check if cropping was used and resize reconstruction accordingly
     if ( intermediate_box_size != box_size ) {

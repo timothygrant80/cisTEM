@@ -51,10 +51,6 @@ class ReconstructedVolume {
                               float resolution_limit = 1.0, bool swap_quadrants = false, bool apply_shifts = false, bool whiten = false, bool apply_ctf = false, bool abolute_ctf = false, bool calculate_projection = true);
     void  Calculate3DSimple(Reconstruct3D& reconstruction);
     void  Calculate3DOptimal(Reconstruct3D& reconstruction, ResolutionStatistics& statistics, float weiner_filter_nominater = 1.0f);
-    // The sampling-aware variant: the Wiener constant of a voxel comes from its cone's particle SSNR
-    // (statistics.cone_part_SSNR, CalculateConicalParticleSSNR) instead of its shell's, so directions
-    // where the half maps agree less -- rarer or worse-aligned views -- are damped harder.
-    void  Calculate3DOptimalDirectional(Reconstruct3D& reconstruction, ResolutionStatistics& statistics, float weiner_filter_nominater = 1.0f);
     float Correct3D(float mask_radius = 0.0);
     void  CosineRingMask(float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_mask_edge);
     void  CosineMask(float wanted_mask_radius, float wanted_mask_edge);
@@ -64,22 +60,9 @@ class ReconstructedVolume {
     void  FinalizeOptimal(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
                           float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
                           bool center_mass, std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics = NULL, float weiner_filter_nominator = 1.0f);
-    // FinalizeOptimal with the directional Wiener filter: the conical FSC is measured from the two half maps
-    // before they are released, the per-cone particle SSNR from the reconstruction's own sampling, and
-    // Calculate3DOptimalDirectional does the filtering. The shell statistics written to the file are the same.
-    void  FinalizeOptimalDirectional(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
-                                     float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
-                                     bool center_mass, std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics = NULL,
-                                     float weiner_filter_nominator = 1.0f, int number_of_cones = 36);
     void  FinalizeML(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
                      float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
                      std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics = NULL);
     void  Calculate3DML(Reconstruct3D& reconstruction);
     float ComputeOrientationDistributionEfficiency(Reconstruct3D& reconstruction);
-
-  private:
-    void FinalizeOptimalImpl(Reconstruct3D& reconstruction, Image* density_map_1, Image* density_map_2,
-                             float& original_pixel_size, float& pixel_size, float& inner_mask_radius, float& outer_mask_radius, float& mask_falloff,
-                             bool center_mass, std::string& output_volume, NumericTextFile& output_statistics, ResolutionStatistics* copy_of_statistics,
-                             float weiner_filter_nominator, bool directional, int number_of_cones);
 };

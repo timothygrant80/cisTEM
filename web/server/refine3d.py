@@ -665,6 +665,7 @@ def _record_round(conn, project_id, parent_id, state):
     state["reference_files"] = list(state["pending_volume_files"])
     state["reference_asset_ids"] = volume_ids
     state["volume_ids"] = volume_ids
+    volumes.prepare_orth_views(state["reference_files"], state["settings"]["mask_radius_a"], lambda t: _log(project_id, parent_id, t, "warning"))
     for k in range(classes):
         if classes > 1:
             _log(project_id, parent_id, "Est. Res. Class {:2d} = {} Å ({:.2f} %)".format(k + 1, "{:.2f}".format(est_res[k]) if est_res[k] else "n/a", avgs[k]))
@@ -863,5 +864,5 @@ def current_picture(conn, row, class_index=0):
     if not files:
         return None
     path = files[min(class_index, len(files) - 1)]
-    png, meta = volumes.orthogonal_views_png(path, state["settings"]["mask_radius_a"])
+    png, meta = volumes.orthogonal_views_png_cached(path, state["settings"]["mask_radius_a"])
     return png, meta, path

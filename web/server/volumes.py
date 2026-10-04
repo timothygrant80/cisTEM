@@ -351,6 +351,96 @@ def orthogonal_views_png(path, mask_radius_a=0.0, panel=ORTH_PANEL):
                                           "box": box, "panel": th, "scale": th / float(box), "upscaled": upscaled}
 
 
+# The rendered picture is kept on disk beside the volume -- <stem>_orth_v<render version>[_m<mask radius>A].png,
+# written when the volume is made (the drivers call prepare_orth_views() after each round's merge) or on the
+# first request for it -- and the last few dozen read are held in memory, so a request costs a stat and a 304,
+# or a 300 KB file read, rather than reading a quarter-gigabyte map and projecting it every time the Jobs tab
+# polls. The meta the picture route reports comes from the MRC header alone (orth_views_meta()).
+
+_ORTH_CACHE = {}          # (path, mtime_ns, size, mask key) -> (png bytes, meta), in insertion order
+_ORTH_CACHE_LIMIT = 64    # about 20 MB of PNGs
+_orth_lock = __import__("threading").Lock()
+
+
+def _mask_key(mask_radius_a):
+    return "{:g}".format(float(mask_radius_a)) if mask_radius_a else ""
+
+
+def orth_views_file(path, mask_radius_a=0.0):
+    """Where a volume's rendered orthogonal views live: beside it, named for the render version and the mask."""
+    path = str(path)
+    stem = path[:-4] if path.lower().endswith(".mrc") else path
+    mk = _mask_key(mask_radius_a)
+    return "{}_orth_v{}{}.png".format(stem, preview.RENDER_VERSION, "_m{}A".format(mk) if mk else "")
+
+
+def orth_views_companions(path):
+    """Every rendered picture of a volume (any version, any mask), for removal with the volume."""
+    import glob
+    path = str(path)
+    stem = path[:-4] if path.lower().endswith(".mrc") else path
+    return sorted(glob.glob(glob.escape(stem) + "_orth_v*.png"))
+
+
+def orth_views_meta(path, panel=ORTH_PANEL):
+    """orthogonal_views_png()'s meta from the header alone: every panel ends up `panel` px."""
+    h = read_mrc_header(path)
+    box = int(h["nz"])
+    return {"width": 3 * panel, "height": 2 * panel, "pixel_size": h["pixel_size"], "box": box, "panel": panel,
+            "scale": panel / float(box) if box else 1.0, "upscaled": box < panel}
+
+
+def orthogonal_views_png_cached(path, mask_radius_a=0.0, panel=ORTH_PANEL):
+    """orthogonal_views_png() through the on-disk picture and the memory cache. The picture on disk counts
+    while it is at least as new as the volume (a map rewritten under the same name, ab-initio's rounds,
+    gets a new one); a stale or missing one is rendered now and written, atomically, for the next request."""
+    path = str(path)
+    st = os.stat(path)
+    key = (path, st.st_mtime_ns, st.st_size, _mask_key(mask_radius_a), panel)
+    with _orth_lock:
+        hit = _ORTH_CACHE.get(key)
+    if hit is not None:
+        return hit
+    side = orth_views_file(path, mask_radius_a)
+    png = meta = None
+    try:
+        if os.path.getmtime(side) >= st.st_mtime - 1.0:
+            with open(side, "rb") as fh:
+                png = fh.read()
+            meta = orth_views_meta(path, panel)
+    except OSError:
+        png = None
+    if png is None or not png.startswith(b"\x89PNG"):
+        png, meta = orthogonal_views_png(path, mask_radius_a, panel)
+        try:
+            tmp = side + ".tmp{}".format(os.getpid())
+            with open(tmp, "wb") as fh:
+                fh.write(png)
+            os.replace(tmp, side)
+            if os.path.getmtime(side) < st.st_mtime:   # a volume dated ahead of this clock (another host's) must not look newer
+                os.utime(side, ns=(st.st_mtime_ns, st.st_mtime_ns))
+        except OSError:
+            pass   # a read-only directory: the memory cache still serves it
+    with _orth_lock:
+        _ORTH_CACHE[key] = (png, meta)
+        while len(_ORTH_CACHE) > _ORTH_CACHE_LIMIT:
+            _ORTH_CACHE.pop(next(iter(_ORTH_CACHE)))
+    return png, meta
+
+
+def prepare_orth_views(paths, mask_radius_a=0.0, log=None):
+    """Render and save the pictures of these volumes now (a driver, after a round's merge), so the first
+    request finds them on disk. Never fails the caller: a volume that will not render is reported and skipped."""
+    for p in paths or []:
+        if not p or not os.path.isfile(p):
+            continue
+        try:
+            orthogonal_views_png_cached(p, mask_radius_a)
+        except Exception as exc:  # noqa: BLE001
+            if log:
+                log("could not render the orthogonal views of {}: {}".format(os.path.basename(p), exc))
+
+
 # ---------------------------------------------------------------------------
 # Volume assets and startup runs
 # ---------------------------------------------------------------------------

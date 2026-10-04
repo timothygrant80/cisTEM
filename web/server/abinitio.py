@@ -1002,6 +1002,7 @@ def _align_symmetry(project_id, job_id, state):
         out_files.append(with_sym)
     state["reference_files"] = out_files
     state["display_files"] = out_files
+    volumes.prepare_orth_views(out_files, state["settings"]["mask_radius"], lambda t: _log(project_id, job_id, t, "warning"))
     state["apply_symmetry"] = True
     sched = round_schedule(state["round"], state["rounds"], state["settings"]["initial_resolution_limit"], state["settings"]["final_resolution_limit"], state["plan"], True)
     state["current_percent_used"] = sched["percent_used"]
@@ -1167,6 +1168,7 @@ def _advance(conn, project_id, parent_id, state):
                 raise ValueError("merge3d did not write {}".format(p))
         state["reference_files"] = list(state["pending_reference_files"])
         state["display_files"] = list(state["pending_reference_files"])
+        volumes.prepare_orth_views(state["display_files"], state["settings"]["mask_radius"], lambda t: _log(project_id, parent_id, t, "warning"))
         state["stats_files"] = list(state["pending_stats_files"])
         for p in Path(state["scratch"]).glob("startup_dump_file_*.dump"):
             try:
@@ -1522,5 +1524,5 @@ def current_picture(conn, row, class_index=0, output_number=None):
     if not files:
         return None
     path = files[min(class_index, len(files) - 1)]
-    png, meta = volumes.orthogonal_views_png(path, state["settings"]["mask_radius"])
+    png, meta = volumes.orthogonal_views_png_cached(path, state["settings"]["mask_radius"])
     return png, meta, path

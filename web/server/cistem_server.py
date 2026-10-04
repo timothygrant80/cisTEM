@@ -1680,6 +1680,7 @@ def _delete_assets(project_id, kind):
         for r in conn.execute("SELECT FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID IN ({})".format(placeholders), asset_ids).fetchall():
             if r["FILENAME"]:
                 companions.append(refine3d.blushed_file(project_id, r["FILENAME"]))
+                companions.extend(volumes.orth_views_companions(r["FILENAME"]))   # its rendered orthogonal views
 
     with conn:
         placeholders = ",".join("?" * len(asset_ids))
@@ -3052,7 +3053,7 @@ def volume_preview(project_id, volume_id):
     if request.headers.get("If-None-Match") == etag:
         return "", 304
     try:
-        png, _meta = volumes.orthogonal_views_png(path)
+        png, _meta = volumes.orthogonal_views_png_cached(path)
     except (ValueError, OSError) as exc:
         return jsonify({"error": str(exc)}), 422
     response = app.response_class(png, mimetype="image/png")
@@ -3125,8 +3126,11 @@ def abinitio_current_picture(project_id, job_id):
         return jsonify({"error": "no reconstruction yet"}), 404
     png, meta, path = got
     stat = Path(path).stat()
+    etag = '"r{}-abinitio-{}-{}-{}"'.format(preview.RENDER_VERSION, job_id, int(stat.st_mtime), stat.st_size)
+    if request.headers.get("If-None-Match") == etag:
+        return "", 304
     response = app.response_class(png, mimetype="image/png")
-    response.headers["ETag"] = '"r{}-abinitio-{}-{}-{}"'.format(preview.RENDER_VERSION, job_id, int(stat.st_mtime), stat.st_size)
+    response.headers["ETag"] = etag
     response.headers["Cache-Control"] = "private, no-cache"   # the same URL every round: always revalidate
     # how the picture relates to the map: the box in pixels and the factor each panel was scaled by
     response.headers["X-Picture-Box"] = str(meta.get("box", ""))

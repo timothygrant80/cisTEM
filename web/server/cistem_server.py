@@ -1166,11 +1166,23 @@ def browse_filesystem():
     extensions = BROWSABLE_EXTENSIONS.get(request.args.get("types"), MOVIE_EXTENSIONS)
     raw_path = request.args.get("path") or str(Path.home())
     path = Path(raw_path).expanduser()
+    # A typed path may name a file: its folder is listed and the file named in `file`, which the
+    # picker takes as if it had been clicked (this is how a file beyond a folder the listing
+    # cannot read gets chosen -- the listing itself never gets there).
+    chosen_file = None
+    if path.is_file():
+        chosen_file = path.name
+        path = path.parent
     if not path.is_dir():
         return jsonify({"error": "not a directory: {}".format(path)}), 400
     try:
         entries = list(path.iterdir())
     except OSError as exc:
+        if chosen_file is not None:
+            # The folder itself cannot be read but the file was named outright: hand it over with an empty listing.
+            resolved = path.resolve()
+            return jsonify({"path": str(resolved), "parent": str(resolved.parent) if resolved.parent != resolved else None,
+                            "directories": [], "files": [], "file": chosen_file})
         return jsonify({"error": str(exc)}), 400
 
     directories = []
@@ -1191,12 +1203,15 @@ def browse_filesystem():
 
     resolved = path.resolve()
     parent = resolved.parent
-    return jsonify({
+    out = {
         "path": str(resolved),
         "parent": str(parent) if parent != resolved else None,
         "directories": directories,
         "files": files,
-    })
+    }
+    if chosen_file is not None:
+        out["file"] = chosen_file
+    return jsonify(out)
 
 
 # ---------------------------------------------------------------------------

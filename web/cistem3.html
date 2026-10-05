@@ -842,10 +842,11 @@ table.rp-commands-table td:not(:first-child),table.rp-commands-table th:not(:fir
 
 .browse-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .browse-path{
-  font-family:var(--font-mono);font-size:15px;color:var(--text-secondary);
+  font-family:var(--font-mono);font-size:15px;color:var(--text);
   background:var(--surface-sunken);padding:6px 10px;border:1px solid var(--border);
-  flex:1;overflow-x:auto;white-space:nowrap;
+  flex:1;min-width:0;white-space:nowrap;
 }
+.browse-path:focus{outline:none;border-color:var(--accent);background:var(--surface);}
 .browse-list{list-style:none;margin:0;padding:0;border:1px solid var(--border);max-height:360px;overflow-y:auto;}
 .browse-list li{
   padding:7px 10px;font-size:16px;cursor:pointer;border-bottom:1px solid var(--border);
@@ -1850,7 +1851,8 @@ From branch : <span id="versionBranch">—</span></p>
   <div class="modal-body">
     <div class="browse-toolbar">
       <button class="small" id="browseUpBtn">&uarr; Up</button>
-      <span class="browse-path" id="browsePath"></span>
+      <input class="browse-path" id="browsePath" type="text" spellcheck="false" autocomplete="off" placeholder="Type a folder or file path and press Enter">
+      <button class="small" id="browseGoBtn">Go</button>
     </div>
     <ul class="browse-list" id="browseList"></ul>
     <p class="form-note" id="browseNote">Click a folder to open it, or a movie file to match every file of that type in its folder.</p>
@@ -2952,7 +2954,7 @@ From branch : <span id="versionBranch">—</span></p>
    "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn","movieGroupInvertBtn",
    "movieRemoveBtn","movieRemoveAllBtn","movieRenameBtn","imageRenameBtn","volRenameBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
-   "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
+   "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseGoBtn","browseList",
    "browseTitle","browseNote",
    "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
@@ -3120,9 +3122,10 @@ From branch : <span id="versionBranch">—</span></p>
   function openBrowseModal(target){
     browseTarget = target;
     els.browseTitle.textContent = "Choose " + target.noun.charAt(0).toUpperCase() + target.noun.slice(1) + (target.single ? "" : " Files");
-    els.browseNote.textContent = target.single
+    els.browseNote.textContent = (target.single
       ? "Click a folder to open it, or " + target.article + " " + target.noun + " to choose it."
-      : "Click a folder to open it, or " + target.article + " " + target.noun + " file to match every file of that type in its folder.";
+      : "Click a folder to open it, or " + target.article + " " + target.noun + " file to match every file of that type in its folder.")
+      + " Or type a path above and press Enter: a folder opens, a file is chosen -- the way past a folder the listing cannot read.";
     els.browseModal.classList.add("open");
     els.browseScrim.classList.add("open");
     var glob = target.input.value.trim();
@@ -3143,17 +3146,37 @@ From branch : <span id="versionBranch">—</span></p>
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
       return r.json();
     }).then(function(d){
-      els.browsePath.textContent = d.path;
+      if (d.file){ chooseBrowseFile(d.path, d.file); return; }   // the typed path named a file
+      els.browsePath.value = d.path;
       browseParent = d.parent;
       els.browseUpBtn.disabled = !d.parent;
       renderBrowseList(d);
     }).catch(function(err){
+      // Keep what was typed so it can be corrected, and let Up climb out of a
+      // folder that cannot be read (the parent from the text, since the server
+      // could not say).
+      if (path) els.browsePath.value = path;
+      var parent = (path || "").replace(/[/\\]+$/, "").replace(/[^/\\]*$/, "").replace(/[/\\]+$/, "");
+      browseParent = path && parent !== path ? (parent || "/") : null;
+      els.browseUpBtn.disabled = !browseParent;
       els.browseList.innerHTML = "";
       var li = document.createElement("li");
       li.className = "browse-empty";
       li.textContent = "Could not list that folder: " + err.message;
       els.browseList.appendChild(li);
     });
+  }
+  function browseToTyped(){
+    var typed = els.browsePath.value.trim();
+    loadBrowseDir(typed || null);
+  }
+  function chooseBrowseFile(dir, name){
+    var ext = name.slice(name.lastIndexOf("."));
+    var glob = browseTarget.input;
+    // A single-file target takes the file itself; a glob target every file of its type in the folder.
+    glob.value = browseTarget.single ? dir + "/" + name : dir + "/*" + ext;
+    glob.dispatchEvent(new Event("input", {bubbles: true}));
+    closeBrowseModal();
   }
   function renderBrowseList(d){
     els.browseList.innerHTML = "";
@@ -3176,18 +3199,13 @@ From branch : <span id="versionBranch">—</span></p>
       var li = document.createElement("li");
       li.innerHTML = FILE_ICON + "<span></span>";
       li.querySelector("span").textContent = name;
-      li.addEventListener("click", function(){
-        var ext = name.slice(name.lastIndexOf("."));
-        var glob = browseTarget.input;
-        // A single-file target takes the file itself; a glob target every file of its type in the folder.
-        glob.value = browseTarget.single ? d.path + "/" + name : d.path + "/*" + ext;
-        glob.dispatchEvent(new Event("input", {bubbles: true}));
-        closeBrowseModal();
-      });
+      li.addEventListener("click", function(){ chooseBrowseFile(d.path, name); });
       els.browseList.appendChild(li);
     });
   }
   els.browseUpBtn.addEventListener("click", function(){ if (browseParent) loadBrowseDir(browseParent); });
+  els.browseGoBtn.addEventListener("click", browseToTyped);
+  els.browsePath.addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); browseToTyped(); } });
   els.browseModalClose.addEventListener("click", closeBrowseModal);
   els.browseScrim.addEventListener("click", closeBrowseModal);
 

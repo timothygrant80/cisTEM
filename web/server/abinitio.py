@@ -873,11 +873,15 @@ def _launch_refinement(conn, project_id, job_id, state):
     class_rows = _load_rows(state, "input")
     defaults = default_statistics(state["molecular_weight"], state["active_pixel_size"], state["active_box"])
     star_files, stats_files = [], []
+    nprng = np.random.default_rng(rng.getrandbits(64))
     for k, rows in enumerate(class_rows):
-        for r in rows:
-            r["occupancy"] = 100.0 if classes == 1 else 100.0 / classes
-            r["phi"], r["theta"], r["psi"] = rng.uniform(-1, 1) * 180.0, rng.uniform(-1, 1) * 180.0, rng.uniform(-1, 1) * 180.0
-            r["x_shift"] = r["y_shift"] = 0.0
+        rows = refinements.as_table(rows)
+        rows["occupancy"] = 100.0 if classes == 1 else 100.0 / classes
+        for col in ("phi", "theta", "psi"):
+            rows[col] = nprng.uniform(-180.0, 180.0, len(rows))
+        rows["x_shift"] = 0.0
+        rows["y_shift"] = 0.0
+        class_rows[k] = rows
         p = str(scratch / "refine_input_{}_class{}.cistem".format(_output_number(state), k + 1))
         starfile.write_params(p, rows)
         star_files.append(p)

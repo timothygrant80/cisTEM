@@ -583,10 +583,23 @@ def _merge_output_stars(state):
 
 
 def _average_occupancy(rows):
-    """Refinement::UpdateAverageOccupancy(): the mean occupancy over the active particles (0 when none)."""
-    table = refinements.as_table(rows)
-    active = table["image_is_active"] >= 0
-    return float(table["occupancy"][active].astype(float).mean()) if active.any() else 0.0
+    return refinements.average_occupancy(rows)
+
+
+def update_tracking(tracking, input_rows, output_rows, resolution):
+    """One round's per-particle bookkeeping (ProcessAllJobsFinished()): a particle handed to refine3d
+    as a global search (image_is_active 0 in, 1 out) counts another global alignment at this resolution;
+    every other particle is one round further from its last. Rows beyond the shorter table are "other"."""
+    inp = refinements.as_table(input_rows)
+    out = refinements.as_table(output_rows)
+    n = len(tracking["since_global"])
+    m = min(n, len(inp), len(out))
+    went_global = np.zeros(n, dtype=bool)
+    went_global[:m] = (inp["image_is_active"][:m] == 0) & (out["image_is_active"][:m] == 1)
+    tracking["globals"][went_global] += 1
+    tracking["since_global"][went_global] = 0
+    tracking["last_global_res"][went_global] = resolution
+    tracking["since_global"][~went_global] += 1
 
 
 def _rows_for_reconstruction(rows):
@@ -920,13 +933,7 @@ def plan_next_round(state, output_stats, input_rows, output_rows):
     mask = state["settings"]["mask_radius_a"]
     state["percent_used_per_round"].append(state["current_percent_used"])
     tracking = _load_tracking(state)
-    for i in range(n):
-        if i < len(input_rows[0]) and i < len(output_rows[0]) and input_rows[0][i].get("image_is_active", 1) == 0 and output_rows[0][i].get("image_is_active", 1) == 1:
-            tracking["globals"][i] += 1
-            tracking["since_global"][i] = 0
-            tracking["last_global_res"][i] = state["high_res_limit_per_round"][-1]
-        else:
-            tracking["since_global"][i] += 1
+    update_tracking(tracking, input_rows[0], output_rows[0], state["high_res_limit_per_round"][-1])
     _store_tracking(state, tracking)
     best_p143 = None
     for k in range(classes):

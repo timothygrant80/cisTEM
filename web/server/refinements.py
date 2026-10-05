@@ -121,6 +121,14 @@ def load_table(conn, refinement_id, class_number):
     return out
 
 
+def average_occupancy(rows_or_table):
+    """Refinement::UpdateAverageOccupancy(): the mean occupancy over the active particles (image_is_active >= 0),
+    0 when there are none. Takes a parameter table or dict rows."""
+    table = as_table(rows_or_table)
+    active = table["image_is_active"] >= 0
+    return float(table["occupancy"][active].astype(float).mean()) if active.any() else 0.0
+
+
 def load_rows(conn, refinement_id, class_number):
     """REFINEMENT_RESULT_<id>_<k> as star rows (dicts); load_table() is the array form the drivers use."""
     return starfile.table_to_rows(load_table(conn, refinement_id, class_number))

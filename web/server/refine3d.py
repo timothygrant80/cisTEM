@@ -684,8 +684,7 @@ def _record_round(conn, project_id, parent_id, state):
         return
     details = []
     for k in range(classes):
-        active = [r for r in class_rows[k] if r.get("image_is_active", 1) >= 0]
-        avg_occ = sum(r.get("occupancy", 100.0) for r in active) / max(len(active), 1)
+        avg_occ = refinements.average_occupancy(class_rows[k])
         details.append({
             "REFERENCE_VOLUME_ASSET_ID": previous_refs[k], "LOW_RESOLUTION_LIMIT": s["low_resolution_limit_a"], "HIGH_RESOLUTION_LIMIT": s["high_resolution_limit_a"],
             "MASK_RADIUS": s["mask_radius_a"], "SIGNED_CC_RESOLUTION_LIMIT": s["signed_cc_resolution_limit_a"], "GLOBAL_RESOLUTION_LIMIT": s["high_resolution_limit_a"],

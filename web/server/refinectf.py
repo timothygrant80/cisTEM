@@ -331,13 +331,13 @@ def _start(conn, project_id, job_id, params, profile):
             pass
     reference_files = [conn.execute("SELECT FILENAME FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=?", (vid,)).fetchone()["FILENAME"] for vid in reference_ids]
     class_rows = [refinements.load_table(conn, ref["REFINEMENT_ID"], k) for k in range(1, classes + 1)]
-    first = class_rows[0][0] if class_rows and class_rows[0] else {}
+    first = class_rows[0][0] if class_rows and len(class_rows[0]) else None
     state = {
         "phase": None, "round": 0, "rounds": 1, "settings": s,
         "package_id": pkg["REFINEMENT_PACKAGE_ASSET_ID"], "package_name": pkg["NAME"], "stack_filename": pkg["STACK_FILENAME"],
         "pixel_size": float(pkg["OUTPUT_PIXEL_SIZE"] or 1.0), "box_size": int(pkg["STACK_BOX_SIZE"]), "invert_contrast": bool(pkg["STACK_HAS_WHITE_PROTEIN"]),
         "symmetry": pkg["SYMMETRY"] or "C1", "molecular_weight": float(pkg["MOLECULAR_WEIGHT"] or 300.0), "particle_size": float(pkg["PARTICLE_SIZE"] or 150.0),
-        "voltage": float(first.get("voltage", 300.0) or 300.0), "cs": float(first.get("cs", 2.7) or 2.7),
+        "voltage": float(first["voltage"]) if first is not None and first["voltage"] else 300.0, "cs": float(first["cs"]) if first is not None and first["cs"] else 2.7,
         "number_of_particles": n, "number_of_classes": classes,
         "refinement_profile": profile["name"], "refinement_jobs": int(profile["total_jobs"]),
         "reconstruction_profile": recon_profile["name"], "reconstruction_jobs": int(recon_profile["total_jobs"]),
@@ -764,8 +764,7 @@ def _record(conn, project_id, parent_id, state):
     input_details = {d["CLASS_NUMBER"]: d for d in refinements.load_details(conn, state["input_refinement_id"])}
     details = []
     for k in range(classes):
-        active = [r for r in class_rows[k] if r.get("image_is_active", 1) >= 0]
-        avg_occ = sum(r.get("occupancy", 100.0) for r in active) / max(len(active), 1)
+        avg_occ = refinements.average_occupancy(class_rows[k])
         high = s["high_resolution_limit_a"] if s["refine_defocus"] else float(input_details.get(k + 1, {}).get("HIGH_RESOLUTION_LIMIT") or s["high_resolution_limit_a"])
         details.append({
             "REFERENCE_VOLUME_ASSET_ID": previous_refs[k], "LOW_RESOLUTION_LIMIT": s["low_resolution_limit_a"], "HIGH_RESOLUTION_LIMIT": high,

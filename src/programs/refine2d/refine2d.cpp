@@ -748,17 +748,41 @@ bool Refine2DApp::DoCalculation( ) {
         if ( block_size < 1 )
             block_size = 1;
 
-            //		image_counter = 0;
+        // Choose the images that go into the noise power spectrum here, serially, in line order and from a generator
+        // with a fixed seed, so that every refine2d task (and every run) over the same particle range whitens with
+        // the same curve. The choice used to be made inside the parallel loop from the clock-seeded global generator,
+        // in whatever order the threads reached it, so each task had its own subset and its own slightly different
+        // curve, and the logP and sigma it wrote carried a per-task offset. The block rule is the original's: a draw
+        // opens a run of block_size consecutive images (read in blocks to avoid seeking a lot in large files).
+        std::vector<char>     use_for_noise_spectrum(input_star_file.ReturnNumberofLines( ), 0);
+        RandomNumberGenerator noise_subset_generator(4711, true);
+        keep_reading            = false;
+        current_block_read_size = 0;
+        for ( current_line = 0; current_line < input_star_file.ReturnNumberofLines( ); current_line++ ) {
+            if ( input_star_file.ReturnPositionInStack(current_line) < first_particle || input_star_file.ReturnPositionInStack(current_line) > last_particle )
+                continue;
+            if ( keep_reading == false ) {
+                if ( noise_subset_generator.GetUniformRandom( ) >= 1.0 - 2.0 * (percentage / float(block_size)) ) {
+                    keep_reading            = true;
+                    current_block_read_size = 0;
+                }
+            }
+            else {
+                current_block_read_size++;
+                if ( current_block_read_size == block_size )
+                    keep_reading = false;
+                use_for_noise_spectrum[current_line] = 1;
+            }
+        }
+        current_line = 0;
 
 #pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack,                                                                                                                                                    \
-                                                                   number_of_blank_edges, sum_power, current_line, global_random_number_generator, block_size) private(current_line_local, input_parameters, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
-                                                                                                                                                                       mask_radius_for_noise, image_counter, keep_reading, current_block_read_size)
+                                                                   number_of_blank_edges, sum_power, current_line, use_for_noise_spectrum) private(current_line_local, input_parameters, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
+                                                                                                                                                                       mask_radius_for_noise, image_counter)
         {
 
             image_counter               = 0;
             number_of_blank_edges_local = 0;
-            keep_reading                = false;
-            current_block_read_size     = 0;
             input_image_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), true);
             temp_image_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), true);
             sum_power_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
@@ -767,40 +791,17 @@ bool Refine2DApp::DoCalculation( ) {
 
 #pragma omp for schedule(static, 1)
             for ( current_line_local = 0; current_line_local < input_star_file.ReturnNumberofLines( ); current_line_local++ ) {
-#pragma omp critical
-                {
-                    input_parameters = input_star_file.ReturnLine(current_line_local);
-
-                    //				current_line++;
-                    //				if (input_star_file.ReturnPositionInStack(current_line) < first_particle || input_star_file.ReturnPositionInStack(current_line) > last_particle) continue;
-                    //				image_counter++;
-                    if ( input_parameters.position_in_stack >= first_particle && input_parameters.position_in_stack <= last_particle ) {
-                        image_counter++;
-                        if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )
-                            my_progress->Update(image_counter);
-                        //					if (is_running_locally == true) my_progress->Update(image_counter);
-                        file_read = false;
-                        if ( keep_reading == false ) {
-                            if ( (global_random_number_generator.GetUniformRandom( ) >= 1.0 - 2.0 * (percentage / float(block_size))) ) {
-                                keep_reading            = true;
-                                current_block_read_size = 0;
-                            }
-                        }
-                        else {
-                            current_block_read_size++;
-                            if ( current_block_read_size == block_size )
-                                keep_reading = false;
-
-                            input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
-                            file_read = true;
-                        }
-                    }
-                }
-
+                input_parameters = input_star_file.ReturnLine(current_line_local);
                 if ( input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle )
                     continue;
-                if ( ! file_read )
+                image_counter++;
+                if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )
+                    my_progress->Update(image_counter);
+                if ( ! use_for_noise_spectrum[current_line_local] )
                     continue;
+// ReadSlice requires omp critical to avoid parallel reads, which may lead to the wrong slice being read
+#pragma omp critical
+                input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
 
                 mask_radius_for_noise = mask_radius / input_parameters.pixel_size;
                 if ( 2.0 * mask_radius_for_noise + mask_falloff / input_parameters.pixel_size > 0.95 * input_image_local.logical_x_dimension ) {
@@ -864,8 +865,18 @@ bool Refine2DApp::DoCalculation( ) {
     noise_power_spectrum.MakeThreadSafeForNThreads(max_threads);
     number_of_terms.MakeThreadSafeForNThreads(max_threads);
 
+    // The particles percent_used leaves out are drawn here, serially, one draw per particle in line order. The draw
+    // used to happen inside the parallel loop, which shared the global generator between the threads without a lock,
+    // so the fraction actually used wandered with thread timing. The global generator keeps the choice random between
+    // runs, as before.
+    std::vector<float> particle_selection_draws(input_star_file.ReturnNumberofLines( ), 0.0f);
+    for ( current_line = 0; current_line < input_star_file.ReturnNumberofLines( ); current_line++ ) {
+        if ( input_star_file.ReturnPositionInStack(current_line) >= first_particle && input_star_file.ReturnPositionInStack(current_line) <= last_particle )
+            particle_selection_draws[current_line] = global_random_number_generator.GetUniformRandom( );
+    }
+
 #pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack,                                                                                                                                                                                                           \
-                                                                   number_of_blank_edges, global_random_number_generator, percent_used, cropped_box_size, low_resolution_limit, high_resolution_limit, binned_pixel_size, invert_contrast,                                                                                                                                              \
+                                                                   number_of_blank_edges, particle_selection_draws, percent_used, cropped_box_size, low_resolution_limit, high_resolution_limit, binned_pixel_size, invert_contrast,                                                                                                                                              \
                                                                    noise_power_spectrum, padded_box_size, psi_step, psi_start, number_of_rotations, reverse_list_of_nozero_classes, smoothing_factor, max_search_range, output_star_file,                                                                                                                                               \
                                                                    fourier_size, input_particle, binning_factor, normalize_particles, low_resolution_contrast, input_classes_cache, sum_logp_particle) private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
                                                                                                                                                                                                                output_parameters, input_ctf, average, ctf_input_image_local, cropped_input_image_local, psi, i, rotation_angle, current_class, best_class, ssq_X, best_correlation_map, \
@@ -918,7 +929,7 @@ bool Refine2DApp::DoCalculation( ) {
             if ( input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle )
                 continue;
             image_counter++;
-            if ( (global_random_number_generator.GetUniformRandom( ) < 1.0f - 2.0f * percent_used) ) {
+            if ( particle_selection_draws[current_line_local] < 1.0f - 2.0f * percent_used ) {
                 input_parameters.best_2d_class = -abs(input_parameters.best_2d_class);
                 input_parameters.score_change  = 0.0f;
                 output_parameters              = input_parameters;

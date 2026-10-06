@@ -121,17 +121,30 @@ def bin_image(image, max_edge):
 MAX_PAGE_SECTIONS = 400
 
 
-def read_section(path, section=1, max_edge=1024, count=1):
-    """`count` consecutive sections from `section` (or the sum, section 0)
-    binned for display, concatenated, with the info the client needs --
-    `count` is how many came back (fewer at the end of the stack), `width`
-    and `height` the binned size of each. Returns (float32 array, info)."""
+def read_section(path, section=1, max_edge=1024, count=1, sections=None):
+    """`count` consecutive sections from `section` (or the sum, section 0) --
+    or, with `sections`, exactly those sections in that order (a 2D class's
+    members, scattered through the particle stack) -- binned for display,
+    concatenated, with the info the client needs: `count` is how many came
+    back (fewer at the end of the stack), `width` and `height` the binned
+    size of each. Returns (float32 array, info)."""
     info = file_info(path)
     section = int(section or 0)
     count = max(1, min(int(count or 1), MAX_PAGE_SECTIONS))
-    if section < 0 or section > info["nz"]:
+    if sections is not None:
+        sections = [int(x) for x in sections][:MAX_PAGE_SECTIONS]
+        if not sections:
+            raise DisplayError("no sections were asked for")
+        for x in sections:
+            if x < 1 or x > info["nz"]:
+                raise DisplayError("section {} is not in the file's {} sections".format(x, info["nz"]))
+        section = sections[0]
+    elif section < 0 or section > info["nz"]:
         raise DisplayError("section {} is not in the file's {} sections".format(section, info["nz"]))
-    if section == 0:
+    if sections is not None:
+        images = [_read(path, info, x) for x in sections]
+        info["sections"] = sections
+    elif section == 0:
         summed = min(info["nz"], MAX_SUM_SECTIONS)
         acc = None
         for s in range(1, summed + 1):

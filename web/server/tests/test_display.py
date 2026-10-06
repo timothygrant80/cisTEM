@@ -80,3 +80,56 @@ class DisplayTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SectionListTests(unittest.TestCase):
+    """read_section(sections=[...]): exactly those sections, in that order (a 2D class's members)."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.stack = os.path.join(self.tmp, "stack.mrcs")
+        w = rp.MrcStackWriter(self.stack, 16, 1.0)
+        for i in range(6):
+            w.append(np.full((16, 16), float(i + 1), dtype=np.float32))
+        w.close()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_list_of_sections_in_order(self):
+        data, info = display.read_section(self.stack, max_edge=64, sections=[5, 2, 6])
+        self.assertEqual(info["count"], 3)
+        self.assertEqual(info["sections"], [5, 2, 6])
+        self.assertEqual(info["section"], 5)
+        self.assertEqual([float(data[i][0, 0]) for i in range(3)], [5.0, 2.0, 6.0])
+
+    def test_a_section_outside_the_file_is_refused(self):
+        with self.assertRaises(display.DisplayError):
+            display.read_section(self.stack, sections=[1, 7])
+        with self.assertRaises(display.DisplayError):
+            display.read_section(self.stack, sections=[])
+
+    def test_the_route_takes_a_comma_list(self):
+        import json
+        import cistem_server
+        import auth
+        import db
+        import pathlib
+        root = pathlib.Path(self.tmp)
+        old = auth.AUTH_DB_PATH, db.PROJECTS_ROOT
+        auth.AUTH_DB_PATH = root / "auth.db"
+        db.PROJECTS_ROOT = root / "projects"
+        db.PROJECTS_ROOT.mkdir()
+        try:
+            user = auth.create_user("alice", "password123", "user")
+            headers = {"Authorization": "Bearer " + auth.create_session(user["id"])}
+            r = cistem_server.app.test_client().get("/api/display/section", query_string={"path": self.stack, "sections": "3,1", "max_edge": 64}, headers=headers)
+            self.assertEqual(r.status_code, 200)
+            info = json.loads(r.headers["X-Display-Info"])
+            self.assertEqual(info["sections"], [3, 1])
+            arr = np.frombuffer(r.data, dtype="<f4").reshape(2, info["height"], info["width"])
+            self.assertEqual([float(arr[0, 0, 0]), float(arr[1, 0, 0])], [3.0, 1.0])
+            r = cistem_server.app.test_client().get("/api/display/section", query_string={"path": self.stack, "sections": "3,x"}, headers=headers)
+            self.assertEqual(r.status_code, 400)
+        finally:
+            auth.AUTH_DB_PATH, db.PROJECTS_ROOT = old

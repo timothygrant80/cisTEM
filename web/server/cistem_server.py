@@ -1125,10 +1125,12 @@ def display_section():
         section = int(request.args.get("section", 1))
         count = int(request.args.get("count", 1))
         max_edge = max(64, min(int(request.args.get("max_edge", 1024)), 4096))
+        # `sections=3,17,42`: exactly those sections in that order, in place of section + count
+        sections = [int(x) for x in request.args["sections"].split(",") if x.strip()] if request.args.get("sections") else None
     except ValueError:
-        return jsonify({"error": "section, count and max_edge must be integers"}), 400
+        return jsonify({"error": "section, count, sections and max_edge must be integers"}), 400
     try:
-        data, info = display.read_section(request.args.get("path", ""), section, max_edge, count)
+        data, info = display.read_section(request.args.get("path", ""), section, max_edge, count, sections=sections)
     except display.DisplayError as exc:
         return jsonify({"error": str(exc)}), 400
     except OSError as exc:
@@ -3595,6 +3597,27 @@ def classification_class_members_png(project_id, classification_id, class_number
 
 
 CLASS_MEMBER_LIMIT = 100
+
+
+@app.route("/api/projects/<project_id>/classifications/<int:classification_id>/class/<int:class_number>/members", methods=["GET"])
+@auth.project_access_required
+def classification_class_members_list(project_id, classification_id, class_number):
+    """The class's members as positions in the package's particle stack (those that took part in the
+    round first, `?limit=` of them) with the stack's path -- what the results page's embedded Display
+    panel shows as a stack of its own; `members.png` above is the same set as one picture."""
+    limit = request.args.get("limit", default=CLASS_MEMBER_LIMIT, type=int)
+    conn = db.get_conn(project_id)
+    row = conn.execute("SELECT rp.STACK_FILENAME FROM CLASSIFICATION_LIST c JOIN REFINEMENT_PACKAGE_ASSETS rp "
+                       "ON rp.REFINEMENT_PACKAGE_ASSET_ID = c.REFINEMENT_PACKAGE_ASSET_ID WHERE c.CLASSIFICATION_ID=?",
+                       (classification_id,)).fetchone()
+    members, total = classification.class_members(conn, classification_id, class_number, limit)
+    conn.close()
+    if row is None:
+        return jsonify({"error": "no such classification"}), 404
+    path = row["STACK_FILENAME"] or ""
+    return jsonify({"classification_id": classification_id, "class_number": class_number, "stack_filename": path,
+                    "stack_file_exists": bool(path) and Path(path).is_file(), "total": total, "limit": limit,
+                    "positions": [m["position_in_stack"] for m in members]})
 
 
 # ---- class selections (Refine2DResultsPanel's selection manager) ----

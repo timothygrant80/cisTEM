@@ -152,6 +152,26 @@ class SelectionTests(unittest.TestCase):
         self.db.PROJECTS_ROOT = self._root
         __import__("shutil").rmtree(self.tmp, ignore_errors=True)
 
+    def test_class_members_as_a_list_for_the_display_panel(self):
+        import auth
+        import pathlib
+        import cistem_server
+        old_auth = auth.AUTH_DB_PATH
+        auth.AUTH_DB_PATH = pathlib.Path(self.tmp) / "auth.db"
+        try:
+            user = auth.create_user("boss", "password123", "admin")
+            headers = {"Authorization": "Bearer " + auth.create_session(user["id"])}
+            r = cistem_server.app.test_client().get("/api/projects/{}/classifications/1/class/1/members?limit=5".format(self.project), headers=headers)
+            self.assertEqual(r.status_code, 200)
+            d = r.get_json()
+            self.assertEqual(d["positions"], [1, 2])
+            self.assertEqual(d["total"], 2)
+            self.assertEqual(d["stack_filename"], "/nonexistent.mrc")
+            self.assertFalse(d["stack_file_exists"])
+            self.assertEqual(cistem_server.app.test_client().get("/api/projects/{}/classifications/9/class/1/members".format(self.project), headers=headers).status_code, 404)
+        finally:
+            auth.AUTH_DB_PATH = old_auth
+
     def test_selection_crud_and_members(self):
         conn = self.db.get_conn(self.project)
         sid = c.create_selection(conn, 1, "sel", [1])

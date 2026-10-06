@@ -562,7 +562,12 @@ img.is-loading{opacity:.6;}   /* figLoading(): the picture showing while its rep
 @media (max-width:1100px){ .pick-result{grid-template-columns:1fr;} }
 /* 2D classification: a montage of class averages with a selection square
    (ClassumDisplayPanel), and the members of the selected class below it. */
-.c2d-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-content:start;}   /* rows stack from the top: the box is as tall as the panel, and stretched rows put a gap under the FSC */
+.c2d-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-content:start;}
+/* A Display panel embedded in a page (the 2D class averages and members, the live class averages): a box of
+   a fixed height the panel fills, with the browser's resize handle at its corner so it can be pulled taller. */
+.c2d-display{display:flex;flex-direction:column;height:clamp(300px,50vh,900px);min-height:220px;resize:vertical;overflow:hidden;padding-bottom:4px;}
+.c2d-display.c2d-display-members{height:clamp(240px,36vh,800px);}
+.c2d-display .display-panel{flex:1 1 auto;min-height:0;}   /* rows stack from the top: the box is as tall as the panel, and stretched rows put a gap under the FSC */
 .c2d-frame{position:relative;border:1px solid var(--border);background:#404040;min-height:80px;}
 .c2d-frame img{display:block;width:100%;height:auto;}
 .c2d-frame.selectable img{cursor:pointer;}
@@ -4741,10 +4746,25 @@ From branch : <span id="versionBranch">—</span></p>
     function emptyLoading(on){ if (on) empty.textContent = "Loading\u2026"; else if (!page.loadedProject) empty.innerHTML = emptyHTML; }
     emptyLoading(true);
     var resultBox = document.createElement("div"); resultBox.className = "ra-result c2d-layout"; resultBox.hidden = true; scroll.appendChild(resultBox);
-    var averages = classMontageFigure("Class averages"); averages.frame.classList.add("selectable"); resultBox.appendChild(averages.root);
+    // The class averages in an embedded Display panel (scale, greys, FFT, the loupe), each class an image of
+    // the averages stack; a click on one shows its members and, with a selection picked, toggles it there.
+    // The selected class is framed and the picked classes shaded with a tick, drawn over the panel's tiles.
+    function embeddedFigure(cls, panelOpts){
+      var box = document.createElement("div"); box.className = "c2d-display" + (cls ? " " + cls : "");
+      var panel = makeDisplayPanel(box, panelOpts);
+      var caption = document.createElement("div"); caption.className = "c2d-caption";
+      var left = document.createElement("span"), right = document.createElement("span"); caption.appendChild(left); caption.appendChild(right);
+      var root = document.createElement("div"); root.appendChild(box); root.appendChild(caption);
+      return {root: root, panel: panel, left: left, right: right};
+    }
+    var averages = embeddedFigure("", {embedded: true, keepView: true, onImageClick: function(n){ onClassClick(n); }, tileOverlay: function(ctx, n, x, y, w, h){ drawClassOverlay(ctx, n, x, y, w, h); }});
+    resultBox.appendChild(averages.root);
+    averages.panel.clear("Loading…");
     var membersHead = document.createElement("div"); membersHead.className = "rpkg-particles-head"; membersHead.textContent = "Class Members"; resultBox.appendChild(membersHead);
-    var members = classMontageFigure("Members of the selected class"); resultBox.appendChild(members.root);
-    members.status.textContent = "Click a class average to see its members.";
+    var members = embeddedFigure("c2d-display-members", {embedded: true, keepView: true});
+    resultBox.appendChild(members.root);
+    members.panel.clear("Click a class average to see its members.");
+    var membersSeq = 0;
     els.resultsPages.appendChild(root);
     page.root = root;
     var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody");
@@ -4755,7 +4775,19 @@ From branch : <span id="versionBranch">—</span></p>
     // ---- selections (Refine2DResultsPanel's SelectionManagerListCtrl) ----
     function currentSelection(){ return page.selections.filter(function(s){ return s.selection_id === page.selectionId; })[0] || null; }
     function pickedIndices(){ var s = currentSelection(); return s ? s.classes.map(function(k){ return k - 1; }) : []; }
-    function redrawOverlay(){ if (page.current) averages.select(page.current.montage, page.selectedClass != null ? page.selectedClass - 1 : null, pickedIndices()); }
+    function redrawOverlay(){ averages.panel.redraw(); }
+    // cisTEM's selected-image shading with a tick on every class in the picked selection, and the eye (the
+    // yellow frame) on the class whose members are shown -- over the panel's tile at (x, y), w by h canvas pixels.
+    function drawClassOverlay(ctx, n, x, y, w, h){
+      if (!page.current) return;
+      if (pickedIndices().indexOf(n - 1) >= 0){
+        ctx.fillStyle = "rgba(47,95,166,.28)"; ctx.fillRect(x, y, w, h);
+        ctx.font = "700 " + Math.max(12, Math.min(19, Math.round(h / 6))) + "px " + getComputedStyle(document.documentElement).getPropertyValue("--font-mono");
+        ctx.lineWidth = 3; ctx.strokeStyle = "#2F5FA6"; ctx.fillStyle = "#fff"; ctx.textBaseline = "top";
+        ctx.strokeText("\u2713", x + 5, y + 4); ctx.fillText("\u2713", x + 5, y + 4);
+      }
+      if (page.selectedClass === n){ ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3); }
+    }
     function loadSelections(){
       if (page.selectedId == null || !state.projectId){ page.selections = []; renderSelections(); return; }
       var cid = page.selectedId;
@@ -4902,8 +4934,8 @@ From branch : <span id="versionBranch">—</span></p>
       }
       empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
       rightLabel.textContent = "Class Averages — " + item.name;
-      figLoading(averages.img, averages.status, "Loading…"); averages.select(null, null, null);
-      figLoading(members.img, members.status, "Click a class average to see its members."); members.left.textContent = ""; members.right.textContent = "";
+      averages.panel.clear("Loading…");
+      members.panel.clear("Click a class average to see its members."); members.left.textContent = ""; members.right.textContent = "";
       membersHead.textContent = "Class Members";
       apiFetch(projectApiUrl("/classifications/" + item.classification_id)).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
@@ -4914,36 +4946,39 @@ From branch : <span id="versionBranch">—</span></p>
         DETAILS.forEach(function(d, i){ detailCells[i].textContent = d[1](full); });
         averages.left.textContent = full.number_of_classes + " classes · " + fmtVal(full.active_particles) + " of " + fmtVal(full.number_of_particles) + " particles took part";
         averages.right.textContent = full.high_resolution_limit != null ? "high-res limit " + Number(full.high_resolution_limit).toFixed(1) + " Å" : "";
-        averages.img.style.maxWidth = full.montage ? (full.montage.width * 2) + "px" : "";
-        averages.svg.style.maxWidth = averages.img.style.maxWidth;
-        loadFigure(averages.img, averages.status, "/classifications/" + full.classification_id + "/averages.png", full.class_average_file_exists, "class averages", page.urls);
-        setExpand(averages.expand, full.class_average_file_exists ? {path: full.class_average_file, title: full.name + " — class averages", section: 1, greys: "local"} : null);
+        if (full.class_average_file_exists) averages.panel.open({path: full.class_average_file, title: full.name + " — class averages", section: 1, greys: "local"});
+        else averages.panel.clear("The class averages file is missing: " + (full.class_average_file || ""));
         if (page.selectedClass != null) showClass(page.selectedClass); else redrawOverlay();
-      }).catch(function(err){ averages.status.textContent = "Could not load this classification: " + err.message; });
+      }).catch(function(err){ averages.panel.clear("Could not load this classification: " + err.message); });
     }
     function showClass(k){
       var c = page.current; if (!c) return;
       page.selectedClass = k;
-      averages.select(c.montage, k - 1, pickedIndices());
+      averages.panel.redraw();
       var n = (c.class_member_counts || [])[k - 1] || 0;
       membersHead.textContent = "Class Members — Class #" + k + " (" + n + " particle" + (n === 1 ? "" : "s") + ")";
-      figLoading(members.img, members.status, n ? "Loading…" : "This class has no members.");
+      members.panel.clear(n ? "Loading…" : "This class has no members.");
       members.left.textContent = ""; members.right.textContent = "";
       if (!n) return;
-      var limit = 100;
+      var limit = 100, seq = ++membersSeq;
       members.right.textContent = n > limit ? "showing the first " + limit : "";
-      loadFigure(members.img, members.status, "/classifications/" + c.classification_id + "/class/" + k + "/members.png?limit=" + limit, true, "class members", page.urls);
+      // The members' positions in the package's stack, shown as a stack of their own in the panel.
+      apiFetch(projectApiUrl("/classifications/" + c.classification_id + "/class/" + k + "/members?limit=" + limit)).then(function(r){
+        if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+        return r.json();
+      }).then(function(d){
+        if (seq !== membersSeq) return;
+        if (!d.stack_file_exists){ members.panel.clear("The particle stack is missing: " + (d.stack_filename || "")); return; }
+        members.left.textContent = d.total > d.positions.length ? "the first " + d.positions.length + " of " + d.total + " members, those that took part in the round first" : "";
+        members.panel.open({path: d.stack_filename, sections: d.positions, title: c.name + " — class #" + k + " members", section: 1, greys: "auto"});
+      }).catch(function(err){ if (seq === membersSeq) members.panel.clear("Could not load the members: " + err.message); });
     }
-    averages.img.addEventListener("click", function(e){
-      var c = page.current; if (!c || !c.montage) return;
-      var rect = averages.img.getBoundingClientRect();
-      var x = (e.clientX - rect.left) * c.montage.width / rect.width, y = (e.clientY - rect.top) * c.montage.height / rect.height;
-      var idx = averages.tileAt(c.montage, x, y);
-      if (idx < 0 || idx >= c.number_of_classes) return;
-      showClass(idx + 1);
+    function onClassClick(n){
+      var c = page.current; if (!c || n < 1 || n > c.number_of_classes) return;
+      showClass(n);
       // With a selection picked, a click also toggles the class in it (OnClassumLeftClick).
-      if (currentSelection()) toggleClassInSelection(idx + 1);
-    });
+      if (currentSelection()) toggleClassInSelection(n);
+    }
     pkgSelect.addEventListener("change", function(){ page.packageId = Number(pkgSelect.value); page.selectedId = null; renderList(); });
     btn("details").addEventListener("click", function(){
       page.showDetails = !page.showDetails;
@@ -6831,16 +6866,27 @@ From branch : <span id="versionBranch">—</span></p>
   // y up as cisTEM counts it. Rows come in file order and are flipped when
   // drawn, so the first row is the bottom of the picture. `setOverlay(fn)`
   // lets a view draw over the picture in image coordinates (pick circles).
-  function makeDisplayPanel(host){
+  // `opts` (all optional) embed the panel in a page: `embedded` hides Open (the page says what is shown);
+  // `keepView` keeps the scale, greys and toggles when another file is opened (a results page moving between
+  // classifications); `onImageClick(n, label)` is told which image of a page was clicked instead of the panel
+  // framing it; `tileOverlay(ctx, n, x, y, w, h)` draws over each image of the page in canvas pixels (the 2D
+  // page's selected classes). `open({sections: [...]})` shows those sections of the file, in that order, as the
+  // stack (the members of a 2D class, scattered through the particle stack).
+  function makeDisplayPanel(host, opts){
+    opts = opts || {};
     var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
     // location: the first image of the page shown (1-based; 0 = the frame sum); tiles: the page's sections as float32 rows.
     var dp = { path: null, title: "", pixelSize: null, info: null, bin: 1, w: 0, h: 0, location: 1, sum: false, singleView: false, pageScale: null, tiles: [], fftTiles: [], pageCount: 0, seq: 0,
-               mode: "auto", manual: null, global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, selected: null, lay: null, low: 0, high: 0 };
+               mode: "auto", manual: null, global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, selected: null, lay: null, low: 0, high: 0, list: null };
+    // How many images the panel pages through: the file's sections, or the list it was opened on.
+    function nImages(){ return dp.list ? dp.list.length : (dp.info ? dp.info.nz : 0); }
+    function imageLabel(n){ return dp.list ? "particle " + dp.list[n - 1] : "image " + n; }
     var root = document.createElement("div"); root.className = "display-panel"; host.appendChild(root);
     var bar = document.createElement("div"); bar.className = "display-toolbar"; root.appendChild(bar);
     function button(label, title, cls){ var b = document.createElement("button"); b.type = "button"; b.className = "small" + (cls ? " " + cls : ""); b.textContent = label; b.title = title || ""; bar.appendChild(b); return b; }
     function sep(){ var d = document.createElement("span"); d.className = "dp-sep"; bar.appendChild(d); }
     var openBtn = button("Open…", "Open an image file on the machine running the API server");
+    if (opts.embedded) openBtn.hidden = true;
     var saveBtn = button("Save", "Save the picture as shown, as a PNG");
     sep();
     var prevBtn = button("◀", "Previous page of images (left arrow)"), sectionInput = document.createElement("input");
@@ -6880,7 +6926,7 @@ From branch : <span id="versionBranch">—</span></p>
     // At the chosen scale, as many images as fit across and down are shown;
     // if none fits, the scale drops so one does. Fit means one image fills the stage.
     function maxEdge(){ return Math.max(512, Math.min(2048, Math.round(Math.max(stage.clientWidth, stage.clientHeight) * (window.devicePixelRatio || 1)))); }
-    function single(){ return dp.sum || dp.singleView || !dp.info || dp.info.nz <= 1; }
+    function single(){ return dp.sum || dp.singleView || !dp.info || nImages() <= 1; }
     // Scales are in the file's pixels: an image is drawn nx*scale wide. The
     // server bins each section to about that size (edgeFor), so a page of
     // small tiles costs little and a zoomed-in image comes at full resolution.
@@ -7036,9 +7082,9 @@ From branch : <span id="versionBranch">—</span></p>
       canvas.classList.toggle("smooth", dp.hq);
       paintCanvas();
       if (dp.showHist || dp.mode === "manual") drawHistogram(pageArray(), dp.mode === "manual" && dp.manual ? dp.manual : first);
-      var where = dp.sum ? "[sum of " + dp.info.summed + "]" : dp.info.nz > 1 ? (dp.tiles.length > 1 ? "[images " + dp.location + "–" + (dp.location + dp.tiles.length - 1) + " of " + dp.info.nz + "]" : "[" + dp.location + " / " + dp.info.nz + "]") : "";
+      var where = dp.sum ? "[sum of " + dp.info.summed + "]" : nImages() > 1 ? (dp.tiles.length > 1 ? "[images " + dp.location + "–" + (dp.location + dp.tiles.length - 1) + " of " + nImages() + "]" : "[" + (dp.list ? imageLabel(dp.location) + ", " : "") + dp.location + " / " + nImages() + "]") : "";
       fileText.textContent = (dp.title ? dp.title + " — " : "") + dp.path + " " + where + "  " + dp.info.nx + " × " + dp.info.ny + (dp.bin > 1 ? "  (binned ×" + dp.bin + ")" : "") +
-        (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") + (dp.tiles.length === 1 ? "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high) + (dp.singleView ? "  (double-click for the page)" : "") : dp.selected != null ? "  selected image " + dp.selected + "  (double-click to open it)" : "");
+        (pixelSize() ? "  " + pixelSize().toFixed(3) + " Å/px" : "") + (dp.tiles.length === 1 ? "  greys " + fmtG(dp.low) + " … " + fmtG(dp.high) + (dp.singleView ? "  (double-click for the page)" : "") : dp.selected != null ? "  selected " + imageLabel(dp.selected) + "  (double-click to open it)" : "");
     }
     // The canvas from the offscreen page: cheap, so the loupe can repaint on every mouse move.
     function paintCanvas(){
@@ -7057,6 +7103,11 @@ From branch : <span id="versionBranch">—</span></p>
       if (dp.selected != null && dp.selected >= dp.location && dp.selected < dp.location + dp.tiles.length){
         var si = dp.selected - dp.location, tx = (si % across) * tw, ty = Math.floor(si / across) * th;
         ctx.save(); ctx.strokeStyle = "#2F5FA6"; ctx.lineWidth = 3; ctx.strokeRect(tx + 1.5, ty + 1.5, tw - 3, th - 3); ctx.restore();
+      }
+      if (opts.tileOverlay){
+        ctx.save();
+        for (var t2 = 0; t2 < dp.tiles.length; t2++) opts.tileOverlay(ctx, dp.location + t2, (t2 % across) * tw, Math.floor(t2 / across) * th, tw, th);
+        ctx.restore();
       }
       if (dp.overlay && single()) dp.overlay(ctx, {scale: lay.scale, bin: dp.bin, width: dp.info.nx, height: dp.info.ny, toCanvas: function(x, y){ return [x * lay.scale, canvas.height - y * lay.scale]; }});
       if (loupe.on) paintLoupe(ctx);
@@ -7163,17 +7214,17 @@ From branch : <span id="versionBranch">—</span></p>
     sectionInput.addEventListener("change", function(){ if (dp.path) goTo(Number(sectionInput.value)); });
     // A page back or forward: by as many images as are shown (OnPrevious / OnNext).
     function step(delta){
-      if (!dp.info || dp.info.nz <= 1) return;
+      if (!dp.info || nImages() <= 1) return;
       var per = dp.lay ? dp.lay.perPage : 1;
       if (dp.sum){ if (delta > 0) goTo(1); return; }
-      if (delta > 0 && dp.location + dp.tiles.length - 1 >= dp.info.nz) return;   // the last image is already shown
+      if (delta > 0 && dp.location + dp.tiles.length - 1 >= nImages()) return;   // the last image is already shown
       var next = dp.location + delta * per;
-      if (next < 1) next = 1; if (next > dp.info.nz) next = dp.info.nz;
+      if (next < 1) next = 1; if (next > nImages()) next = nImages();
       if (next !== dp.location) goTo(next);
     }
     function goTo(n){
-      n = Math.max(0, Math.min(Math.round(n), dp.info ? dp.info.nz : n));
-      dp.sum = n === 0 && !!dp.info && dp.info.nz > 1;
+      n = Math.max(dp.list ? 1 : 0, Math.min(Math.round(n), dp.info ? nImages() : n));
+      dp.sum = n === 0 && !!dp.info && !dp.list && nImages() > 1;
       dp.location = n;
       fetchPage();
     }
@@ -7187,7 +7238,7 @@ From branch : <span id="versionBranch">—</span></p>
       canvas.toBlob(function(blob){
         if (!blob) return;
         var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-        a.download = (dp.path.split("/").pop().replace(/\.[^.]+$/, "") || "image") + (dp.info.nz > 1 ? "_" + dp.location : "") + (dp.fft ? "_fft" : "") + ".png";
+        a.download = (dp.path.split("/").pop().replace(/\.[^.]+$/, "") || "image") + (nImages() > 1 ? "_" + dp.location : "") + (dp.fft ? "_fft" : "") + ".png";
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
       }, "image/png");
@@ -7207,17 +7258,19 @@ From branch : <span id="versionBranch">—</span></p>
       var h = hit(e);
       if (!h){ locText.textContent = ""; return; }
       var v = tileSource(h.idx)[h.j * dp.w + h.ix];
-      locText.textContent = (dp.tiles.length > 1 ? "image " + h.image + "  " : "") + (h.ix * dp.bin) + ", " + (h.j * dp.bin) + (dp.bin > 1 ? " (±" + (dp.bin - 1) + ")" : "") + " : " + fmtG(v);
+      locText.textContent = (dp.tiles.length > 1 || dp.list ? imageLabel(h.image) + "  " : "") + (h.ix * dp.bin) + ", " + (h.j * dp.bin) + (dp.bin > 1 ? " (±" + (dp.bin - 1) + ")" : "") + " : " + fmtG(v);
     });
     canvas.addEventListener("mouseleave", function(){ locText.textContent = ""; loupeOff(); });
     canvas.addEventListener("click", function(e){
-      var h = hit(e); if (!h || dp.tiles.length <= 1) return;
+      var h = hit(e); if (!h) return;
+      if (opts.onImageClick){ opts.onImageClick(h.image, dp.list ? dp.list[h.image - 1] : h.image); return; }
+      if (dp.tiles.length <= 1) return;
       dp.selected = dp.selected === h.image ? null : h.image; draw();
     });
     // A double-click on an image of the page opens it on its own, at Fit;
     // from a single view a double-click goes back to the page it sits in.
     canvas.addEventListener("dblclick", function(e){
-      var h = hit(e); if (!h || !dp.info || dp.info.nz <= 1 || dp.sum) return;
+      var h = hit(e); if (!h || !dp.info || nImages() <= 1 || dp.sum) return;
       if (dp.tiles.length > 1){
         dp.selected = h.image; dp.pageScale = dp.scale; dp.scale = "fit"; dp.singleView = true; scaleSelect.value = "fit";
         goTo(h.image);
@@ -7239,7 +7292,8 @@ From branch : <span id="versionBranch">—</span></p>
       var lay = layout(), count = dp.sum ? 1 : lay.perPage;
       dp.pageCount = count;
       message.hidden = false; message.textContent = "Loading…";
-      apiFetch(apiUrl("/display/section") + "?path=" + encodeURIComponent(path) + "&section=" + (dp.sum ? 0 : dp.location) + "&count=" + count + "&max_edge=" + edgeFor(lay.scale), {cache: "no-cache"}).then(function(r){
+      var which = dp.list ? "&sections=" + dp.list.slice(dp.location - 1, dp.location - 1 + count).join(",") : "&section=" + (dp.sum ? 0 : dp.location) + "&count=" + count;
+      apiFetch(apiUrl("/display/section") + "?path=" + encodeURIComponent(path) + which + "&max_edge=" + edgeFor(lay.scale), {cache: "no-cache"}).then(function(r){
         if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
         var info = JSON.parse(r.headers.get("X-Display-Info") || "{}");
         return r.arrayBuffer().then(function(buf){ return {info: info, buf: buf}; });
@@ -7249,8 +7303,8 @@ From branch : <span id="versionBranch">—</span></p>
         dp.info.summed = info.summed; dp.bin = info.bin; dp.w = info.width; dp.h = info.height; n = dp.w * dp.h;
         dp.tiles = []; dp.fftTiles = [];
         for (var i = 0; i < (info.count || 1); i++) dp.tiles.push(all.subarray(i * n, (i + 1) * n));
-        sectionInput.value = dp.sum ? 0 : dp.location; sectionInput.max = String(dp.info.nz); sectionInput.min = dp.info.nz > 1 ? "0" : "1"; sectionInput.disabled = dp.info.nz <= 1;
-        countLabel.textContent = "/ " + dp.info.nz; prevBtn.disabled = nextBtn.disabled = dp.info.nz <= 1;
+        sectionInput.value = dp.sum ? 0 : dp.location; sectionInput.max = String(nImages()); sectionInput.min = nImages() > 1 && !dp.list ? "0" : "1"; sectionInput.disabled = nImages() <= 1;
+        countLabel.textContent = "/ " + nImages(); prevBtn.disabled = nextBtn.disabled = nImages() <= 1;
         if (dp.mode === "manual" && !dp.manual){ var r0 = greyRange(dp.tiles.length === 1 ? tileSource(0) : pageArray()); dp.manual = [r0[0], r0[1]]; setManualInputs(); }
         message.hidden = true;
         draw();
@@ -7262,12 +7316,15 @@ From branch : <span id="versionBranch">—</span></p>
     }
     function open(src){
       dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
-      var seq = ++dp.seq, path = src.path;
-      var fileChanged = path !== dp.path;
+      var seq = ++dp.seq, path = src.path, list = src.sections ? src.sections.slice() : null;
+      var fileChanged = path !== dp.path || JSON.stringify(list) !== JSON.stringify(dp.list);
+      var firstOpen = !dp.path;
+      dp.list = list;
       // A new file starts in the greys its caller asks for: Local for volumes and class averages (each slice or
       // average on its own min / max), Auto for everything else (the mean +- 2.5 sigma rule) -- as the DisplayPanels
       // cisTEM opens for those do. Reopening the same file keeps whatever the user chose.
-      if (fileChanged){ dp.global = null; dp.manual = null; dp.selected = null; dp.singleView = false; dp.mode = src.greys === "local" ? "local" : "auto"; setPressed(); }
+      if (fileChanged){ dp.global = null; dp.manual = null; dp.selected = null; dp.singleView = false; }
+      if (fileChanged && (firstOpen || !opts.keepView)){ dp.mode = src.greys === "local" ? "local" : "auto"; setPressed(); }
       dp.path = path; dp.tiles = []; dp.fftTiles = []; canvas.width = canvas.height = 0;
       message.hidden = false; message.textContent = "Loading…";
       apiFetch(apiUrl("/display/info") + "?path=" + encodeURIComponent(path)).then(function(r){
@@ -7278,7 +7335,8 @@ From branch : <span id="versionBranch">—</span></p>
         dp.info = info; dp.bin = 0;   // the binning comes with the first page
         var section = src.section === "middle" ? Math.max(1, Math.round(info.nz / 2)) : (src.section != null ? src.section : 1);
         // A stack opens at 100% so that as many images as fit are shown; a single image fills the stage.
-        if (fileChanged){ dp.scale = info.nz > 1 && section !== 0 ? "1" : "fit"; scaleSelect.value = dp.scale; }
+        if (fileChanged && (firstOpen || !opts.keepView)){ dp.scale = nImages() > 1 && section !== 0 ? "1" : "fit"; scaleSelect.value = dp.scale; }
+        if (dp.list && section < 1) section = 1;
         if (dp.mode === "global") fetchGlobal();
         goTo(section);
       }).catch(function(err){
@@ -7287,8 +7345,13 @@ From branch : <span id="versionBranch">—</span></p>
         dp.info = null; fileText.textContent = path; locText.textContent = "";
       });
     }
+    function clear(text){
+      dp.seq++; dp.path = null; dp.list = null; dp.info = null; dp.tiles = []; dp.fftTiles = []; dp.lay = null;
+      canvas.width = canvas.height = 0; fileText.textContent = ""; locText.textContent = ""; countLabel.textContent = "";
+      message.hidden = false; message.textContent = text || "No image open.";
+    }
     setPressed();
-    return { open: open, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: draw, state: dp, root: root };
+    return { open: open, clear: clear, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: paintCanvas, state: dp, root: root };
   }
 
   // The modal instance the asset panels' Display buttons use (a movie opens
@@ -10683,7 +10746,14 @@ From branch : <span id="versionBranch">—</span></p>
           '<button class="small" data-role="rnext" title="The round after">&rarr;</button>' +
           '<button class="small" data-role="rlatest" title="Follow the newest round as the run goes on">Latest</button>' +
         '</div></div>';
-      var fig = classMontageFigure("Class averages"); card.appendChild(fig.root);
+      // The averages in an embedded Display panel, reopened only when the round shown changes (the poll
+      // redraws every few seconds); the scale and greys the user chose carry from round to round.
+      var figBox = document.createElement("div"); figBox.className = "c2d-display"; card.appendChild(figBox);
+      var figPanel = makeDisplayPanel(figBox, {embedded: true, keepView: true});
+      figPanel.clear("Loading…");
+      var figCaption = document.createElement("div"); figCaption.className = "c2d-caption"; card.appendChild(figCaption);
+      var fig = {left: document.createElement("span"), right: document.createElement("span"), shownPath: null};
+      figCaption.appendChild(fig.left); figCaption.appendChild(fig.right);
       var rpick = card.querySelector('[data-role="rpick"]'), prev = card.querySelector('[data-role="rprev"]'), next = card.querySelector('[data-role="rnext"]'), latestBtn = card.querySelector('[data-role="rlatest"]');
       var last = null, chosen = null, cache = {};   // chosen: a classification id, or null for the newest
       // Every result the run has written, oldest first: the starting references (when the run made
@@ -10700,10 +10770,11 @@ From branch : <span id="versionBranch">—</span></p>
       function render(cls, rightText){
         fig.left.textContent = cls.name + (cls.is_startup ? " (starting references)" : " (round " + cls.round + " of " + cls.rounds + ")") + (chosen != null ? " · earlier round" : "");
         fig.right.textContent = rightText;
-        figLoading(fig.img, fig.status, "Loading…");
-        fig.img.style.maxWidth = cls.montage ? (cls.montage.width * 2) + "px" : "";
-        loadFigure(fig.img, fig.status, "/classifications/" + cls.classification_id + "/averages.png", cls.class_average_file_exists, "class averages", last.urls);
-        setExpand(fig.expand, cls.class_average_file_exists ? {path: cls.class_average_file, title: cls.name + " — class averages", section: 1, greys: "local"} : null);
+        var path = cls.class_average_file_exists ? cls.class_average_file : null;
+        if (!path){ fig.shownPath = null; figPanel.clear("No class averages yet"); return; }
+        if (path === fig.shownPath) return;
+        fig.shownPath = path;
+        figPanel.open({path: path, title: cls.name + " — class averages", section: 1, greys: "local"});
       }
       function showRound(){
         if (!last) return;
@@ -10718,13 +10789,13 @@ From branch : <span id="versionBranch">—</span></p>
           (result.phase === "startup" ? "creating starting references" : result.phase === "merge" ? "merging round " + (result.round + 1) : "refining round " + (result.round + 1) + " of " + result.rounds);
         if (chosen == null){ render(result, phase); return; }
         if (cache[id]){ render(cache[id], phase); return; }
-        figLoading(fig.img, fig.status, "Loading…");
+        fig.shownPath = null; figPanel.clear("Loading…");
         apiFetch(projectApiUrl("/classifications/" + id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
           var h = (result.history || []).filter(function(e){ return e.classification_id === id; })[0];
           cache[id] = {classification_id: full.classification_id, name: full.name, class_average_file: full.class_average_file, class_average_file_exists: full.class_average_file_exists,
                        montage: full.montage, is_startup: !h, round: h ? h.round : 0, rounds: result.rounds};
           if (currentId() === id && chosen != null) render(cache[id], phase);
-        }).catch(function(err){ fig.status.textContent = "Could not load this round: " + err.message; });
+        }).catch(function(err){ figPanel.clear("Could not load this round: " + err.message); });
       }
       function stepRound(delta){
         var rs = rounds(); if (!rs.length) return;

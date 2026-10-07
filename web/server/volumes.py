@@ -222,15 +222,22 @@ def auto_mask(volume, pixel_size, mask_radius_a):
     return cosine_mask(out, r_px, 1.0, value=0.0)
 
 
-def apply_mask(volume, mask, cosine_edge_px, weight_outside, low_pass_radius=0.0, filter_edge=0.0):
+def apply_mask(volume, mask, cosine_edge_px, weight_outside, low_pass_radius=None, filter_edge=0.0):
     """Image::ApplyMask(mask, edge, weight_outside, low_pass_radius, filter_edge)
     as Refine 3D's Multiply3DMaskerThread calls it: the mask is binarised
     (> 0), given a cosine edge of `cosine_edge_px` by convolution with a
     normalised cosine kernel, and the volume is kept inside it; outside it
     is replaced by the average density beyond 0.4 of the box, or -- with a
-    weight and a low-pass radius (cycles/pixel) -- by that weight times a
-    low-pass-filtered copy of the volume."""
+    weight -- by that weight times the volume (its masked region replaced
+    by that average), low-pass filtered to `low_pass_radius` (cycles/pixel)
+    when one is given. `None` is no filter: the GUI passes an infinite
+    radius there (pixel size / 0), so the weighted density outside the mask
+    is kept unfiltered; a radius of 0 would make cisTEM ignore the weight,
+    which no caller wants. Verified against Image::ApplyMask to float
+    precision in all three forms (2026-10-07)."""
     volume = np.asarray(volume, dtype=np.float32)
+    if low_pass_radius is None:
+        low_pass_radius = float("inf")
     n = volume.shape[0]
     binary = (np.asarray(mask) > 0.0).astype(np.float32)
 

@@ -220,6 +220,19 @@ class Refine3DTests(unittest.TestCase):
         # A zero-occupancy particle contributes nothing to that class.
         self.assertAlmostEqual(sum(refinements.angular_histogram([[dict(cls1[0], occupancy=0.0)], [cls2[0]]], 1)), 0.0)
 
+    def test_apply_mask_weight_without_a_low_pass_keeps_weighted_density_outside(self):
+        """Image::ApplyMask with an infinite low-pass radius, what the GUI passes when the outside filter is off:
+        outside the mask the volume is kept at the weight, unfiltered; a radius of 0 would ignore the weight."""
+        n = 32
+        zz, yy, xx = np.mgrid[:n, :n, :n].astype(np.float32)
+        vol = np.random.default_rng(3).normal(0, 1, (n, n, n)).astype(np.float32)
+        mask = (((zz - 16) ** 2 + (yy - 16) ** 2 + (xx - 16) ** 2) < 6.0 ** 2).astype(np.float32)
+        out = V.apply_mask(vol, mask, 2.0, 0.5)   # no low-pass radius: no filter
+        far = ((zz - 16) ** 2 + (yy - 16) ** 2 + (xx - 16) ** 2) > 12.0 ** 2
+        np.testing.assert_allclose(out[far], 0.5 * vol[far], atol=1e-4)
+        flat = V.apply_mask(vol, mask, 2.0, 0.5, 0.0)   # cisTEM's radius-0 behaviour: the weight is ignored
+        self.assertLess(float(np.std(flat[far])), 1e-3)
+
     def test_apply_mask_keeps_inside_and_replaces_outside(self):
         n = 32
         z, y, x = np.indices((n, n, n))

@@ -242,9 +242,12 @@ bool Project3DApp::DoCalculation( ) {
     }
     else {
         number_of_projections_to_calculate = global_euler_search.number_of_search_positions;
+    }
 
-        // setup paramters
-
+    // The loop below fills a parameter line per projection whichever way the angles came, so the lines
+    // must exist in both cases (they used to be allocated for the grid only, and projecting from a star
+    // file wrote past the end of an empty array and crashed after the first image).
+    {
         output_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK |
                                                               IMAGE_IS_ACTIVE |
                                                               PSI |
@@ -362,7 +365,8 @@ bool Project3DApp::DoCalculation( ) {
 
     // write star file
 
-    output_params.WriteTocisTEMStarFile(output_star_file);
+    if ( ! project_based_on_star ) // projecting from a star file was given no output star file name
+        output_params.WriteTocisTEMStarFile(output_star_file);
     delete my_progress;
 
     Printf("\n\nProject3D: Normal termination\n\n");

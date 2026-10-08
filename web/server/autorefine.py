@@ -447,9 +447,9 @@ def _mask_then_refine(conn, project_id, job_id, state):
         _log(project_id, job_id, "Masking reference reconstruction with selected mask")
         mask, _ps = volumes.read_mrc_volume(state["mask_file"])
         masked = []
-        for ref in state["reference_files"]:
+        for k, ref in enumerate(state["reference_files"]):
             vol, _ps = volumes.read_mrc_volume(ref)
-            out = str(scratch / (Path(ref).stem + "_masked.mrc"))
+            out = str(scratch / (Path(ref).stem + "_masked_class{}.mrc".format(k + 1)))
             # No filter (None) when the low-pass is off: the outside weight still applies, as in the GUI, where the thread's
             # pixel size / 0 gives ApplyMask an infinite radius; a radius of 0 would have it ignore the weight instead.
             low_pass = state["pixel_size"] / s["mask_filter_resolution_a"] if s["low_pass_outside_mask"] and s["mask_filter_resolution_a"] > 0 else None
@@ -462,9 +462,9 @@ def _mask_then_refine(conn, project_id, job_id, state):
         # DoMasking() but never reads it -- the mask comes from ConvertToAutoMask's
         # fixed 7 A binning, which is what volumes.auto_mask does.
         masked = []
-        for ref in state["reference_files"]:
+        for k, ref in enumerate(state["reference_files"]):
             vol, _ps = volumes.read_mrc_volume(ref)
-            out = str(scratch / (Path(ref).stem + "_masked.mrc"))
+            out = str(scratch / (Path(ref).stem + "_masked_class{}.mrc".format(k + 1)))
             volumes.write_mrc_volume(out, volumes.auto_mask(vol, state["pixel_size"], s["mask_radius_a"]), state["pixel_size"])
             masked.append(out)
         state["reference_files"] = masked

@@ -586,3 +586,28 @@ class JobActionTests(unittest.TestCase):
         self.assertEqual([a["name"] for a in refine3d.available_actions({"phase": "recon", "round": 0, "rounds": 3})], ["finish"])
         self.assertEqual(refine3d.available_actions({"phase": "recon", "round": 2, "rounds": 3}), [])   # already the last round
         self.assertEqual(refine3d.available_actions({"phase": "recon", "round": 0, "rounds": 3, "finish_requested": True}), [])
+
+
+class MergeProfileTests(unittest.TestCase):
+    def _profile(self, copies, override=False, overridden=0):
+        return {"name": "p", "total_jobs": overridden if override else copies,
+                "run_commands": [{"command": "$command", "copies": copies, "threads_per_copy": 4, "override_total_copies": override, "overridden_total_copies": overridden, "delay_ms": 0}]}
+
+    def test_at_least_one_copy_per_class(self):
+        p = self._profile(2)
+        out = ab.merge_profile(p, 8)
+        self.assertEqual(out["run_commands"][0]["copies"], 8)
+        self.assertEqual(out["total_jobs"], 8)
+        self.assertEqual(p["run_commands"][0]["copies"], 2)   # the stored profile is untouched
+
+    def test_enough_copies_or_one_class_leaves_the_profile_alone(self):
+        p = self._profile(16)
+        self.assertIs(ab.merge_profile(p, 8), p)
+        one = self._profile(1)
+        self.assertIs(ab.merge_profile(one, 1), one)
+        self.assertIsNone(ab.merge_profile(None, 8))
+
+    def test_an_overridden_total_is_raised_instead(self):
+        out = ab.merge_profile(self._profile(2, True, 3), 8)
+        self.assertEqual(out["run_commands"][0]["overridden_total_copies"], 8)
+        self.assertEqual(out["run_commands"][0]["copies"], 2)

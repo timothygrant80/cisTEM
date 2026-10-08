@@ -46,7 +46,7 @@ import progress_store
 import refinements
 import starfile
 import volumes
-from abinitio import (_new_child, _parent_row, _profile, _task, _load_state, _save, now_iso, particle_range,
+from abinitio import (merge_profile, _new_child, _parent_row, _profile, _task, _load_state, _save, now_iso, particle_range,
                       default_statistics, write_statistics, read_statistics, update_occupancies, pooled_part_ssnr,
                       average_sigma, angular_step as calculate_angular_step)
 from stages import merge3d, reconstruct3d, refine3d as refine3d_adapter
@@ -349,7 +349,7 @@ def _launch_merge(conn, project_id, job_id, state):
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
                   "pending_volume_files": outputs, "pending_stats_files": stats, "pending_half_maps": halves if keep_halves else []})
     _log(project_id, job_id, "Merging and filtering {} — child job {}".format("reconstructions" if classes > 1 else "reconstruction", child))
-    _runtime.submit_child(project_id, child, merge3d, tasks, _profile(state["reconstruction_profile"]))
+    _runtime.submit_child(project_id, child, merge3d, tasks, merge_profile(_profile(state["reconstruction_profile"]), len(tasks)))
 
 
 def _launch_refinement(conn, project_id, job_id, state):

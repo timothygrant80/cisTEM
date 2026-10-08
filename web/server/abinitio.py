@@ -471,6 +471,27 @@ def _new_child(conn, parent_id, stage, name, parent_row):
     return child_id
 
 
+def merge_profile(profile, classes):
+    """The reconstruction run profile with at least one copy per class, for the merge3d child: every
+    class's merge is one task, so with fewer copies than classes the merges ran in waves (the GUI's
+    behaviour too, since it hands the same profile to the merge). merge3d is mostly single-threaded,
+    so the extra copies cost little; the profile in the system store is untouched."""
+    if not profile or classes <= 1 or not profile.get("run_commands"):
+        return profile
+    import copy as _copy
+    total = sum(int(c["overridden_total_copies"]) if c.get("override_total_copies") else int(c["copies"]) for c in profile["run_commands"])
+    if total >= classes:
+        return profile
+    out = _copy.deepcopy(profile)
+    c = out["run_commands"][0]
+    if c.get("override_total_copies"):
+        c["overridden_total_copies"] = int(c["overridden_total_copies"]) + (classes - total)
+    else:
+        c["copies"] = int(c["copies"]) + (classes - total)
+    out["total_jobs"] = classes
+    return out
+
+
 def _profile(name):
     sys_conn = db.get_system_conn()
     try:
@@ -861,7 +882,7 @@ def _launch_merge(conn, project_id, job_id, state):
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
                   "pending_reference_files": outputs, "pending_stats_files": stats, "pending_half_maps": halves if s["use_blush"] else []})
     _log(project_id, job_id, "Merging and filtering {} (Wiener nominator {:.0f}) — child job {}".format("reconstructions" if classes > 1 else "reconstruction", wiener, child))
-    _runtime.submit_child(project_id, child, merge3d, tasks, _profile(state["reconstruction_profile"]))
+    _runtime.submit_child(project_id, child, merge3d, tasks, merge_profile(_profile(state["reconstruction_profile"]), len(tasks)))
 
 
 def _launch_refinement(conn, project_id, job_id, state):

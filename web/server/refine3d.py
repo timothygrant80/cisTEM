@@ -362,10 +362,10 @@ def _launch_refinement(conn, project_id, job_id, state):
     scratch = Path(state["scratch"])
     defaults = default_statistics(state["molecular_weight"], state["pixel_size"], state["box_size"])
     star_files, stats_files = [], []
+    stored = _load_rows(state, "output")   # the round's input rows, kept in scratch (see _merge_output_stars)
     for k in range(1, classes + 1):
-        rows = refinements.load_table(conn, input_id, k)
         p = str(scratch / "input_par_{}_{}.cistem".format(input_id, k))
-        starfile.write_params(p, rows)
+        starfile.write_params(p, stored[k - 1])
         star_files.append(p)
         # WriteStatisticsToFile() writes shells 1..box/2 only; the stored
         # curve (and a package's synthetic one) also has shell 0 and the
@@ -488,12 +488,15 @@ def _merge_output_stars(conn, state):
     n_classes = state["number_of_classes"]
     jobs = _required_count(state, "refinement_jobs_this_round")
     outputs = state.get("pending_output_stars") or []
+    # The round's input rows are the tables in scratch (the input refinement's at the start, each round's merged
+    # rows after that -- what the record step writes to the database), read in a couple of seconds for eight
+    # classes; the same rows from REFINEMENT_RESULT_<id>_<k> took 16 s a class at 3.3 million particles.
+    stored = _load_rows(state, "output")
     class_rows = []
     for k in range(1, n_classes + 1):
-        inputs = refinements.load_table(conn, state["input_refinement_id"], k)
         paths = [outputs[(k - 1) * jobs + j] if (k - 1) * jobs + j < len(outputs) else None for j in range(jobs)]
         try:
-            class_rows.append(starfile.merge_task_outputs(inputs, paths))
+            class_rows.append(starfile.merge_task_outputs(stored[k - 1], paths))
         except ValueError as exc:
             raise ValueError("{} (class {})".format(exc, k))
     return class_rows

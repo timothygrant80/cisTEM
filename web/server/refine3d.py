@@ -268,9 +268,10 @@ def _start(conn, project_id, job_id, params, profile):
     _log(project_id, job_id, "Refine 3D of {!r} from {!r}: {} particles, {} class{}, {} refinement, {} round{}, {:.1f} Å limit, refinement profile {!r}, reconstruction profile {!r}".format(
         pkg["NAME"], ref["NAME"], n, classes, "" if classes == 1 else "es", "global search" if s["global"] else "local", s["number_of_rounds"],
         "" if s["number_of_rounds"] == 1 else "s", s["high_resolution_limit_a"], profile["name"], recon_profile["name"]))
+    # The input refinement's rows go to scratch once, as the "output" tables every later step reads (the initial
+    # reconstruction, each round's refine3d inputs and merge), in place of re-reading the database each round.
+    _store_rows(state, "output", [refinements.load_table(conn, ref["REFINEMENT_ID"], k) for k in range(1, classes + 1)])
     if state["initial"]:
-        rows = [refinements.load_table(conn, ref["REFINEMENT_ID"], k) for k in range(1, classes + 1)]
-        _store_rows(state, "output", rows)
         state["output_refinement_id"] = ref["REFINEMENT_ID"]
         _log(project_id, job_id, "A class has no reference volume yet: reconstructing one from the input parameters first")
         _launch_reconstruction(conn, project_id, job_id, state)

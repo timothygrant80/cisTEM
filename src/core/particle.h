@@ -71,6 +71,26 @@ class Particle {
     Image*               beamtilt_image;
     bool                 beamtilt_image_calculated;
     Image*               particle_image;
+    // Scratch kept between calls (one Particle per thread): MLBlur's working images and its per-row and
+    // per-column tables, and ReturnLogLikelihood's images. Allocating them per call made FFT plans under the
+    // global planning mutex for every class of every particle (see Image::Allocate).
+    Image*             mlblur_correlation_map;
+    Image*             mlblur_temp_image;
+    Image*             mlblur_sum_image;
+    float*             mlblur_temp_k1;
+    long               mlblur_temp_k1_size;
+    std::vector<float> mlblur_penalty_x;
+    std::vector<float> mlblur_penalty_y;
+    std::vector<float> mlblur_dx2;
+    std::vector<float> mlblur_dy2;
+    Image*             ll_temp_image1;
+    Image*             ll_temp_image2;
+    Image*             ll_projection_image;
+    Image*             ll_temp_projection;
+    Image*             ll_temp_particle;
+    Image*             ll_ctf_input_image;
+    Image*             ll_beamtilt_input_image;
+    void               FreeScratch( );
     bool                 includes_reference_ssnr_weighting;
     bool                 is_normalized;
     bool                 is_phase_flipped;

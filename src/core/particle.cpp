@@ -26,7 +26,36 @@ Particle::Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimensio
     AllocateImage(wanted_logical_x_dimension, wanted_logical_y_dimension);
 }
 
+void Particle::FreeScratch( ) {
+    delete mlblur_correlation_map;
+    delete mlblur_temp_image;
+    delete mlblur_sum_image;
+    delete[] mlblur_temp_k1;
+    delete ll_temp_image1;
+    delete ll_temp_image2;
+    delete ll_projection_image;
+    delete ll_temp_projection;
+    delete ll_temp_particle;
+    delete ll_ctf_input_image;
+    delete ll_beamtilt_input_image;
+    mlblur_correlation_map = mlblur_temp_image = mlblur_sum_image = NULL;
+    mlblur_temp_k1         = NULL;
+    mlblur_temp_k1_size    = 0;
+    ll_temp_image1 = ll_temp_image2 = ll_projection_image = ll_temp_projection = ll_temp_particle = ll_ctf_input_image = ll_beamtilt_input_image = NULL;
+}
+
+// A scratch image of the wanted size, allocated (and its FFT plans made) only when it does not exist yet or changed size.
+static void EnsureScratchImage(Image*& image, int wanted_x, int wanted_y, bool is_in_real_space) {
+    if ( image == NULL )
+        image = new Image;
+    if ( ! image->is_in_memory || image->logical_x_dimension != wanted_x || image->logical_y_dimension != wanted_y || image->logical_z_dimension != 1 )
+        image->Allocate(wanted_x, wanted_y, is_in_real_space);
+    image->is_in_real_space         = is_in_real_space;
+    image->object_is_centred_in_box = true;
+}
+
 Particle::~Particle( ) {
+    FreeScratch( );
 
     if ( particle_image != NULL ) {
         delete particle_image;
@@ -131,7 +160,10 @@ void Particle::Init( ) {
     sigma_noise         = 0.0;
     snr                 = 0.0;
     logp                = -std::numeric_limits<float>::max( );
-    ;
+    mlblur_correlation_map = mlblur_temp_image = mlblur_sum_image = NULL;
+    mlblur_temp_k1         = NULL;
+    mlblur_temp_k1_size    = 0;
+    ll_temp_image1 = ll_temp_image2 = ll_projection_image = ll_temp_projection = ll_temp_particle = ll_ctf_input_image = ll_beamtilt_input_image = NULL;
     particle_occupancy                = 0.0;
     particle_score                    = 0.0;
     particle_image                    = NULL;
@@ -751,20 +783,22 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
     float pixel_center_2d_z = mask_center_2d_z / original_pixel_size - input_image.physical_address_of_box_center_x;
     float pixel_radius_2d   = mask_radius_2d / original_pixel_size;
 
-    Image* temp_image1 = new Image;
-    temp_image1->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
-    Image* temp_image2 = new Image;
-    //	temp_image2->Allocate(binned_image_box_size, binned_image_box_size, false);
-    Image* projection_image = new Image;
-    projection_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
-    Image* temp_projection = new Image;
-    temp_projection->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
-    Image* temp_particle = new Image;
-    temp_particle->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
-    Image* ctf_input_image = new Image;
-    ctf_input_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
-    Image* beamtilt_input_image = new Image;
-    beamtilt_input_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+    // The working images persist between calls (FreeScratch); they used to be allocated and FFT-planned per call.
+    EnsureScratchImage(ll_temp_image1, particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
+    EnsureScratchImage(ll_projection_image, input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+    EnsureScratchImage(ll_temp_projection, input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+    EnsureScratchImage(ll_temp_particle, input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+    EnsureScratchImage(ll_ctf_input_image, input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+    EnsureScratchImage(ll_beamtilt_input_image, input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+    if ( ll_temp_image2 == NULL )
+        ll_temp_image2 = new Image;
+    Image* temp_image1          = ll_temp_image1;
+    Image* temp_image2          = ll_temp_image2;
+    Image* projection_image     = ll_projection_image;
+    Image* temp_projection      = ll_temp_projection;
+    Image* temp_particle        = ll_temp_particle;
+    Image* ctf_input_image      = ll_ctf_input_image;
+    Image* beamtilt_input_image = ll_beamtilt_input_image;
 
     //	if (filter_radius_high != 0.0)
     //	{
@@ -784,7 +818,7 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
     input_3d.density_map->ExtractSlice(*temp_image1, alignment_parameters, pixel_size / filter_radius_high);
 
     if ( frealign_score != NULL ) {
-        temp_image2->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
+        EnsureScratchImage(temp_image2, particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
         temp_image2->CopyFrom(temp_image1);
         if ( no_ctf_weighting )
             input_3d.CalculateProjection(*temp_image2, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / filter_radius_high, false, false, false, false, false, false);
@@ -964,13 +998,7 @@ float Particle::ReturnLogLikelihood(Image& input_image, CTF& input_ctf, Reconstr
     //	return 	- number_of_independent_pixels * variance_difference / variance_masked / 2.0
     //			+ ReturnParameterLogP(current_parameters);
 
-    delete temp_image1;
-    delete temp_image2;
-    delete projection_image;
-    delete temp_particle;
-    delete temp_projection;
-    delete ctf_input_image;
-    delete beamtilt_input_image;
+    // the working images stay allocated for the next call
 
     return logp;
 }
@@ -1097,19 +1125,36 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
     double          min_float = std::numeric_limits<float>::min( );
     double          scale;
     AnglesAndShifts rotation_angle;
-    Image*          correlation_map = new Image;
-    correlation_map->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
-    Image* temp_image = new Image;
-    temp_image->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
-    Image* sum_image = new Image;
-    sum_image->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, true);
+    // The working images and tables persist between calls (FreeScratch): one Particle per thread.
+    EnsureScratchImage(mlblur_correlation_map, particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
+    EnsureScratchImage(mlblur_temp_image, particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
+    EnsureScratchImage(mlblur_sum_image, particle_image->logical_x_dimension, particle_image->logical_y_dimension, true);
+    Image* correlation_map = mlblur_correlation_map;
+    Image* temp_image      = mlblur_temp_image;
+    Image* sum_image       = mlblur_sum_image;
+    if ( int(mlblur_dx2.size( )) != particle_image->logical_x_dimension || int(mlblur_dy2.size( )) != particle_image->logical_y_dimension ) {
+        // The squared distance of each column and row from the origin (wrapped), the same for every rotation and class;
+        // the x wrap uses the y dimension, as the loops it replaces did (the images are square).
+        mlblur_dx2.assign(particle_image->logical_x_dimension, 0.0f);
+        mlblur_dy2.assign(particle_image->logical_y_dimension, 0.0f);
+        mlblur_penalty_x.assign(particle_image->logical_x_dimension, 0.0f);
+        mlblur_penalty_y.assign(particle_image->logical_y_dimension, 0.0f);
+        for ( i = 0; i < particle_image->logical_x_dimension; i++ )
+            mlblur_dx2[i] = powf((i > particle_image->physical_address_of_box_center_x) ? float(i - particle_image->logical_y_dimension) : float(i), 2);
+        for ( j = 0; j < particle_image->logical_y_dimension; j++ )
+            mlblur_dy2[j] = powf((j > particle_image->physical_address_of_box_center_y) ? float(j - particle_image->logical_y_dimension) : float(j), 2);
+    }
 
     //	Printf("Max shift in angstoms = %f\n", max_shift_in_angstroms);
     float max_radius_squared = powf(max_shift_in_angstroms / pixel_size, 2);
-    float current_squared_radius;
 
 #ifndef MKL
-    float* temp_k1 = new float[particle_image->real_memory_allocated];
+    if ( mlblur_temp_k1 == NULL || mlblur_temp_k1_size < particle_image->real_memory_allocated ) {
+        delete[] mlblur_temp_k1;
+        mlblur_temp_k1      = new float[particle_image->real_memory_allocated];
+        mlblur_temp_k1_size = particle_image->real_memory_allocated;
+    }
+    float* temp_k1 = mlblur_temp_k1;
     float* temp_k2;
     temp_k2 = temp_k1 + 1;
     float* real_a;
@@ -1193,68 +1238,56 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
 #endif
         correlation_map->is_in_real_space = false;
         correlation_map->BackwardFFT( );
-        temp_image->CopyFrom(correlation_map);
 
-        // Calculate LogP (excluding -0.5 * number_of_independent_pixels * (logf(2.0 * PI) + ssq_X) and apply hierarchical prior f(x,y)
-        // ssq_X_minus_A = (ssq_X - 2.0 * correlation_map->real_values[0] + ssq_A) / 2
-        pixel_counter = 0;
-        penalty_x     = 0.0;
-        penalty_y     = 0.0;
-        // The following is divided by 2 according to the LogP formula
+        // LogP (excluding -0.5 * number_of_independent_pixels * (logf(2.0 * PI) + ssq_X)) with the hierarchical prior f(x,y)
+        // (divided by 2 according to the LogP formula), the radius mask and the maximum, in one pass over the map: the prior
+        // is separable, so its x and y parts are tabulated per column and per row for this rotation, and the radius test
+        // comes from the tables made once per call above. This replaces two passes that called powf per pixel.
+        for ( i = 0; i < particle_image->logical_x_dimension; i++ ) {
+            dx                  = (i > particle_image->physical_address_of_box_center_x) ? float(i - particle_image->logical_y_dimension) : float(i);
+            mlblur_penalty_x[i] = constraints_used.x_shift ? powf(dx - mid_x, 2) * rvar2_x : 0.0f;
+        }
         for ( j = 0; j < particle_image->logical_y_dimension; j++ ) {
-            if ( constraints_used.y_shift ) {
-                if ( j > particle_image->physical_address_of_box_center_y )
-                    dy = j - particle_image->logical_y_dimension;
-                else
-                    dy = j;
-                penalty_y = powf(dy - mid_y, 2) * rvar2_y;
-            }
+            dy                  = (j > particle_image->physical_address_of_box_center_y) ? float(j - particle_image->logical_y_dimension) : float(j);
+            mlblur_penalty_y[j] = constraints_used.y_shift ? powf(dy - mid_y, 2) * rvar2_y : 0.0f;
+        }
+        pixel_counter = 0;
+        new_max_found = false;
+        float max_raw = 0.0f; // the correlation coefficient at the maximum (the map used to be copied whole to look it up)
+        int   max_i   = 0;
+        int   max_j   = 0;
+        for ( j = 0; j < particle_image->logical_y_dimension; j++ ) {
+            const float penalty_y_j = mlblur_penalty_y[j];
+            const float dy2         = mlblur_dy2[j];
             for ( i = 0; i < particle_image->logical_x_dimension; i++ ) {
-                if ( constraints_used.x_shift ) {
-                    if ( i > particle_image->physical_address_of_box_center_x )
-                        dx = i - particle_image->logical_y_dimension;
-                    else
-                        dx = i;
-                    penalty_x = powf(dx - mid_x, 2) * rvar2_x;
+                const float raw   = correlation_map->real_values[pixel_counter];
+                float       value = raw * number_of_pixels - norm_A - mlblur_penalty_x[i] - penalty_y_j;
+                if ( mlblur_dx2[i] + dy2 > max_radius_squared ) {
+                    value = 0.0f;
                 }
-                correlation_map->real_values[pixel_counter] = correlation_map->real_values[pixel_counter] * number_of_pixels - norm_A - penalty_x - penalty_y;
+                else if ( value > max_logp_particle ) {
+                    new_max_found     = true;
+                    max_logp_particle = value;
+                    max_raw           = raw;
+                    max_i             = i;
+                    max_j             = j;
+                }
+                correlation_map->real_values[pixel_counter] = value;
                 pixel_counter++;
             }
             pixel_counter += particle_image->padding_jump_value;
         }
-        // Find correlation maximum to threshold LogP, and find best alignment parameters
-        pixel_counter = 0;
-        new_max_found = false;
-        for ( j = 0; j < particle_image->logical_y_dimension; j++ ) {
-            if ( j > particle_image->physical_address_of_box_center_y )
-                dy = j - particle_image->logical_y_dimension;
-            else
-                dy = j;
-            for ( i = 0; i < particle_image->logical_x_dimension; i++ ) {
-                if ( i > particle_image->physical_address_of_box_center_x )
-                    dx = i - particle_image->logical_y_dimension;
-                else
-                    dx = i;
-
-                current_squared_radius = powf(dx, 2) + powf(dy, 2);
-                if ( current_squared_radius > max_radius_squared ) {
-                    correlation_map->real_values[pixel_counter] = 0.0f;
-                }
-                else if ( correlation_map->real_values[pixel_counter] > max_logp_particle ) {
-                    new_max_found     = true;
-                    max_logp_particle = correlation_map->real_values[pixel_counter];
-                    // Store correlation coefficient that corresponds to highest likelihood
-                    snr_psi = temp_image->real_values[pixel_counter];
-                    rotation_angle.euler_matrix.RotateCoords2D(dx, dy, current_parameters.x_shift, current_parameters.y_shift);
-                    current_parameters.x_shift *= pixel_size;
-                    current_parameters.y_shift *= pixel_size;
-
-                    current_parameters.psi           = psi;
-                    current_parameters.best_2d_class = current_class + 1;
-                }
-                pixel_counter++;
-            }
-            pixel_counter += particle_image->padding_jump_value;
+        if ( new_max_found ) {
+            // The best alignment parameters: the shift of the maximum, rotated back by psi
+            dx = (max_i > particle_image->physical_address_of_box_center_x) ? float(max_i - particle_image->logical_y_dimension) : float(max_i);
+            dy = (max_j > particle_image->physical_address_of_box_center_y) ? float(max_j - particle_image->logical_y_dimension) : float(max_j);
+            // Store correlation coefficient that corresponds to highest likelihood
+            snr_psi = max_raw;
+            rotation_angle.euler_matrix.RotateCoords2D(dx, dy, current_parameters.x_shift, current_parameters.y_shift);
+            current_parameters.x_shift *= pixel_size;
+            current_parameters.y_shift *= pixel_size;
+            current_parameters.psi           = psi;
+            current_parameters.best_2d_class = current_class + 1;
         }
         //		// To get normalized correlation coefficient, need to divide by sigmas of particle and reference
         // To get sigma^2, need to calculate ssq_X - 2XA + ssq_A
@@ -1295,16 +1328,7 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
             sump_psi        = 0.0;
 
             for ( j = 0; j < particle_image->logical_y_dimension; j++ ) {
-                if ( j > particle_image->physical_address_of_box_center_y )
-                    dy = particle_image->logical_y_dimension - j;
-                else
-                    dy = j;
                 for ( i = 0; i < particle_image->logical_x_dimension; i++ ) {
-                    if ( i > particle_image->physical_address_of_box_center_x )
-                        dx = particle_image->logical_y_dimension - i;
-                    else
-                        dx = i;
-
                     if ( correlation_map->real_values[pixel_counter] >= log_threshold && correlation_map->real_values[pixel_counter] != 0.0f ) {
                         correlation_map->real_values[pixel_counter] = exp(correlation_map->real_values[pixel_counter] - max_logp_particle);
                         sump_psi += correlation_map->real_values[pixel_counter];
@@ -1489,13 +1513,7 @@ float Particle::MLBlur(Image* input_classes_cache, float ssq_X, Image& cropped_i
     }
 
     //	Printf("log_sum = %g, old = %g, n = %g, var = %g\n", logf(sump_class), old_max_log,  number_of_independent_pixels, norm_A);
-    delete correlation_map;
-    delete temp_image;
-    delete sum_image;
-#ifndef MKL
-    delete[] temp_k1;
-#endif
-
+    // the working images stay allocated for the next call
     return logp;
 }
 

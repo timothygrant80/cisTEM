@@ -10831,6 +10831,12 @@ void Image::Rotate2D(Image& rotated_image, AnglesAndShifts& rotation_angle, floa
 }
 
 void Image::Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle, float mask_radius_in_pixels) {
+    // The value outside the mask is the image's edge average; a caller that rotates the same image many times
+    // (the in-plane rotation caches of refine2d and the global search) computes it once and uses the overload.
+    Rotate2DSample(rotated_image, rotation_angle, mask_radius_in_pixels, ReturnAverageOfRealValues(physical_address_of_box_center_x - 2.0, true));
+}
+
+void Image::Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle, float mask_radius_in_pixels, float edge_value) {
     MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
     MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
     MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
@@ -10855,8 +10861,6 @@ void Image::Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle
 
     float padding_factor = float(logical_x_dimension) / float(rotated_image.logical_x_dimension);
 
-    //	float edge_value = ReturnAverageOfRealValuesOnEdges();
-    float edge_value = ReturnAverageOfRealValues(physical_address_of_box_center_x - 2.0, true);
 
     if ( mask_radius_in_pixels == 0.0 ) {
         mask_radius_sq = powf(physical_address_of_box_center_x - 1, 2);

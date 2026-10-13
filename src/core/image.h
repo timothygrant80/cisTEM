@@ -244,6 +244,7 @@ class Image {
     void                Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixels = 0.0);
     void                RotateInPlaceAboutZBy90Degrees(bool rotate_by_positive_90 = true, bool preserve_origin = false);
     void                Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle, float mask_radius_in_pixels = 0.0);
+    void                Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle, float mask_radius_in_pixels, float edge_value); // edge_value: ReturnAverageOfRealValues(centre - 2, true), computed once by a caller rotating the same image many times
     float               Skew2D(Image& skewed_image, float height_offset, float minimum_height, float skew_axis, float skew_angle, bool adjust_signal = false);
     float               ReturnLinearInterpolated2D(const float wanted_physical_x_coordinate, const float wanted_physical_y_coordinate);
     float               ReturnNearest2D(float& wanted_physical_x_coordinate, float& wanted_physical_y_coordinate);

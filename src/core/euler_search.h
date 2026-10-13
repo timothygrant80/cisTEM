@@ -46,4 +46,16 @@ class EulerSearch {
     //	void RotateFourier2DFromIndex(Image &image_to_rotate, Image &rotated_image, Kernel2D &kernel_index);
     //	void RotateFourier2DIndex(Image &image_to_rotate, Kernel2D &kernel_index, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, float padding_factor = 1.0);
     Kernel2D ReturnLinearInterpolatedFourierKernel2D(Image& image_to_rotate, float& x, float& y);
+
+    // Scratch kept between calls to Run(): one EulerSearch per thread, so these are per thread. Allocating and
+    // FFT-planning them for every particle serialised the threads on the FFTW planning mutex (see Image::Allocate).
+    Image* run_flipped_image;
+    Image* run_padded_image;
+    Image* run_projection_image;
+    Image* run_correlation_map;
+    Image* run_rotation_cache;
+    int    run_rotation_cache_size;
+    float* run_temp_k1;
+    long   run_temp_k1_size;
+    void   FreeRunScratch( );
 };

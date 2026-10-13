@@ -2,6 +2,10 @@
 
 EulerSearch::EulerSearch( ) {
     // Nothing to do until Init is called
+    run_flipped_image = run_padded_image = run_projection_image = run_correlation_map = run_rotation_cache = NULL;
+    run_rotation_cache_size = 0;
+    run_temp_k1             = NULL;
+    run_temp_k1_size        = 0;
     refine_top_N                = 0;
     number_of_search_dimensions = 0;
     number_of_search_positions  = 0;
@@ -31,11 +35,39 @@ EulerSearch::EulerSearch(const EulerSearch& other_search) // copy constructor
 {
     // To avoid segfault in the copy
     list_of_search_parameters = NULL;
+    run_flipped_image = run_padded_image = run_projection_image = run_correlation_map = run_rotation_cache = NULL;
+    run_rotation_cache_size = 0;
+    run_temp_k1             = NULL;
+    run_temp_k1_size        = 0;
     list_of_best_parameters   = NULL;
     *this                     = other_search;
 }
 
+void EulerSearch::FreeRunScratch( ) {
+    delete run_flipped_image;
+    delete run_padded_image;
+    delete run_projection_image;
+    delete run_correlation_map;
+    delete[] run_rotation_cache;
+    delete[] run_temp_k1;
+    run_flipped_image = run_padded_image = run_projection_image = run_correlation_map = run_rotation_cache = NULL;
+    run_rotation_cache_size = 0;
+    run_temp_k1             = NULL;
+    run_temp_k1_size        = 0;
+}
+
+// A scratch image of the wanted size, allocated (and its FFT plans made) only when it does not exist yet or changed size.
+static void EnsureScratch(Image*& image, int wanted_x, int wanted_y, bool is_in_real_space) {
+    if ( image == NULL )
+        image = new Image;
+    if ( ! image->is_in_memory || image->logical_x_dimension != wanted_x || image->logical_y_dimension != wanted_y || image->logical_z_dimension != 1 )
+        image->Allocate(wanted_x, wanted_y, is_in_real_space);
+    image->is_in_real_space         = is_in_real_space;
+    image->object_is_centred_in_box = true;
+}
+
 EulerSearch::~EulerSearch( ) {
+    FreeRunScratch( );
     //	if (best_values != NULL) delete [] best_values;
     //	if (parameter_map != NULL) delete [] parameter_map;
     if ( list_of_search_parameters != NULL )
@@ -432,20 +464,24 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
     bool            mirrored_match;
     Peak            found_peak;
     AnglesAndShifts angles;
-    Image*          flipped_image    = new Image;
-    Image*          padded_image     = new Image;
-    Image*          projection_image = new Image;
-    Image*          rotated_image    = new Image;
-    Image*          correlation_map  = new Image;
-    Image*          rotation_cache   = NULL;
-    flipped_image->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
-    padded_image->Allocate(padding_factor_2d * flipped_image->logical_x_dimension, padding_factor_2d * flipped_image->logical_y_dimension, true);
-    projection_image->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
-    rotated_image->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
-    correlation_map->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+    // The working images persist between calls (see FreeRunScratch); rotated_image, which the old code allocated, was never used.
+    EnsureScratch(run_flipped_image, particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+    EnsureScratch(run_padded_image, padding_factor_2d * particle.particle_image->logical_x_dimension, padding_factor_2d * particle.particle_image->logical_y_dimension, true);
+    EnsureScratch(run_projection_image, particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+    EnsureScratch(run_correlation_map, particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+    Image* flipped_image    = run_flipped_image;
+    Image* padded_image     = run_padded_image;
+    Image* projection_image = run_projection_image;
+    Image* correlation_map  = run_correlation_map;
+    Image* rotation_cache   = NULL;
     correlation_map->object_is_centred_in_box = false;
 #ifndef MKL
-    float* temp_k1 = new float[flipped_image->real_memory_allocated];
+    if ( run_temp_k1 == NULL || run_temp_k1_size < flipped_image->real_memory_allocated ) {
+        delete[] run_temp_k1;
+        run_temp_k1      = new float[flipped_image->real_memory_allocated];
+        run_temp_k1_size = flipped_image->real_memory_allocated;
+    }
+    float* temp_k1 = run_temp_k1;
     float* temp_k2;
     temp_k2 = temp_k1 + 1;
     float* real_a;
@@ -485,9 +521,16 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
     psi_i = number_of_psi_positions;
     if ( test_mirror )
         psi_i *= 2;
-    rotation_cache = new Image[psi_i];
+    if ( run_rotation_cache == NULL || run_rotation_cache_size != psi_i ) {
+        delete[] run_rotation_cache;
+        run_rotation_cache      = new Image[psi_i];
+        run_rotation_cache_size = psi_i;
+    }
+    rotation_cache = run_rotation_cache;
     for ( i = 0; i < psi_i; i++ ) {
-        rotation_cache[i].Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+        if ( ! rotation_cache[i].is_in_memory || rotation_cache[i].logical_x_dimension != particle.particle_image->logical_x_dimension || rotation_cache[i].logical_y_dimension != particle.particle_image->logical_y_dimension )
+            rotation_cache[i].Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+        rotation_cache[i].is_in_real_space = false;
     }
 
     flipped_image->CopyFrom(particle.particle_image);
@@ -498,6 +541,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
     // if the periphery of the image is a bit attenuated for the search
     //	padded_image.CorrectSinc();
     padded_image->BackwardFFT( );
+    const float padded_edge_value = padded_image->ReturnAverageOfRealValues(padded_image->physical_address_of_box_center_x - 2.0, true); // once, not per rotation
 
     psi_m = 0;
     for ( psi_i = 0; psi_i < number_of_psi_positions; psi_i++ ) {
@@ -510,7 +554,7 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
             angles.GenerateRotationMatrix2D(psi_start);
             //			flipped_image->RotateFourier2D(rotation_cache[psi_m], angles);
         }
-        padded_image->Rotate2DSample(rotation_cache[psi_m], angles);
+        padded_image->Rotate2DSample(rotation_cache[psi_m], angles, 0.0, padded_edge_value);
         rotation_cache[psi_m].ForwardFFT( );
         rotation_cache[psi_m].SwapRealSpaceQuadrants( );
 
@@ -676,19 +720,5 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
 	projection_image->SwapRealSpaceQuadrants();
 	projection_image->QuickAndDirtyWriteSlice("proj.mrc", particle.origin_micrograph); */
 
-    delete flipped_image;
-    delete padded_image;
-    delete projection_image;
-    delete rotated_image;
-    delete correlation_map;
-    psi_i = number_of_psi_positions;
-    if ( test_mirror )
-        psi_i *= 2;
-    for ( i = 0; i < psi_i; ++i ) {
-        rotation_cache[i].Deallocate( );
-    }
-    delete[] rotation_cache;
-#ifndef MKL
-    delete[] temp_k1;
-#endif
+    // the scratch images and the rotation cache stay allocated for the next call
 }

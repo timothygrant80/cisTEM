@@ -875,7 +875,7 @@ bool Refine2DApp::DoCalculation( ) {
             particle_selection_draws[current_line] = global_random_number_generator.GetUniformRandom( );
     }
 
-#pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack,                                                                                                                                                                                                           \
+#pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack, input_particle_images,                                                                                                                                                                                                           \
                                                                    number_of_blank_edges, particle_selection_draws, percent_used, cropped_box_size, low_resolution_limit, high_resolution_limit, binned_pixel_size, invert_contrast,                                                                                                                                              \
                                                                    noise_power_spectrum, padded_box_size, psi_step, psi_start, number_of_rotations, reverse_list_of_nozero_classes, smoothing_factor, max_search_range, output_star_file,                                                                                                                                               \
                                                                    fourier_size, input_particle, binning_factor, normalize_particles, low_resolution_contrast, input_classes_cache, sum_logp_particle) private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
@@ -888,6 +888,10 @@ bool Refine2DApp::DoCalculation( ) {
         images_processed_local      = 0;
         sum_snr_local               = 0.0f;
         sum_logp_total_local        = -std::numeric_limits<float>::max( );
+        // Each thread reads the stack through a file handle of its own: the shared handle's stream position is
+        // not thread safe (the read used to be unprotected here, a race that could hand a thread the wrong slice),
+        // and a lock around it would serialise the reads instead.
+        MRCFile input_stack_local(input_particle_images, false);
         input_image_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), true);
         temp_image_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), true);
         ctf_input_image_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
@@ -941,7 +945,7 @@ bool Refine2DApp::DoCalculation( ) {
                 continue;
             }
 
-            input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+            input_image_local.ReadSlice(&input_stack_local, input_parameters.position_in_stack);
 
             if ( exclude_blank_edges && (input_image_local.ContainsBlankEdges(mask_radius / input_parameters.pixel_size) || input_image_local.ContainsRepeatedLineEdges( )) ) {
                 number_of_blank_edges_local++;
@@ -1037,12 +1041,13 @@ bool Refine2DApp::DoCalculation( ) {
             // Maybe this is not a good idea since this amplifies noise...
             //		padded_image.CorrectSinc();
             padded_image.BackwardFFT( );
+            const float padded_edge_value = padded_image.ReturnAverageOfRealValues(padded_image.physical_address_of_box_center_x - 2.0, true); // once per particle, not per rotation
             //???		input_particle_local.mask_volume = padded_image.CosineMask(padded_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
 
             for ( i = 0; i < number_of_rotations; i++ ) {
                 psi = i * psi_step + psi_start;
                 rotation_angle.GenerateRotationMatrix2D(psi);
-                padded_image.Rotate2DSample(rotation_cache[i], rotation_angle);
+                padded_image.Rotate2DSample(rotation_cache[i], rotation_angle, 0.0, padded_edge_value);
                 // Correct variance for interpolation.
                 temp_float = rotation_cache[i].ReturnSumOfSquares( );
                 rotation_cache[i].MultiplyByConstant(sqrtf(variance / temp_float));
@@ -1069,7 +1074,7 @@ bool Refine2DApp::DoCalculation( ) {
             //		best_class = -1;
             if ( best_class >= 0 ) {
                 rotation_angle.GenerateRotationMatrix2D(-input_parameters.psi);
-                padded_image.Rotate2DSample(rotation_cache[number_of_rotations], rotation_angle);
+                padded_image.Rotate2DSample(rotation_cache[number_of_rotations], rotation_angle, 0.0, padded_edge_value);
                 temp_float = rotation_cache[number_of_rotations].ReturnSumOfSquares( );
                 rotation_cache[number_of_rotations].MultiplyByConstant(sqrtf(variance / temp_float));
                 //			rotation_cache[number_of_rotations].MultiplyByConstant(-1.0);

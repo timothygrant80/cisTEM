@@ -1,5 +1,7 @@
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 #include "core_headers.h"
+#include <map>
+#include <tuple>
 #include <memory>
 
 using namespace cistem;
@@ -1208,59 +1210,67 @@ void Image::ApplySqrtNFilter( ) {
     }
 }
 
+// The shell (bin) of every Fourier pixel of an image of these dimensions, as Whiten() computes it: made once per
+// size per thread and reused, since Whiten runs on every projection of a refinement and the sqrtf per pixel was
+// most of its cost. Keyed on the dimensions; fourier_voxel_size is 1 / dimension, so nothing else enters.
+static const std::vector<int>& WhiteningBinTable(Image& image, int number_of_bins2) {
+    thread_local std::map<std::tuple<int, int, int>, std::vector<int>> tables;
+    const std::tuple<int, int, int>                                    key(image.logical_x_dimension, image.logical_y_dimension, image.logical_z_dimension);
+    auto                                                               found = tables.find(key);
+    if ( found != tables.end( ) )
+        return found->second;
+    std::vector<int>& table = tables[key];
+    table.resize(image.real_memory_allocated / 2);
+    long pixel_counter = 0;
+    for ( int k = 0; k <= image.physical_upper_bound_complex_z; k++ ) {
+        float z = powf(image.ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * image.fourier_voxel_size_z, 2);
+        for ( int j = 0; j <= image.physical_upper_bound_complex_y; j++ ) {
+            float y = powf(image.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * image.fourier_voxel_size_y, 2);
+            for ( int i = 0; i <= image.physical_upper_bound_complex_x; i++ ) {
+                float x              = powf(i * image.fourier_voxel_size_x, 2);
+                table[pixel_counter] = int(sqrtf(x + y + z) * number_of_bins2);
+                pixel_counter++;
+            }
+        }
+    }
+    return table;
+}
+
 void Image::Whiten(float resolution_limit, Curve* whitening_filter) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to whiten is not in Fourier space");
 
-    int i;
-    int j;
-    int k;
-    int bin;
-
-    float x;
-    float y;
-    float z;
-    float frequency;
-    float frequency_squared;
+    int   i;
+    int   bin;
     float temp_float;
     float resolution_limit_pixel = resolution_limit * logical_x_dimension;
-    //	float resolution_limit_pixel = std::min(float(0.5), resolution_limit) * logical_x_dimension - 1.0;
 
-    int number_of_bins = ReturnLargestLogicalDimension( ) / 2 + 1;
-    // Extend table to include corners in 3D Fourier space
-    int     number_of_bins_extended = int(number_of_bins * sqrtf(3.0)) + 1;
-    double* sum                     = new double[number_of_bins_extended];
-    int     number_of_bins2         = 2 * (number_of_bins - 1);
-    int*    non_zero_count          = new int[number_of_bins_extended];
-    ZeroDoubleArray(sum, number_of_bins_extended);
-    ZeroIntArray(non_zero_count, number_of_bins_extended);
+    int number_of_bins          = ReturnLargestLogicalDimension( ) / 2 + 1;
+    int number_of_bins_extended = int(number_of_bins * sqrtf(3.0)) + 1;
+    int number_of_bins2         = 2 * (number_of_bins - 1);
+
+    // the shell sums, in scratch that persists per thread rather than new/delete per call
+    thread_local std::vector<double> sum_scratch;
+    thread_local std::vector<int>    count_scratch;
+    sum_scratch.assign(number_of_bins_extended, 0.0);
+    count_scratch.assign(number_of_bins_extended, 0);
+    double*                 sum            = sum_scratch.data( );
+    int*                    non_zero_count = count_scratch.data( );
+    const std::vector<int>& bin_of_pixel   = WhiteningBinTable(*this, number_of_bins2);
+    const long              n_pixels       = real_memory_allocated / 2;
 
     if ( whitening_filter != NULL ) // setup the curve
     {
         whitening_filter->ClearData( );
     }
 
-    long pixel_counter = 0;
-
-    for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
-        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
-
-        for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
-            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
-
-            for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
-                temp_float = powf(abs(complex_values[pixel_counter]), 2);
-                if ( temp_float != 0.0 ) {
-                    x                 = powf(i * fourier_voxel_size_x, 2);
-                    frequency_squared = x + y + z;
-
-                    // compute radius, in units of physical Fourier pixels
-                    bin = int(sqrtf(frequency_squared) * number_of_bins2);
-                    if ( bin <= resolution_limit_pixel ) {
-                        sum[bin] += temp_float;
-                        non_zero_count[bin] += 1;
-                    }
-                }
-                pixel_counter++;
+    long pixel_counter;
+    for ( pixel_counter = 0; pixel_counter < n_pixels; pixel_counter++ ) {
+        temp_float = powf(abs(complex_values[pixel_counter]), 2);
+        if ( temp_float != 0.0 ) {
+            bin = bin_of_pixel[pixel_counter];
+            if ( bin <= resolution_limit_pixel ) {
+                sum[bin] += temp_float;
+                non_zero_count[bin] += 1;
             }
         }
     }
@@ -1270,38 +1280,20 @@ void Image::Whiten(float resolution_limit, Curve* whitening_filter) {
             sum[i] = sqrtf(sum[i] / non_zero_count[i]);
     }
 
-    pixel_counter = 0;
-    for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
-        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
-
-        for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
-            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
-
-            for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
-                x                 = powf(i * fourier_voxel_size_x, 2);
-                frequency_squared = x + y + z;
-
-                // compute radius, in units of physical Fourier pixels
-                bin = int(sqrtf(frequency_squared) * number_of_bins2);
-
-                if ( bin <= resolution_limit_pixel ) {
-                    if ( non_zero_count[bin] != 0.0 ) {
-                        complex_values[pixel_counter] /= sum[bin];
-                    }
-                    else {
-                        complex_values[pixel_counter] = 0.0f + I * 0.0f;
-                    }
-                }
-                else {
-                    complex_values[pixel_counter] = 0.0f + I * 0.0f;
-                }
-                pixel_counter++;
+    for ( pixel_counter = 0; pixel_counter < n_pixels; pixel_counter++ ) {
+        bin = bin_of_pixel[pixel_counter];
+        if ( bin <= resolution_limit_pixel ) {
+            if ( non_zero_count[bin] != 0.0 ) {
+                complex_values[pixel_counter] /= sum[bin];
+            }
+            else {
+                complex_values[pixel_counter] = 0.0f + I * 0.0f;
             }
         }
+        else {
+            complex_values[pixel_counter] = 0.0f + I * 0.0f;
+        }
     }
-
-    delete[] sum;
-    delete[] non_zero_count;
 }
 
 void Image::MultiplyByWeightsCurve(Curve& weights, float scale_factor) {
@@ -8636,44 +8628,36 @@ void Image::Abs( ) {
 void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
-    bool need_to_fft = false;
-
-    long pixel_counter = 0;
-
-    int k;
-    int k_logical;
-
-    int j;
-    int j_logical;
-
-    int i;
-
-    float phase_z;
-    float phase_y;
-    float phase_x;
-
-    std::complex<float> total_phase_shift;
+    bool need_to_fft     = false;
+    long pixel_counter   = 0;
+    int  k;
+    int  j;
+    int  i;
 
     if ( is_in_real_space == true ) {
         ForwardFFT( );
         need_to_fft = true;
     }
 
+    // The phase factor exp(-i(phase_x + phase_y + phase_z)) is separable, so it is a product of one factor per
+    // axis: one cosf and sinf per frequency along each axis, tabulated here, and one complex multiply per pixel
+    // (there used to be a cosf and a sinf per pixel, a fifth of a local refinement's time). The factors differ
+    // from the per-pixel cosf/sinf of the summed phase only by float rounding.
+    std::vector<std::complex<float>> factor_x(physical_upper_bound_complex_x + 1);
+    std::vector<std::complex<float>> factor_y(physical_upper_bound_complex_y + 1);
+    std::vector<std::complex<float>> factor_z(physical_upper_bound_complex_z + 1);
+    for ( i = 0; i <= physical_upper_bound_complex_x; i++ )
+        factor_x[i] = Return3DPhaseFromIndividualDimensions(ReturnPhaseFromShift(wanted_x_shift, i, logical_x_dimension), 0.0f, 0.0f);
+    for ( j = 0; j <= physical_upper_bound_complex_y; j++ )
+        factor_y[j] = Return3DPhaseFromIndividualDimensions(0.0f, ReturnPhaseFromShift(wanted_y_shift, ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j), logical_y_dimension), 0.0f);
+    for ( k = 0; k <= physical_upper_bound_complex_z; k++ )
+        factor_z[k] = Return3DPhaseFromIndividualDimensions(0.0f, 0.0f, ReturnPhaseFromShift(wanted_z_shift, ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k), logical_z_dimension));
+
     for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
-        k_logical = ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k);
-        phase_z   = ReturnPhaseFromShift(wanted_z_shift, k_logical, logical_z_dimension);
-
         for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
-            j_logical = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
-            phase_y   = ReturnPhaseFromShift(wanted_y_shift, j_logical, logical_y_dimension);
-
+            const std::complex<float> factor_yz = factor_y[j] * factor_z[k];
             for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
-
-                phase_x = ReturnPhaseFromShift(wanted_x_shift, i, logical_x_dimension);
-
-                total_phase_shift = Return3DPhaseFromIndividualDimensions(phase_x, phase_y, phase_z);
-                complex_values[pixel_counter] *= total_phase_shift;
-
+                complex_values[pixel_counter] *= factor_x[i] * factor_yz;
                 pixel_counter++;
             }
         }

@@ -23,6 +23,7 @@ symmetry-related view of each particle (SymmetryMatrix); the histogram here
 counts each assigned view once, which is the same picture for C1 and a
 coarser one otherwise.
 """
+import itertools
 import math
 import os
 import threading
@@ -115,16 +116,16 @@ def load_table(conn, refinement_id, class_number, keys=None):
     dt = starfile.table_dtype(keys)
     cur = conn.cursor()
     cur.row_factory = None   # plain tuples: a million rows in about a second rather than four as sqlite3.Row objects
-    rows = cur.execute("SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in columns), table)).fetchall()
-    out = np.zeros(len(rows), dtype=dt)
-    if rows:
-        plain = np.array(rows, dtype=float)   # one conversion, then per column
-        for i, k in enumerate(keys):
-            out[k] = plain[:, i]
+    cur.execute("SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in columns), table))
+    # straight from the cursor's tuples into one flat float array, never a list of them (a third faster than fetchall + np.array)
+    plain = np.fromiter(itertools.chain.from_iterable(cur), dtype=float).reshape(-1, len(keys))
+    out = np.zeros(len(plain), dtype=dt)
+    for i, k in enumerate(keys):
+        out[k] = plain[:, i]
     return out
 
 
-ANGULAR_KEYS = ("position_in_stack", "phi", "theta", "occupancy", "image_is_active")   # all angular_histogram() reads
+ANGULAR_KEYS = ("phi", "theta", "occupancy", "image_is_active")   # all angular_histogram() reads
 
 
 def average_occupancy(rows_or_table):
@@ -217,6 +218,41 @@ def best_class_per_particle(class_rows):
     return {int(p): int(b) for p, b in zip(positions, best)}
 
 
+def angular_bins(phi_deg, theta_deg, symmetry="C1"):
+    """The histogram bin of every particle's view under every symmetry mate: an int array of (mates x particles),
+    from the particles' phi and theta in degrees (any array-likes of equal length). Computed once, it serves every
+    weighting of the same angles: a package made from a refinement histograms its classes this way."""
+    try:
+        mats = symmetry_module.matrices(symmetry)
+    except ValueError:
+        mats = symmetry_module.matrices("C1")
+    phi = np.radians(np.asarray(phi_deg, dtype=float)); theta = np.radians(np.asarray(theta_deg, dtype=float))
+    # The north pole under the Euler rotation is the matrix's third column: (sin t cos p, sin t sin p, cos t); psi does not move it.
+    pole = np.stack([np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)], 1)   # particles x 3
+    bins = np.zeros((len(mats), len(phi)), dtype=np.int64)
+    for i, rm in enumerate(mats):
+        v = pole @ np.asarray(rm, dtype=float).T                 # rotate every pole by this symmetry mate
+        flip = v[:, 2] < 0.0
+        v[flip, 0] = -v[flip, 0]; v[flip, 1] = -v[flip, 1]
+        x, y = v[:, 0], v[:, 1]
+        t_deg = np.degrees(np.arcsin(np.minimum(1.0, np.sqrt(x * x + y * y))))
+        p_deg = np.where((x == 0) & (y == 0), 0.0, np.degrees(np.arctan2(y, x))) % 360.0
+        tb = np.searchsorted(_THETA_BOUNDS_ARRAY, t_deg, side="right")
+        pb = np.searchsorted(_PHI_BOUNDS_ARRAY, p_deg, side="right")
+        bins[i] = THETA_BINS * pb + tb
+    return bins
+
+
+def histogram_from_bins(bins, weight):
+    """angular_histogram()'s list from angular_bins()' array and one weight per particle (occupancy / 100 for an
+    active particle, 0 otherwise). A zero weight adds nothing, so bins of inactive particles may stay in."""
+    hist = np.zeros(THETA_BINS * PHI_BINS)
+    weight = np.asarray(weight, dtype=float)
+    for row in bins:
+        hist += np.bincount(row, weights=weight, minlength=THETA_BINS * PHI_BINS)
+    return hist.tolist()
+
+
 def angular_histogram(class_rows, wanted_class=1, symmetry="C1"):
     """Refinement::FillAngularDistributionHistogram()'s bins -- 18 theta bins
     (equal-area in cos theta) x 72 phi bins over the northern hemisphere, every
@@ -239,30 +275,12 @@ def angular_histogram(class_rows, wanted_class=1, symmetry="C1"):
     table = as_table(class_rows[wanted_class - 1])
     if len(table) == 0:
         return hist.tolist()
-    try:
-        mats = symmetry_module.matrices(symmetry)
-    except ValueError:
-        mats = symmetry_module.matrices("C1")
     active = table["image_is_active"] >= 0
     weight = np.where(active, table["occupancy"].astype(float) / 100.0, 0.0)
     keep = weight > 0.0
     if not keep.any():
         return hist.tolist()
-    weight = weight[keep]
-    phi = np.radians(table["phi"][keep].astype(float)); theta = np.radians(table["theta"][keep].astype(float))
-    # The north pole under the Euler rotation is the matrix's third column: (sin t cos p, sin t sin p, cos t); psi does not move it.
-    pole = np.stack([np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)], 1)   # particles x 3
-    for rm in mats:
-        v = pole @ np.asarray(rm, dtype=float).T                 # rotate every pole by this symmetry mate
-        flip = v[:, 2] < 0.0
-        v[flip, 0] = -v[flip, 0]; v[flip, 1] = -v[flip, 1]
-        x, y = v[:, 0], v[:, 1]
-        t_deg = np.degrees(np.arcsin(np.minimum(1.0, np.sqrt(x * x + y * y))))
-        p_deg = np.where((x == 0) & (y == 0), 0.0, np.degrees(np.arctan2(y, x))) % 360.0
-        tb = np.searchsorted(_THETA_BOUNDS_ARRAY, t_deg, side="right")
-        pb = np.searchsorted(_PHI_BOUNDS_ARRAY, p_deg, side="right")
-        hist += np.bincount(THETA_BINS * pb + tb, weights=weight, minlength=THETA_BINS * PHI_BINS)
-    return hist.tolist()
+    return histogram_from_bins(angular_bins(table["phi"][keep], table["theta"][keep], symmetry), weight[keep])
 
 
 def write_angular_distribution(conn, rid, k, hist):

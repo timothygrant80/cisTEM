@@ -85,6 +85,21 @@ class FromPackageTests(unittest.TestCase):
         self.assertEqual([r["occupancy"] for r in rows], [100.0] * (N // 2))
         self.assertEqual([r["position_in_stack"] for r in rows], list(range(1, N // 2 + 1)))
 
+    def test_angular_distributions_match_a_rebuild(self):
+        # each new class's histogram is computed from bins made once per source class; it must equal what
+        # rebuild_angular_distributions() computes from the class's own table -- randomised or fixed occupancies,
+        # a kept subset, a class with several sources, and a symmetry with mates
+        for params in ({"number_of_classes": 3, "class_sources": [[1], [1], [1, 2]]},
+                       {"number_of_classes": 2, "class_sources": [[2], [1]], "randomise_occupancies": False},
+                       {"number_of_classes": 2, "carry_over_classes": [2]}):
+            out = rp.create_package_from_package(self.conn, self.project, dict({"source_package_id": 1, "source_refinement_id": 1, "symmetry": "D2"}, **params))
+            rid = out["refinement_id"]
+            stored = [refinements.load_angular_distribution(self.conn, rid, k) for k in range(1, params["number_of_classes"] + 1)]
+            refinements.rebuild_angular_distributions(self.conn, rid)
+            rebuilt = [refinements.load_angular_distribution(self.conn, rid, k) for k in range(1, params["number_of_classes"] + 1)]
+            self.assertEqual(stored, rebuilt, params)
+            self.assertAlmostEqual(sum(stored[0]), 4 * sum(r["occupancy"] for r in refinements.load_rows(self.conn, rid, 1)) / 100.0, places=3)
+
     def test_progress_is_reported(self):
         calls = []
         rp.create_package_from_package(self.conn, self.project, {"source_package_id": 1, "source_refinement_id": 1, "carry_over_classes": [1], "number_of_classes": 2},

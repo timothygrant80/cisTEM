@@ -26,6 +26,7 @@ near-duplicate picks removed, exactly as the wizard's class-selection path
 does. Templates, and combining or importing packages, are not mirrored.
 """
 
+import itertools
 import math
 from concurrent.futures import ThreadPoolExecutor
 import os
@@ -724,8 +725,36 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
 
     insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
                    number_of_classes, contained, refinement_id, white_protein=bool(pkg["STACK_HAS_WHITE_PROTEIN"]))
-    insert_initial_refinement(conn, refinement_id, package_id, "Parameters from {}".format(ref["NAME"]), class_rows, box_size, output_pixel_size, molecular_weight, angular=True,
+    insert_initial_refinement(conn, refinement_id, package_id, "Parameters from {}".format(ref["NAME"]), class_rows, box_size, output_pixel_size, molecular_weight, angular=False,
                               number_of_particles=len(kept_positions))
+    # The angular distributions, for the new symmetry. A class copied from one source class has that class's
+    # angles, so the bins are computed once per source class (from the source table, for the kept particles) and
+    # each new class costs only its occupancy column -- nothing at all at 100% -- where rebuilding from the new
+    # tables read four columns per class and did the trigonometry every time (two thirds of the whole operation).
+    refinements_module = _refinements( )
+    bins_of_source = {}
+    with conn:
+        for i, src in enumerate(sources):
+            if progress:
+                progress(i, number_of_classes, "Angular distribution of class {} of {}".format(i + 1, number_of_classes))
+            if len(src) != 1:
+                hist = refinements_module.angular_histogram(refinements_module.load_table(conn, refinement_id, i + 1, refinements_module.ANGULAR_KEYS), 1, symmetry)
+            else:
+                k = src[0]
+                if k not in bins_of_source:
+                    plain.execute("SELECT r.PHI, r.THETA, r.IMAGE_IS_ACTIVE FROM REFINEMENT_RESULT_{}_{} r{} ORDER BY r.POSITION_IN_STACK".format(rid, k, join_map.format("r")))
+                    # through float32 like a parameter table (starfile.table_dtype), so the bins match a rebuild's
+                    angles = np.fromiter(itertools.chain.from_iterable(plain), dtype=float).reshape(-1, 3).astype(np.float32)
+                    bins_of_source[k] = (refinements_module.angular_bins(angles[:, 0], angles[:, 1], symmetry), angles[:, 2] >= 0)
+                    del angles
+                bins, active = bins_of_source[k]
+                if randomise and number_of_classes > 1:
+                    plain.execute("SELECT OCCUPANCY FROM REFINEMENT_RESULT_{}_{} ORDER BY POSITION_IN_STACK".format(refinement_id, i + 1))
+                    weight = np.fromiter(itertools.chain.from_iterable(plain), dtype=np.float32).astype(float) / 100.0
+                else:
+                    weight = np.ones(len(kept_positions))
+                hist = refinements_module.histogram_from_bins(bins, np.where(active, weight, 0.0))
+            refinements_module.write_angular_distribution(conn, refinement_id, i + 1, hist)
     with conn:
         conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_MAP")
         for i in range(number_of_classes):

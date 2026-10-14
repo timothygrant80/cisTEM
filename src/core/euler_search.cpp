@@ -2,10 +2,11 @@
 
 EulerSearch::EulerSearch( ) {
     // Nothing to do until Init is called
-    run_flipped_image = run_padded_image = run_projection_image = run_correlation_map = run_rotation_cache = NULL;
+    run_flipped_image = run_padded_image = run_projection_image = run_rotation_cache = NULL;
     run_rotation_cache_size = 0;
-    run_temp_k1             = NULL;
-    run_temp_k1_size        = 0;
+    run_batch_complex = run_batch_real = NULL;
+    run_batch_plan = run_batch_plan_rest = NULL;
+    run_batch_count = run_batch_chunk = run_batch_nx = run_batch_ny = 0;
     refine_top_N                = 0;
     number_of_search_dimensions = 0;
     number_of_search_positions  = 0;
@@ -35,25 +36,112 @@ EulerSearch::EulerSearch(const EulerSearch& other_search) // copy constructor
 {
     // To avoid segfault in the copy
     list_of_search_parameters = NULL;
-    run_flipped_image = run_padded_image = run_projection_image = run_correlation_map = run_rotation_cache = NULL;
+    run_flipped_image = run_padded_image = run_projection_image = run_rotation_cache = NULL;
     run_rotation_cache_size = 0;
-    run_temp_k1             = NULL;
-    run_temp_k1_size        = 0;
+    run_batch_complex = run_batch_real = NULL;
+    run_batch_plan = run_batch_plan_rest = NULL;
+    run_batch_count = run_batch_chunk = run_batch_nx = run_batch_ny = 0;
     list_of_best_parameters   = NULL;
     *this                     = other_search;
+}
+
+void EulerSearch::FreeBatchPlan( ) {
+    if ( run_batch_plan != NULL || run_batch_plan_rest != NULL ) {
+        std::lock_guard<std::mutex> lock(Image::s_mutexProtectingFFTW);
+        if ( run_batch_plan != NULL )
+            fftwf_destroy_plan(run_batch_plan);
+        if ( run_batch_plan_rest != NULL )
+            fftwf_destroy_plan(run_batch_plan_rest);
+        run_batch_plan = run_batch_plan_rest = NULL;
+    }
+    if ( run_batch_complex != NULL )
+        fftwf_free(run_batch_complex);
+    if ( run_batch_real != NULL )
+        fftwf_free(run_batch_real);
+    run_batch_complex = run_batch_real = NULL;
+    run_batch_count = run_batch_chunk = run_batch_nx = run_batch_ny = 0;
+}
+
+// The in-plane angles' correlation maps are transformed `run_batch_chunk` at a time: one many-transform plan
+// over that many half-planes of ny x (nx/2+1) complex values (the layout of an Image's complex_values) into as
+// many unpadded nx x ny real maps, out of place, plus a plan for the remainder. A chunk rather than all the
+// angles at once because the maps are scanned right after they are made: 32 maps of a 128 box are 2 MB, which
+// stays in cache, where 192 would not (measured: the whole batch was slower than one map at a time there).
+// Planned under the FFTW mutex, as Image::Allocate plans, since the planner is not thread safe; executing is.
+void EulerSearch::EnsureBatchPlan(int count, int nx, int ny) {
+    if ( run_batch_plan != NULL && run_batch_count == count && run_batch_nx == nx && run_batch_ny == ny )
+        return;
+    FreeBatchPlan( );
+    const int  chunk     = std::min(count, 32);
+    const long n_complex = long(ny) * (nx / 2 + 1);
+    run_batch_complex    = (float*)fftwf_malloc(sizeof(float) * 2 * n_complex * chunk);
+    run_batch_real       = (float*)fftwf_malloc(sizeof(float) * long(nx) * ny * chunk);
+    int n[2]             = {ny, nx};
+    {
+        std::lock_guard<std::mutex> lock(Image::s_mutexProtectingFFTW);
+        run_batch_plan = fftwf_plan_many_dft_c2r(2, n, chunk, reinterpret_cast<fftwf_complex*>(run_batch_complex), NULL, 1, int(n_complex), run_batch_real, NULL, 1, nx * ny, FFTW_ESTIMATE);
+        if ( count % chunk != 0 )
+            run_batch_plan_rest = fftwf_plan_many_dft_c2r(2, n, count % chunk, reinterpret_cast<fftwf_complex*>(run_batch_complex), NULL, 1, int(n_complex), run_batch_real, NULL, 1, nx * ny, FFTW_ESTIMATE);
+    }
+    if ( run_batch_plan == NULL || (count % chunk != 0 && run_batch_plan_rest == NULL) ) {
+        MyPrintWithDetails("Error in FFT planning for the batched search...");
+        DEBUG_ABORT;
+    }
+    run_batch_count = count;
+    run_batch_chunk = chunk;
+    run_batch_nx    = nx;
+    run_batch_ny    = ny;
+}
+
+// The maximum of a correlation map inside the shift window, +-max_x and +-max_y pixels around the origin,
+// which sits at the map's corners: the four corner blocks in the order Image::FindPeakAtOriginFast2D scans
+// them, the first of equal values winning, as there. The row maximum is a plain reduction the compiler
+// vectorises; the position is looked up only for a row that beats the best so far.
+static void PeakInShiftWindow(const float* map, int nx, int ny, int centre_x, int centre_y, int max_x, int max_y, float& value, int& x, int& y) {
+    if ( max_x > centre_x )
+        max_x = centre_x;
+    if ( max_y > centre_y )
+        max_y = centre_y;
+    value = -std::numeric_limits<float>::max( );
+    x     = 0;
+    y     = 0;
+    const int row_ranges[2][2] = {{0, max_y}, {ny - max_y - 1, ny - 1}};
+    const int col_ranges[2][2] = {{0, max_x}, {nx - max_x - 1, nx - 1}};
+    for ( int c = 0; c < 2; c++ ) {
+        for ( int r = 0; r < 2; r++ ) {
+            const int i0 = col_ranges[c][0], i1 = col_ranges[c][1];
+            for ( int j = row_ranges[r][0]; j <= row_ranges[r][1]; j++ ) {
+                const float* row     = map + long(j) * nx;
+                float        row_max = -std::numeric_limits<float>::max( );
+                for ( int i = i0; i <= i1; i++ )
+                    row_max = std::max(row_max, row[i]);
+                if ( row_max > value ) {
+                    value = row_max;
+                    y     = j;
+                    for ( int i = i0; i <= i1; i++ ) {
+                        if ( row[i] == row_max ) {
+                            x = i;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if ( x > centre_x )
+        x -= nx;
+    if ( y > centre_y )
+        y -= ny;
 }
 
 void EulerSearch::FreeRunScratch( ) {
     delete run_flipped_image;
     delete run_padded_image;
     delete run_projection_image;
-    delete run_correlation_map;
     delete[] run_rotation_cache;
-    delete[] run_temp_k1;
-    run_flipped_image = run_padded_image = run_projection_image = run_correlation_map = run_rotation_cache = NULL;
+    run_flipped_image = run_padded_image = run_projection_image = run_rotation_cache = NULL;
     run_rotation_cache_size = 0;
-    run_temp_k1             = NULL;
-    run_temp_k1_size        = 0;
+    FreeBatchPlan( );
 }
 
 // A scratch image of the wanted size, allocated (and its FFT plans made) only when it does not exist yet or changed size.
@@ -462,26 +550,17 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
     float           temp_float[6];
     float           effective_bfactor = 100.0;
     bool            mirrored_match;
-    Peak            found_peak;
     AnglesAndShifts angles;
     // The working images persist between calls (see FreeRunScratch); rotated_image, which the old code allocated, was never used.
     EnsureScratch(run_flipped_image, particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
     EnsureScratch(run_padded_image, padding_factor_2d * particle.particle_image->logical_x_dimension, padding_factor_2d * particle.particle_image->logical_y_dimension, true);
     EnsureScratch(run_projection_image, particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
-    EnsureScratch(run_correlation_map, particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
     Image* flipped_image    = run_flipped_image;
     Image* padded_image     = run_padded_image;
     Image* projection_image = run_projection_image;
-    Image* correlation_map  = run_correlation_map;
     Image* rotation_cache   = NULL;
-    correlation_map->object_is_centred_in_box = false;
 #ifndef MKL
-    if ( run_temp_k1 == NULL || run_temp_k1_size < flipped_image->real_memory_allocated ) {
-        delete[] run_temp_k1;
-        run_temp_k1      = new float[flipped_image->real_memory_allocated];
-        run_temp_k1_size = flipped_image->real_memory_allocated;
-    }
-    float* temp_k1 = run_temp_k1;
+    float* temp_k1 = NULL; // the products are formed directly below; kept so the non-MKL declarations compile unchanged
     float* temp_k2;
     temp_k2 = temp_k1 + 1;
     float* real_a;
@@ -533,6 +612,11 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
         rotation_cache[i].is_in_real_space = false;
     }
 
+    const int  nx        = flipped_image->logical_x_dimension;
+    const int  ny        = flipped_image->logical_y_dimension;
+    const long n_complex = flipped_image->real_memory_allocated / 2;
+    EnsureBatchPlan(psi_i, nx, ny);
+
     flipped_image->CopyFrom(particle.particle_image);
     //	flipped_image->MultiplyPixelWiseReal(*particle.ctf_image, particle.is_phase_flipped);
     flipped_image->MultiplyPixelWiseReal(*particle.ctf_image, true);
@@ -576,103 +660,43 @@ void EulerSearch::Run(Particle& particle, Image& input_3d, Image* projections) {
         else
             projection_image->CopyFrom(&projections[i]);
 
-#ifndef MKL
-        for ( pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2 ) {
-            temp_k1[pixel_counter] = real_a[pixel_counter] + real_b[pixel_counter];
-        };
-        for ( pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2 ) {
-            temp_k2[pixel_counter] = real_b[pixel_counter] - real_a[pixel_counter];
-        };
-#endif
-
-        //		projection_image->SwapRealSpaceQuadrants();
-        //		rotation_cache[0].SwapRealSpaceQuadrants();
-        //		projection_image->QuickAndDirtyWriteSlice("proj.mrc", 1);
-        //		rotation_cache[0].QuickAndDirtyWriteSlice("part.mrc", 1);
-        //		exit(0);
-
+        // The in-plane angles a chunk at a time: the products with the rotated particles (mirror copies at the
+        // odd slots when mirrors are tested, as the rotation cache holds them), one transform of the chunk, then
+        // the scan of its maps while they are still in cache.
         best_inplane_score = -std::numeric_limits<float>::max( );
-        psi_m              = 0;
-        for ( psi_i = 0; psi_i < number_of_psi_positions; psi_i++ ) {
-#ifndef MKL
-            real_c = rotation_cache[psi_m].real_values;
-            real_d = rotation_cache[psi_m].real_values + 1;
-#endif
-
+        mirrored_match     = false;
+        for ( int first = 0; first < psi_i; first += run_batch_chunk ) {
+            const int in_chunk = std::min(run_batch_chunk, psi_i - first);
+            for ( int slot = 0; slot < in_chunk; slot++ ) {
+                float* product = run_batch_complex + 2L * slot * n_complex;
 #ifdef MKL
-            // Use the MKL
-            vmcMulByConj(flipped_image->real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(projection_image->complex_values), reinterpret_cast<MKL_Complex8*>(rotation_cache[psi_m].complex_values), reinterpret_cast<MKL_Complex8*>(correlation_map->complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
+                vmcMulByConj(n_complex, reinterpret_cast<MKL_Complex8*>(projection_image->complex_values), reinterpret_cast<MKL_Complex8*>(rotation_cache[first + slot].complex_values), reinterpret_cast<MKL_Complex8*>(product), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
 #else
-            for ( pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2 ) {
-                real_r[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_d[pixel_counter] * temp_k1[pixel_counter];
-            };
-            for ( pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2 ) {
-                real_i[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_c[pixel_counter] * temp_k2[pixel_counter];
-            };
+                const float* a = projection_image->real_values;
+                const float* b = rotation_cache[first + slot].real_values;
+                for ( long q = 0; q < 2 * n_complex; q += 2 ) { // (ar + i ai)(br - i bi)
+                    product[q]     = a[q] * b[q] + a[q + 1] * b[q + 1];
+                    product[q + 1] = a[q + 1] * b[q] - a[q] * b[q + 1];
+                }
 #endif
-            correlation_map->is_in_real_space  = false;
-            correlation_map->complex_values[0] = 0.0;
-            correlation_map->BackwardFFT( );
-            found_peak = correlation_map->FindPeakAtOriginFast2D(max_pix_x, max_pix_y);
-            //				sample_rate++;
-            //				projection_image->SwapRealSpaceQuadrants();
-            //				rotation_cache[psi_m].SwapRealSpaceQuadrants();
-            //				projection_image->QuickAndDirtyWriteSlice("proj.mrc", sample_rate);
-            //				rotation_cache[psi_m].QuickAndDirtyWriteSlice("part.mrc", sample_rate);
-            //				projection_image->SwapRealSpaceQuadrants();
-            //				rotation_cache[psi_m].SwapRealSpaceQuadrants();
-            //				Printf("peak  = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
-            //						list_of_search_parameters[i][1], list_of_search_parameters[i][0], found_peak.x, found_peak.y);
-            if ( found_peak.value > best_inplane_score ) {
-                best_inplane_score     = found_peak.value;
-                best_inplane_values[0] = 360.0 - (psi_i * psi_step + psi_start);
-                best_inplane_values[1] = found_peak.x;
-                best_inplane_values[2] = found_peak.y;
-                mirrored_match         = false;
+                product[0] = 0.0f; // the DC term, as before
+                product[1] = 0.0f;
             }
-
-            if ( test_mirror ) {
-                psi_m++;
-
-#ifndef MKL
-                real_c = rotation_cache[psi_m].real_values;
-                real_d = rotation_cache[psi_m].real_values + 1;
-#endif
-
-#ifdef MKL
-                // Use the MKL
-                vmcMulByConj(flipped_image->real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(projection_image->complex_values), reinterpret_cast<MKL_Complex8*>(rotation_cache[psi_m].complex_values), reinterpret_cast<MKL_Complex8*>(correlation_map->complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
-#else
-                for ( pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2 ) {
-                    real_r[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_d[pixel_counter] * temp_k1[pixel_counter];
-                };
-                for ( pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2 ) {
-                    real_i[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_c[pixel_counter] * temp_k2[pixel_counter];
-                };
-#endif
-                correlation_map->is_in_real_space  = false;
-                correlation_map->complex_values[0] = 0.0;
-                correlation_map->BackwardFFT( );
-                found_peak = correlation_map->FindPeakAtOriginFast2D(max_pix_x, max_pix_y);
-                //					sample_rate++;
-                //					projection_image->SwapRealSpaceQuadrants();
-                //					rotation_cache[psi_m].SwapRealSpaceQuadrants();
-                //					projection_image->QuickAndDirtyWriteSlice("proj.mrc", sample_rate);
-                //					rotation_cache[psi_m].QuickAndDirtyWriteSlice("part.mrc", sample_rate);
-                //					projection_image->SwapRealSpaceQuadrants();
-                //					rotation_cache[psi_m].SwapRealSpaceQuadrants();
-                //					Printf("peakm = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
-                //							list_of_search_parameters[i][1] + 180.0, list_of_search_parameters[i][0], found_peak.x, found_peak.y);
-                if ( found_peak.value > best_inplane_score ) {
-                    best_inplane_score     = found_peak.value;
-                    best_inplane_values[0] = 360.0 - (psi_i * psi_step + psi_start);
-                    best_inplane_values[1] = found_peak.x;
-                    best_inplane_values[2] = found_peak.y;
-                    mirrored_match         = true;
+            fftwf_execute(in_chunk == run_batch_chunk ? run_batch_plan : run_batch_plan_rest);
+            for ( int slot = 0; slot < in_chunk; slot++ ) {
+                psi_m = first + slot;
+                float peak_value;
+                int   peak_x, peak_y;
+                PeakInShiftWindow(run_batch_real + long(slot) * nx * ny, nx, ny, flipped_image->physical_address_of_box_center_x, flipped_image->physical_address_of_box_center_y, max_pix_x, max_pix_y, peak_value, peak_x, peak_y);
+                if ( peak_value > best_inplane_score ) {
+                    const int psi_index    = test_mirror ? psi_m / 2 : psi_m;
+                    best_inplane_score     = peak_value;
+                    best_inplane_values[0] = 360.0 - (psi_index * psi_step + psi_start);
+                    best_inplane_values[1] = peak_x;
+                    best_inplane_values[2] = peak_y;
+                    mirrored_match         = test_mirror && (psi_m % 2 == 1);
                 }
             }
-            //			}
-            psi_m++;
         }
         if ( best_inplane_score > list_of_best_parameters[best_parameters_to_keep][5] ) {
             list_of_best_parameters[best_parameters_to_keep][5] = best_inplane_score;

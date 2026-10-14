@@ -176,6 +176,7 @@ def validate(conn, params):
 
 _runtime = None
 _locks = {}
+_record_threads = {}      # parent job id -> the thread writing its last round's refinement to the database
 _locks_guard = threading.Lock()
 
 
@@ -371,7 +372,7 @@ def _launch_refinement(conn, project_id, job_id, state):
         # WriteStatisticsToFile() writes shells 1..box/2 only; the stored
         # curve (and a package's synthetic one) also has shell 0 and the
         # corners beyond Nyquist, which refine3d's reader rejects.
-        stats = [st for st in refinements.load_statistics(conn, input_id, k) if 1 <= st["shell"] <= state["box_size"] // 2] or defaults
+        stats = [st for st in _input_statistics(conn, state, k - 1) if 1 <= st["shell"] <= state["box_size"] // 2] or defaults
         sp = str(scratch / "input_stats_{}_{}.txt".format(input_id, k))
         write_statistics(sp, stats, state["pixel_size"])
         stats_files.append(sp)
@@ -424,6 +425,21 @@ def _round_statistics(conn, state, k):
     stats_files = state.get("pending_stats_files") or []
     if stats_files and k < len(stats_files) and os.path.isfile(stats_files[k]) and state["reference_files"] == state.get("pending_volume_files"):
         return read_statistics(stats_files[k])
+    return _input_statistics(conn, state, k)
+
+
+def _input_statistics(conn, state, k):
+    """Class k's (0-based) statistics of the input refinement: from the file the record step wrote while that
+    refinement is still being written to the database on its thread (see _record_round), else the database."""
+    f = state.get("input_stats_file")
+    if f and os.path.isfile(f):
+        try:
+            with open(f) as fh:
+                saved = json.load(fh)
+            if int(saved.get("refinement_id", -1)) == int(state["input_refinement_id"]):
+                return saved["stats"][k]
+        except (OSError, ValueError, KeyError, IndexError):
+            pass
     return refinements.load_statistics(conn, state["input_refinement_id"], k + 1)
 
 
@@ -580,6 +596,7 @@ def _child_finished_cleared(project_id, child_id, parent_id, status, error):
 
 
 def _child_finished(project_id, child_id, parent_id, status, error):
+    _wait_for_record(parent_id)   # before the lock: the thread needs it to note what it wrote
     with _job_lock(parent_id):
         conn = db.get_conn(project_id)
         try:
@@ -635,6 +652,8 @@ def _advance(conn, project_id, parent_id, state):
         raise ValueError("unexpected phase {!r}".format(phase))
     if state["phase"] != "finished":
         _save(conn, parent_id, state, _progress_percent(state))
+    if state.get("pending_record") and state["phase"] != "finished":
+        _start_record_thread(project_id, parent_id)
 
 
 def _record_round(conn, project_id, parent_id, state):
@@ -710,10 +729,107 @@ def _record_round(conn, project_id, parent_id, state):
            "starting_refinement_id": state["input_refinement_id"], "number_of_particles": state["number_of_particles"], "number_of_classes": classes,
            "resolution_statistics_box_size": state["box_size"], "resolution_statistics_pixel_size": state["pixel_size"], "percent_used": s["percent_used"],
            "job_id": parent_id}
-    refinements.add_refinement(conn, ref, class_rows, stats, details, symmetry=state["symmetry"])
-    state["history"].append({"round": state["round"] + 1, "refinement_id": rid, "label": "Iter. #{}".format(state["round"] + 1), "estimated_resolution": est_res,
-                             "average_sigma": average_sigma(class_rows), "finished_at": now_iso()})
-    _log(project_id, parent_id, "Refinement #{} written ({}); volume asset{} {}".format(rid, ref["name"], "" if classes == 1 else "s", ", ".join("#{}".format(v) for v in volume_ids)))
+    entry = {"round": state["round"] + 1, "refinement_id": rid, "label": "Iter. #{}".format(state["round"] + 1), "estimated_resolution": est_res,
+             "average_sigma": average_sigma(class_rows), "finished_at": now_iso()}
+    written_line = "Refinement #{} written ({}); volume asset{} {}".format(rid, ref["name"], "" if classes == 1 else "s", ", ".join("#{}".format(v) for v in volume_ids))
+    if state.get("pending_record"):
+        # the previous round's write failed on its thread (a success clears this): done here, and a failure fails the job
+        _write_pending_record(conn, project_id, parent_id, state)
+    # The next round needs only the scratch tables and these statistics, not the database, so every round but the
+    # last writes its refinement -- six tables of a few million rows, and the angular distributions -- on a thread
+    # while the next refine3d runs (4.5 minutes of a 48-minute round, measured on a 3.3-million-particle job), from
+    # a snapshot of the round's tables that the next merge's rows cannot overwrite. The last round writes in place,
+    # since finishing removes the scratch directory.
+    last_round = state.get("finish_requested") or state["round"] + 1 >= state["rounds"]
+    stats_file = str(Path(state["scratch"]) / "record_{}_stats.json".format(rid))
+    with open(stats_file, "w") as fh:
+        json.dump({"refinement_id": rid, "stats": stats}, fh)
+    state["input_stats_file"] = stats_file
+    if last_round:
+        refinements.add_refinement(conn, ref, class_rows, stats, details, symmetry=state["symmetry"])
+        state["history"].append(entry)
+        _log(project_id, parent_id, written_line)
+        return
+    _store_rows(state, "record_{}".format(rid), class_rows)
+    state["pending_record"] = {"refinement_id": rid, "ref": ref, "details": details, "stats_file": stats_file, "history": entry, "log": written_line,
+                               "files": [_class_star(state, "record_{}".format(rid), k) for k in range(classes)]}
+
+
+def _write_pending_record(conn, project_id, parent_id, state):
+    """The refinement described by state["pending_record"] into the database from its snapshot files, here and now.
+    Clears the record from `state` (the caller saves it) and removes the snapshot."""
+    pending = state["pending_record"]
+    class_rows = [starfile.read_params(f, as_table=True) for f in pending["files"]]
+    with open(pending["stats_file"]) as fh:
+        stats = json.load(fh)["stats"]
+    refinements.add_refinement(conn, pending["ref"], class_rows, stats, pending["details"], symmetry=state["symmetry"], commit_every=refinements.RESULT_INSERT_ROWS)
+    state["history"].append(pending["history"])
+    state.pop("pending_record", None)
+    for f in pending["files"]:
+        try:
+            os.remove(f)
+        except OSError:
+            pass
+    _log(project_id, parent_id, pending["log"])
+
+
+def _start_record_thread(project_id, parent_id):
+    with _locks_guard:
+        t = _record_threads.get(parent_id)
+        if t is not None and t.is_alive():
+            return
+        t = threading.Thread(target=_record_pending, args=(project_id, parent_id), daemon=True, name="refine3d-record-" + parent_id)
+        _record_threads[parent_id] = t
+    t.start()
+
+
+def _wait_for_record(parent_id):
+    with _locks_guard:
+        t = _record_threads.get(parent_id)
+    if t is not None and t is not threading.current_thread():
+        t.join()
+
+
+def _record_pending(project_id, parent_id):
+    """The record thread: the pending refinement's rows into the database, one transaction per slice so the job's
+    other bookkeeping (the next child's row, its task results) is never held behind a minutes-long write; then,
+    under the job lock, the history entry appended and the pending record cleared in place -- json_insert /
+    json_remove on STATE_JSON, as child_progress() writes its counters, so a whole-state save by a step that
+    loaded the state before this finished cannot put the record back. A failure leaves the record in place for
+    the next round's _record_round to retry in the foreground, where its failure fails the job."""
+    conn = db.get_conn(project_id)
+    try:
+        state = _load_state(conn, parent_id)
+        pending = (state or {}).get("pending_record")
+        if not pending:
+            return
+        try:
+            class_rows = [starfile.read_params(f, as_table=True) for f in pending["files"]]
+            with open(pending["stats_file"]) as fh:
+                stats = json.load(fh)["stats"]
+            refinements.add_refinement(conn, pending["ref"], class_rows, stats, pending["details"], symmetry=state["symmetry"],
+                                       commit_every=refinements.RESULT_INSERT_ROWS)
+            del class_rows
+        except Exception as exc:  # noqa: BLE001
+            row = conn.execute("SELECT STATUS FROM JOBS WHERE JOB_ID=?", (parent_id,)).fetchone()
+            if row is not None and row["STATUS"] in ("queued", "running"):
+                _log(project_id, parent_id, "could not write Refinement #{} in the background ({}); it will be written again before the next round's".format(
+                    pending["refinement_id"], exc), level="warning")
+            return
+        with _job_lock(parent_id):
+            with conn:
+                n = conn.execute("UPDATE JOBS SET STATE_JSON = json_remove(json_insert(STATE_JSON, '$.history[#]', json(?)), '$.pending_record') "
+                                 "WHERE JOB_ID = ? AND json_extract(STATE_JSON, '$.pending_record.refinement_id') = ?",
+                                 (json.dumps(pending["history"]), parent_id, int(pending["refinement_id"]))).rowcount
+        for f in pending["files"]:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+        if n:
+            _log(project_id, parent_id, pending["log"])
+    finally:
+        conn.close()
 
 
 ACTIONS = {"finish": "Finish After This Round"}
@@ -811,6 +927,9 @@ def resume(project_id, parent_row):
                 conn.execute("UPDATE JOBS SET STATUS='failed', ERROR='Server restarted before this run recorded its plan', FINISHED_AT=? WHERE JOB_ID=?",
                              (now_iso(), parent_row["JOB_ID"]))
             return
+        if state.get("pending_record"):
+            _log(project_id, parent_row["JOB_ID"], "server restarted while Refinement #{} was being written; writing it again".format(state["pending_record"]["refinement_id"]))
+            _start_record_thread(project_id, parent_row["JOB_ID"])
         if state.get("phase") in blush_phase.PHASES:
             blush_phase.resume(_BLUSH, project_id, parent_row["JOB_ID"], state["phase"])
             return

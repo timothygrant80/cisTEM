@@ -27,6 +27,7 @@ import itertools
 import math
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -218,10 +219,8 @@ def best_class_per_particle(class_rows):
     return {int(p): int(b) for p, b in zip(positions, best)}
 
 
-def angular_bins(phi_deg, theta_deg, symmetry="C1"):
-    """The histogram bin of every particle's view under every symmetry mate: an int array of (mates x particles),
-    from the particles' phi and theta in degrees (any array-likes of equal length). Computed once, it serves every
-    weighting of the same angles: a package made from a refinement histograms its classes this way."""
+def _angular_bins_per_mate(phi_deg, theta_deg, symmetry):
+    """The histogram bin of every particle's view, one int array per symmetry mate in turn."""
     try:
         mats = symmetry_module.matrices(symmetry)
     except ValueError:
@@ -229,8 +228,7 @@ def angular_bins(phi_deg, theta_deg, symmetry="C1"):
     phi = np.radians(np.asarray(phi_deg, dtype=float)); theta = np.radians(np.asarray(theta_deg, dtype=float))
     # The north pole under the Euler rotation is the matrix's third column: (sin t cos p, sin t sin p, cos t); psi does not move it.
     pole = np.stack([np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)], 1)   # particles x 3
-    bins = np.zeros((len(mats), len(phi)), dtype=np.int64)
-    for i, rm in enumerate(mats):
+    for rm in mats:
         v = pole @ np.asarray(rm, dtype=float).T                 # rotate every pole by this symmetry mate
         flip = v[:, 2] < 0.0
         v[flip, 0] = -v[flip, 0]; v[flip, 1] = -v[flip, 1]
@@ -239,13 +237,22 @@ def angular_bins(phi_deg, theta_deg, symmetry="C1"):
         p_deg = np.where((x == 0) & (y == 0), 0.0, np.degrees(np.arctan2(y, x))) % 360.0
         tb = np.searchsorted(_THETA_BOUNDS_ARRAY, t_deg, side="right")
         pb = np.searchsorted(_PHI_BOUNDS_ARRAY, p_deg, side="right")
-        bins[i] = THETA_BINS * pb + tb
-    return bins
+        yield THETA_BINS * pb + tb
+
+
+def angular_bins(phi_deg, theta_deg, symmetry="C1"):
+    """The histogram bin of every particle's view under every symmetry mate: an int array of (mates x particles),
+    from the particles' phi and theta in degrees (any array-likes of equal length). Computed once, it serves every
+    weighting of the same angles: a package made from a refinement histograms its classes this way. (At I symmetry
+    this is 60 x 8 bytes a particle; a one-off histogram goes mate by mate instead, see angular_histogram.)"""
+    rows = list(_angular_bins_per_mate(phi_deg, theta_deg, symmetry))
+    return np.stack(rows, 0) if rows else np.zeros((0, len(phi_deg)), dtype=np.int64)
 
 
 def histogram_from_bins(bins, weight):
-    """angular_histogram()'s list from angular_bins()' array and one weight per particle (occupancy / 100 for an
-    active particle, 0 otherwise). A zero weight adds nothing, so bins of inactive particles may stay in."""
+    """angular_histogram()'s list from angular_bins()' array (or any iterable of per-mate bin arrays) and one
+    weight per particle (occupancy / 100 for an active particle, 0 otherwise). A zero weight adds nothing, so bins
+    of inactive particles may stay in."""
     hist = np.zeros(THETA_BINS * PHI_BINS)
     weight = np.asarray(weight, dtype=float)
     for row in bins:
@@ -280,7 +287,7 @@ def angular_histogram(class_rows, wanted_class=1, symmetry="C1"):
     keep = weight > 0.0
     if not keep.any():
         return hist.tolist()
-    return histogram_from_bins(angular_bins(table["phi"][keep], table["theta"][keep], symmetry), weight[keep])
+    return histogram_from_bins(_angular_bins_per_mate(table["phi"][keep], table["theta"][keep], symmetry), weight[keep])
 
 
 def write_angular_distribution(conn, rid, k, hist):
@@ -306,40 +313,69 @@ def rebuild_angular_distributions(conn, rid):
             del table
 
 
-def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=True, symmetry="C1"):
+RESULT_INSERT_ROWS = 500000      # rows per executemany: a class's tuples are built a slice at a time, never all at once
+HISTOGRAM_THREADS = 8
+
+
+def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=True, symmetry="C1", commit_every=None):
     """Database::AddRefinement() + the package bookkeeping around it.
     `ref` carries refinement_id, refinement_package_asset_id, name,
     starting_refinement_id, number_of_particles, number_of_classes,
     resolution_statistics_box_size / _pixel_size, percent_used, job_id;
     class_details[k] the REFINEMENT_DETAILS values for class k+1 (a dict
     keyed by column name; missing ones default); `symmetry` the package's
-    point group, which the angular distributions are expanded by."""
-    release_id("refinement", ref["refinement_id"])
+    point group, which the angular distributions are expanded by.
+
+    The result tables, statistics and angular distributions go in first and
+    the REFINEMENT_LIST row last, so nothing lists a refinement whose rows
+    are still arriving. With `commit_every` (a row count) each slice of
+    result rows is its own transaction -- for a write that runs beside a
+    job's other bookkeeping, which a one-transaction write of six classes of
+    three million rows would hold behind the busy timeout. The histograms
+    are computed on threads, one class each: numpy releases the interpreter
+    lock, and at O or I symmetry they cost more than the inserts."""
     rid = int(ref["refinement_id"])
     package_id = int(ref["refinement_package_asset_id"])
+    classes = int(ref["number_of_classes"])
+    tables = [as_table(class_rows[k]) for k in range(classes)]
+    hists = [None] * classes
+    if angular:
+        with ThreadPoolExecutor(max_workers=min(HISTOGRAM_THREADS, classes)) as pool:
+            hists = list(pool.map(lambda k: angular_histogram(tables, k + 1, symmetry), range(classes)))
+    for k in range(1, classes + 1):
+        table = tables[k - 1]
+        with conn:
+            conn.execute("DROP TABLE IF EXISTS REFINEMENT_RESULT_{}_{}".format(rid, k))
+            conn.execute("CREATE TABLE REFINEMENT_RESULT_{}_{}({})".format(rid, k, RESULT_DDL))
+        step = int(commit_every) if commit_every else RESULT_INSERT_ROWS
+        sql = "INSERT OR REPLACE INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(rid, k, ",".join("?" * len(RESULT_KEYS)))
+        if commit_every:
+            for a in range(0, len(table), step):
+                with conn:
+                    conn.executemany(sql, _result_tuples(table[a:a + step]))
+        else:
+            with conn:
+                for a in range(0, len(table), step):
+                    conn.executemany(sql, _result_tuples(table[a:a + step]))
+        with conn:
+            write_statistics(conn, rid, k, class_stats[k - 1] if k - 1 < len(class_stats) else [])
+            if angular:
+                write_angular_distribution(conn, rid, k, hists[k - 1])
     with conn:
         conn.execute("INSERT OR REPLACE INTO REFINEMENT_LIST(REFINEMENT_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, RESOLUTION_STATISTICS_ARE_GENERATED, "
                      "DATETIME_OF_RUN, STARTING_REFINEMENT_ID, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES, RESOLUTION_STATISTICS_BOX_SIZE, "
                      "RESOLUTION_STATISTICS_PIXEL_SIZE, PERCENT_USED, JOB_ID) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                      (rid, package_id, ref["name"], 1 if ref.get("resolution_statistics_are_generated") else 0, int(ref.get("datetime_of_run") or db.now_epoch()),
                       int(ref.get("starting_refinement_id") if ref.get("starting_refinement_id") is not None else -1), int(ref["number_of_particles"]),
-                      int(ref["number_of_classes"]), int(ref["resolution_statistics_box_size"]), float(ref["resolution_statistics_pixel_size"]),
+                      classes, int(ref["resolution_statistics_box_size"]), float(ref["resolution_statistics_pixel_size"]),
                       float(ref.get("percent_used", 100.0)), ref.get("job_id")))
         conn.execute("DROP TABLE IF EXISTS REFINEMENT_DETAILS_{}".format(rid))
         conn.execute("CREATE TABLE REFINEMENT_DETAILS_{}({})".format(rid, DETAIL_DDL))
-        for k in range(1, int(ref["number_of_classes"]) + 1):
+        for k in range(1, classes + 1):
             d = dict(class_details[k - 1]) if k - 1 < len(class_details) else {}
             d["CLASS_NUMBER"] = k
             values = [d.get(c, _DETAIL_DEFAULTS.get(c, 0)) for c in DETAIL_COLUMNS]
             conn.execute("INSERT INTO REFINEMENT_DETAILS_{} VALUES ({})".format(rid, ",".join("?" * len(DETAIL_COLUMNS))), values)
-            conn.execute("DROP TABLE IF EXISTS REFINEMENT_RESULT_{}_{}".format(rid, k))
-            conn.execute("CREATE TABLE REFINEMENT_RESULT_{}_{}({})".format(rid, k, RESULT_DDL))
-            table = as_table(class_rows[k - 1])
-            conn.executemany("INSERT OR REPLACE INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(rid, k, ",".join("?" * len(RESULT_KEYS))),
-                             _result_tuples(table))
-            write_statistics(conn, rid, k, class_stats[k - 1] if k - 1 < len(class_stats) else [])
-            if angular:
-                write_angular_distribution(conn, rid, k, angular_histogram(class_rows, k, symmetry))
         list_table = "REFINEMENT_PACKAGE_REFINEMENTS_LIST_{}".format(package_id)
         conn.execute("CREATE TABLE IF NOT EXISTS {}(REFINEMENT_NUMBER INTEGER PRIMARY KEY, REFINEMENT_ID INTEGER)".format(list_table))
         if conn.execute("SELECT 1 FROM {} WHERE REFINEMENT_ID=?".format(list_table), (rid,)).fetchone() is None:
@@ -347,6 +383,7 @@ def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=Tr
             conn.execute("INSERT INTO {} VALUES (?, ?)".format(list_table), (n, rid))
         conn.execute("UPDATE REFINEMENT_PACKAGE_ASSETS SET LAST_REFINEMENT_ID=?, NUMBER_OF_REFINEMENTS=COALESCE(NUMBER_OF_REFINEMENTS, 0) + 1 "
                      "WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (rid, package_id))
+    release_id("refinement", rid)   # only now: the id stays reserved until the row that MAX(REFINEMENT_ID) would see is in
 
 
 _DETAIL_DEFAULTS = {"REFERENCE_VOLUME_ASSET_ID": -1, "RECONSTRUCTED_VOLUME_ASSET_ID": -1, "RECONSTRUCTION_ID": -1, "MASK_ASSET_ID": -1,

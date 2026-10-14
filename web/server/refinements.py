@@ -103,22 +103,28 @@ def refinement_row(conn, refinement_id):
     return conn.execute("SELECT * FROM REFINEMENT_LIST WHERE REFINEMENT_ID=?", (int(refinement_id),)).fetchone()
 
 
-def load_table(conn, refinement_id, class_number):
+def load_table(conn, refinement_id, class_number, keys=None):
     """REFINEMENT_RESULT_<id>_<k> as a parameter table (starfile.table_dtype(RESULT_KEYS), ordered by position).
-    One fetch into a structured array: the drivers hold a class's particles this way."""
+    One fetch into a structured array: the drivers hold a class's particles this way. `keys` names a subset
+    of RESULT_KEYS to read (the angular distribution needs four columns of twenty-four)."""
     table = "REFINEMENT_RESULT_{}_{}".format(int(refinement_id), int(class_number))
     if not _table_exists(conn, table):
         raise ValueError("refinement {} has no results for class {}".format(refinement_id, class_number))
-    dt = starfile.table_dtype(RESULT_KEYS)
+    keys = tuple(keys) if keys else RESULT_KEYS
+    columns = [RESULT_COLUMNS[RESULT_KEYS.index(k)] for k in keys]
+    dt = starfile.table_dtype(keys)
     cur = conn.cursor()
     cur.row_factory = None   # plain tuples: a million rows in about a second rather than four as sqlite3.Row objects
-    rows = cur.execute("SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in RESULT_COLUMNS), table)).fetchall()
+    rows = cur.execute("SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in columns), table)).fetchall()
     out = np.zeros(len(rows), dtype=dt)
     if rows:
         plain = np.array(rows, dtype=float)   # one conversion, then per column
-        for i, k in enumerate(RESULT_KEYS):
+        for i, k in enumerate(keys):
             out[k] = plain[:, i]
     return out
+
+
+ANGULAR_KEYS = ("position_in_stack", "phi", "theta", "occupancy", "image_is_active")   # all angular_histogram() reads
 
 
 def average_occupancy(rows_or_table):
@@ -273,10 +279,13 @@ def rebuild_angular_distributions(conn, rid):
     if row is None:
         raise KeyError("no refinement {}".format(rid))
     classes = int(row["NUMBER_OF_CLASSES"] or 1)
-    class_rows = [load_rows(conn, rid, k) for k in range(1, classes + 1)]
+    # One class at a time, as a table of the five columns the histogram reads: a dict per particle per class,
+    # all classes at once, was tens of gigabytes for a six-class package of three million particles.
     with conn:
         for k in range(1, classes + 1):
-            write_angular_distribution(conn, rid, k, angular_histogram(class_rows, k, row["SYMMETRY"] or "C1"))
+            table = load_table(conn, rid, k, ANGULAR_KEYS)
+            write_angular_distribution(conn, rid, k, angular_histogram(table, 1, row["SYMMETRY"] or "C1"))
+            del table
 
 
 def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=True, symmetry="C1"):

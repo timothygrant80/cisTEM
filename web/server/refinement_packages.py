@@ -600,27 +600,20 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
     randomise = params.get("randomise_occupancies")
     randomise = (number_of_classes > 1) if randomise is None else bool(randomise)
 
-    # the source refinement's rows per class, by position in stack
-    by_class = []
-    for k in range(1, source_classes + 1):
-        by_class.append({r["position_in_stack"]: r for r in refinements.load_rows(conn, rid, k)})
+    # Everything per particle is done by SQLite itself (INSERT ... SELECT from the source tables) or on numpy
+    # columns: a dict per particle per class, which this used to build, was tens of gigabytes and minutes for a
+    # six-class package of three million particles.
     src_table = "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(src_id)
     if not _table_exists(conn, src_table):
         raise ValueError("the source package has no particles")
-    particles = [dict(r) for r in conn.execute("SELECT * FROM {} ORDER BY POSITION_IN_STACK".format(src_table)).fetchall()]
-    if not particles:
+    plain = conn.cursor( )
+    plain.row_factory = None
+    positions = np.array([r[0] for r in plain.execute("SELECT POSITION_IN_STACK FROM {} ORDER BY POSITION_IN_STACK".format(src_table)).fetchall( )], dtype=np.int64)
+    if positions.size == 0:
         raise ValueError("the source package has no particles")
-
-    def best_class(pos):
-        return max(range(source_classes), key=lambda k: float(by_class[k].get(pos, {}).get("occupancy") or 0.0))
-
-    carry = params.get("carry_over_classes")
-    carry_all = not carry or source_classes == 1 or set(int(c) for c in carry) >= set(range(1, source_classes + 1))
-    if not carry_all:
-        wanted = set(int(c) for c in carry)
-        particles = [p for p in particles if (best_class(p["POSITION_IN_STACK"]) + 1) in wanted]
-        if not particles:
-            raise ValueError("no particle has its highest occupancy in the chosen classes")
+    for k in range(1, source_classes + 1):
+        if not _table_exists(conn, "REFINEMENT_RESULT_{}_{}".format(rid, k)):
+            raise ValueError("the source refinement has no results for class {}".format(k))
 
     # which source class(es) each new class takes its parameters from
     sources = params.get("class_sources")
@@ -633,64 +626,111 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
         if any(c < 1 or c > source_classes for c in src):
             raise ValueError("class_sources names a class the source refinement does not have")
 
+    carry = params.get("carry_over_classes")
+    carry_all = not carry or source_classes == 1 or set(int(c) for c in carry) >= set(range(1, source_classes + 1))
+
+    # The occupancy of every particle in every source class, when a particle's highest-occupancy class decides
+    # something: which particles are kept, or which of several sources a new class takes a particle from.
+    occupancy = None
+    if (not carry_all) or any(len(src) > 1 and rule != "random" for src in sources):
+        occupancy = np.zeros((source_classes, len(positions)), dtype=np.float32)
+        for k in range(source_classes):
+            rows = plain.execute("SELECT POSITION_IN_STACK, COALESCE(OCCUPANCY, 0) FROM REFINEMENT_RESULT_{}_{} ORDER BY POSITION_IN_STACK".format(rid, k + 1)).fetchall( )
+            pos_k = np.array([r[0] for r in rows], dtype=np.int64)
+            occ_k = np.array([r[1] for r in rows], dtype=np.float32)
+            idx = np.clip(np.searchsorted(pos_k, positions), 0, max(len(pos_k) - 1, 0))
+            found = (pos_k[idx] == positions) if len(pos_k) else np.zeros(len(positions), dtype=bool)
+            if not found.all( ):
+                raise ValueError("the source refinement has no row for particle {}".format(int(positions[~found][0])))
+            occupancy[k] = occ_k[idx]
+    else:
+        for k in sorted({c for src in sources for c in src}):
+            n_rows = plain.execute("SELECT COUNT(*) FROM REFINEMENT_RESULT_{}_{}".format(rid, k)).fetchone( )[0]
+            if n_rows != len(positions):
+                raise ValueError("the source refinement's class {} has {} rows for the package's {} particles".format(k, n_rows, len(positions)))
+
+    if carry_all:
+        kept = np.ones(len(positions), dtype=bool)
+    else:
+        wanted = set(int(c) for c in carry)
+        kept = np.isin(occupancy.argmax(axis=0) + 1, sorted(wanted))
+        if not kept.any( ):
+            raise ValueError("no particle has its highest occupancy in the chosen classes")
+    kept_positions = positions[kept]
+
     package_id = next_package_id(conn)
     refinement_id = _refinements().next_refinement_id(conn)
     name = (params.get("name") or "").strip() or "Refinement Package #{}".format(package_id)
-    rng = random.Random()
 
     if carry_all:
         stack_path = pkg["STACK_FILENAME"]
-        positions = {p["POSITION_IN_STACK"]: p["POSITION_IN_STACK"] for p in particles}
+        new_numbers = kept_positions
     else:
         # CarryOverNo: the kept slices copied into a stack of their own, renumbered from 1.
         stack_path = str(db.project_dir(project_id) / "Assets" / "ParticleStacks" / "particle_stack_{}.mrc".format(package_id))
         Path(stack_path).parent.mkdir(parents=True, exist_ok=True)
         writer = MrcStackWriter(stack_path, box_size, output_pixel_size)
-        positions = {}
         try:
-            for n, p in enumerate(particles, 1):
-                if progress and (n % 10 == 0 or n == len(particles) or n == 1):
-                    progress(n, len(particles), "Copying particles into the new stack")
-                writer.append(read_mrc_section(pkg["STACK_FILENAME"], p["POSITION_IN_STACK"]))
-                positions[p["POSITION_IN_STACK"]] = writer.count
+            for n, old in enumerate(kept_positions.tolist( ), 1):
+                if progress and (n % 10 == 0 or n == len(kept_positions) or n == 1):
+                    progress(n, len(kept_positions), "Copying particles into the new stack")
+                writer.append(read_mrc_section(pkg["STACK_FILENAME"], old))
         finally:
             writer.close()
+        new_numbers = np.arange(1, len(kept_positions) + 1, dtype=np.int64)
         if log:
-            log("wrote {} particles of {} to {}".format(len(particles), pkg["NAME"], stack_path))
+            log("wrote {} particles of {} to {}".format(len(kept_positions), pkg["NAME"], stack_path))
 
-    contained = [{"position_id": p["ORIGINAL_PARTICLE_POSITION_ASSET_ID"], "image_id": p["PARENT_IMAGE_ASSET_ID"], "position_in_stack": positions[p["POSITION_IN_STACK"]],
-                  "x": p["X_POSITION"], "y": p["Y_POSITION"], "pixel_size": p["PIXEL_SIZE"], "defocus1": p["DEFOCUS_1"], "defocus2": p["DEFOCUS_2"],
-                  "defocus_angle": p["DEFOCUS_ANGLE"], "phase_shift": p["PHASE_SHIFT"], "cs": p["SPHERICAL_ABERRATION"], "voltage": p["MICROSCOPE_VOLTAGE"],
-                  "amplitude_contrast": p["AMPLITUDE_CONTRAST"], "subset": p["ASSIGNED_SUBSET"]} for p in particles]
-
-    def pick(pos, src):
-        if len(src) == 1:
-            k = src[0] - 1
-        elif rule == "random":
-            k = src[rng.randrange(len(src))] - 1
-        else:
-            k = max((c - 1 for c in src), key=lambda kk: float(by_class[kk].get(pos, {}).get("occupancy") or 0.0))
-        return by_class[k].get(pos) or by_class[0].get(pos)
-
+    # The copies as SQL: the kept particles' new numbers in a temporary map (none is needed when every particle
+    # keeps its number), and for a class drawing on several source classes a temporary table of the source each
+    # particle takes.
+    with conn:
+        conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_MAP")
+        if not carry_all:
+            conn.execute("CREATE TEMP TABLE NEW_PACKAGE_MAP(OLD INTEGER PRIMARY KEY, NEW INTEGER)")
+            conn.executemany("INSERT INTO temp.NEW_PACKAGE_MAP VALUES (?, ?)", zip(kept_positions.tolist( ), new_numbers.tolist( )))
+    position_of = "s.POSITION_IN_STACK" if carry_all else "m.NEW"
+    join_map = "" if carry_all else " JOIN temp.NEW_PACKAGE_MAP m ON m.OLD = {}.POSITION_IN_STACK"
+    contained = ("SELECT s.ORIGINAL_PARTICLE_POSITION_ASSET_ID, s.PARENT_IMAGE_ASSET_ID, {pos}, s.X_POSITION, s.Y_POSITION, s.PIXEL_SIZE, s.DEFOCUS_1, s.DEFOCUS_2, "
+                 "s.DEFOCUS_ANGLE, s.PHASE_SHIFT, s.SPHERICAL_ABERRATION, s.MICROSCOPE_VOLTAGE, s.AMPLITUDE_CONTRAST, s.ASSIGNED_SUBSET "
+                 "FROM {src} s{join} ORDER BY s.POSITION_IN_STACK").format(pos=position_of, src=src_table, join=join_map.format("s"))
+    # |U(-1, 1)| x 200 / N as the wizard's Randomise Occupancies draws it, from SQLite's generator; else 100
+    occupancy_expression = "((random() & 9223372036854775807) / 9223372036854775807.0) * {:.10g}".format(200.0 / number_of_classes) if (randomise and number_of_classes > 1) else "100.0"
+    result_columns = ("r.PSI, r.THETA, r.PHI, r.XSHIFT, r.YSHIFT, r.DEFOCUS1, r.DEFOCUS2, r.DEFOCUS_ANGLE, r.PHASE_SHIFT, {occ}, r.LOGP, r.SIGMA, r.SCORE, "
+                      "r.IMAGE_IS_ACTIVE, r.PIXEL_SIZE, r.MICROSCOPE_VOLTAGE, r.MICROSCOPE_CS, r.AMPLITUDE_CONTRAST, r.BEAM_TILT_X, r.BEAM_TILT_Y, "
+                      "r.IMAGE_SHIFT_X, r.IMAGE_SHIFT_Y, r.ASSIGNED_SUBSET").format(occ=occupancy_expression)
+    rng = np.random.default_rng( )
     class_rows = []
-    for i in range(number_of_classes):
-        rows = []
+    for i, src in enumerate(sources):
         if progress:
             progress(i, number_of_classes, "Copying the parameters for class {} of {}".format(i + 1, number_of_classes))
-        for p in particles:
-            a = pick(p["POSITION_IN_STACK"], sources[i])
-            if a is None:
-                raise ValueError("the source refinement has no row for particle {}".format(p["POSITION_IN_STACK"]))
-            occupancy = abs(rng.uniform(-1.0, 1.0) * (200.0 / number_of_classes)) if (randomise and number_of_classes > 1) else 100.0
-            rows.append((positions[p["POSITION_IN_STACK"]], a["psi"], a["theta"], a["phi"], a["x_shift"], a["y_shift"], a["defocus_1"], a["defocus_2"],
-                         a["defocus_angle"], a["phase_shift"], occupancy, a["logp"], a["sigma"], a["score"], a["image_is_active"], a["pixel_size"],
-                         a["voltage"], a["cs"], a["amplitude_contrast"], a["beam_tilt_x"], a["beam_tilt_y"], a["image_shift_x"], a["image_shift_y"], a["assigned_subset"]))
-        class_rows.append(rows)
+        if len(src) == 1:
+            class_rows.append("SELECT {pos}, {cols} FROM REFINEMENT_RESULT_{rid}_{k} r{join}".format(
+                pos=("r.POSITION_IN_STACK" if carry_all else "m.NEW"), cols=result_columns, rid=rid, k=src[0], join=join_map.format("r")))
+            continue
+        # the source class per kept particle: the highest occupancy among the sources, or one at random
+        if rule == "random":
+            chosen = rng.choice(np.array(src, dtype=np.int64), size=len(kept_positions))
+        else:
+            chosen = np.array(src, dtype=np.int64)[occupancy[[c - 1 for c in src]][:, kept].argmax(axis=0)]
+        choice_table = "temp.NEW_PACKAGE_CHOICE_{}".format(i + 1)
+        with conn:
+            conn.execute("DROP TABLE IF EXISTS {}".format(choice_table))
+            conn.execute("CREATE TEMP TABLE NEW_PACKAGE_CHOICE_{}(OLD INTEGER PRIMARY KEY, CLASS INTEGER)".format(i + 1))
+            conn.executemany("INSERT INTO {} VALUES (?, ?)".format(choice_table), zip(kept_positions.tolist( ), chosen.tolist( )))
+        parts = ["SELECT {pos}, {cols} FROM REFINEMENT_RESULT_{rid}_{k} r JOIN {choice} c ON c.OLD = r.POSITION_IN_STACK AND c.CLASS = {k}{join}".format(
+            pos=("r.POSITION_IN_STACK" if carry_all else "m.NEW"), cols=result_columns, rid=rid, k=k, choice=choice_table, join=join_map.format("r")) for k in src]
+        class_rows.append(" UNION ALL ".join(parts))
 
     insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
                    number_of_classes, contained, refinement_id, white_protein=bool(pkg["STACK_HAS_WHITE_PROTEIN"]))
-    insert_initial_refinement(conn, refinement_id, package_id, "Parameters from {}".format(ref["NAME"]), class_rows, box_size, output_pixel_size, molecular_weight, angular=True)
-    return {"refinement_package_asset_id": package_id, "name": name, "particles": len(contained), "stack_filename": stack_path, "shared_stack": carry_all,
+    insert_initial_refinement(conn, refinement_id, package_id, "Parameters from {}".format(ref["NAME"]), class_rows, box_size, output_pixel_size, molecular_weight, angular=True,
+                              number_of_particles=len(kept_positions))
+    with conn:
+        conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_MAP")
+        for i in range(number_of_classes):
+            conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_CHOICE_{}".format(i + 1))
+    return {"refinement_package_asset_id": package_id, "name": name, "particles": len(kept_positions), "stack_filename": stack_path, "shared_stack": carry_all,
             "box_size": box_size, "output_pixel_size": output_pixel_size, "refinement_id": refinement_id, "source_package_id": src_id, "source_refinement_id": rid}
 
 
@@ -728,17 +768,20 @@ def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_si
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_CURRENT_REFERENCES_{}(CLASS_NUMBER INTEGER PRIMARY KEY, VOLUME_ASSET_ID INTEGER)".format(package_id))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_REFINEMENTS_LIST_{}(REFINEMENT_NUMBER INTEGER PRIMARY KEY, REFINEMENT_ID INTEGER)".format(package_id))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_{}(CLASSIFICATION_NUMBER INTEGER PRIMARY KEY, CLASSIFICATION_ID INTEGER)".format(package_id))
-        conn.executemany(
-            "INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)".format(package_id),
-            [(c["position_id"], c["image_id"], c["position_in_stack"], c["x"], c["y"], c["pixel_size"], c["defocus1"], c["defocus2"],
-              c["defocus_angle"], c["phase_shift"], c["cs"], c["voltage"], c["amplitude_contrast"], c["subset"]) for c in contained])
+        if isinstance(contained, str):   # a SELECT producing the table's fourteen columns: the copy stays inside SQLite
+            conn.execute("INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} {}".format(package_id, contained))
+        else:
+            conn.executemany(
+                "INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)".format(package_id),
+                [(c["position_id"], c["image_id"], c["position_in_stack"], c["x"], c["y"], c["pixel_size"], c["defocus1"], c["defocus2"],
+                  c["defocus_angle"], c["phase_shift"], c["cs"], c["voltage"], c["amplitude_contrast"], c["subset"]) for c in contained])
         # "Generate from parameters" for every class: no reference volume yet.
         conn.executemany("INSERT INTO REFINEMENT_PACKAGE_CURRENT_REFERENCES_{} VALUES (?, -1)".format(package_id),
                          [(k,) for k in range(1, number_of_classes + 1)])
         conn.execute("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_{} VALUES (1, ?)".format(package_id), (refinement_id,))
 
 
-def insert_initial_refinement(conn, refinement_id, package_id, name, class_rows, box_size, pixel_size, molecular_weight, angular=False):
+def insert_initial_refinement(conn, refinement_id, package_id, name, class_rows, box_size, pixel_size, molecular_weight, angular=False, number_of_particles=None):
     """Database::AddRefinement() for a package's first refinement: the
     REFINEMENT_LIST row, a REFINEMENT_DETAILS_<id> row per class with
     ClassRefinementResults' constructor values (occupancy split evenly),
@@ -746,7 +789,8 @@ def insert_initial_refinement(conn, refinement_id, package_id, name, class_rows,
     column order) and GenerateDefaultStatistics()' curve. The wizard writes
     no angular distribution for random angles; an import does (`angular`)."""
     number_of_classes = len(class_rows)
-    number_of_particles = len(class_rows[0]) if class_rows else 0
+    if number_of_particles is None:   # a class given as a SELECT (see below) has no length; the caller says
+        number_of_particles = len(class_rows[0]) if class_rows else 0
     now = db.now_epoch()
     with conn:
         conn.execute(
@@ -769,7 +813,10 @@ def insert_initial_refinement(conn, refinement_id, package_id, name, class_rows,
                          "DEFOCUS1 REAL, DEFOCUS2 REAL, DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, OCCUPANCY REAL, LOGP REAL, SIGMA REAL, SCORE REAL, IMAGE_IS_ACTIVE INTEGER, "
                          "PIXEL_SIZE REAL, MICROSCOPE_VOLTAGE REAL, MICROSCOPE_CS REAL, AMPLITUDE_CONTRAST REAL, BEAM_TILT_X REAL, BEAM_TILT_Y REAL, IMAGE_SHIFT_X REAL, "
                          "IMAGE_SHIFT_Y REAL, ASSIGNED_SUBSET INTEGER)".format(refinement_id, k))
-            conn.executemany("INSERT INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(refinement_id, k, ",".join("?" * 24)), rows)
+            if isinstance(rows, str):   # a SELECT producing the table's twenty-four columns: the copy stays inside SQLite
+                conn.execute("INSERT INTO REFINEMENT_RESULT_{}_{} {}".format(refinement_id, k, rows))
+            else:
+                conn.executemany("INSERT INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(refinement_id, k, ",".join("?" * 24)), rows)
             conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_RESOLUTION_STATISTICS_{}_{}(SHELL INTEGER PRIMARY KEY, RESOLUTION REAL, FSC REAL, PART_FSC REAL, "
                          "PART_SSNR REAL, REC_SSNR REAL)".format(refinement_id, k))
             conn.executemany("INSERT INTO REFINEMENT_RESOLUTION_STATISTICS_{}_{} VALUES (?,?,?,?,?,?)".format(refinement_id, k), stats)

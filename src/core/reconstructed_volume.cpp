@@ -22,6 +22,7 @@ ReconstructedVolume::ReconstructedVolume(float wanted_molecular_mass_in_kDa) {
     current_mask_radius      = 0.0;
     current_mask_falloff     = 0.0;
     current_whitening        = false;
+    current_whitened_valid   = false;
     current_swap_quadrants   = false;
     whitened_projection      = false;
     density_map              = NULL;
@@ -89,6 +90,7 @@ ReconstructedVolume& ReconstructedVolume::operator=(const ReconstructedVolume* o
         current_mask_radius      = other_volume->current_mask_radius;
         current_mask_falloff     = other_volume->current_mask_falloff;
         current_whitening        = other_volume->current_whitening;
+        current_whitened_valid   = false;
         current_swap_quadrants   = other_volume->current_swap_quadrants;
         whitened_projection      = other_volume->whitened_projection;
         symmetry_matrices        = other_volume->symmetry_matrices;
@@ -124,6 +126,7 @@ void ReconstructedVolume::CopyAllButVolume(const ReconstructedVolume* other_volu
         current_mask_radius      = other_volume->current_mask_radius;
         current_mask_falloff     = other_volume->current_mask_falloff;
         current_whitening        = other_volume->current_whitening;
+        current_whitened_valid   = false;
         current_swap_quadrants   = other_volume->current_swap_quadrants;
         whitened_projection      = other_volume->whitened_projection;
         symmetry_matrices        = other_volume->symmetry_matrices;
@@ -277,14 +280,13 @@ void ReconstructedVolume::CalculateProjection(Image& projection, Image& CTF, Ang
         current_swap_quadrants   = swap_quadrants;
         current_whitening        = whiten;
 
+        current_whitened_valid = false;
         if ( whiten ) {
-            //			var_A = projection.ReturnSumOfSquares();
-            //			projection.MultiplyByConstant(sqrtf(projection.number_of_real_space_pixels / var_A));
+            // Whitening depends on the slice alone, so the whitened slice is kept beside the raw one and an evaluation
+            // that changes only the shift (two of every five line searches of the local refinement) reuses it.
             projection.Whiten(resolution_limit);
-            //			projection.PhaseFlipPixelWise(CTF);
-            //			projection.BackwardFFT();
-            //			projection.ZeroFloatOutside(0.5 * projection.logical_x_dimension - 1.0);
-            //			projection.ForwardFFT();
+            current_whitened_projection.CopyFrom(&projection);
+            current_whitened_valid = true;
         }
         if ( apply_ctf ) {
             //			projection.BackwardFFT();
@@ -320,16 +322,16 @@ void ReconstructedVolume::CalculateProjection(Image& projection, Image& CTF, Ang
             current_swap_quadrants = swap_quadrants;
             current_whitening      = whiten;
 
-            projection.CopyFrom(&current_projection);
-
-            if ( whiten ) {
-                //				var_A = projection.ReturnSumOfSquares();
-                //				projection.MultiplyByConstant(sqrtf(projection.number_of_real_space_pixels / var_A));
-                projection.Whiten(resolution_limit);
-                //				projection.PhaseFlipPixelWise(CTF);
-                //				projection.BackwardFFT();
-                //				projection.ZeroFloatOutside(0.5 * projection.logical_x_dimension - 1.0);
-                //				projection.ForwardFFT();
+            if ( whiten && current_whitened_valid ) {
+                projection.CopyFrom(&current_whitened_projection);
+            }
+            else {
+                projection.CopyFrom(&current_projection);
+                if ( whiten ) {
+                    projection.Whiten(resolution_limit);
+                    current_whitened_projection.CopyFrom(&projection);
+                    current_whitened_valid = true;
+                }
             }
             if ( apply_ctf ) {
                 projection.MultiplyPixelWiseReal(CTF, abolute_ctf);

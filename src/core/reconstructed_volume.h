@@ -14,6 +14,8 @@ class ReconstructedVolume {
     SymmetryMatrix symmetry_matrices;
     Image*         density_map;
     Image          current_projection;
+    Image          current_whitened_projection; // the whitened current_projection, when the last call asked for whitening
+    bool           current_whitened_valid;
     //	ResolutionStatistics		statistics;
     float current_resolution_limit;
     float current_ctf;

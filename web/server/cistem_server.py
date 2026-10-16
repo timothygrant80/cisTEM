@@ -52,6 +52,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, abort, g, jsonify, request, send_from_directory
+from werkzeug.exceptions import HTTPException, InternalServerError
 from flask_cors import CORS
 
 import abinitio
@@ -91,6 +92,40 @@ app = Flask(__name__)
 _COMPRESSIBLE = ("text/html", "text/css", "text/javascript", "application/javascript", "application/json", "image/svg+xml", "text/plain")
 _GZIP_MIN_BYTES = 1024
 _gzip_cache = {}   # (path, etag) -> gzipped bytes, for the static files
+
+
+# Errors under /api/ are JSON, whatever raised them: the page reads every failed response's `error`, and
+# Werkzeug's HTML page for an unhandled exception used to reach it as "Unexpected token '<' ... is not valid
+# JSON", with the cause only in the server's terminal. The traceback goes to the log (and the file under
+# data/ when run as a program, _log_to_file()); the message goes back to the caller.
+
+@app.errorhandler(HTTPException)
+def _api_http_error(exc):
+    if not request.path.startswith("/api/"):
+        return exc
+    return jsonify({"error": exc.description, "status": exc.code}), exc.code
+
+
+@app.errorhandler(Exception)
+def _api_unhandled_error(exc):
+    app.logger.exception("unhandled error in %s %s", request.method, request.path)
+    if not request.path.startswith("/api/"):
+        return InternalServerError(original_exception=exc)
+    return jsonify({"error": "internal server error: {}: {}".format(type(exc).__name__, exc), "status": 500}), 500
+
+
+def _log_to_file():
+    """Warnings and tracebacks to data/server.log (rotated at 5 MB, five kept) as well as the terminal, so
+    a failure is on record when the terminal is gone."""
+    import logging.handlers
+    path = Path(__file__).parent / "data" / "server.log"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handler = logging.handlers.RotatingFileHandler(str(path), maxBytes=5 * 1024 * 1024, backupCount=5)
+    handler.setLevel(logging.WARNING)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    app.logger.addHandler(handler)
+    logging.getLogger("werkzeug").addHandler(handler)
+    return path
 
 
 @app.after_request
@@ -4739,6 +4774,7 @@ def configured_port():
 
 
 if __name__ == "__main__":
+    print("errors are logged to", _log_to_file(), flush=True)
     auth.bootstrap_admin_if_needed()
     start_job_runner()
     _recover_interrupted_jobs()

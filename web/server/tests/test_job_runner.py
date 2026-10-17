@@ -214,8 +214,9 @@ class LocalControllerOfTests(unittest.TestCase):
         self.assertIsNone(jr.local_controller_of("nice", "cistem_job_controller"))
 
     def test_launch_through_another_program_is_undecidable(self):
-        for manager in ("ssh head-node $command", "nohup $command", "sbatch --wrap=\"$command\"",
-                        "env FOO=1 $command", "$program_name $command"):
+        # (nohup and env used to be here; they run the program on this machine and are now seen through)
+        for manager in ("ssh head-node $command", "sbatch --wrap=\"$command\"", "srun -n 1 $command",
+                        "mpirun -np 4 $command", "$program_name $command"):
             self.assertIsNone(jr.local_controller_of(manager, "cistem_job_controller"), manager)
 
 

@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS JOB_TASKS(
 -- (then acknowledges it, which deletes the row). Rows of finished tasks go
 -- when they finish.
 CREATE TABLE IF NOT EXISTS PACKAGE_TASKS(
-  TASK_ID TEXT PRIMARY KEY, STATE TEXT NOT NULL, DONE INTEGER, TOTAL INTEGER, MESSAGE TEXT,
+  TASK_ID TEXT PRIMARY KEY, KIND TEXT, STATE TEXT NOT NULL, DONE INTEGER, TOTAL INTEGER, MESSAGE TEXT,
   ERROR TEXT, NAME TEXT, STARTED_AT REAL, UPDATED_AT REAL
 );
 
@@ -370,6 +370,8 @@ _ALTER_STATEMENTS = [
     # says nothing for an image with no picks. Same idea as CTF_ESTIMATION_ID.
     "ALTER TABLE IMAGE_ASSETS ADD COLUMN ACTIVE_PICKING_ID INTEGER",
     "ALTER TABLE JOBS ADD COLUMN JOB_NUMBER INTEGER",
+    # Background tasks of every kind share the package creations' table (cistem_server._start_task).
+    "ALTER TABLE PACKAGE_TASKS ADD COLUMN KIND TEXT",
     # The job protocol's per-job state, so a controller can reconnect to a
     # restarted server (docs/job-protocol.md section 7.2): the token it must
     # present, the highest seq of its we processed, and the task list we sent

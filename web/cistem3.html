@@ -1604,6 +1604,7 @@ From branch : <span id="versionBranch">—</span></p>
     <div class="submit-row">
       <button class="primary" id="importBtn" disabled>Import</button>
     </div>
+    <div class="np-progress" id="importProgress" hidden><div class="progress-track"><div class="progress-fill running" id="importProgressFill"></div></div><div class="progress-eta" id="importProgressText"></div></div>
     <p class="form-note" id="importNote"></p>
   </div>
 </div>
@@ -1804,6 +1805,7 @@ From branch : <span id="versionBranch">—</span></p>
     <div class="submit-row">
       <button class="primary" id="importImagesBtn" disabled>Import</button>
     </div>
+    <div class="np-progress" id="importImagesProgress" hidden><div class="progress-track"><div class="progress-fill running" id="importImagesProgressFill"></div></div><div class="progress-eta" id="importImagesProgressText"></div></div>
     <p class="form-note" id="importImagesNote"></p>
   </div>
 </div>
@@ -2965,7 +2967,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
    "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
-   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npRandomOccField","npRandomOcc","npProgress","npProgressFill","npProgressText",
+   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npRandomOccField","npRandomOcc","npProgress","npProgressFill","npProgressText","importProgress","importProgressFill","importProgressText","importImagesProgress","importImagesProgressFill","importImagesProgressText",
    "npRecentreField","npRecentre","npDedupField","npDedup","npDedupThresholdField","npDedupThreshold","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
    "ppGroupList","ppGroupAddBtn","ppGroupRenameBtn","ppGroupRemoveBtn","ppGroupInvertBtn","ppGroupFromImagesBtn",
    "ppSelectAllCheckbox","ppListBody","ppListNote","ppRemoveBtn","ppRemoveAllBtn","ppAddToGroupBtn","ppDisplayBtn",
@@ -6291,7 +6293,7 @@ From branch : <span id="versionBranch">—</span></p>
         loadVolumes();
         loadRunProfiles();
         fetchJobs();
-        resumePackageTasks();
+        resumeBackgroundTasks();
       } finally {
         state.prefetch = null;
       }
@@ -6636,7 +6638,7 @@ From branch : <span id="versionBranch">—</span></p>
   function validateImportForm(){
     var problems = importFormProblems();
     var ok = problems.length === 0;
-    els.importBtn.disabled = !ok;
+    els.importBtn.disabled = !ok || importBusy.movies;
     els.importBtn.title = ok ? "" : problems.join("; ");
     var msg;
     if (!ok){
@@ -6695,22 +6697,77 @@ From branch : <span id="versionBranch">—</span></p>
     }).catch(function(){});
   }
 
-  els.importBtn.addEventListener("click", function(){
-    // The button is disabled unless validateImportForm() passes, so this is
-    // just a guard against a stale click landing mid-revalidation.
-    if (!state.projectId || !validateImportForm()) return;
-    var body = {};
-    els.importFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
-    if (!body.apply_gain) body.gain_ref = null;
-    if (!body.apply_dark) body.dark_ref = null;
-    els.importBtn.disabled = true;
-    els.importBtn.textContent = "Importing…";
-    apiFetch(projectApiUrl("/movies/import"), {
+  // An import runs on the server as a background task (POST ...?async=1 -> task id, followed through
+  // GET /tasks/:id): the dialog's fields, Browse buttons and Import button are disabled while it runs --
+  // reading the headers of a directory of TIFF movies on a network filesystem takes minutes, and a second
+  // click used to start a second import against the first's write lock -- and the bar under the button
+  // shows the file being read, the files done and the time left. A reload, or another browser, finds the
+  // running import through GET /tasks and takes the dialog over (attachImportTask, from
+  // resumeBackgroundTasks); the dialog can be closed meanwhile, the import goes on.
+  var importBusy = {movies: false, images: false};
+  function importDialog(kind){
+    return kind === "movies"
+      ? {fields: els.importFields, btn: els.importBtn, progress: els.importProgress, fill: els.importProgressFill, text: els.importProgressText, note: els.importNote, modal: els.importModal, open: openImportModal, path: "/movies/import"}
+      : {fields: els.importImagesFields, btn: els.importImagesBtn, progress: els.importImagesProgress, fill: els.importImagesProgressFill, text: els.importImagesProgressText, note: els.importImagesNote, modal: els.importImagesModal, open: openImportImagesModal, path: "/images/import"};
+  }
+  function setImportBusy(kind, on){
+    var d = importDialog(kind);
+    importBusy[kind] = on;
+    d.fields.querySelectorAll("input, select, button").forEach(function(el){ el.disabled = on; });
+    d.btn.disabled = true; d.btn.textContent = on ? "Importing\u2026" : "Import";
+    d.progress.hidden = !on;
+    if (on){ d.note.className = "form-note"; d.note.textContent = ""; d.fill.style.width = "0%"; d.text.textContent = "Starting\u2026"; }
+    else if (kind === "movies"){ syncConditionalFields(els.importFields, IMPORT_FIELDS); updateEerFieldState(); }
+  }
+  function runImportTask(kind, start){
+    var d = importDialog(kind);
+    setImportBusy(kind, true);
+    return start().then(function(taskId){ return followTask(taskId, function(t){ showTaskProgress(t, d.fill, d.text); }); })
+      .then(function(result){ importFinished(kind, result); })
+      .catch(function(err){
+        d.note.className = "form-note blocked"; d.note.textContent = "Import failed: " + err.message;
+        if (!d.modal.classList.contains("open")) alert("Import failed: " + err.message);
+      })
+      .finally(function(){
+        setImportBusy(kind, false);
+        // Re-run the preflight: whatever just imported now counts as a duplicate, so the button falls back to disabled.
+        if (kind === "movies"){ importPaths.glob = null; scheduleImportPathCheck(); }
+        else { imageImportPaths.glob = null; scheduleImageImportCheck(); }
+      });
+  }
+  function startImportTask(kind, body){
+    return apiFetch(projectApiUrl(importDialog(kind).path + "?async=1"), {
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
     }).then(function(r){
       if (!r.ok) return responseError(r);
       return r.json();
-    }).then(function(result){
+    }).then(function(d){ return d.task_id; });
+  }
+  function attachImportTask(kind, t){
+    if (importBusy[kind]) return;
+    var d = importDialog(kind);
+    var glob = d.fields.querySelector('[data-key="input_glob"]');
+    if (glob && t.name) glob.value = t.name;
+    d.open();
+    runImportTask(kind, function(){ showTaskProgress(t, d.fill, d.text); return Promise.resolve(t.task_id); });
+  }
+  function importFinished(kind, result){
+    if (kind === "images"){
+      var m = "Imported " + result.image_count + " image" + (result.image_count === 1 ? "" : "s") + " into All Images."
+        + (result.skipped_count ? " Skipped " + result.skipped_count + " already imported." : "");
+      var bad = result.failed || [];
+      if (bad.length){
+        m += " " + bad.length + " could not be read: "
+          + bad.slice(0, 3).map(function(f){ return f.path.split("/").pop() + " (" + f.reason + ")"; }).join(", ")
+          + (bad.length > 3 ? ", \u2026" : "") + ".";
+      }
+      els.importImagesNote.textContent = m;
+      state.selectedImageGroupId = 0;
+      loadImageGroups();
+      loadImages();
+      return;
+    }
+    {
       var msg = "Imported " + result.movie_count + " movie" + (result.movie_count === 1 ? "" : "s") + " into All Movies."
         + (result.skipped_count ? " Skipped " + result.skipped_count + " already imported." : "");
       var failed = result.failed || [];
@@ -6727,15 +6784,17 @@ From branch : <span id="versionBranch">—</span></p>
       loadMovieGroups();
       loadMovies();
       populateDynamicFields(STAGES.motion_correction.fields);
-    }).catch(function(err){
-      alert("Import failed: " + err.message);
-    }).finally(function(){
-      els.importBtn.textContent = "Import";
-      // Re-run the preflight: whatever just imported now counts as a
-      // duplicate, so the button should fall back to disabled.
-      importPaths.glob = null;
-      scheduleImportPathCheck();
-    });
+    }
+  }
+  els.importBtn.addEventListener("click", function(){
+    // The button is disabled unless validateImportForm() passes, so this is
+    // just a guard against a stale click landing mid-revalidation.
+    if (!state.projectId || importBusy.movies || !validateImportForm()) return;
+    var body = {};
+    els.importFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
+    if (!body.apply_gain) body.gain_ref = null;
+    if (!body.apply_dark) body.dark_ref = null;
+    runImportTask("movies", function(){ return startImportTask("movies", body); });
   });
 
   function loadMovies(){
@@ -7716,7 +7775,7 @@ From branch : <span id="versionBranch">—</span></p>
   function validateImageImportForm(){
     var problems = imageImportFormProblems();
     var ok = problems.length === 0;
-    els.importImagesBtn.disabled = !ok;
+    els.importImagesBtn.disabled = !ok || importBusy.images;
     els.importImagesBtn.title = ok ? "" : problems.join("; ");
     var msg;
     if (!ok){
@@ -7757,38 +7816,10 @@ From branch : <span id="versionBranch">—</span></p>
   els.importImagesBtn.addEventListener("click", function(){
     // The button is disabled unless validateImageImportForm() passes, so this
     // is just a guard against a stale click landing mid-revalidation.
-    if (!state.projectId || !validateImageImportForm()) return;
+    if (!state.projectId || importBusy.images || !validateImageImportForm()) return;
     var body = {};
     els.importImagesFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
-    els.importImagesBtn.disabled = true;
-    els.importImagesBtn.textContent = "Importing…";
-    apiFetch(projectApiUrl("/images/import"), {
-      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
-    }).then(function(r){
-      if (!r.ok) return responseError(r);
-      return r.json();
-    }).then(function(result){
-      var msg = "Imported " + result.image_count + " image" + (result.image_count === 1 ? "" : "s") + " into All Images."
-        + (result.skipped_count ? " Skipped " + result.skipped_count + " already imported." : "");
-      var failed = result.failed || [];
-      if (failed.length){
-        msg += " " + failed.length + " could not be read: "
-          + failed.slice(0, 3).map(function(f){ return f.path.split("/").pop() + " (" + f.reason + ")"; }).join(", ")
-          + (failed.length > 3 ? ", …" : "") + ".";
-      }
-      els.importImagesNote.textContent = msg;
-      state.selectedImageGroupId = 0;
-      loadImageGroups();
-      loadImages();
-    }).catch(function(err){
-      alert("Import failed: " + err.message);
-    }).finally(function(){
-      els.importImagesBtn.textContent = "Import";
-      // Re-run the preflight: whatever just imported now counts as a
-      // duplicate, so the button should fall back to disabled.
-      imageImportPaths.glob = null;
-      scheduleImageImportCheck();
-    });
+    runImportTask("images", function(){ return startImportTask("images", body); });
   });
 
   // ---------- Import Volumes (MyVolumeImportDialog) ----------
@@ -9148,22 +9179,27 @@ From branch : <span id="versionBranch">—</span></p>
     if (on){ els.npNote.classList.remove("blocked"); els.npNote.textContent = ""; els.npProgressFill.style.width = "0%"; els.npProgressText.textContent = "Starting\u2026"; }
     els.npProgress.hidden = !on;
   }
-  function showPackageProgress(t){
+  // A background task's bar and line: its message, done / total, and the time left from the rate so far,
+  // as the Jobs tab's -- for the package dialog and the two import dialogs.
+  function showTaskProgress(t, fill, text){
     var pct = t.total ? Math.round(100 * (t.done || 0) / t.total) : 0;
-    els.npProgressFill.style.width = pct + "%";
+    fill.style.width = pct + "%";
     var eta = t.total && t.done > 0 && t.elapsed > 0 ? (t.total - t.done) * (t.elapsed / t.done) : null;
-    els.npProgressText.textContent = (t.message || "") + (t.total ? " \u00b7 " + fmtCount(t.done || 0) + " / " + fmtCount(t.total) : "") +
+    text.textContent = (t.message || "") + (t.total ? " \u00b7 " + fmtCount(t.done || 0) + " / " + fmtCount(t.total) : "") +
       (t.state === "running" && t.total ? " \u00b7 " + (eta == null ? "estimating\u2026" : eta < 1 ? "finishing" : fmtDuration(eta) + " left") : "");
   }
-  function followPackageTask(taskId){
-    return apiFetch(projectApiUrl("/refinement-packages/tasks/" + taskId)).then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); }).then(function(res){
-      if (!res.ok) throw new Error((res.data && res.data.error) || "lost the creation task");
-      if (res.data.state === "failed") throw new Error(res.data.error || "could not create the package");
-      showPackageProgress(res.data);
+  function showPackageProgress(t){ showTaskProgress(t, els.npProgressFill, els.npProgressText); }
+  // Polls GET /tasks/:id until the task is done (its result) or failed (an Error with its reason).
+  function followTask(taskId, onProgress){
+    return apiFetch(projectApiUrl("/tasks/" + taskId)).then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); }).then(function(res){
+      if (!res.ok) throw new Error((res.data && res.data.error) || "lost the task");
+      if (res.data.state === "failed") throw new Error(res.data.error || "the task failed");
+      onProgress(res.data);
       if (res.data.state === "done") return res.data.result;
-      return new Promise(function(resolve){ setTimeout(resolve, 400); }).then(function(){ return followPackageTask(taskId); });
+      return new Promise(function(resolve){ setTimeout(resolve, 400); }).then(function(){ return followTask(taskId, onProgress); });
     });
   }
+  function followPackageTask(taskId){ return followTask(taskId, showPackageProgress); }
   function packageCreated(result, announce){
     state.selectedPackageId = result.refinement_package_asset_id;
     closeNewPackageModal();
@@ -9173,19 +9209,25 @@ From branch : <span id="versionBranch">—</span></p>
         (result.duplicates_removed ? " (" + result.duplicates_removed + " duplicate pick" + (result.duplicates_removed === 1 ? "" : "s") + " removed)" : "") + ". It is on the Assets tab under Refinement Packages.");
     }
   }
-  // A creation started before the page was reloaded (or the connection lost) is
-  // still running on the server: pick its dialog back up when the project opens.
-  function resumePackageTasks(){
+  // A task started before the page was reloaded (or the connection lost) -- a package creation, a movie
+  // or image import -- is still running on the server: pick its dialog back up when the project opens.
+  var TASK_KIND_WORDS = {package: "The refinement package", movie_import: "The movie import", image_import: "The image import"};
+  function resumeBackgroundTasks(){
     var project = state.projectId;
-    openData("package_tasks", projectApiUrl("/refinement-packages/tasks")).catch(function(){ return {tasks: []}; }).then(function(d){
+    openData("background_tasks", projectApiUrl("/tasks")).catch(function(){ return {tasks: []}; }).then(function(d){
       if (state.projectId !== project) return;
       var tasks = d.tasks || [];
-      // Creations the server was restarted under: say so once, then let the server forget them.
+      // Tasks the server was restarted under: say so once, then let the server forget them.
       tasks.filter(function(x){ return x.state === "failed"; }).forEach(function(x){
-        alert("The refinement package" + (x.name ? " \u201c" + x.name + "\u201d" : "") + " was not created: " + (x.error || "the creation failed") + ".");
-        apiFetch(projectApiUrl("/refinement-packages/tasks/" + encodeURIComponent(x.task_id) + "/ack"), {method: "POST"}).catch(function(){});
+        alert((TASK_KIND_WORDS[x.kind] || "The task") + (x.name ? " \u201c" + x.name + "\u201d" : "") + " did not finish: " + (x.error || "it failed") + ".");
+        apiFetch(projectApiUrl("/tasks/" + encodeURIComponent(x.task_id) + "/ack"), {method: "POST"}).catch(function(){});
       });
-      var t = tasks.filter(function(x){ return x.state === "running"; })[0];
+      var running = tasks.filter(function(x){ return x.state === "running"; });
+      var mi = running.filter(function(x){ return x.kind === "movie_import"; })[0];
+      if (mi) attachImportTask("movies", mi);
+      var ii = running.filter(function(x){ return x.kind === "image_import"; })[0];
+      if (ii) attachImportTask("images", ii);
+      var t = running.filter(function(x){ return (x.kind || "package") === "package"; })[0];
       if (!t || els.newPackageModal.classList.contains("open")) return;
       openNewPackageModal(null);
       if (t.name) els.npName.value = t.name;

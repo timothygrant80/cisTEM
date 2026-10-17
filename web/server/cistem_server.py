@@ -1951,11 +1951,17 @@ def get_movie_import_defaults(project_id):
     return jsonify(dict(row) if row else {})
 
 
-@app.route("/api/projects/<project_id>/movies/import", methods=["POST"])
-@auth.project_access_required
-def import_movies(project_id):
-    body = request.get_json(force=True, silent=True) or {}
+class ImportRequestError(ValueError):
+    """An import refused for what was asked (a 400), as opposed to a failure."""
 
+
+def _note(progress, done, total, message):
+    if progress:
+        progress(done, total, message)
+
+
+def _import_movies_work(project_id, body, progress=None):
+    """The movie import (the route below, or a background task): the result dict, or ImportRequestError for a 400."""
     input_glob = (body.get("input_glob") or "").strip()
     voltage_kv = body.get("voltage_kv")
     cs_mm = body.get("cs_mm")
@@ -2016,7 +2022,7 @@ def import_movies(project_id):
         elif pixel_size_a and desired_pixel_size_a <= pixel_size_a:
             errors.append("desired pixel size must be larger than the current pixel size")
     if errors:
-        return jsonify({"error": "; ".join(errors)}), 400
+        raise ImportRequestError("; ".join(errors))
 
     conn = db.get_conn(project_id)
     # Files already in this project are skipped rather than added twice --
@@ -2024,14 +2030,12 @@ def import_movies(project_id):
     matched, already_imported = _partition_matches(conn, MOVIE_KIND, input_glob)
     if not matched and not already_imported:
         conn.close()
-        return jsonify({"error": "no files match that path: {}".format(input_glob)}), 400
+        raise ImportRequestError("no files match that path: {}".format(input_glob))
     if not matched:
         conn.close()
-        return jsonify({
-            "error": "all {} matching file{} already imported".format(
+        raise ImportRequestError("all {} matching file{} already imported".format(
                 len(already_imported), "" if len(already_imported) == 1 else "s are"
-            )
-        }), 400
+            ))
 
     # Like the reference dialog's CheckForEERFiles(), decide from the actual
     # resolved files -- not just the client's glob-based guess -- whether
@@ -2053,9 +2057,12 @@ def import_movies(project_id):
     # and a project database whose write lock is held that long fails every
     # other writer with "database is locked" (seen 2026-10-16, with the
     # movies on NFS and a second import attempt as the other writer).
+    total = len(matched)
+    _note(progress, 0, total, "Reading the headers\u2026")
     headers = []
     failed = []
-    for path in matched:
+    for i, path in enumerate(matched):
+        _note(progress, i, total, "Reading " + Path(path).name)
         try:
             header = imageheaders.read_movie_header(
                 path,
@@ -2077,6 +2084,7 @@ def import_movies(project_id):
             continue
         headers.append((path, header))
 
+    _note(progress, total, total, "Writing {} movie{}".format(len(headers), "" if len(headers) == 1 else "s"))
     # Imports land in the All Movies group (id 0) only -- organizing movies
     # into other groups is what Add To Group is for, after the fact.
     with conn:
@@ -2122,11 +2130,29 @@ def import_movies(project_id):
         )
     conn.close()
 
-    return jsonify({
+    return {
         "movie_count": len(movie_ids),
         "skipped_count": len(already_imported),
         "failed": failed,
-    }), 201
+    }
+
+
+@app.route("/api/projects/<project_id>/movies/import", methods=["POST"])
+@auth.project_access_required
+def import_movies(project_id):
+    """Imports the movies a glob matches as movie assets (see _import_movies_work). Synchronous by default;
+    with `?async=1` the import runs in the background and the answer is `202 {task_id}` to follow at
+    GET /tasks/:id -- reading the headers of a directory of TIFF movies on a network filesystem takes
+    minutes, during which the dialog shows the files done and the time left and takes no second click."""
+    body = request.get_json(force=True, silent=True) or {}
+    if request.args.get("async") in ("1", "true", "yes"):
+        task_id = _start_task(project_id, "movie_import", (body.get("input_glob") or "").strip(),
+                              lambda progress: _import_movies_work(project_id, body, progress), "could not import the movies")
+        return jsonify({"task_id": task_id}), 202
+    try:
+        return jsonify(_import_movies_work(project_id, body)), 201
+    except ImportRequestError as exc:
+        return jsonify({"error": str(exc)}), 400
 
 
 @app.route("/api/projects/<project_id>/movie-groups", methods=["POST"])
@@ -2314,9 +2340,7 @@ def import_volumes(project_id):
         conn.close()
 
 
-@app.route("/api/projects/<project_id>/images/import", methods=["POST"])
-@auth.project_access_required
-def import_images(project_id):
+def _import_images_work(project_id, body, progress=None):
     """Imports micrographs as image assets.
 
     Deliberately much shorter than import_movies(): an image is already
@@ -2326,8 +2350,6 @@ def import_images(project_id):
     MyMovieImportDialog, whose field set is voltage / Cs / pixel size /
     contrast and nothing more.
     """
-    body = request.get_json(force=True, silent=True) or {}
-
     input_glob = (body.get("input_glob") or "").strip()
     voltage_kv = body.get("voltage_kv")
     cs_mm = body.get("cs_mm")
@@ -2347,7 +2369,7 @@ def import_images(project_id):
         if value is None or value == "":
             errors.append("{} is required".format(label))
     if errors:
-        return jsonify({"error": "; ".join(errors)}), 400
+        raise ImportRequestError("; ".join(errors))
 
     conn = db.get_conn(project_id)
     matched, already_imported = _partition_matches(
@@ -2355,24 +2377,26 @@ def import_images(project_id):
     )
     if not matched and not already_imported:
         conn.close()
-        return jsonify({"error": "no files match that path: {}".format(input_glob)}), 400
+        raise ImportRequestError("no files match that path: {}".format(input_glob))
     if not matched:
         conn.close()
-        return jsonify({
-            "error": "all {} matching file{} already imported".format(
+        raise ImportRequestError("all {} matching file{} already imported".format(
                 len(already_imported), "" if len(already_imported) == 1 else "s are"
-            )
-        }), 400
+            ))
 
     # Headers before the transaction, as the movie import does: no write lock
     # held while files on a slow filesystem are read.
+    total = len(matched)
+    _note(progress, 0, total, "Reading the headers\u2026")
     headers = []
     failed = []
-    for path in matched:
+    for i, path in enumerate(matched):
+        _note(progress, i, total, "Reading " + Path(path).name)
         try:
             headers.append((path, imageheaders.read_image_header(path)))
         except imageheaders.HeaderError as exc:
             failed.append({"path": path, "reason": str(exc)})
+    _note(progress, total, total, "Writing {} image{}".format(len(headers), "" if len(headers) == 1 else "s"))
     with conn:
         image_ids = []
         for path, header in headers:
@@ -2403,11 +2427,26 @@ def import_images(project_id):
         )
     conn.close()
 
-    return jsonify({
+    return {
         "image_count": len(image_ids),
         "skipped_count": len(already_imported),
         "failed": failed,
-    }), 201
+    }
+
+
+@app.route("/api/projects/<project_id>/images/import", methods=["POST"])
+@auth.project_access_required
+def import_images(project_id):
+    """Imports micrographs as image assets (see _import_images_work); `?async=1` as the movie import's."""
+    body = request.get_json(force=True, silent=True) or {}
+    if request.args.get("async") in ("1", "true", "yes"):
+        task_id = _start_task(project_id, "image_import", (body.get("input_glob") or "").strip(),
+                              lambda progress: _import_images_work(project_id, body, progress), "could not import the images")
+        return jsonify({"task_id": task_id}), 202
+    try:
+        return jsonify(_import_images_work(project_id, body)), 201
+    except ImportRequestError as exc:
+        return jsonify({"error": str(exc)}), 400
 
 
 @app.route("/api/projects/<project_id>/image-groups", methods=["POST"])
@@ -2707,22 +2746,26 @@ def refinement_package_defaults(project_id):
     return jsonify(out)
 
 
-# Package creation in the background: task id -> {state, done, total, message, result | error}.
-# The wizard's OneSecondProgressDialog, as a task the dialog polls. The live copy
-# is this dict; the project's PACKAGE_TASKS table mirrors it (progress at most
-# once a second) so that a server restart mid-creation leaves a 'failed' row with
-# the reason for the page to report, rather than a task id nobody knows.
+# Background tasks: task id -> {kind, state, done, total, message, result | error}.
+# The wizard's OneSecondProgressDialog, as a task the dialog polls: a package
+# creation (kind "package"), a movie import ("movie_import") or an image import
+# ("image_import"), each of which can take minutes. The live copy is this dict;
+# the project's PACKAGE_TASKS table (named for the first kind it held) mirrors
+# it (progress at most once a second) so that a server restart mid-task leaves
+# a 'failed' row with the reason for the page to report, rather than a task id
+# nobody knows. Every kind writes the project only at its end, in one
+# transaction, so a task the restart killed wrote nothing.
 _package_tasks = {}
 _package_tasks_lock = threading.Lock()
 _PACKAGE_TASK_WRITE_INTERVAL = 1.0
-RESTART_ERROR = ("the server was restarted while this package was being created, so it was not created: "
-                 "nothing was written to the project -- create it again")
+RESTART_ERROR = ("the server was restarted while this was running, so it did not finish: "
+                 "nothing was written to the project -- start it again")
 
 
 def _package_task_row_write(conn, task_id, task):
     conn.execute(
-        "INSERT OR REPLACE INTO PACKAGE_TASKS(TASK_ID, STATE, DONE, TOTAL, MESSAGE, ERROR, NAME, STARTED_AT, UPDATED_AT) VALUES (?,?,?,?,?,?,?,?,?)",
-        (task_id, task.get("state"), task.get("done"), task.get("total"), task.get("message"), task.get("error"),
+        "INSERT OR REPLACE INTO PACKAGE_TASKS(TASK_ID, KIND, STATE, DONE, TOTAL, MESSAGE, ERROR, NAME, STARTED_AT, UPDATED_AT) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (task_id, task.get("kind") or "package", task.get("state"), task.get("done"), task.get("total"), task.get("message"), task.get("error"),
          task.get("name"), task.get("started_at"), time.time()))
 
 
@@ -2743,8 +2786,8 @@ def _package_task_persist(project_id, task_id, remove=False):
 
 def _package_task_from_row(row):
     d = {k.lower(): row[k] for k in row.keys()}
-    return {"state": d["state"], "done": d["done"], "total": d["total"], "message": d["message"], "error": d["error"],
-            "name": d["name"], "started_at": d["started_at"], "from_before_restart": True}
+    return {"kind": d.get("kind") or "package", "state": d["state"], "done": d["done"], "total": d["total"], "message": d["message"],
+            "error": d["error"], "name": d["name"], "started_at": d["started_at"], "from_before_restart": True}
 
 
 def _recover_package_tasks():
@@ -2763,12 +2806,15 @@ def _recover_package_tasks():
                 n = conn.execute("UPDATE PACKAGE_TASKS SET STATE='failed', ERROR=?, UPDATED_AT=? WHERE STATE='running'",
                                  (RESTART_ERROR, time.time())).rowcount
             if n:
-                log.warning("project %s: %d package creation(s) were running when the server stopped; marked failed", entry.name, n)
+                log.warning("project %s: %d background task(s) were running when the server stopped; marked failed", entry.name, n)
         finally:
             conn.close()
 
 
-def _run_package_task(task_id, project_id, body):
+def _run_task(task_id, project_id, work, failure_prefix):
+    """The thread of a background task: `work(progress)` returns the task's result; a ValueError is the
+    task refused for what was asked (its message is the error), anything else a failure under
+    `failure_prefix`."""
     last_write = [0.0]
 
     def progress(done, total, message):
@@ -2778,21 +2824,20 @@ def _run_package_task(task_id, project_id, body):
             last_write[0] = time.time()
             try:
                 _package_task_persist(project_id, task_id)
-            except Exception:  # noqa: BLE001 -- the mirror is best effort; the creation must not fail over it
-                log.exception("could not record the progress of package task %s", task_id)
-    conn = db.get_conn(project_id)
+            except Exception:  # noqa: BLE001 -- the mirror is best effort; the task must not fail over it
+                log.exception("could not record the progress of task %s", task_id)
     try:
-        result = refinement_packages.create_package(conn, project_id, body, progress=progress)
+        result = work(progress)
         with _package_tasks_lock:
             _package_tasks[task_id].update({"state": "done", "result": result, "done": _package_tasks[task_id].get("total"), "message": "Done"})
     except ValueError as exc:
         with _package_tasks_lock:
             _package_tasks[task_id].update({"state": "failed", "error": str(exc)})
     except Exception as exc:  # noqa: BLE001 - the dialog needs the reason, not a 500 nobody sees
+        log.exception("task %s failed", task_id)
         with _package_tasks_lock:
-            _package_tasks[task_id].update({"state": "failed", "error": "could not create the package: {}".format(exc)})
+            _package_tasks[task_id].update({"state": "failed", "error": "{}: {}".format(failure_prefix, exc)})
     finally:
-        conn.close()
         try:
             # A finished task lives on in memory for the dialog to poll; the table only needs
             # to know about ones that could be interrupted, so a done task's row goes and a
@@ -2801,7 +2846,18 @@ def _run_package_task(task_id, project_id, body):
                 failed = _package_tasks[task_id].get("state") == "failed"
             _package_task_persist(project_id, task_id, remove=not failed)
         except Exception:  # noqa: BLE001
-            log.exception("could not record the end of package task %s", task_id)
+            log.exception("could not record the end of task %s", task_id)
+
+
+def _start_task(project_id, kind, name, work, failure_prefix):
+    """Start `work` on a thread as a background task of the project; the task id to poll at GET /tasks/:id."""
+    task_id = secrets.token_hex(6)
+    with _package_tasks_lock:
+        _package_tasks[task_id] = {"kind": kind, "state": "running", "done": 0, "total": None, "message": "Starting\u2026", "project_id": project_id,
+                                   "started_at": time.time(), "name": name}
+    _package_task_persist(project_id, task_id)
+    threading.Thread(target=_run_task, args=(task_id, project_id, work, failure_prefix), daemon=True, name=kind + "-" + task_id).start()
+    return task_id
 
 
 @app.route("/api/projects/<project_id>/refinement-packages", methods=["POST"])
@@ -2817,12 +2873,13 @@ def create_refinement_package(project_id):
     the dialog draws its progress bar."""
     body = request.get_json(force=True, silent=True) or {}
     if request.args.get("async") in ("1", "true", "yes"):
-        task_id = secrets.token_hex(6)
-        with _package_tasks_lock:
-            _package_tasks[task_id] = {"state": "running", "done": 0, "total": None, "message": "Starting\u2026", "project_id": project_id,
-                                       "started_at": time.time(), "name": body.get("name") or ""}
-        _package_task_persist(project_id, task_id)
-        threading.Thread(target=_run_package_task, args=(task_id, project_id, body), daemon=True, name="package-" + task_id).start()
+        def work(progress):
+            conn = db.get_conn(project_id)
+            try:
+                return refinement_packages.create_package(conn, project_id, body, progress=progress)
+            finally:
+                conn.close()
+        task_id = _start_task(project_id, "package", body.get("name") or "", work, "could not create the package")
         return jsonify({"task_id": task_id}), 202
     conn = db.get_conn(project_id)
     try:
@@ -2844,17 +2901,15 @@ def _package_task_json(task_id, task):
     return out
 
 
-@app.route("/api/projects/<project_id>/refinement-packages/tasks", methods=["GET"])
-@auth.project_access_required
-def refinement_package_tasks(project_id):
-    """The project's package creations still running, newest first -- so a page
-    that was reloaded (or reconnected) while one ran can pick its progress
-    dialog back up -- and, after them, the ones that failed and have not been
-    acknowledged (a creation the server was restarted under: the page reports
-    it once and acknowledges it). {tasks: [{task_id, state, done, total,
-    message, started_at, elapsed, name, error?, from_before_restart?}]}."""
+def _tasks_json(project_id, kind=None):
+    """The project's background tasks still running, newest first -- so a page that was reloaded (or
+    reconnected) while one ran can pick its progress back up -- and, after them, the ones that failed
+    and have not been acknowledged (a task the server was restarted under: the page reports it once and
+    acknowledges it). `kind` keeps one kind. [{task_id, kind, state, done, total, message, started_at,
+    elapsed, name, error?, from_before_restart?}]."""
     with _package_tasks_lock:
-        running = [(tid, t) for tid, t in _package_tasks.items() if t.get("project_id") == project_id and t.get("state") == "running"]
+        running = [(tid, t) for tid, t in _package_tasks.items() if t.get("project_id") == project_id and t.get("state") == "running"
+                   and (kind is None or (t.get("kind") or "package") == kind)]
         live_ids = set(_package_tasks)
     running.sort(key=lambda item: item[1].get("started_at") or 0, reverse=True)
     out = [_package_task_json(tid, t) for tid, t in running]
@@ -2864,15 +2919,16 @@ def refinement_package_tasks(project_id):
     finally:
         conn.close()
     for row in rows:
-        if row["TASK_ID"] not in live_ids:   # a failure from before this server process; live ones the dialog already has
-            out.append(_package_task_json(row["TASK_ID"], _package_task_from_row(row)))
-    return jsonify({"tasks": out})
+        if row["TASK_ID"] in live_ids:   # a failure from this server process the dialog already has
+            continue
+        task = _package_task_from_row(row)
+        if kind is None or task["kind"] == kind:
+            out.append(_package_task_json(row["TASK_ID"], task))
+    return out
 
 
-@app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>", methods=["GET"])
-@auth.project_access_required
-def refinement_package_task(project_id, task_id):
-    """A background package creation: {state: running|done|failed, done, total, message, started_at, elapsed, result?, error?}."""
+def _task_response(project_id, task_id):
+    """One background task: {kind, state: running|done|failed, done, total, message, started_at, elapsed, result?, error?}."""
     with _package_tasks_lock:
         task = _package_tasks.get(task_id)
         if task is not None and task.get("project_id") == project_id:
@@ -2887,10 +2943,8 @@ def refinement_package_task(project_id, task_id):
     return jsonify(_package_task_json(task_id, _package_task_from_row(row)))
 
 
-@app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>/ack", methods=["POST"])
-@auth.project_access_required
-def acknowledge_refinement_package_task(project_id, task_id):
-    """The page has told the user about a failed creation: forget it."""
+def _acknowledge_task(project_id, task_id):
+    """The page has told the user about a failed task: forget it."""
     with _package_tasks_lock:
         task = _package_tasks.get(task_id)
         if task is not None and task.get("project_id") == project_id and task.get("state") == "failed":
@@ -2898,10 +2952,48 @@ def acknowledge_refinement_package_task(project_id, task_id):
     conn = db.get_conn(project_id)
     try:
         with conn:
-            conn.execute("DELETE FROM PACKAGE_TASKS WHERE TASK_ID=?", (task_id,))
+            conn.execute("DELETE FROM PACKAGE_TASKS WHERE TASK_ID=? AND STATE='failed'", (task_id,))
     finally:
         conn.close()
     return jsonify({"acknowledged": task_id})
+
+
+@app.route("/api/projects/<project_id>/tasks", methods=["GET"])
+@auth.project_access_required
+def background_tasks(project_id):
+    """{tasks: [...]} -- every kind, or `?kind=package|movie_import|image_import`; see _tasks_json."""
+    return jsonify({"tasks": _tasks_json(project_id, request.args.get("kind") or None)})
+
+
+@app.route("/api/projects/<project_id>/tasks/<task_id>", methods=["GET"])
+@auth.project_access_required
+def background_task(project_id, task_id):
+    return _task_response(project_id, task_id)
+
+
+@app.route("/api/projects/<project_id>/tasks/<task_id>/ack", methods=["POST"])
+@auth.project_access_required
+def acknowledge_background_task(project_id, task_id):
+    return _acknowledge_task(project_id, task_id)
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/tasks", methods=["GET"])
+@auth.project_access_required
+def refinement_package_tasks(project_id):
+    """The package creations among the project's tasks (the generic routes above serve every kind)."""
+    return jsonify({"tasks": _tasks_json(project_id, "package")})
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>", methods=["GET"])
+@auth.project_access_required
+def refinement_package_task(project_id, task_id):
+    return _task_response(project_id, task_id)
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/tasks/<task_id>/ack", methods=["POST"])
+@auth.project_access_required
+def acknowledge_refinement_package_task(project_id, task_id):
+    return _acknowledge_task(project_id, task_id)
 
 
 @app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>", methods=["GET"])

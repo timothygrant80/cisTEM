@@ -94,37 +94,62 @@ class Sink:
         want reconnection to survive a server restart (see restore())."""
 
 
+# Programs that run what follows them here, on this machine, with their own
+# options in between: `nice -n 19 /opt/cistem/bin/$command` still launches the
+# controller or worker locally, where `ssh node $command`, `srun $command` or
+# `sbatch --wrap="$command"` hand it to something else, possibly elsewhere.
+LOCAL_WRAPPERS = ("nice", "ionice", "nohup", "env", "time", "stdbuf", "taskset", "numactl", "chrt", "setsid", "exec")
+
+
+def _local_command_word(command):
+    """The word of a run or manager command that `$command` expands in --
+    bare, or with a directory stuck to its front -- when the command runs it
+    on this machine: as its first word, or after local wrappers (LOCAL_WRAPPERS)
+    and their options. None when it goes through another program, or has no
+    `$command` word."""
+    words = (command or "$command").split() or ["$command"]
+    for i, word in enumerate(words):
+        if word.endswith("$command") and "$" not in word[:-len("$command")]:
+            return word
+        if word.rsplit("/", 1)[-1] in LOCAL_WRAPPERS:
+            continue
+        if i > 0 and (word.startswith("-") or "=" in word or word.lstrip("-").isdigit()):
+            continue   # a wrapper's option or its value
+        return None
+    return None
+
+
 def local_controller_of(manager_command, controller_executable):
     """The executable a manager command would launch on this machine, or
     None when that cannot be told from here.
 
     `$command` expands to `<controller> <hosts> <port> <token>`, so a manager
-    command whose first word *is* `$command` -- bare, or with a directory
-    stuck to its front (`/opt/cistem/bin/$command`, the way to name a
-    controller that is not on PATH) -- launches the controller locally, and
-    its first word after expansion is what to look for. Anything else in
-    front (`ssh node $command`, `nohup $command`, `sbatch --wrap="$command"`)
-    launches it through another program, possibly on another machine, and
-    the only test is running it."""
-    manager = (manager_command or "$command").strip() or "$command"
-    first = manager.split(None, 1)[0]
-    if not first.endswith("$command") or "$" in first[:-len("$command")]:
+    command that runs `$command` here -- bare, with a directory stuck to its
+    front (`/opt/cistem/bin/$command`, the way to name a controller that is
+    not on PATH), or under a local wrapper (`nice -n 19 /opt/cistem/bin/$command`;
+    LOCAL_WRAPPERS) -- launches the controller locally, and the expansion of
+    that word is what to look for. Anything else in front (`ssh node $command`,
+    `sbatch --wrap="$command"`) launches it through another program, possibly
+    on another machine, and the only test is running it."""
+    word = _local_command_word((manager_command or "$command").strip() or "$command")
+    if word is None:
         return None
     try:
         controller_first = shlex.split(controller_executable)[0]
     except (ValueError, IndexError):
         return None
-    return first[:-len("$command")] + controller_first
+    return word[:-len("$command")] + controller_first
 
 
 def local_program_of(profile, program):
     """The path this machine should run `program` (a worker executable such as
     find_particles) from, as the run profile would launch it: a directory stuck
     to `$command` in the profile's run commands (`/opt/cistem/bin/$command`,
-    the way to name workers that are not on PATH) names the directory, else a
-    directory in the manager command does, else the bare name is looked up on
-    PATH. Run commands that go through another program (`ssh node $command`)
-    say nothing about this machine and are skipped. The result is a name or
+    the way to name workers that are not on PATH; `nice -n 19 /opt/cistem/bin/$command`
+    the same under a local wrapper) names the directory, else a directory in
+    the manager command does, else the bare name is looked up on PATH. Run
+    commands that go through another program (`ssh node $command`) say nothing
+    about this machine and are skipped. The result is a name or
     path for shutil.which(); whether it exists is the caller's question.
     Used by the things the server runs itself rather than through a job --
     the particle-picking preview, align_symmetry, sharpen_map."""

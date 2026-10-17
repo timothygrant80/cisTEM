@@ -179,6 +179,14 @@ class LocalProgramOfTests(unittest.TestCase):
         profile = {"manager_command": "sbatch --wrap=\"$command\"", "run_commands": [{"command": "ssh node $command"}]}
         self.assertEqual(jr.local_program_of(profile, "align_symmetry"), "align_symmetry")
 
+    def test_a_local_wrapper_in_front_still_names_the_directory(self):
+        # "nice -n 19 /tmp/$command": the worker runs here, from /tmp -- the picking preview used to
+        # give up at "nice" and look on PATH (2026-10-17)
+        profile = {"manager_command": "$command", "run_commands": [{"command": "nice -n 19 /tmp/$command"}]}
+        self.assertEqual(jr.local_program_of(profile, "find_particles"), "/tmp/find_particles")
+        profile = {"manager_command": "nohup env OMP_NUM_THREADS=8 /opt/cistem/bin/$command", "run_commands": [{"command": "ssh node $command"}]}
+        self.assertEqual(jr.local_program_of(profile, "align_symmetry"), "/opt/cistem/bin/align_symmetry")
+
     def test_no_profile(self):
         self.assertEqual(jr.local_program_of(None, "sharpen_map"), "sharpen_map")
         self.assertEqual(jr.local_program_of({}, "sharpen_map"), "sharpen_map")
@@ -196,6 +204,14 @@ class LocalControllerOfTests(unittest.TestCase):
                          "cistem_job_controller")
         # a multi-word default controller ("python3 fake_controller.py") is judged on its first word
         self.assertEqual(jr.local_controller_of("$command", "python3 /x/fake_controller.py"), "python3")
+
+    def test_local_wrappers_are_seen_through(self):
+        self.assertEqual(jr.local_controller_of("nice -n 19 /tmp/$command", "cistem_job_controller"), "/tmp/cistem_job_controller")
+        self.assertEqual(jr.local_controller_of("/usr/bin/nice -n19 $command", "cistem_job_controller"), "cistem_job_controller")
+        self.assertEqual(jr.local_controller_of("env OMP_NUM_THREADS=4 /opt/bin/$command", "cistem_job_controller"), "/opt/bin/cistem_job_controller")
+        # a wrapper that then hands over to another program is still undecidable
+        self.assertIsNone(jr.local_controller_of("nice -n 19 ssh node $command", "cistem_job_controller"))
+        self.assertIsNone(jr.local_controller_of("nice", "cistem_job_controller"))
 
     def test_launch_through_another_program_is_undecidable(self):
         for manager in ("ssh head-node $command", "nohup $command", "sbatch --wrap=\"$command\"",

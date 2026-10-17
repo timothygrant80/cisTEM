@@ -2044,38 +2044,48 @@ def import_movies(project_id):
     asset_eer_frames_per_image = eer_frames_per_image if is_eer_import else None
     asset_eer_super_res_factor = eer_super_res_factor if is_eer_import else None
 
+    # Dimensions and frame count come from each file's own header (see
+    # imageheaders.py). A file that won't parse is skipped and reported
+    # rather than failing the whole import, matching the reference dialog's
+    # "%s is not a valid image file, skipping". The headers are read before
+    # the transaction opens: counting a TIFF or EER movie's frames walks the
+    # whole file, minutes for a directory of movies on a network filesystem,
+    # and a project database whose write lock is held that long fails every
+    # other writer with "database is locked" (seen 2026-10-16, with the
+    # movies on NFS and a second import attempt as the other writer).
+    headers = []
+    failed = []
+    for path in matched:
+        try:
+            header = imageheaders.read_movie_header(
+                path,
+                count_frames=not skip_full_check,
+                eer_super_res_factor=eer_super_res_factor,
+                eer_frames_per_image=eer_frames_per_image,
+            )
+        except imageheaders.HeaderError as exc:
+            failed.append({"path": path, "reason": str(exc)})
+            continue
+        n_frames = header["number_of_frames"]
+        # Same guard the reference dialog applies -- but only when the
+        # count is trustworthy, i.e. we actually counted.
+        if n_frames is not None and n_frames < 3:
+            failed.append({
+                "path": path,
+                "reason": "contains fewer than 3 frames ({})".format(n_frames),
+            })
+            continue
+        headers.append((path, header))
+
     # Imports land in the All Movies group (id 0) only -- organizing movies
     # into other groups is what Add To Group is for, after the fact.
     with conn:
         movie_ids = []
-        failed = []
-        for path in matched:
+        for path, header in headers:
             name = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-            # Dimensions and frame count come from the file's own header (see
-            # imageheaders.py). A file that won't parse is skipped and
-            # reported rather than failing the whole import, matching the
-            # reference dialog's "%s is not a valid image file, skipping".
-            try:
-                header = imageheaders.read_movie_header(
-                    path,
-                    count_frames=not skip_full_check,
-                    eer_super_res_factor=eer_super_res_factor,
-                    eer_frames_per_image=eer_frames_per_image,
-                )
-            except imageheaders.HeaderError as exc:
-                failed.append({"path": path, "reason": str(exc)})
-                continue
             x_size = header["x_size"]
             y_size = header["y_size"]
             n_frames = header["number_of_frames"]
-            # Same guard the reference dialog applies -- but only when the
-            # count is trustworthy, i.e. we actually counted.
-            if n_frames is not None and n_frames < 3:
-                failed.append({
-                    "path": path,
-                    "reason": "contains fewer than 3 frames ({})".format(n_frames),
-                })
-                continue
             cur = conn.execute(
                 "INSERT INTO MOVIE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, X_SIZE, Y_SIZE, NUMBER_OF_FRAMES, "
@@ -2354,16 +2364,19 @@ def import_images(project_id):
             )
         }), 400
 
+    # Headers before the transaction, as the movie import does: no write lock
+    # held while files on a slow filesystem are read.
+    headers = []
+    failed = []
+    for path in matched:
+        try:
+            headers.append((path, imageheaders.read_image_header(path)))
+        except imageheaders.HeaderError as exc:
+            failed.append({"path": path, "reason": str(exc)})
     with conn:
         image_ids = []
-        failed = []
-        for path in matched:
+        for path, header in headers:
             name = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-            try:
-                header = imageheaders.read_image_header(path)
-            except imageheaders.HeaderError as exc:
-                failed.append({"path": path, "reason": str(exc)})
-                continue
             cur = conn.execute(
                 "INSERT INTO IMAGE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "

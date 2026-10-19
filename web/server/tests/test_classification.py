@@ -138,7 +138,10 @@ class SelectionTests(unittest.TestCase):
             # three picks on image 7: two of them 5 A apart once re-centred, one far away
             for pid, pos, x, y in ((10, 1, 100.0, 100.0), (11, 2, 130.0, 100.0), (12, 3, 500.0, 500.0)):
                 conn.execute("INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_1 VALUES (?,7,?,?,?,1.0,1,1,0,0,2.7,300,0.07,1)", (pid, pos, x, y))
-            conn.execute("INSERT INTO IMAGE_ASSETS(IMAGE_ASSET_ID, NAME, FILENAME, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) VALUES (7, 'img', '/nonexistent.mrc', 1.0, 300, 2.7, 0)")
+            # a real (tiny) image file: a member whose image file is missing is copied from the stack instead of cut
+            image_path = os.path.join(self.tmp, "img7.mrc")
+            w = rp.MrcStackWriter(image_path, 32, 1.0); w.append(__import__("numpy").zeros((32, 32), dtype="float32")); w.close()
+            conn.execute("INSERT INTO IMAGE_ASSETS(IMAGE_ASSET_ID, NAME, FILENAME, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) VALUES (7, 'img', ?, 1.0, 300, 2.7, 0)", (image_path,))
         cls = {"classification_id": 1, "refinement_package_asset_id": 1, "name": "C", "class_average_file": "/nonexistent.mrc", "number_of_particles": 3,
                "number_of_classes": 2, "low_resolution_limit": 300, "high_resolution_limit": 8, "mask_radius": 100, "angular_search_step": 15,
                "search_range_x": 100, "search_range_y": 100, "smoothing_factor": 1, "exclude_blank_edges": True, "auto_percent_used": True, "percent_used": 100}
@@ -169,14 +172,14 @@ class SelectionTests(unittest.TestCase):
     def test_class_selection_source_recentres_and_removes_duplicates(self):
         conn = self.db.get_conn(self.project)
         sid = c.create_selection(conn, 1, "sel", [1, 2])
-        rows, info = self.rp._particles_of_selections(conn, {"selection_ids": [sid], "recentre": True, "remove_duplicates": True, "duplicate_threshold_a": 20.0})
+        rows, copies, info = self.rp._particles_of_selections(conn, {"selection_ids": [sid], "recentre": True, "remove_duplicates": True, "duplicate_threshold_a": 20.0})
         # Particle 2 (moved 25 A) is the duplicate of particle 1 and goes; particle 3 is re-centred.
-        self.assertEqual(info["duplicates_removed"], 1)
+        self.assertEqual((info["duplicates_removed"], copies), (1, []))
         self.assertEqual(sorted(r["PARTICLE_POSITION_ASSET_ID"] for r in rows), [10, 12])
         p3 = [r for r in rows if r["PARTICLE_POSITION_ASSET_ID"] == 12][0]
         self.assertEqual((p3["X_POSITION"], p3["Y_POSITION"]), (499.0, 501.0))
         # Without re-centring nothing moves and nothing is removed.
-        rows, info = self.rp._particles_of_selections(conn, {"selection_ids": [sid], "recentre": False, "remove_duplicates": True})
+        rows, _copies, info = self.rp._particles_of_selections(conn, {"selection_ids": [sid], "recentre": False, "remove_duplicates": True})
         self.assertEqual((len(rows), info["duplicates_removed"]), (3, 0))
         self.assertEqual([r["X_POSITION"] for r in rows], [100.0, 130.0, 500.0])
         conn.close()

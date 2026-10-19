@@ -305,7 +305,14 @@ def _particles_of_selections(conn, params):
     `remove_duplicates` then drops picks on the same image closer than
     `duplicate_threshold_a` to one another, keeping the one that moved least
     (the wizard's Remove duplicate picks page; threshold defaults to the
-    largest dimension)."""
+    largest dimension).
+
+    A member with no image to cut from -- its package was imported as a
+    stack (parent image -1), or the image asset or its file has gone -- is
+    returned separately as a *copy*: the particle is taken from its package's
+    stack instead (create_package() crops or pads it to the new box and, when
+    `recentre` is on, moves it by the classification's shift in whole
+    pixels). Returns (rows to cut, copies, source info)."""
     import classification  # noqa: E402 -- classification imports this module
 
     selection_ids = params.get("selection_ids") or []
@@ -335,14 +342,32 @@ def _particles_of_selections(conn, params):
             contained_cache[pid] = {r["POSITION_IN_STACK"]: r for r in conn.execute("SELECT * FROM {}".format(table)).fetchall()} \
                 if _table_exists(conn, table) else {}
         c = contained_cache[pid].get(m["position_in_stack"])
-        if c is None or c["PARENT_IMAGE_ASSET_ID"] is None or c["PARENT_IMAGE_ASSET_ID"] < 0:
-            continue  # no parent image to cut from (an imported stack) -- not supported here
+        if c is None:
+            continue  # the classification names a particle its package no longer lists
         x, y = float(c["X_POSITION"]), float(c["Y_POSITION"])
         shift2 = 0.0
         if recentre:
             x -= float(m["x_shift"]); y -= float(m["y_shift"])
             shift2 = float(m["x_shift"]) ** 2 + float(m["y_shift"]) ** 2
-        picks.append({"position_id": c["ORIGINAL_PARTICLE_POSITION_ASSET_ID"], "image_id": c["PARENT_IMAGE_ASSET_ID"], "x": x, "y": y, "shift2": shift2})
+        picks.append({"position_id": c["ORIGINAL_PARTICLE_POSITION_ASSET_ID"], "image_id": c["PARENT_IMAGE_ASSET_ID"], "x": x, "y": y, "shift2": shift2,
+                      "package_id": pid, "position_in_stack": int(m["position_in_stack"]), "contained": c,
+                      "dx_a": -float(m["x_shift"]) if recentre else 0.0, "dy_a": -float(m["y_shift"]) if recentre else 0.0})
+
+    # Which picks have an image to be cut from: a parent image asset whose file is still there.
+    image_rows = {}
+    def image_of(iid):
+        if iid is None or iid < 0:
+            return None
+        if iid not in image_rows:
+            row = conn.execute(
+                "SELECT ia.IMAGE_ASSET_ID, ia.FILENAME, ia.PIXEL_SIZE, ia.VOLTAGE, ia.SPHERICAL_ABERRATION, ia.PROTEIN_IS_WHITE, "
+                "ce.DEFOCUS1, ce.DEFOCUS2, ce.DEFOCUS_ANGLE, ce.ADDITIONAL_PHASE_SHIFT, ce.AMPLITUDE_CONTRAST, ce.TILT_ANGLE, ce.TILT_AXIS "
+                "FROM IMAGE_ASSETS ia LEFT JOIN ESTIMATED_CTF_PARAMETERS ce ON ce.CTF_ESTIMATION_ID = ia.CTF_ESTIMATION_ID "
+                "WHERE ia.IMAGE_ASSET_ID = ?", (iid,)).fetchone()
+            image_rows[iid] = row if row is not None and row["FILENAME"] and os.path.isfile(row["FILENAME"]) else None
+        return image_rows[iid]
+    copies = [p for p in picks if image_of(p["image_id"]) is None]
+    picks = [p for p in picks if image_of(p["image_id"]) is not None]
 
     removed = 0
     if remove_duplicates and picks:
@@ -369,26 +394,17 @@ def _particles_of_selections(conn, params):
             kept.extend(image_picks)
         picks = kept
 
-    image_ids = sorted({p["image_id"] for p in picks})
-    images = {}
-    for iid in image_ids:
-        images[iid] = conn.execute(
-            "SELECT ia.IMAGE_ASSET_ID, ia.FILENAME, ia.PIXEL_SIZE, ia.VOLTAGE, ia.SPHERICAL_ABERRATION, ia.PROTEIN_IS_WHITE, "
-            "ce.DEFOCUS1, ce.DEFOCUS2, ce.DEFOCUS_ANGLE, ce.ADDITIONAL_PHASE_SHIFT, ce.AMPLITUDE_CONTRAST, ce.TILT_ANGLE, ce.TILT_AXIS "
-            "FROM IMAGE_ASSETS ia LEFT JOIN ESTIMATED_CTF_PARAMETERS ce ON ce.CTF_ESTIMATION_ID = ia.CTF_ESTIMATION_ID "
-            "WHERE ia.IMAGE_ASSET_ID = ?", (iid,)).fetchone()
     picks.sort(key=lambda p: (p["image_id"], p["position_id"] if p["position_id"] is not None else 0))
+    copies.sort(key=lambda p: (p["package_id"], p["position_in_stack"]))
     rows = []
     for p in picks:
-        img = images.get(p["image_id"])
-        if img is None:
-            continue
+        img = image_of(p["image_id"])
         rows.append({"PARTICLE_POSITION_ASSET_ID": p["position_id"], "PARENT_IMAGE_ASSET_ID": p["image_id"], "X_POSITION": p["x"], "Y_POSITION": p["y"],
                      "FILENAME": img["FILENAME"], "PIXEL_SIZE": img["PIXEL_SIZE"], "VOLTAGE": img["VOLTAGE"], "SPHERICAL_ABERRATION": img["SPHERICAL_ABERRATION"],
                      "PROTEIN_IS_WHITE": img["PROTEIN_IS_WHITE"], "DEFOCUS1": img["DEFOCUS1"], "DEFOCUS2": img["DEFOCUS2"], "DEFOCUS_ANGLE": img["DEFOCUS_ANGLE"],
                      "ADDITIONAL_PHASE_SHIFT": img["ADDITIONAL_PHASE_SHIFT"], "AMPLITUDE_CONTRAST": img["AMPLITUDE_CONTRAST"],
                      "TILT_ANGLE": img["TILT_ANGLE"], "TILT_AXIS": img["TILT_AXIS"]})
-    return rows, {"members": len(members), "duplicates_removed": removed, "recentred": recentre}
+    return rows, copies, {"members": len(members), "duplicates_removed": removed, "recentred": recentre, "copied": len(copies)}
 
 
 def selection_defaults(conn, selection_ids):
@@ -421,10 +437,11 @@ def create_package(conn, project_id, params, log=None, progress=None):
     if params.get("source_package_id") is not None:
         return create_package_from_package(conn, project_id, params, log, progress)
     source = {}
+    copies = []
     if params.get("selection_ids"):
-        particles, source = _particles_of_selections(conn, params)
-        if not particles:
-            raise ValueError("the selected classes hold no particles that can be cut from an image")
+        particles, copies, source = _particles_of_selections(conn, params)
+        if not particles and not copies:
+            raise ValueError("the selected classes hold no particles")
     else:
         group_id = params.get("particle_group_id")
         if group_id is None:
@@ -444,8 +461,21 @@ def create_package(conn, project_id, params, log=None, progress=None):
     molecular_weight = float(params.get("molecular_weight_kda") or 300.0)
     largest_dimension = float(params.get("largest_dimension_a") or 150.0)
     number_of_classes = max(1, int(params.get("number_of_classes") or 1))
-    first_pixel_size = float(particles[0]["PIXEL_SIZE"] or 1.0)
+    # The stacks the copies come from: a copy keeps its stack's pixel size, so the output pixel size must be theirs.
+    stacks = {}
+    for c in copies:
+        if c["package_id"] not in stacks:
+            pkg = conn.execute("SELECT STACK_FILENAME, STACK_BOX_SIZE, OUTPUT_PIXEL_SIZE, STACK_HAS_WHITE_PROTEIN FROM REFINEMENT_PACKAGE_ASSETS "
+                               "WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (c["package_id"],)).fetchone()
+            if pkg is None or not pkg["STACK_FILENAME"] or not os.path.isfile(pkg["STACK_FILENAME"]):
+                raise ValueError("the particles of package {} have no image to be cut from and its stack file is missing".format(c["package_id"]))
+            stacks[c["package_id"]] = pkg
+    first_pixel_size = float(particles[0]["PIXEL_SIZE"] or 1.0) if particles else float(next(iter(stacks.values()))["OUTPUT_PIXEL_SIZE"] or 1.0)
     output_pixel_size = float(params.get("output_pixel_size") or first_pixel_size)
+    for pid, pkg in stacks.items():
+        if abs(float(pkg["OUTPUT_PIXEL_SIZE"] or 1.0) - output_pixel_size) > 1e-3 * output_pixel_size:
+            raise ValueError("the particles of package {} have no image to be cut from, so they are copied from its stack and keep its pixel size "
+                             "of {:.4g} A; set the output pixel size to that".format(pid, float(pkg["OUTPUT_PIXEL_SIZE"] or 1.0)))
     box_size = int(params.get("box_size") or default_box_size(largest_dimension, first_pixel_size))
     if box_size < 16:
         raise ValueError("box size must be at least 16 pixels")
@@ -462,7 +492,7 @@ def create_package(conn, project_id, params, log=None, progress=None):
     # and its particles are cut and normalised in batches rather than one at a time.
     writer = MrcStackWriter(stack_path, box_size, output_pixel_size)
     contained = []
-    total = len(particles)
+    total = len(particles) + len(copies)
     by_image = []
     for p in particles:
         if not by_image or by_image[-1][0] != p["PARENT_IMAGE_ASSET_ID"]:
@@ -498,12 +528,46 @@ def create_package(conn, project_id, params, log=None, progress=None):
                 n += len(chunk)
                 if progress:
                     progress(n, total, "Cutting particles from image {}".format(image_id))
+        # ---- the copies: particles with no image, taken from their package's stack ----
+        # Cropped or padded (with the particle's own edge average) to the new box, moved by the
+        # classification's shift in whole pixels when re-centring, inverted if their stack holds white
+        # protein (as a cut particle from a white-protein image is), otherwise as they are; their
+        # CTF and half-set come from the source package's contained-particles row.
+        for pid, pkg in stacks.items():
+            group = [c for c in copies if c["package_id"] == pid]
+            src_box, ps = int(pkg["STACK_BOX_SIZE"]), float(pkg["OUTPUT_PIXEL_SIZE"] or 1.0)
+            if log:
+                log("copying particles from the stack of package {}".format(pid))
+            for start in range(0, len(group), _CUT_BATCH):
+                chunk = group[start:start + _CUT_BATCH]
+                boxes = np.empty((len(chunk), box_size, box_size), dtype=np.float32)
+                for k, c in enumerate(chunk):
+                    particle = read_mrc_section(pkg["STACK_FILENAME"], c["position_in_stack"])
+                    _cut_box(particle, _edge_average(particle), src_box // 2 + int(round(c["dx_a"] / ps)), src_box // 2 + int(round(c["dy_a"] / ps)),
+                             box_size, boxes[k])
+                if pkg["STACK_HAS_WHITE_PROTEIN"]:
+                    np.negative(boxes, out=boxes)
+                first = writer.count + 1
+                writer.append_many(boxes)
+                for k, c in enumerate(chunk):
+                    row = c["contained"]
+                    contained.append({
+                        "position_id": -(first + k), "image_id": -1, "position_in_stack": first + k,
+                        "x": float(row["X_POSITION"] or 0.0) + c["dx_a"], "y": float(row["Y_POSITION"] or 0.0) + c["dy_a"],
+                        "pixel_size": float(row["PIXEL_SIZE"] or ps), "defocus1": float(row["DEFOCUS_1"] or 0.0), "defocus2": float(row["DEFOCUS_2"] or 0.0),
+                        "defocus_angle": float(row["DEFOCUS_ANGLE"] or 0.0), "phase_shift": float(row["PHASE_SHIFT"] or 0.0),
+                        "cs": float(row["SPHERICAL_ABERRATION"] or 2.7), "voltage": float(row["MICROSCOPE_VOLTAGE"] or 300.0),
+                        "amplitude_contrast": float(row["AMPLITUDE_CONTRAST"] or 0.07), "subset": int(row["ASSIGNED_SUBSET"] or (1 + (first + k) % 2))})
+                n += len(chunk)
+                if progress:
+                    progress(n, total, "Copying particles from the stack of package {}".format(pid))
     finally:
         if pool is not None:
             pool.shutdown(wait=False, cancel_futures=True)
         writer.close()
-    subsets = assign_subsets([c["image_id"] for c in contained])
-    for c, s in zip(contained, subsets):
+    # Half-sets: the wizard's rule over the cut particles (by parent image); a copy keeps its source's.
+    cut = [c for c in contained if c["image_id"] >= 0]
+    for c, s in zip(cut, assign_subsets([c["image_id"] for c in cut])):
         c["subset"] = s
     if progress:
         progress(total, total, "Writing the package")

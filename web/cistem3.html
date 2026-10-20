@@ -9124,7 +9124,7 @@ From branch : <span id="versionBranch">—</span></p>
   els.newPackageScrim.addEventListener("click", closeNewPackageModal);
   els.npGroup.addEventListener("change", refreshPackageDefaults);
   els.npSource.addEventListener("change", npSourceChanged);
-  els.npSrcPackage.addEventListener("change", npSourcePackageChanged);
+  els.npSrcPackage.addEventListener("change", function(){ npSourcePackageChanged(false); });
   els.npSrcRefinement.addEventListener("change", function(){ np.source = null; refreshPackageDefaults(); });
   els.npCarryAll.addEventListener("change", function(){ npSyncClassUi(np.source); });
   els.npClasses.addEventListener("input", function(){ npSyncClassUi(np.source); });
@@ -9321,7 +9321,7 @@ From branch : <span id="versionBranch">—</span></p>
   STAGES.class2d.wire = function(paramFields){
     var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
     var start = paramFields.querySelector('[data-key="starting_classification_id"]');
-    if (pkg) pkg.addEventListener("change", class2dPackageChanged);
+    if (pkg) pkg.addEventListener("change", function(){ class2dPackageChanged(false); });
     if (start) start.addEventListener("change", class2dStartChanged);
   };
   STAGES.class2d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") class2dPackageChanged(refreshing); };
@@ -9380,7 +9380,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
   STAGES.ab_initio_3d.wire = function(paramFields){
     var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
-    if (pkg) pkg.addEventListener("change", abinitioPackageChanged);
+    if (pkg) pkg.addEventListener("change", function(){ abinitioPackageChanged(false); });
     abinitioFillProfiles();
   };
   STAGES.ab_initio_3d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") abinitioPackageChanged(refreshing); };
@@ -9478,7 +9478,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
   STAGES.refine3d.wire = function(paramFields){
     var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
-    if (pkg) pkg.addEventListener("change", refine3dPackageChanged);
+    if (pkg) pkg.addEventListener("change", function(){ refine3dPackageChanged(false); });
     var hi = paramFields.querySelector('[data-key="high_resolution_limit_a"]');
     if (hi) hi.addEventListener("change", refine3dHighResChanged);
     abinitioFillProfiles();
@@ -9519,7 +9519,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
   STAGES.auto_refine3d.wire = function(paramFields){
     var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
-    if (pkg) pkg.addEventListener("change", autorefinePackageChanged);
+    if (pkg) pkg.addEventListener("change", function(){ autorefinePackageChanged(false); });
     abinitioFillProfiles();
   };
   STAGES.auto_refine3d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") autorefinePackageChanged(refreshing); };
@@ -9624,7 +9624,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
   STAGES.sharpen3d.wire = function(paramFields){
     var vol = paramFields.querySelector('[data-key="volume_asset_id"]');
-    if (vol) vol.addEventListener("change", sharpenVolumeChanged);
+    if (vol) vol.addEventListener("change", function(){ sharpenVolumeChanged(false); });
     // OnUseMaskCheckBox(): a supplied mask switches auto-masking off (and back when unticked).
     var useMask = paramFields.querySelector('[data-key="use_mask"]');
     if (useMask) useMask.addEventListener("change", function(){

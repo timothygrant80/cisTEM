@@ -436,7 +436,8 @@ _BLUSH = blush_phase.Host(module=sys.modules[__name__],
                           statistics=_round_statistics,
                           companion_path=lambda project_id, state, ref: blush_phase.assets_companion(project_id, ref),
                           half_maps=_half_maps,
-                          unfiltered=lambda state: state["settings"]["blush_unfiltered"])
+                          unfiltered=lambda state: state["settings"]["blush_unfiltered"],
+                          resolution_limit=lambda state, k: float(state["class_high_res_limits"][k]))
 
 
 def _mask_then_refine(conn, project_id, job_id, state):

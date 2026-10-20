@@ -290,6 +290,11 @@ def fsc_crossing_index(fsc, threshold=FSC_THRESHOLD):
     return res_index - 1
 
 
+def shell_of_resolution(resolution_a, box_size, pixel_size):
+    """The Fourier shell (of a box_size transform at pixel_size) at `resolution_a`."""
+    return int(round(box_size * float(pixel_size) / float(resolution_a))) if resolution_a and resolution_a > 0 else 0
+
+
 def fsc_by_shell(stats, box_size, key="part_fsc"):
     """cisTEM's statistics rows ({shell, fsc, part_fsc, ...}, shells 1..box/2) as an array indexed by shell, shell 0 = 1."""
     out = np.ones(box_size // 2 + 1, dtype=float)
@@ -558,7 +563,7 @@ class BlushCancelled(RuntimeError):
 
 
 def denoise(volume, pixel_size, mask_radius_a, fsc=None, input_is_filtered=False, stride=DEFAULT_STRIDE, batch_size=1,
-            threads=0, processes=1, device=None, model=None, progress=None):
+            threads=0, processes=1, device=None, model=None, progress=None, min_cut_shell=None, report=None):
     """RELION's refine3d() on one cisTEM map. `volume` (z, y, x) at `pixel_size`
     A; `mask_radius_a` the refinement's mask radius; `fsc` the round's FSC
     indexed by shell (fsc_by_shell), None for no spectral trailing. Returns the
@@ -572,7 +577,17 @@ def denoise(volume, pixel_size, mask_radius_a, fsc=None, input_is_filtered=False
     of the input's frequencies beyond the denoiser's 3 A Nyquist applies in
     both modes, since the network cannot produce them. On the CPU, `processes`
     > 1 shares the blocks over that many spawned processes of `threads`
-    PyTorch threads each (0: PyTorch's default); on a GPU both are ignored."""
+    PyTorch threads each (0: PyTorch's default); on a GPU both are ignored.
+
+    `min_cut_shell` is a floor on the trailing cut: the shell the caller's
+    refinement resolution limit lies at, so the cut never falls below what the
+    reference is refined against anyway. Without it an FSC under 1/7 from the
+    first shell -- an early ab-initio round of a small protein, where cisTEM
+    itself distrusts the FSC and hands refine3d default statistics -- puts the
+    crossing at shell -1 and the crossover grid is zero everywhere: a blank
+    map, and blank maps from then on (seen 2026-10-20). `report`, a dict, is
+    filled with the shells involved (fsc_shell, floor_shell, cut_shell,
+    floored, beyond_denoiser) for the caller's log."""
     import torch
     device = device or availability()["device"] or "cpu"
     pooled = device == "cpu" and processes > 1 and model is None   # the blocks run in worker processes
@@ -598,10 +613,17 @@ def denoise(volume, pixel_size, mask_radius_a, fsc=None, input_is_filtered=False
     denoised_df_nv = fft(denoised_nv)
     denoised_df = rescale_fourier(denoised_df_nv, n) * (n / n_nv) ** 3
     denoiser_limit = denoised_df_nv.shape[-1] - 3          # the last shell the 1.5 A grid can carry, less the edge
+    fsc_index = fsc_crossing_index(fsc) if fsc is not None else None
     if fsc is not None:
-        max_index = fsc_crossing_index(fsc)
+        max_index = fsc_index
     else:
         max_index = denoiser_limit + 1 if input_is_filtered else denoiser_limit
+    floored = min_cut_shell is not None and fsc is not None and int(min_cut_shell) > max_index
+    if floored:
+        max_index = int(min_cut_shell)
+    if report is not None:
+        report.update({"fsc_shell": fsc_index, "floor_shell": int(min_cut_shell) if min_cut_shell is not None else None, "cut_shell": max_index,
+                       "floored": floored, "beyond_denoiser": max_index > denoiser_limit, "box": n})
     if max_index > denoiser_limit:
         # The data reach beyond the denoiser's Nyquist: keep its low frequencies and the input's high ones.
         grid = crossover_grid(denoiser_limit, n, 3)
@@ -613,9 +635,11 @@ def denoise(volume, pixel_size, mask_radius_a, fsc=None, input_is_filtered=False
     return ifft(out_df)
 
 
-def denoise_file(input_paths, output_path, pixel_size, mask_radius_a, fsc_stats=None, input_is_filtered=False, **kwargs):
+def denoise_file(input_paths, output_path, pixel_size, mask_radius_a, fsc_stats=None, input_is_filtered=False, min_cut_resolution_a=None, **kwargs):
     """Read one map, or average several (the half maps) into the unfiltered
-    reconstruction, denoise it and write `output_path`; returns the output."""
+    reconstruction, denoise it and write `output_path`; returns the output.
+    `min_cut_resolution_a` is the refinement's resolution limit, the floor on
+    the trailing cut (denoise()'s min_cut_shell, in A)."""
     import volumes
     acc = None
     ps = None
@@ -626,7 +650,8 @@ def denoise_file(input_paths, output_path, pixel_size, mask_radius_a, fsc_stats=
     vol = acc / float(len(input_paths))
     ps = pixel_size or ps
     fsc = fsc_by_shell(fsc_stats, vol.shape[0]) if fsc_stats else None
-    out = denoise(vol, ps, mask_radius_a, fsc=fsc, input_is_filtered=input_is_filtered, **kwargs)
+    floor = shell_of_resolution(min_cut_resolution_a, vol.shape[0], ps) if min_cut_resolution_a else None
+    out = denoise(vol, ps, mask_radius_a, fsc=fsc, input_is_filtered=input_is_filtered, min_cut_shell=floor, **kwargs)
     volumes.write_mrc_volume(output_path, out, ps)
     return out
 

@@ -44,8 +44,12 @@ class Host:
     (masking, then the refinement), `continue_post` after the POST phase (the
     cycle); the rest read the state."""
 
-    def __init__(self, module, continue_pre, continue_post, pixel_size, mask_radius, statistics, companion_path, half_maps, unfiltered):
+    def __init__(self, module, continue_pre, continue_post, pixel_size, mask_radius, statistics, companion_path, half_maps, unfiltered,
+                 resolution_limit=None):
         self.module = module
+        # resolution_limit(state, k): the high-resolution limit (A) class k is refined to -- the floor on Blush's
+        # spectral cut (blush.denoise's min_cut_shell), so a worthless early FSC cannot blank the reference.
+        self.resolution_limit = resolution_limit
         self.continue_pre = continue_pre
         self.continue_post = continue_post
         self.pixel_size = pixel_size
@@ -54,6 +58,21 @@ class Host:
         self.companion_path = companion_path
         self.half_maps = half_maps
         self.unfiltered = unfiltered
+
+
+def _cut_note(report, pixel_size, limit):
+    """For the log: where the denoised map was cut, in A, and why."""
+    if not report or report.get("cut_shell") is None or not report.get("box"):
+        return ""
+    def res(shell):
+        return "{:.1f} A".format(report["box"] * pixel_size / shell) if shell and shell > 0 else "the origin"
+    if report.get("beyond_denoiser"):
+        return "; the data reach beyond the denoiser's 3 A, its output mixed with the input's higher frequencies"
+    if report.get("floored"):
+        return "; cut at the round's limit of {} (the FSC crossed 1/7 at {}, which would have left nothing)".format(res(report["cut_shell"]), res(report["fsc_shell"]))
+    if report.get("fsc_shell") is not None:
+        return "; cut at {} where the FSC crossed 1/7".format(res(report["cut_shell"]))
+    return ""
 
 
 def assets_companion(project_id, reference_file):
@@ -145,9 +164,13 @@ def _worker(host, project_id, job_id, phase):
                 return not cancel_event.is_set()
 
             progress_store.note(job_id, 0, 0, label + ": preparing ({})".format(layout))
+            limit = host.resolution_limit(state, k) if host.resolution_limit else None
+            report = {}
             blush.denoise_file(paths, out, host.pixel_size(state), host.mask_radius(state), fsc_stats=host.statistics(conn, state, k), input_is_filtered=filtered,
+                               min_cut_resolution_a=limit, report=report,
                                batch_size=rt["batch_size"], threads=rt["threads"], processes=rt["processes"], progress=progress)
-            m._log(project_id, job_id, "Blush: class {} denoised from {} -> {} ({}, batch {})".format(k + 1, note, os.path.basename(out), layout, rt["batch_size"]))
+            m._log(project_id, job_id, "Blush: class {} denoised from {} -> {} ({}, batch {}){}".format(
+                k + 1, note, os.path.basename(out), layout, rt["batch_size"], _cut_note(report, host.pixel_size(state), limit)))
             references.append(out)
         if phase == POST:
             for k in range(classes):

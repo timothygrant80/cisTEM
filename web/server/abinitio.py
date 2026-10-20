@@ -979,7 +979,9 @@ _BLUSH = blush_phase.Host(module=sys.modules[__name__],
                           statistics=_round_statistics,
                           companion_path=lambda project_id, state, ref: blush_phase.sibling_companion(ref),
                           half_maps=_half_maps,
-                          unfiltered=lambda state: True)
+                          unfiltered=lambda state: True,
+                          # the finer of this round's and the next's limits: the companion made after a merge serves the next round
+                          resolution_limit=lambda state, k: min(float(state["current_high_res"]), float(state.get("next_high_res") or state["current_high_res"])))
 
 
 def _mask_then_refine(conn, project_id, job_id, state):

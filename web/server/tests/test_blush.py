@@ -121,6 +121,28 @@ class PipelineTests(unittest.TestCase):
         plain = blush.denoise(noisy, 2.0, mask_radius_a=40.0, fsc=None, input_is_filtered=True, model=self.Identity(), device="cpu")
         self.assertGreater(np.abs(blush.fft(plain))[shells > 8].max(), 1e-2 * df.max())   # no cut without an FSC on a filtered input
 
+    def test_a_worthless_fsc_blanks_the_map_unless_the_cut_is_floored(self):
+        # An FSC under 1/7 from the first shell (an early ab-initio round of a small protein): the crossing is at
+        # shell -1 and the crossover grid zero everywhere, a blank map; with the round's resolution limit as the
+        # floor the map is kept to that limit.
+        vol, r = self._blob()
+        fsc = np.zeros(25); fsc[0] = 1.0            # as fsc_by_shell() builds it: 1 at the origin, the FSC from shell 1
+        blank = blush.denoise(vol, 2.0, mask_radius_a=40.0, fsc=fsc, model=self.Identity(), device="cpu")
+        self.assertLess(np.abs(blank).max(), 1e-6)
+        report = {}
+        floor = blush.shell_of_resolution(16.0, 48, 2.0)       # 48 * 2 / 16 = shell 6
+        self.assertEqual(floor, 6)
+        out = blush.denoise(vol, 2.0, mask_radius_a=40.0, fsc=fsc, model=self.Identity(), device="cpu", min_cut_shell=floor, report=report)
+        self.assertEqual((report["fsc_shell"], report["floor_shell"], report["cut_shell"], report["floored"]), (-1, 6, 6, True))
+        df = np.abs(blush.fft(out)); shells = blush.fourier_shells(df.shape)
+        self.assertGreater(df[shells < 4].max(), 1e-2 * np.abs(blush.fft(vol)).max())    # the low frequencies are there
+        self.assertLess(df[shells > 8].max(), 1e-3 * df.max())                           # and nothing past the limit
+        # a floor below the FSC's own crossing changes nothing
+        fsc = np.ones(25); fsc[12:] = 0.0
+        report = {}
+        blush.denoise(vol, 2.0, mask_radius_a=40.0, fsc=fsc, model=self.Identity(), device="cpu", min_cut_shell=6, report=report)
+        self.assertEqual((report["cut_shell"], report["floored"]), (10, False))
+
     def test_progress_is_reported_and_can_cancel(self):
         vol, _ = self._blob(64)
         seen = []
@@ -247,6 +269,10 @@ class PhaseHelperTests(unittest.TestCase):
             self.assertIs(host.module, mod)
             for name in ("_job_lock", "_load_state", "_save", "_finish", "_parent_row", "_log", "_progress_percent"):
                 self.assertTrue(callable(getattr(mod, name)), "{} lacks {}".format(mod.__name__, name))
+            self.assertTrue(callable(host.resolution_limit), "{} gives Blush no resolution limit".format(mod.__name__))
+        self.assertEqual(abinitio._BLUSH.resolution_limit({"current_high_res": 20.0, "next_high_res": 16.0}, 0), 16.0)
+        self.assertEqual(refine3d._BLUSH.resolution_limit({"settings": {"high_resolution_limit_a": 8.0}}, 0), 8.0)
+        self.assertEqual(autorefine._BLUSH.resolution_limit({"class_high_res_limits": [12.0, 9.5]}, 1), 9.5)
 
 
 class DriverSettingsTests(unittest.TestCase):

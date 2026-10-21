@@ -534,6 +534,14 @@ void MyApp::SendInfo(std::string info_to_send) {
 
 void MyApp::AddJobToResultQueue(JobResult* result_to_add) {
     // takes ownership of result_to_add
+
+    // An intermediate result belongs to the task this worker is running. refine3d and refine_ctf
+    // stamp theirs; reconstruct3d and refine2d's skipped-particle results leave job_number at the
+    // constructor's -1, and the job controller, which counts results per task for the server's
+    // progress bar, drops a result with no task -- so a reconstruction showed no progress until
+    // its tasks finished. The GUI never needed the stamp: it counted every result it received.
+    if ( result_to_add->job_number < 0 )
+        result_to_add->job_number = my_current_job.job_number;
     {
         std::lock_guard<std::mutex> lock(job_lock);
         job_queue.push_back(*result_to_add);

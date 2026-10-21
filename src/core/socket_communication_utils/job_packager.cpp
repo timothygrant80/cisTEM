@@ -1543,6 +1543,7 @@ JobResult::JobResult( ) {
 }
 
 JobResult::JobResult(int wanted_result_size, float* wanted_result_data) {
+    job_number = -1;
     SetResult(wanted_result_size, wanted_result_data);
 }
 

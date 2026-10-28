@@ -46,9 +46,6 @@ AC_DEFUN([AX_LIBTORCH],
 	# 	use_libtorch="no"
 	# ])
 
-	# Set automake conditional for Makefile.am
-	AM_CONDITIONAL([ENABLE_LIBTORCH_AM], [test "x$use_libtorch" = "xyes"])
-
 	AS_IF([test "x$use_libtorch" = "xyes"],
 	[
 		# Check if LIBTORCH_ROOT is set, otherwise try /opt/libtorch
@@ -101,6 +98,9 @@ AC_DEFUN([AX_LIBTORCH],
 			AC_MSG_NOTICE([  LIBTORCH_RPATH     = $LIBTORCH_RPATH])
 		])
 	])
+
+	# Set automake conditional for Makefile.am (after the file check, which may reset use_libtorch)
+	AM_CONDITIONAL([ENABLE_LIBTORCH_AM], [test "x$use_libtorch" = "xyes"])
 
 	# Substitute variables for use in Makefile.am
 	AC_SUBST(LIBTORCH_CXX_FLAGS)

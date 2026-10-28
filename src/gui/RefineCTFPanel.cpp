@@ -696,6 +696,7 @@ void CTFRefinementManager::BeginRefinementCycle( ) {
     active_high_resolution_limit   = my_parent->HighResolutionLimitTextCtrl->ReturnValue( );
     active_mask_radius             = my_parent->MaskRadiusTextCtrl->ReturnValue( );
     active_signed_cc_limit         = 0.0f;
+    active_sphere_radius           = 0.0f;
     active_defocus_search_range    = my_parent->DefocusSearchRangeTextCtrl->ReturnValue( );
     active_defocus_search_step     = my_parent->DefocusSearchStepTextCtrl->ReturnValue( );
     active_inner_mask_radius       = my_parent->InnerMaskRadiusTextCtrl->ReturnValue( );

@@ -1801,6 +1801,7 @@ void AutoRefinementManager::ProcessJobResult(JobResult* result_to_process) {
 
         output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.Init(output_refinement->resolution_statistics_pixel_size, output_refinement->resolution_statistics_box_size);
 
+        // FIXME: This appears redundant -- ResolutionStatistics::Init does Curve::ClearData() for each of these members already
         output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.FSC.ClearData( );
         output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_FSC.ClearData( );
         output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_SSNR.ClearData( );

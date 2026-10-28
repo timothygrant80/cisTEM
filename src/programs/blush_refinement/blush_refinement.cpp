@@ -18,6 +18,7 @@
 #include <string>
 #include <wx/string.h>
 #include <wx/log.h>
+#include <memory>
 
 /**
  * @brief Used by BlushRefinement class to spawn and communicate with the ipc_blush
@@ -111,19 +112,32 @@ class TorchShim {
         int in_pipe[2];
         int out_pipe[2];
 
-        if ( pipe(in_pipe) != 0 || pipe(out_pipe) != 0 ) {
-            wxLogError("TorchShim error: Failed to create POSIX pipes.");
+        // Create 2 one-way communication channel pipes for input/output
+        // in_pipe/out_pipe will now store 2 file descriptors, a read end [0] and a write end [1] each
+        if ( pipe(in_pipe) != 0 ) {
+            wxLogError("TorchShim error: Failed to create input POSIX pipe.");
+            return;
+        }
+        if ( pipe(out_pipe) != 0 ) {
+            close(in_pipe[0]);
+            close(in_pipe[1]);
+            wxLogError("TorchShim error: Failed to create output POSIX pipe.");
             return;
         }
 
+        // This object simply specifies what instructions should take place, and when
+        // Since the instructions below use posix_spawn_file_actions calls, it will take
+        // place on spawn
         posix_spawn_file_actions_t actions;
         posix_spawn_file_actions_init(&actions);
 
-        posix_spawn_file_actions_adddup2(&actions, in_pipe[0], STDIN_FILENO);
-        posix_spawn_file_actions_adddup2(&actions, out_pipe[1], STDOUT_FILENO);
+        // Open needed file descriptors using the standard file streams
+        posix_spawn_file_actions_adddup2(&actions, in_pipe[0], STDIN_FILENO); // READ
+        posix_spawn_file_actions_adddup2(&actions, out_pipe[1], STDOUT_FILENO); // WRITE
 
-        posix_spawn_file_actions_addclose(&actions, in_pipe[1]);
-        posix_spawn_file_actions_addclose(&actions, out_pipe[0]);
+        // Close unneeded file descriptors
+        posix_spawn_file_actions_addclose(&actions, in_pipe[1]); // WRITE
+        posix_spawn_file_actions_addclose(&actions, out_pipe[0]); // READ
 
         // wxScopedCharBuffer path_buffer = executablePath.mb_str( );
         std::string   path_buffer = executablePath.ToStdString( );
@@ -350,10 +364,15 @@ bool BlushRefinement::DoCalculation( ) {
         total_blush_iterations = n_steps * n_steps * n_steps;
     }
 
-    ProgressBar* progress_bar = nullptr;
+    // ProgressBar*                 progress_bar = nullptr;
+    std::unique_ptr<ProgressBar> progress_bar;
     if ( is_running_locally ) {
-        progress_bar = new ProgressBar(100);
+        // progress_bar = new ProgressBar(100);
+        progress_bar = std::make_unique<ProgressBar>(100);
     }
+    // else {
+    //     progress_bar = nullptr;
+    // }
     wxPrintf("\n\nBlushing %s...\n\n", ifname);
 
     // Load pixel data from Image for passage for passage to serialization function
@@ -379,9 +398,9 @@ bool BlushRefinement::DoCalculation( ) {
 
     wxPrintf("Performing inference...\n");
     if ( shim.IsValid( ) ) {
-        JobResult*        intermediate_result;
-        float             gui_result_params[3];
-        std::vector<char> result_bytes = shim.ProcessJob(buffer_data, [this, &pct_complete, progress_bar, &intermediate_result, &gui_result_params](int pct_increment, long s_rem) {
+        JobResult* intermediate_result;
+        float      gui_result_params[3];
+        auto       progress_callback = [this, &pct_complete, &progress_bar, &intermediate_result, &gui_result_params](int pct_increment, long s_rem) {
             if ( this->is_running_locally ) {
                 pct_complete += pct_increment;
                 std::min(pct_complete, 100);
@@ -400,7 +419,8 @@ bool BlushRefinement::DoCalculation( ) {
             }
 
             return true;
-        });
+        };
+        std::vector<char> result_bytes = shim.ProcessJob(buffer_data, progress_callback);
 
         wxPrintf("Completed inference.\n");
         const size_t expected_bytes = static_cast<size_t>(new_box_size) * new_box_size * new_box_size * sizeof(float);
@@ -418,9 +438,6 @@ bool BlushRefinement::DoCalculation( ) {
     }
     input_volume.AddFFTWPadding( );
 
-    if ( progress_bar ) {
-        delete progress_bar;
-    }
     MRCFile ofile(ofname, true);
     input_volume.WriteSlices(&ofile, 1, box_size);
     ofile.SetPixelSizeAndWriteHeader(pixel_size);

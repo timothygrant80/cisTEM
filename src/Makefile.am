@@ -813,11 +813,6 @@ console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 endif
 
-# Add LibTorch flags if enabled
-if ENABLE_LIBTORCH_AM
-console_test_CXXFLAGS += $(LIBTORCH_CXX_FLAGS)
-console_test_CPPFLAGS += $(LIBTORCH_CXX_FLAGS)
-endif
 
 console_test_LDSTRING=
 if WANT_CISTEM_GPU_AM
@@ -826,7 +821,7 @@ if WANT_CISTEM_GPU_AM
 endif
 
 
-console_test_LDADD    = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS) $(LIBTORCH_LIBS)
+console_test_LDADD    = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
 console_test_LDFLAGS  = $(LIBTORCH_RPATH)
 console_test_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 

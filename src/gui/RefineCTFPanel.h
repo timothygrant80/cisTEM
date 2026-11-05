@@ -141,6 +141,12 @@ class RefineCTFPanel : public RefineCTFPanelParent {
     int active_mask_thread_id;
     int next_thread_id;
 
+    /* 
+        Masking logic has been isolated to MaskingService.cpp, and giving the class access to the thread allows
+        creating a generic thread to use runtime polymorphism to instanstiate the correct thread.
+	*/
+    wxThread* masking_thread = nullptr;
+
   public:
     wxStopWatch stopwatch;
 

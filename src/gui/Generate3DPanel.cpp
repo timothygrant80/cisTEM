@@ -731,6 +731,7 @@ void Generate3DPanel::SetupMerge3dJob( ) {
         wxString orthogonal_views_filename   = main_frame->current_project.volume_asset_directory.GetFullPath( ) + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i.mrc", number_of_3d_jobs + 1, input_refinement->refinement_id, class_counter + 1);
         float    weiner_nominator            = 1.0f;
         float    alignment_res               = 5;
+
         current_job_package.AddJob("ttttfffttibtiff", output_reconstruction_1.ToUTF8( ).data( ),
                                    output_reconstruction_2.ToUTF8( ).data( ),
                                    output_reconstruction_filtered.ToUTF8( ).data( ),

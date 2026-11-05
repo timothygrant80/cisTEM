@@ -104,7 +104,7 @@
                 }
             }
         },
-        {
+		{
             "label": "Configure cisTEM DEBUG build with LibTorch",
             "type": "shell",
             "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-libtorch && cd ${build_dir}/intel-gpu-debug-static-libtorch && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-libtorch ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "

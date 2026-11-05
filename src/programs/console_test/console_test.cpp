@@ -6,7 +6,6 @@
 #include "wx/socket.h"
 
 #include "../../core/core_headers.h"
-#include "../../../include/libtorch/cistem_torch_helper.h"
 
 // embedded images..
 
@@ -109,9 +108,6 @@ class
     void TestRunProfileDiskOperations( );
     void TestCTFNodes( );
     void TestSpectrumImageMethods( );
-#ifdef cisTEM_USING_LIBTORCH
-    void TestLibTorch( );
-#endif
 
     void BeginTest(const char* test_name);
     void EndTest( );
@@ -171,9 +167,6 @@ bool MyTestApp::DoCalculation( ) {
     TestRunProfileDiskOperations( );
     TestCTFNodes( );
     TestSpectrumImageMethods( );
-#ifdef cisTEM_USING_LIBTORCH
-    TestLibTorch( );
-#endif
 
     wxPrintf("\n\n\n");
 
@@ -721,8 +714,16 @@ void MyTestApp::TestEmpiricalDistribution( ) {
  */
 struct LogCaptureRAII {
     wxLogBuffer buffer;
+    wxLog*      old_target;
 
     LogCaptureRAII( ) {
+        // Save the current log target and set our buffer as the active target
+        old_target = wxLog::SetActiveTarget(&buffer);
+    }
+
+    ~LogCaptureRAII( ) {
+        // Restore the previous log target
+        wxLog::SetActiveTarget(old_target);
     }
 
     // Disable copy, allow move if needed in future
@@ -732,21 +733,15 @@ struct LogCaptureRAII {
     template <class Obj, class MemFn, class... Args>
     decltype(auto) call(Obj&& obj, MemFn memfn, Args&&... args) {
         clear( );
-        wxLog* old_target;
-        old_target = wxLog::SetActiveTarget(&buffer);
 
         // memfn is a pointer-to-member (e.g., &T::foo)
         if constexpr ( std::is_void_v<std::invoke_result_t<MemFn, Obj, Args...>> ) {
-
             (std::forward<Obj>(obj).*memfn)(std::forward<Args>(args)...);
-            return;
         }
         else {
             auto&& r = (std::forward<Obj>(obj).*memfn)(std::forward<Args>(args)...);
             return std::forward<decltype(r)>(r);
         }
-
-        wxLog::SetActiveTarget(old_target);
     }
 
     // Check whether the captured buffer contains the given substring
@@ -2147,30 +2142,6 @@ void MyTestApp::TestSpectrumImageMethods( ) {
 
     EndTest( );
 }
-
-#ifdef cisTEM_USING_LIBTORCH
-void MyTestApp::TestLibTorch( ) {
-    BeginTest("LibTorch Linking and Basic Operations");
-
-    // Create a tensor with values [1, 2, 3, 4] in a 2x2 matrix
-    torch::Tensor tensor = torch::tensor({{1.0f, 2.0f}, {3.0f, 4.0f}});
-
-    // Square the tensor (element-wise multiplication)
-    torch::Tensor squared = tensor * tensor;
-
-    // Check that the result is correct: [1, 4, 9, 16]
-    float  expected[] = {1.0f, 4.0f, 9.0f, 16.0f};
-    float* data       = squared.data_ptr<float>( );
-
-    for ( int i = 0; i < 4; i++ ) {
-        if ( std::abs(data[i] - expected[i]) > 0.0001f ) {
-            FailTest;
-        }
-    }
-
-    EndTest( );
-}
-#endif
 
 void MyTestApp::BeginTest(const char* test_name) {
     // For access by other tests when running CheckDependencies

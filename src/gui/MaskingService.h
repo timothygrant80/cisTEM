@@ -14,10 +14,6 @@ class AbInitioManager;
 template <typename PanelType>
 void DispatchMasking(PanelType* panel);
 
-// void DispatchMasking(AutoRefinementManager* manager);
-// void DispatchMasking(RefinementManager* manager);
-// void DispatchMasking(AbInitioManager* manager);
-
 struct MaskingParams {
     // Input/output files
     wxArrayString input_files;
@@ -53,8 +49,6 @@ class MaskingService {
     static wxThread* StartMasking(
             wxWindow*      parent,
             MaskingParams& params);
-
-    //   private:
 };
 
 void StopAndDestroyMaskingThread(wxThread*& masking_thread);

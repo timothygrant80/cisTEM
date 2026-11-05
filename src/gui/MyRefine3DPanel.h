@@ -201,9 +201,7 @@ class MyRefine3DPanel : public Refine3DPanel {
 
     void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
     void OnMaskerThreadComplete(wxThreadEvent& my_event);
-    // void OnWorkerThreadMessage(wxThreadEvent& event);
 
-    // Move these to public because DispatchMasking in MaskingService.cpp needs access
     int active_mask_thread_id;
     int next_thread_id;
 
@@ -212,7 +210,6 @@ class MyRefine3DPanel : public Refine3DPanel {
 	long-running process to avoid memory leaks and segfaults. By giving the GUI panel access to the thread,
 	it can issue a destroy command that will clean up resources being used by the thread.
 	*/
-    // Use polymorphism to allow this pointer to store both the AutoMaskerThread as well as the Multiply3DMaskThread
     wxThread*                          masking_thread = nullptr;
     std::shared_ptr<std::atomic<bool>> stop_flag      = std::make_shared<std::atomic<bool>>(false); // For halting masking thread (mostly because of blush)
 };

@@ -66,7 +66,6 @@ AutoRefine3DPanel::AutoRefine3DPanel(wxWindow* parent)
     Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
     Bind(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
     Bind(EVT_UPDATE_MASK_THREAD_PROGRESS, &AutoRefine3DPanel::OnUpdateMaskerThreadProgress, this);
-    // Bind(EVT_WORKER_THREAD_MESSAGE, &AutoRefine3DPanel::OnWorkerThreadMessage, this);
     Bind(RETURN_PROCESSED_IMAGE_EVT, &AutoRefine3DPanel::OnOrthThreadComplete, this);
 
     my_refinement_manager.SetParent(this);
@@ -2078,7 +2077,6 @@ void AutoRefinementManager::ProcessAllJobsFinished( ) {
 
         my_parent->Layout( );
 
-        //wxPrintf("Calling cycle refinement\n");
         main_frame->DirtyVolumes( );
         main_frame->DirtyRefinements( );
 
@@ -2089,7 +2087,6 @@ void AutoRefinementManager::ProcessAllJobsFinished( ) {
         CycleRefinement( );
     }
     else if ( running_job_type == BLUSH_INFERENCE ) {
-        // Already wrote the MRC when all jobs finished, so maybe spawn the next process(es) here
         main_frame->job_controller.KillJob(my_parent->my_job_id);
         if ( active_should_auto_mask || active_should_mask ) {
             DispatchMasking(my_parent);
@@ -2289,12 +2286,6 @@ void AutoRefinementManager::CycleRefinement( ) {
         }
     }
 }
-
-// void AutoRefine3DPanel::OnWorkerThreadMessage(wxThreadEvent& event) {
-//     wxString msg = event.GetString( );
-//     WriteErrorText(msg);
-//     my_refinement_manager.apply_blush_denoising = false; // skip future calls to blush if we can't do it
-// }
 
 void AutoRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event) {
     if ( my_event.GetInt( ) == active_mask_thread_id ) {

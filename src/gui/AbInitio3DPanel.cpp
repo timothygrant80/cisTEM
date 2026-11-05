@@ -42,7 +42,6 @@ AbInitio3DPanel::AbInitio3DPanel(wxWindow* parent)
     Bind(EVT_UPDATE_MASK_THREAD_PROGRESS, &AbInitio3DPanel::OnUpdateMaskerThreadProgress, this);
     Bind(wxEVT_RESAMPLE_VOLUME_EVENT, &AbInitio3DPanel::OnVolumeResampled, this);
     Bind(wxEVT_COMMAND_IMPOSESYMMETRY_DONE, &AbInitio3DPanel::OnImposeSymmetryThreadComplete, this);
-    // Bind(EVT_WORKER_THREAD_MESSAGE, &AbInitio3DPanel::OnWorkerThreadMessage, this);
     FillRefinementPackagesComboBox( );
 
     // limits
@@ -2736,12 +2735,6 @@ void AbInitio3DPanel::OnImposeSymmetryThreadComplete(wxThreadEvent& event) {
         }
     }
 }
-
-// void AbInitio3DPanel::OnWorkerThreadMessage(wxThreadEvent& event) {
-//     wxString msg = event.GetString( );
-//     WriteErrorText(msg);
-//     my_refinement_manager.apply_blush_denoising = false; // skip future calls to blush if we can't do it
-// }
 
 void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event) {
     // in theory the long data should contain a pointer to wxPanel that we are going to add to the notebook..

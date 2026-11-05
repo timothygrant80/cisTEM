@@ -732,8 +732,6 @@ void Generate3DPanel::SetupMerge3dJob( ) {
         float    weiner_nominator            = 1.0f;
         float    alignment_res               = 5;
 
-        // NOTE: the final two arguments are only used for blush, but blush will not be used for generate3D.
-        // The merge3d program still expects them, however, so they will be passed here but never used.
         current_job_package.AddJob("ttttfffttibtiff", output_reconstruction_1.ToUTF8( ).data( ),
                                    output_reconstruction_2.ToUTF8( ).data( ),
                                    output_reconstruction_filtered.ToUTF8( ).data( ),
@@ -744,8 +742,7 @@ void Generate3DPanel::SetupMerge3dJob( ) {
                                    class_counter + 1,
                                    save_orthogonal_views_image,
                                    orthogonal_views_filename.ToUTF8( ).data( ),
-                                   number_of_reconstruction_jobs, weiner_nominator, alignment_res
-                                   /*false, 0.0f*/);
+                                   number_of_reconstruction_jobs, weiner_nominator, alignment_res);
     }
 }
 

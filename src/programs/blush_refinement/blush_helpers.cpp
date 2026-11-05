@@ -118,9 +118,6 @@ torch::Tensor generate_radial_mask(const int& box_size, const float& radius, con
         scale = torch::where(r > radius, 0, scale);
     }
 
-    // write_real_values_to_text_file("cpp_radial_mask_writeout.txt", box_size, false, true, &scale);
-    // compare_text_file_lines("cpp_radial_mask_writeout.txt", "py_radial_mask_writeout.txt", "comp_radial_mask_writeout.txt");
-
     return scale;
 }
 
@@ -145,7 +142,6 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
     // torch::NoGradGuard no_grad;
 
     torch::set_num_threads(max_threads);
-    // torch::set_num_interop_threads(1);
 
     constexpr float model_voxel_size{1.5f}; // The expected voxel/pixel size of inputs to the blush model
     constexpr int   model_block_size{64};
@@ -182,8 +178,6 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
         return;
     }
 
-    // input_volume.RemoveFFTWPadding( );
-
     volume_tensor = torch::from_blob(input_volume.data( ), {box_size, box_size, box_size}, torch::kFloat32).clone( ).contiguous( );
     volume_tensor = volume_tensor.permute({2, 1, 0}).contiguous( ); // Change to (z, y, x) order for LibTorch
 
@@ -218,9 +212,7 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
     int bi = 0;
     try {
         BlockIterator it({box_size, box_size, box_size}, model_block_size, strides);
-        // int           bi = 0;
         //////////////// FOR UPDATING GUI /////////////////////////////////////////////////////
-        // bool                                  calculated_avg_duration{false};
         std::chrono::system_clock::time_point global_start_time{std::chrono::high_resolution_clock::now( )};
         int                                   current_iteration{0};
         int                                   last_percent{-1};
@@ -235,11 +227,11 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
         long   forward_call_count{0};
 
         for ( auto it_coords : it ) {
-            /* This is an InferenceMode guard that prevents the BlushModel using LibTorch from tracking
+            /* 
+               This is an InferenceMode guard that prevents the BlushModel using LibTorch from tracking
 			   unnecessary data while processing, such as gradients, which are used for training. If
 			   this were tracked it could result in using excessive amounts of memory.
 			*/
-
             torch::InferenceMode inference;
             if ( stop_flag && stop_flag->load(std::memory_order_relaxed) ) {
                 return;
@@ -248,12 +240,12 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
             torch::Tensor volume_block;
             torch::Tensor std_dev_block;
 
-            // auto it_coords = it.get_coords_by_index(i);
             int x = std::get<0>(it_coords);
             int y = std::get<1>(it_coords);
             int z = std::get<2>(it_coords);
 
             current_iteration++;
+
             // Here -1 is just a method for determining if iterations have finished; could probably improve clarity,
             // but for now this note is enough.
             if ( x > -1 ) {
@@ -261,8 +253,6 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
                 float         mask_mean     = current_slice.mean( ).item<float>( );
 
                 // Skip this block if the mask mean is quite low as there must not be much density here.
-
-                // Using blush mask and the mean is too small
                 constexpr float mean_threshold = 0.3f;
                 if ( mask_mean < mean_threshold ) {
                     continue;
@@ -330,7 +320,6 @@ void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filen
             std::tuple<torch::Tensor, torch::Tensor> output        = model.forward(batch.select(1, 0).contiguous( ), batch.select(1, 1).contiguous( ));
             forward_only_ms += std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now( ) - forward_start).count( );
             forward_call_count++;
-            // torch::Tensor vol_outputs    = std::get<0>(initial_output).clone( );
             torch::Tensor vol_outputs = std::get<0>(output).clone( );
 
             for ( int i = 0; i < bi; i++ ) {

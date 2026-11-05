@@ -119,6 +119,7 @@ if test "x$CXX" = "xicpc"; then
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
   # This may only be needed for dynamic linking
   
+LIBS="$LIBS -lz"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
@@ -230,9 +231,6 @@ if test "x$want_blush_refinement" = "xyes" || test "x$enable_blush" = "xyes"; th
 	fi
 fi
 AM_CONDITIONAL([ENABLE_BLUSHREFINEMENT_AM], [test "x$build_blush_refinement" = "xyes"])
-
-# Specifically activate blush if needed.
-# submodule_Blush
 
 # wx-config 
 
@@ -573,18 +571,8 @@ if test "x$use_mkl_threads" = "xyes" -o "x$use_gnu_threads" = "xyes"; then
             MKL_LIBS="$MKL_LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread "
         fi
     else
-		if test "x$static_link" = "xtrue" ; then
-            # Mirroring the workaround for libtool's handling of circular dependencies
-			# GNU threads are required for threading library compatability with LibTorch
-            LIBTOOL_FLAGS="--preserve-dup-deps "
-            circular_deps="${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a "
-			
-			# Explicitly repeat the circular dependencies 3 times to ensure symbol resolution
-			# This is required because libmkl_core.a and libmkl_gnu_threads.a have circular dependencies, and libtool
-			# tries to do a single pass, which means that one of the libraries will not be defined before the other;
-			# therefore doing multiple passes ensures that the symbols are resolved by ensuring libtool is checking
-			# the deps each time it thinks it has encountered something that is undefined.
-			MKL_LIBS="$MKL_LIBS ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${circular_deps} ${circular_deps} ${circular_deps} -lpthread -lm -ldl"
+        if test "x$static_link" = "xtrue" ; then
+            MKL_LIBS="$MKL_LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a  ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread "
         else
             MKL_LIBS="$MKL_LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread "
         fi

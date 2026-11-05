@@ -27,15 +27,13 @@
 #include <memory>
 #include <vector>
 #include <cstdint>
-#include <cstring> // Needed for std::memcpy
+#include <cstring>
 #include <cstdio>
 #include <csignal>
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/prctl.h>
 #include <signal.h>
-
-// #include <mkl_service.h>
 
 void SignalHandler(int sig) {
     BLUSH_LOG_ERROR("FATAL CRASH: OS sent signal %d to child process!", sig);
@@ -162,10 +160,6 @@ int main( ) {
             BLUSH_LOG_INFO("Using default log directory (CLI mode)");
         }
 
-        // {
-        //     std::string msg = "Successfully loaded model_filename: " + model_filename + "\n";
-        //     DbgLog(msg.c_str( ));
-        // }
         // Ensure the buffer is large enough to hold all necessary data.
         size_t remaining_header = sizeof(float) + (3 * sizeof(int));
         if ( offset + remaining_header > buffer.size( ) ) {
@@ -178,7 +172,6 @@ int main( ) {
         int   num_threads;
         int   batch_size;
 
-        // std::memcpy(&pixel_size,  buffer.data() + offset, sizeof(float)); offset += sizeof(float);
         std::memcpy(&mask_radius, buffer.data( ) + offset, sizeof(float));
         offset += sizeof(float);
         std::memcpy(&box_size, buffer.data( ) + offset, sizeof(int));
@@ -188,8 +181,6 @@ int main( ) {
         std::memcpy(&batch_size, buffer.data( ) + offset, sizeof(int));
         offset += sizeof(int);
 
-        // DbgLog("Successfully parsed remaining serialized data.\n");
-
         // Calculate remaining bytes for pixel data
         size_t pixel_bytes = buffer.size( ) - offset;
 
@@ -198,7 +189,6 @@ int main( ) {
             continue;
         }
 
-        // DbgLog("Verified all bytes read\n");
         size_t num_floats = pixel_bytes / sizeof(float);
 
         // Pre-allocate the vector before copying!
@@ -212,8 +202,6 @@ int main( ) {
         auto stop_flag = std::make_shared<std::atomic<bool>>(false);
 
         // Execute blush with a dummy lambda (no UI progress bar!)
-        // std::cerr << "About to execute BlushHelpers::ApplyBlush..." << std::endl;
-
         enum TransmissionType { PROGRESS = 1,
                                 RESULT   = 2 };
 

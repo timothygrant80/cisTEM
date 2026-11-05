@@ -86,32 +86,6 @@ class BlockIterator {
         return {x_range[x_idx], y_range[y_idx], z_range[z_idx]};
     }
 
-    /**
-     * @brief Get the next coords to be used for slices that will be passed to Blush.
-     * 
-     * @return std::tuple<int, int, int> Contains the coordinates to be used in blocks. If these integers are negative, iterating will cease.
-     */
-    // std::tuple<int, int, int> next( ) {
-    //     if ( ! has_next( ) ) {
-    //         return {-1, -1, -1};
-    //     }
-
-    //     if ( x_index == x_range.size( ) ) {
-    //         x_index = 0;
-    //         y_index++;
-    //     }
-    //     if ( y_index == y_range.size( ) ) {
-    //         y_index = 0;
-    //         z_index++;
-    //     }
-
-    //     std::tuple<int, int, int> coords{x_range[x_index], y_range[y_index], z_range[z_index]};
-    //     x_index++;
-    //     index++;
-
-    //     return coords;
-    // }
-
   private:
     std::vector<int> x_range, y_range, z_range;
 

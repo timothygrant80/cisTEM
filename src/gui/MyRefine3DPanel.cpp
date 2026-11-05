@@ -63,7 +63,6 @@ MyRefine3DPanel::MyRefine3DPanel(wxWindow* parent)
     Bind(RETURN_PROCESSED_IMAGE_EVT, &MyRefine3DPanel::OnOrthThreadComplete, this);
     Bind(EVT_UPDATE_MASK_THREAD_PROGRESS, &MyRefine3DPanel::OnUpdateMaskerThreadProgress, this);
     Bind(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
-    // Bind(EVT_WORKER_THREAD_MESSAGE, &MyRefine3DPanel::OnWorkerThreadMessage, this);
     Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 
     my_refinement_manager.SetParent(this);
@@ -2415,12 +2414,6 @@ void RefinementManager::CycleRefinement( ) {
     main_frame->DirtyVolumes( );
     main_frame->DirtyRefinements( );
 }
-
-// void MyRefine3DPanel::OnWorkerThreadMessage(wxThreadEvent& event) {
-//     wxString msg = event.GetString( );
-//     WriteErrorText(msg);
-//     my_refinement_manager.apply_blush_denoising = false; // skip future calls to blush if we can't do it
-// }
 
 void MyRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event) {
     if ( masking_thread ) {

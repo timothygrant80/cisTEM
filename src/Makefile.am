@@ -777,8 +777,8 @@ if ENABLE_WEBVIEW_AM
 cisTEM_SOURCES += gui/WebViewPanel.cpp
 endif
 
-cisTEM_CXXFLAGS = $(WX_CPPFLAGS) $(LIBTORCH_CXX_FLAGS)
-cisTEM_CPPFLAGS = $(WX_CPPFLAGS) $(LIBTORCH_CXX_FLAGS)
+cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
+cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
 cisTEM_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
@@ -791,7 +791,7 @@ cisTEM_display_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
 gui_test_CXXFLAGS = $(WX_CPPFLAGS)
 gui_test_CPPFLAGS = $(WX_CPPFLAGS)
-gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
+gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)
 gui_test_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 cisTEM_job_control_SOURCES  = programs/guix_job_control/guix_job_control.cpp 
@@ -1138,7 +1138,7 @@ azimuthal_average_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 if ENABLE_LIBTORCH_AM
 if ENABLE_BLUSHREFINEMENT_AM
 ipc_blush_SOURCES = programs/blush_refinement/blush_model.cpp programs/blush_refinement/blush_helpers.cpp programs/blush_refinement/ipc_blush.cpp
-ipc_blush_CXXFLAGS = $(LIBTORCH_CXX_FLAGS) # -diag-disable=1011,2196
+ipc_blush_CXXFLAGS = $(LIBTORCH_CXX_FLAGS)
 ipc_blush_CPPFLAGS = $(LIBTORCH_CXX_FLAGS) 
 # NOTE: ipc_blush links only LibTorch, avoiding cisTEM's sequential-MKL stack (see
 # ipc_blush.cpp, m4/libtorch.m4). Top-level -qmkl=sequential/-fopenmp still apply here since

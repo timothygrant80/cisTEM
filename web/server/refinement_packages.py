@@ -532,7 +532,12 @@ def create_package(conn, project_id, params, log=None, progress=None):
         # Cropped or padded (with the particle's own edge average) to the new box, moved by the
         # classification's shift in whole pixels when re-centring, inverted if their stack holds white
         # protein (as a cut particle from a white-protein image is), otherwise as they are; their
-        # CTF and half-set come from the source package's contained-particles row.
+        # CTF and half-set come from the source package's contained-particles row, and so does their
+        # original position id, the thread back to the source particle (as the wizard keeps it) --
+        # unless that id is already taken in this package (an imported stack numbers its particles
+        # 1..N, so copies from two such stacks, or beside re-cut picks, can clash on the table's
+        # primary key) or is not a positive number, when a unique negative id stands in.
+        used_ids = {c["position_id"] for c in contained}
         for pid, pkg in stacks.items():
             group = [c for c in copies if c["package_id"] == pid]
             src_box, ps = int(pkg["STACK_BOX_SIZE"]), float(pkg["OUTPUT_PIXEL_SIZE"] or 1.0)
@@ -551,8 +556,11 @@ def create_package(conn, project_id, params, log=None, progress=None):
                 writer.append_many(boxes)
                 for k, c in enumerate(chunk):
                     row = c["contained"]
+                    source_id = row["ORIGINAL_PARTICLE_POSITION_ASSET_ID"]
+                    position_id = int(source_id) if source_id is not None and int(source_id) > 0 and int(source_id) not in used_ids else -(first + k)
+                    used_ids.add(position_id)
                     contained.append({
-                        "position_id": -(first + k), "image_id": -1, "position_in_stack": first + k,
+                        "position_id": position_id, "image_id": -1, "position_in_stack": first + k,
                         "x": float(row["X_POSITION"] or 0.0) + c["dx_a"], "y": float(row["Y_POSITION"] or 0.0) + c["dy_a"],
                         "pixel_size": float(row["PIXEL_SIZE"] or ps), "defocus1": float(row["DEFOCUS_1"] or 0.0), "defocus2": float(row["DEFOCUS_2"] or 0.0),
                         "defocus_angle": float(row["DEFOCUS_ANGLE"] or 0.0), "phase_shift": float(row["PHASE_SHIFT"] or 0.0),

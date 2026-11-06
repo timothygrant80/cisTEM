@@ -73,7 +73,7 @@ class FromStackTests(unittest.TestCase):
         self.assertEqual([r["DEFOCUS_1"] for r in rows], [15000.0, 15002.0, 15004.0])        # the source's CTF
         self.assertEqual([r["ASSIGNED_SUBSET"] for r in rows], [2, 1, 1])                   # and half-set
         self.assertEqual([r["X_POSITION"] for r in rows], [-3.0] * 3)                        # re-centred position
-        self.assertTrue(all(r["ORIGINAL_PARTICLE_POSITION_ASSET_ID"] < 0 for r in rows))     # not position assets
+        self.assertEqual([r["ORIGINAL_PARTICLE_POSITION_ASSET_ID"] for r in rows], [1, 3, 5])  # the source's ids, the thread back
         pkg = self.conn.execute("SELECT STACK_BOX_SIZE, OUTPUT_PIXEL_SIZE FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (out["refinement_package_asset_id"],)).fetchone()
         self.assertEqual((pkg[0], pkg[1]), (32, 1.5))
 
@@ -81,6 +81,31 @@ class FromStackTests(unittest.TestCase):
         out = self._create(box_size=16, recentre=False)
         got = rp.read_mrc_section(out["stack_filename"], 1)
         np.testing.assert_array_equal(got, self.particles[0][4:20, 4:20])
+
+    def test_a_colliding_source_id_gets_a_negative_one(self):
+        # A second imported stack numbers its particles 1..N as well: copies from both in one package keep the
+        # first's ids and the second's clashing ones become unique negative ids.
+        stack2 = os.path.join(self.tmp, "imported2.mrc")
+        w = rp.MrcStackWriter(stack2, BOX, 1.5)
+        for i in range(N):
+            w.append(np.full((BOX, BOX), float(i), dtype=np.float32))
+        w.close()
+        contained = [{"position_id": i + 1, "image_id": -1, "position_in_stack": i + 1, "x": 0.0, "y": 0.0, "pixel_size": 1.5,
+                      "defocus1": 25000.0 + i, "defocus2": 24000.0 + i, "defocus_angle": 30.0, "phase_shift": 0.0, "cs": 2.7, "voltage": 300.0,
+                      "amplitude_contrast": 0.07, "subset": 1} for i in range(N)]
+        rp.insert_package(self.conn, 2, "Imported 2", stack2, BOX, 1.5, "C1", 120.0, 80.0, 1, contained, 2)
+        rp.insert_initial_refinement(self.conn, 2, 2, "Random", [[(i + 1, 0, 0, 0, 0, 0, 25000.0 + i, 24000.0 + i, 30.0, 0.0, 100.0, 0, 1, 0, 1, 1.5, 300.0, 2.7, 0.07, 0, 0, 0, 0, 1) for i in range(N)]],
+                                     BOX, 1.5, 120.0)
+        cls = {"classification_id": 2, "refinement_package_asset_id": 2, "name": "C2", "class_average_file": "/nonexistent.mrc", "number_of_particles": N,
+               "number_of_classes": 2, "low_resolution_limit": 300, "high_resolution_limit": 8, "mask_radius": 100, "angular_search_step": 15,
+               "search_range_x": 100, "search_range_y": 100, "smoothing_factor": 1, "exclude_blank_edges": False, "auto_percent_used": True, "percent_used": 100}
+        c2d.add_classification(self.conn, cls, [dict(c2d.empty_result(i + 1), best_2d_class=1 if i < 2 else 2, x_shift=0.0, y_shift=0.0) for i in range(N)])
+        sel2 = c2d.create_selection(self.conn, 2, "picked2", [1])          # particles 1 and 2 of package 2
+        out = rp.create_package(self.conn, self.project, {"selection_ids": [self.selection, sel2], "name": "Both", "output_pixel_size": 1.5, "box_size": BOX})
+        rows = self.conn.execute("SELECT * FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} ORDER BY POSITION_IN_STACK".format(out["refinement_package_asset_id"])).fetchall()
+        self.assertEqual(out["particles"], 5)
+        self.assertEqual([r["ORIGINAL_PARTICLE_POSITION_ASSET_ID"] for r in rows], [1, 3, 5, -4, 2])   # package 2's 1 clashes, its 2 does not
+        self.assertEqual([r["DEFOCUS_1"] for r in rows], [15000.0, 15002.0, 15004.0, 25000.0, 25001.0])
 
     def test_a_different_pixel_size_is_refused(self):
         with self.assertRaises(ValueError) as cm:

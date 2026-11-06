@@ -833,6 +833,21 @@ table.rp-commands-table td:not(:first-child),table.rp-commands-table th:not(:fir
 .display-manual{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14.5px;}
 .display-manual canvas{border:1px solid var(--border);background:var(--surface);}
 .display-manual input[type=number]{width:110px;padding:3px 6px;font-size:14.5px;}
+/* The Display window is not modal: no scrim, the page behind it stays live. Side puts it at the
+   right so a Results list on the left can be used while it is open. */
+.modal.display-modal.side{left:auto;right:10px;top:10px;width:min(980px,58vw);height:calc(100% - 20px);max-height:none;transform:none;}
+.modal.display-modal.side.open{transform:none;}
+.display-window-controls{display:flex;gap:6px;align-items:center;margin-left:auto;margin-right:14px;}
+.display-window-controls .dp-toggle[aria-pressed="true"]{background:var(--surface-sunken);box-shadow:inset 0 1px 2px rgba(0,0,0,.15);}
+.display-tabs{display:flex;gap:4px;padding:6px 18px 0;border-bottom:1px solid var(--border);overflow-x:auto;flex:0 0 auto;background:var(--surface-sunken);}
+.display-tabs[hidden]{display:none;}
+.display-tab{display:flex;align-items:center;gap:6px;max-width:280px;padding:5px 6px 6px 10px;border:1px solid var(--border);border-bottom:none;background:var(--surface-sunken);color:var(--text-secondary);font-size:14.5px;cursor:pointer;white-space:nowrap;border-radius:4px 4px 0 0;margin-bottom:-1px;}
+.display-tab.active{background:var(--surface);color:var(--text);border-color:var(--border-strong);border-bottom:1px solid var(--surface);}
+.display-tab .dp-tab-key{font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);min-width:8px;}
+.display-tab .dp-tab-title{overflow:hidden;text-overflow:ellipsis;}
+.display-tab .dp-tab-close{border:none;background:none;padding:0 3px;font-size:17px;line-height:1;color:var(--text-secondary);cursor:pointer;}
+.display-tab .dp-tab-close:hover{color:var(--text);}
+.display-panel[hidden]{display:none;}
 /* The expand icon in a picture's top-left corner: opens the file behind
    the picture in the Display window. Hidden until the view knows the file. */
 .fig-expand{position:absolute;left:6px;top:6px;z-index:2;width:24px;height:24px;padding:0;border:1px solid var(--border-strong);background:rgba(255,255,255,.88);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:2px;}
@@ -1900,7 +1915,6 @@ From branch : <span id="versionBranch">—</span></p>
   </div>
   <div class="modal-body"><svg id="plotModalSvg" class="ra-plot ang-plot plot-modal-svg" viewBox="0 0 340 240"></svg></div>
 </div>
-<div class="scrim" id="displayScrim"></div>
 <!-- cisTEM's DisplayPanel as a modal: the asset panels' Display buttons open
      a file here, and its own Open button browses the server's files. The
      server hands over the section's numbers (GET /display/section) and the
@@ -1908,8 +1922,14 @@ From branch : <span id="versionBranch">—</span></p>
 <div class="modal display-modal" id="displayModal">
   <div class="modal-head">
     <div class="modal-title" id="displayTitle">Display</div>
+    <div class="display-window-controls">
+      <button class="small dp-toggle" id="displayLockBtn" aria-pressed="false" title="Show every tab the same way: the image number, scale, greys, invert and FFT of one tab apply to all of them, so files are compared like for like">Lock views</button>
+      <button class="small dp-toggle" id="displaySideBtn" aria-pressed="false" title="Put the window at the right of the page, leaving the lists on the left in reach, so another round or volume can be opened in a new tab without closing it">Side</button>
+      <button class="small" id="displayCloseAllBtn" title="Close every tab">Close All</button>
+    </div>
     <button class="log-close" id="displayModalClose" aria-label="Close">&times;</button>
   </div>
+  <div class="display-tabs" id="displayTabs" role="tablist" title="The open files. Tab / Shift+Tab step through them, 1–9 pick one, Space goes back to the one looked at before"></div>
   <div class="modal-body">
     <div id="displayPanelHost"></div>
   </div>
@@ -2958,7 +2978,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseGoBtn","browseList",
    "browseTitle","browseNote",
-   "movieDisplayBtn","displayScrim","displayModal","displayModalClose","displayTitle","displayPanelHost","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
+   "movieDisplayBtn","displayModal","displayModalClose","displayTitle","displayPanelHost","displayTabs","displayLockBtn","displaySideBtn","displayCloseAllBtn","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
@@ -3584,12 +3604,59 @@ From branch : <span id="versionBranch">—</span></p>
     if (/^Loading/.test(text) && !img.hidden && img.src){ img.classList.add("is-loading"); status.hidden = true; return; }
     img.hidden = true; img.classList.remove("is-loading"); status.hidden = false; status.textContent = text;
   }
+  // A page's cache of decoded pictures, keyed by URL and kept to `limit` entries (the least
+  // recently shown let go first): a picture seen before swaps in at once with no request and
+  // no loading state, and the rounds either side of the shown one can be fetched ahead.
+  // `urls` of loadFigure() takes one in place of the list of object URLs a view releases itself.
+  function makePictureCache(limit){
+    var entries = {}, order = [];
+    function drop(key){ var e = entries[key]; if (!e) return; delete entries[key]; e.dead = true; if (e.url) URL.revokeObjectURL(e.url); }
+    function touch(key){ var i = order.indexOf(key); if (i >= 0) order.splice(i, 1); order.push(key); while (order.length > limit) drop(order.shift()); }
+    function fetchPicture(path){
+      var key = projectApiUrl(path), e = entries[key];
+      if (!e){
+        e = entries[key] = {};
+        e.promise = apiFetch(key).then(function(r){
+          if (!r.ok) return responseError(r);
+          e.response = r;
+          return r.blob();
+        }).then(function(blob){
+          var url = URL.createObjectURL(blob), pre = new Image(); pre.src = url;
+          return (pre.decode ? pre.decode().catch(function(){}) : Promise.resolve()).then(function(){
+            e.url = url; e.image = pre;   // the Image keeps the decoded bitmap about
+            if (e.dead) setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);   // let go while loading: usable for now
+            return e;
+          });
+        }).catch(function(err){ if (entries[key] === e) drop(key); throw err; });
+      }
+      touch(key);
+      return e.promise;
+    }
+    return {
+      fetch: fetchPicture,
+      prefetch: function(path){ fetchPicture(path).catch(function(){}); },
+      has: function(path){ var e = entries[projectApiUrl(path)]; return !!(e && e.url); },
+      clear: function(){ order.slice().forEach(drop); order = []; }
+    };
+  }
   function loadFigure(img, status, path, exists, what, urls, onResponse){
     var seq = img.loadSeq = (img.loadSeq || 0) + 1;   // a later call for the same frame supersedes this one
     if (!exists){
       status.hidden = false;
       status.textContent = "The " + what + " file isn’t on disk" + (what === "spectrum" ? " (simulated jobs don’t write one)." : ".");
       img.hidden = true; img.classList.remove("is-loading");
+      return;
+    }
+    if (urls && typeof urls.fetch === "function"){
+      if (!urls.has(path)) figLoading(img, status);
+      urls.fetch(path).then(function(e){
+        if (img.loadSeq !== seq) return;
+        if (onResponse) onResponse(e.response);
+        img.src = e.url; img.hidden = false; img.classList.remove("is-loading"); status.hidden = true;
+      }).catch(function(err){
+        if (img.loadSeq !== seq) return;
+        status.hidden = false; status.textContent = "Could not render the " + what + ": " + err.message; img.hidden = true; img.classList.remove("is-loading");
+      });
       return;
     }
     figLoading(img, status);
@@ -4676,7 +4743,7 @@ From branch : <span id="versionBranch">—</span></p>
   }
 
   function makeClassificationResultsPage(){
-    var page = {items: [], packages: [], packageId: null, selectedId: null, current: null, selectedClass: null, showDetails: false, urls: [], selections: [], selectionId: null};
+    var page = {items: [], packages: [], packageId: null, selectedId: null, current: null, selectedClass: null, showDetails: false, pictures: makePictureCache(24), full: {}, fullPending: {}, selections: [], selectionId: null};
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
     var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
     // Two boxes down the left, as cisTEM's ClassificationsListPanel and its
@@ -4752,7 +4819,6 @@ From branch : <span id="versionBranch">—</span></p>
     var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody");
     var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
     var selBody = left.querySelector('[data-role="selbody"]'), selHint = btn("selhint");
-    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
 
     // ---- selections (Refine2DResultsPanel's SelectionManagerListCtrl) ----
     function currentSelection(){ return page.selections.filter(function(s){ return s.selection_id === page.selectionId; })[0] || null; }
@@ -4840,6 +4906,7 @@ From branch : <span id="versionBranch">—</span></p>
         apiFetch(projectApiUrl("/classifications")).then(function(r){ return r.ok ? r.json() : {classifications: []}; })
       ]).then(function(res){
         emptyLoading(false); page.loadedProject = state.projectId;
+        page.full = {}; page.fullPending = {};
         page.packages = (res[0] && res[0].refinement_packages) || [];
         page.items = (res[1] && res[1].classifications) || [];
         var withResults = {};
@@ -4865,6 +4932,28 @@ From branch : <span id="versionBranch">—</span></p>
       }).catch(function(){});
     };
     function visible(){ return page.items.filter(function(c){ return c.refinement_package_asset_id === page.packageId; }); }
+    // The classification JSON by id, kept while the list stands, and the rounds either side of
+    // the shown one fetched ahead with their averages, so stepping through rounds is a swap.
+    function fetchFull(id){
+      if (page.full[id]) return Promise.resolve(page.full[id]);
+      if (!page.fullPending[id]) page.fullPending[id] = apiFetch(projectApiUrl("/classifications/" + id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(function(full){ page.full[id] = full; delete page.fullPending[id]; return full; }, function(err){ delete page.fullPending[id]; throw err; });
+      return page.fullPending[id];
+    }
+    function prefetchNeighbours(){
+      var rows = visible(), i = rows.findIndex(function(c){ return c.classification_id === page.selectedId; });
+      [i - 1, i + 1, i - 2, i + 2].forEach(function(j){
+        var c = rows[j]; if (!c) return;
+        fetchFull(c.classification_id).then(function(full){ if (full.class_average_file_exists) page.pictures.prefetch("/classifications/" + c.classification_id + "/averages.png"); }).catch(function(){});
+      });
+    }
+    // Up / Down on the Results tab: the classification before or after the shown one.
+    page.step = function(delta){
+      var rows = visible(), i = rows.findIndex(function(c){ return c.classification_id === page.selectedId; }), j = i + delta;
+      if (!rows[j]) return;
+      page.selectedId = rows[j].classification_id; page.selectedClass = null; renderList();
+      var tr = tbody.querySelector("tr.selected"); if (tr && tr.scrollIntoView) tr.scrollIntoView({block: "nearest"});
+    };
     function renderList(){
       var rows = visible();
       if (!rows.some(function(c){ return c.classification_id === page.selectedId; })){
@@ -4895,7 +4984,6 @@ From branch : <span id="versionBranch">—</span></p>
       return true;
     };
     function showSelected(){
-      releaseUrls();
       var item = page.items.filter(function(c){ return c.classification_id === page.selectedId; })[0];
       if (!item){
         page.current = null; empty.hidden = false; resultBox.hidden = true; details.hidden = true; rightLabel.textContent = "Class Averages";
@@ -4904,13 +4992,11 @@ From branch : <span id="versionBranch">—</span></p>
       }
       empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
       rightLabel.textContent = "Class Averages — " + item.name;
-      figLoading(averages.img, averages.status, "Loading…"); averages.select(null, null, null);
+      if (!page.full[item.classification_id]) figLoading(averages.img, averages.status, "Loading…");
+      averages.select(null, null, null);
       figLoading(members.img, members.status, "Click a class average to see its members."); members.left.textContent = ""; members.right.textContent = "";
       membersHead.textContent = "Class Members";
-      apiFetch(projectApiUrl("/classifications/" + item.classification_id)).then(function(r){
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      }).then(function(full){
+      fetchFull(item.classification_id).then(function(full){
         if (full.classification_id !== page.selectedId) return;
         page.current = full;
         DETAILS.forEach(function(d, i){ detailCells[i].textContent = d[1](full); });
@@ -4918,9 +5004,10 @@ From branch : <span id="versionBranch">—</span></p>
         averages.right.textContent = full.high_resolution_limit != null ? "high-res limit " + Number(full.high_resolution_limit).toFixed(1) + " Å" : "";
         averages.img.style.maxWidth = full.montage ? (full.montage.width * 2) + "px" : "";
         averages.svg.style.maxWidth = averages.img.style.maxWidth;
-        loadFigure(averages.img, averages.status, "/classifications/" + full.classification_id + "/averages.png", full.class_average_file_exists, "class averages", page.urls);
+        loadFigure(averages.img, averages.status, "/classifications/" + full.classification_id + "/averages.png", full.class_average_file_exists, "class averages", page.pictures);
         setExpand(averages.expand, full.class_average_file_exists ? {path: full.class_average_file, title: full.name + " — class averages", section: 1, greys: "local"} : null);
         if (page.selectedClass != null) showClass(page.selectedClass); else redrawOverlay();
+        prefetchNeighbours();
       }).catch(function(err){ averages.status.textContent = "Could not load this classification: " + err.message; });
     }
     function showClass(k){
@@ -4934,7 +5021,7 @@ From branch : <span id="versionBranch">—</span></p>
       if (!n) return;
       var limit = 100;
       members.right.textContent = n > limit ? "showing the first " + limit : "";
-      loadFigure(members.img, members.status, "/classifications/" + c.classification_id + "/class/" + k + "/members.png?limit=" + limit, true, "class members", page.urls);
+      loadFigure(members.img, members.status, "/classifications/" + c.classification_id + "/class/" + k + "/members.png?limit=" + limit, true, "class members", page.pictures);
     }
     averages.img.addEventListener("click", function(e){
       var c = page.current; if (!c || !c.montage) return;
@@ -4972,7 +5059,7 @@ From branch : <span id="versionBranch">—</span></p>
   // volume assets); this lists each run (STARTUP_LIST) with its settings and
   // shows the resulting volume's orthogonal views.
   function makeStartupResultsPage(){
-    var page = {items: [], selectedId: null, urls: []};
+    var page = {items: [], selectedId: null, pictures: makePictureCache(24)};
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
     var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
     var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
@@ -5018,7 +5105,6 @@ From branch : <span id="versionBranch">—</span></p>
     // STARTUP_LIST names a run "Refinement #n", as cisTEM's AddStartupJob() does; on this page that reads
     // as a 3D refinement, so the run is shown as "Ab-Initio #n" (the stored name is untouched).
     function startupLabel(r){ return /^Refinement #\d+$/.test(r.name || "") ? "Ab-Initio #" + r.startup_id : (r.name || "Ab-Initio #" + r.startup_id); }
-    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
     page.load = function(){
       if (!state.projectId || !state.connected) return Promise.resolve();
       if (page.loadedProject !== state.projectId){ page.loadedProject = null; emptyLoading(true); }
@@ -5047,8 +5133,22 @@ From branch : <span id="versionBranch">—</span></p>
       page.selectedId = r.startup_id; render();
       return true;
     };
+    // The runs either side of the shown one fetched ahead, so stepping through them is a swap.
+    function prefetchNeighbours(){
+      var i = page.items.findIndex(function(x){ return x.startup_id === page.selectedId; });
+      [i - 1, i + 1, i - 2, i + 2].forEach(function(j){
+        var r = page.items[j]; if (!r) return;
+        (r.volumes || []).forEach(function(v){ if (v.file_exists) page.pictures.prefetch("/volumes/" + v.volume_asset_id + "/preview.png"); });
+      });
+    }
+    // Up / Down on the Results tab: the run before or after the shown one.
+    page.step = function(delta){
+      var i = page.items.findIndex(function(x){ return x.startup_id === page.selectedId; }), r = page.items[i + delta];
+      if (!r) return;
+      page.selectedId = r.startup_id; render();
+      var tr = tbody.querySelector("tr.selected"); if (tr && tr.scrollIntoView) tr.scrollIntoView({block: "nearest"});
+    };
     function show(){
-      releaseUrls();
       var r = page.items.filter(function(x){ return x.startup_id === page.selectedId; })[0];
       if (!r){ empty.hidden = false; resultBox.hidden = true; rightLabel.textContent = "Reconstruction"; return; }
       empty.hidden = true; resultBox.hidden = false; rightLabel.textContent = "Reconstruction — " + startupLabel(r);
@@ -5062,9 +5162,10 @@ From branch : <span id="versionBranch">—</span></p>
         dl.addEventListener("click", function(){ downloadFile("/volumes/" + v.volume_asset_id + "/file.mrc", "volume.mrc", dl); });
         fig.root.querySelector("figcaption").appendChild(dl);
         figures.appendChild(fig.root);
-        loadFigure(fig.img, fig.status, "/volumes/" + v.volume_asset_id + "/preview.png", v.file_exists, "volume", page.urls);
+        loadFigure(fig.img, fig.status, "/volumes/" + v.volume_asset_id + "/preview.png", v.file_exists, "volume", page.pictures);
         setExpand(fig.expand, v.file_exists ? {path: v.filename, title: v.name || "Volume", section: "middle", greys: "local"} : null);
       });
+      prefetchNeighbours();
     }
     return page;
   }
@@ -5331,7 +5432,7 @@ From branch : <span id="versionBranch">—</span></p>
   });
   document.addEventListener("keydown", function(e){ if (e.key === "Escape" && els.plotModal.classList.contains("open")) closePlotModal(); });
   function makeRefinementResultsPage(){
-    var page = {items: [], packages: [], packageId: null, selectedId: null, classIndex: 0, current: null, showDetails: false, urls: []};
+    var page = {items: [], packages: [], packageId: null, selectedId: null, classIndex: 0, current: null, showDetails: false, pictures: makePictureCache(24), full: {}, fullPending: {}};
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
     var layout = document.createElement("div"); layout.className = "results-layout"; root.appendChild(layout);
     var left = document.createElement("div"); left.className = "groupbox ra-left"; layout.appendChild(left);
@@ -5399,7 +5500,6 @@ From branch : <span id="versionBranch">—</span></p>
     page.root = root;
     var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody"), classSelect = classRow.querySelector("select");
     var btn = function(role){ return left.querySelector('[data-role="' + role + '"]'); };
-    function releaseUrls(){ page.urls.forEach(function(u){ URL.revokeObjectURL(u); }); page.urls = []; }
     page.load = function(){
       if (!state.projectId || !state.connected) return Promise.resolve();
       if (page.loadedProject !== state.projectId){ page.loadedProject = null; emptyLoading(true); }
@@ -5408,6 +5508,7 @@ From branch : <span id="versionBranch">—</span></p>
         apiFetch(projectApiUrl("/refinements")).then(function(r){ return r.ok ? r.json() : {refinements: []}; })
       ]).then(function(res){
         emptyLoading(false); page.loadedProject = state.projectId;
+        page.full = {}; page.fullPending = {};
         page.packages = (res[0] && res[0].refinement_packages) || [];
         page.items = ((res[1] && res[1].refinements) || []).filter(function(r){ return r.classes.some(function(c){ return c.reconstructed_volume_asset_id >= 0; }) || r.starting_refinement_id >= 0; });
         if (!page.packages.some(function(p){ return p.refinement_package_asset_id === page.packageId; })){
@@ -5425,6 +5526,31 @@ From branch : <span id="versionBranch">—</span></p>
       }).catch(function(){});
     };
     function visible(){ return page.items.filter(function(r){ return r.refinement_package_asset_id === page.packageId; }); }
+    // The refinement JSON by id, kept while the list stands (cleared when it reloads), and the
+    // rounds either side of the shown one fetched ahead with the shown class's reconstruction,
+    // so stepping through rounds is a swap of what is already here.
+    function fetchFull(id){
+      if (page.full[id]) return Promise.resolve(page.full[id]);
+      if (!page.fullPending[id]) page.fullPending[id] = apiFetch(projectApiUrl("/refinements/" + id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(function(full){ page.full[id] = full; delete page.fullPending[id]; return full; }, function(err){ delete page.fullPending[id]; throw err; });
+      return page.fullPending[id];
+    }
+    function prefetchNeighbours(){
+      var rows = visible(), i = rows.findIndex(function(r){ return r.refinement_id === page.selectedId; });
+      [i - 1, i + 1, i - 2, i + 2].forEach(function(j){
+        var r = rows[j]; if (!r) return;
+        fetchFull(r.refinement_id).catch(function(){});
+        var c = r.classes[page.classIndex] || r.classes[0];
+        if (c && c.reconstructed_volume_asset_id >= 0 && c.volume_file_exists) page.pictures.prefetch("/volumes/" + c.reconstructed_volume_asset_id + "/preview.png");
+      });
+    }
+    // Up / Down on the Results tab: the refinement before or after the shown one, the class kept.
+    page.step = function(delta){
+      var rows = visible(), i = rows.findIndex(function(r){ return r.refinement_id === page.selectedId; }), j = i + delta;
+      if (!rows[j]) return;
+      page.selectedId = rows[j].refinement_id; renderList();
+      var tr = tbody.querySelector("tr.selected"); if (tr && tr.scrollIntoView) tr.scrollIntoView({block: "nearest"});
+    };
     function renderList(){
       var rows = visible();
       if (!rows.some(function(r){ return r.refinement_id === page.selectedId; })){ page.selectedId = rows.length ? rows[rows.length - 1].refinement_id : null; page.classIndex = 0; }
@@ -5449,19 +5575,18 @@ From branch : <span id="versionBranch">—</span></p>
       return true;
     };
     function show(){
-      releaseUrls();
       var item = page.items.filter(function(r){ return r.refinement_id === page.selectedId; })[0];
       if (!item){ page.current = null; empty.hidden = false; resultBox.hidden = true; details.hidden = true; rightLabel.textContent = "Refinement"; return; }
       empty.hidden = true; resultBox.hidden = false; details.hidden = !page.showDetails;
       rightLabel.textContent = "Refinement — " + item.name;
-      figLoading(fig.img, fig.status, "Loading…");
-      apiFetch(projectApiUrl("/refinements/" + item.refinement_id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(full){
+      if (!page.full[item.refinement_id]) figLoading(fig.img, fig.status, "Loading…");
+      fetchFull(item.refinement_id).then(function(full){
         if (full.refinement_id !== page.selectedId) return;
         page.current = full;
         classSelect.innerHTML = "";
         full.classes.forEach(function(c, i){ var o = document.createElement("option"); o.value = i; o.textContent = "#" + c.class_number + (c.estimated_resolution ? " (" + Number(c.estimated_resolution).toFixed(2) + " Å" + (full.classes.length > 1 ? ", " + Number(c.average_occupancy).toFixed(1) + "%" : "") + ")" : ""); o.selected = i === page.classIndex; classSelect.appendChild(o); });
         classRow.hidden = full.classes.length <= 1;
-        showClass();
+        showClass(); prefetchNeighbours();
       }).catch(function(err){ fig.status.textContent = "Could not load this refinement: " + err.message; });
     }
     function showClass(){
@@ -5478,12 +5603,12 @@ From branch : <span id="versionBranch">—</span></p>
       paramsBtn.disabled = false;
       fig.left.textContent = (c.volume_name || "Reconstruction") + (c.reconstructed_volume_asset_id >= 0 ? " (asset #" + c.reconstructed_volume_asset_id + ")" : "");
       fig.right.textContent = c.estimated_resolution ? "est. " + Number(c.estimated_resolution).toFixed(2) + " Å" : "";
-      fig.img.style.maxWidth = "720px"; figLoading(fig.img, fig.status, "Loading…");
-      if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "volume", page.urls);
+      fig.img.style.maxWidth = "720px";
+      if (c.reconstructed_volume_asset_id >= 0) loadFigure(fig.img, fig.status, "/volumes/" + c.reconstructed_volume_asset_id + "/preview.png", c.volume_file_exists, "volume", page.pictures);
       else fig.status.textContent = "No reconstruction for this class.";
       setExpand(fig.expand, c.volume_file_exists ? {path: c.volume_filename, title: c.volume_name || "Reconstruction", section: "middle", greys: "local"} : null);
     }
-    classSelect.addEventListener("change", function(){ page.classIndex = Number(classSelect.value) || 0; releaseUrls(); showClass(); });
+    classSelect.addEventListener("change", function(){ page.classIndex = Number(classSelect.value) || 0; showClass(); });
     pkgSelect.addEventListener("change", function(){ page.packageId = Number(pkgSelect.value); page.selectedId = null; renderList(); });
     btn("details").addEventListener("click", function(){
       page.showDetails = !page.showDetails;
@@ -5495,6 +5620,17 @@ From branch : <span id="versionBranch">—</span></p>
   }
   RESULT_PAGES.refine3d = makeRefinementResultsPage();
   showResultsStage("motion_correction");
+  // Up / Down on the Results tab step through the shown page's list -- a refinement, startup or
+  // classification at a time, the rounds either side fetched ahead -- the quick flipping between
+  // rounds the desktop GUI's lists gave. Not while the Display window has the keys or a dialog is up.
+  document.addEventListener("keydown", function(e){
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (pages.results.hidden || displayWindow.hasKeyboard()) return;
+    if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+    if (document.querySelector(".modal.open:not(.display-modal), .log-drawer.open")) return;
+    var pg = RESULT_PAGES[state.resultsStage]; if (!pg || !pg.step) return;
+    pg.step(e.key === "ArrowDown" ? 1 : -1); e.preventDefault();
+  });
 
   // ---------- run profile ----------
   // ---------- run profiles ----------
@@ -6905,11 +7041,17 @@ From branch : <span id="versionBranch">—</span></p>
   // y up as cisTEM counts it. Rows come in file order and are flipped when
   // drawn, so the first row is the bottom of the picture. `setOverlay(fn)`
   // lets a view draw over the picture in image coordinates (pick circles).
-  function makeDisplayPanel(host){
+  // opts: openFile(src) takes the Open button's choice (a new tab) instead of this panel;
+  // onViewChange(view, panel) hears every change the user makes to how the file is shown.
+  function makeDisplayPanel(host, opts){
+    opts = opts || {};
+    var api;
     var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
     // location: the first image of the page shown (1-based; 0 = the frame sum); tiles: the page's sections as float32 rows.
     var dp = { path: null, title: "", pixelSize: null, info: null, bin: 1, w: 0, h: 0, location: 1, sum: false, singleView: false, pageScale: null, tiles: [], fftTiles: [], pageCount: 0, seq: 0,
-               mode: "auto", manual: null, global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, selected: null, lay: null, low: 0, high: 0 };
+               mode: "auto", manual: null, global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, selected: null, lay: null, low: 0, high: 0,
+               // A hidden tab fetches and draws nothing: what it would have done is noted and done when it is shown.
+               visible: true, needFetch: false, dirty: false, released: false, src: null, pendingView: null, applying: false };
     var root = document.createElement("div"); root.className = "display-panel"; host.appendChild(root);
     var bar = document.createElement("div"); bar.className = "display-toolbar"; root.appendChild(bar);
     function button(label, title, cls){ var b = document.createElement("button"); b.type = "button"; b.className = "small" + (cls ? " " + cls : ""); b.textContent = label; b.title = title || ""; bar.appendChild(b); return b; }
@@ -7082,6 +7224,7 @@ From branch : <span id="versionBranch">—</span></p>
 
     // ---- drawing ----
     function draw(){
+      if (!dp.visible){ dp.dirty = true; return; }
       if (!dp.tiles.length){ canvas.width = canvas.height = 0; return; }
       var lay = layout(); dp.lay = lay;
       // A page size or a binning that changed with the scale or the window wants different data.
@@ -7198,7 +7341,7 @@ From branch : <span id="versionBranch">—</span></p>
       var m = dp.manual.slice();
       m[which] = g;
       if (m[0] > m[1]) m[which === 0 ? 1 : 0] = g;
-      dp.manual = m; setManualInputs(); setPressed(); draw();
+      dp.manual = m; setManualInputs(); setPressed(); draw(); notify();
     }
     histCanvas.addEventListener("click", function(e){ histPick(e, 0); });
     histCanvas.addEventListener("contextmenu", function(e){ e.preventDefault(); histPick(e, 1); });
@@ -7218,20 +7361,22 @@ From branch : <span id="versionBranch">—</span></p>
       if (m === "manual" && !dp.manual && dp.tiles.length){ var r = greyRange(dp.tiles.length === 1 ? tileSource(0) : pageArray()); dp.manual = [r[0], r[1]]; }
       if (m === "manual" && dp.manual) setManualInputs();
       if (m === "global" && dp.path && !dp.global) fetchGlobal();
-      setPressed(); draw();
+      setPressed(); draw(); notify();
     }
+    // Lock views: the window hears each change the user makes here and applies it to the other tabs.
+    function notify(){ if (!dp.applying && opts.onViewChange) opts.onViewChange(getView(), api); }
     function fetchGlobal(){
       var path = dp.path;
       apiFetch(apiUrl("/display/range") + "?path=" + encodeURIComponent(path) + "&max_edge=" + maxEdge()).then(function(r){ return r.ok ? r.json() : null; })
         .then(function(d){ if (d && dp.path === path){ dp.global = d; draw(); } }).catch(function(){});
     }
-    lowInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); });
-    highInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); });
-    invertBtn.addEventListener("click", function(){ dp.invert = !dp.invert; setPressed(); draw(); });
-    fftBtn.addEventListener("click", function(){ dp.fft = !dp.fft; setPressed(); draw(); });
-    hqBtn.addEventListener("click", function(){ dp.hq = !dp.hq; setPressed(); draw(); });
+    lowInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); notify(); });
+    highInput.addEventListener("change", function(){ dp.manual = [Number(lowInput.value), Number(highInput.value)]; draw(); notify(); });
+    invertBtn.addEventListener("click", function(){ dp.invert = !dp.invert; setPressed(); draw(); notify(); });
+    fftBtn.addEventListener("click", function(){ dp.fft = !dp.fft; setPressed(); draw(); notify(); });
+    hqBtn.addEventListener("click", function(){ dp.hq = !dp.hq; setPressed(); draw(); notify(); });
     histBtn.addEventListener("click", function(){ dp.showHist = !dp.showHist; setPressed(); draw(); });
-    scaleSelect.addEventListener("change", function(){ dp.scale = scaleSelect.value; dp.singleView = false; draw(); });
+    scaleSelect.addEventListener("change", function(){ dp.scale = scaleSelect.value; dp.singleView = false; draw(); notify(); });
     prevBtn.addEventListener("click", function(){ step(-1); });
     nextBtn.addEventListener("click", function(){ step(1); });
     sectionInput.addEventListener("change", function(){ if (dp.path) goTo(Number(sectionInput.value)); });
@@ -7249,13 +7394,13 @@ From branch : <span id="versionBranch">—</span></p>
       n = Math.max(0, Math.min(Math.round(n), dp.info ? dp.info.nz : n));
       dp.sum = n === 0 && !!dp.info && dp.info.nz > 1;
       dp.location = n;
-      fetchPage();
+      fetchPage(); notify();
     }
     openBtn.addEventListener("click", function(){
       pathInput.value = dp.path || "";
       openBrowseModal({input: pathInput, noun: "image file", article: "an", types: "display", single: true});
     });
-    pathInput.addEventListener("input", function(){ if (pathInput.value) open({path: pathInput.value, title: ""}); });
+    pathInput.addEventListener("input", function(){ if (!pathInput.value) return; var src = {path: pathInput.value, title: ""}; if (opts.openFile) opts.openFile(src); else open(src); });
     saveBtn.addEventListener("click", function(){
       if (!dp.tiles.length) return;
       canvas.toBlob(function(blob){
@@ -7304,11 +7449,12 @@ From branch : <span id="versionBranch">—</span></p>
       }
     });
     var resizeTimer = null;
-    window.addEventListener("resize", function(){ if (!dp.tiles.length) return; clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 150); });
+    window.addEventListener("resize", function(){ if (!dp.tiles.length || !dp.visible) return; clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 150); });
 
     // ---- loading ----
     function fetchPage(){
       if (!dp.info) return;
+      if (!dp.visible){ dp.needFetch = true; return; }
       var seq = ++dp.seq, path = dp.path;
       var lay = layout(), count = dp.sum ? 1 : lay.perPage;
       dp.pageCount = count;
@@ -7335,7 +7481,7 @@ From branch : <span id="versionBranch">—</span></p>
       });
     }
     function open(src){
-      dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
+      dp.src = src; dp.title = src.title || ""; dp.pixelSize = src.pixelSize || null;
       var seq = ++dp.seq, path = src.path;
       var fileChanged = path !== dp.path;
       // A new file starts in the greys its caller asks for: Local for volumes and class averages (each slice or
@@ -7354,36 +7500,151 @@ From branch : <span id="versionBranch">—</span></p>
         // A stack opens at 100% so that as many images as fit are shown; a single image fills the stage.
         if (fileChanged){ dp.scale = info.nz > 1 && section !== 0 ? "1" : "fit"; scaleSelect.value = dp.scale; }
         if (dp.mode === "global") fetchGlobal();
-        goTo(section);
+        var pv = dp.pendingView; dp.pendingView = null;
+        if (pv) applyView(pv); else goTo(section);
       }).catch(function(err){
         if (seq !== dp.seq) return;
         message.hidden = false; message.textContent = "Could not open: " + err.message;
         dp.info = null; fileText.textContent = path; locText.textContent = "";
       });
     }
+    // ---- as a tab of the Display window ----
+    // How the file is shown, for Lock views: the image number, scale, greys and toggles (not the file).
+    function getView(){
+      return {location: dp.location, sum: dp.sum, scale: dp.scale, singleView: dp.singleView, pageScale: dp.pageScale,
+              mode: dp.mode, manual: dp.manual ? dp.manual.slice() : null, invert: dp.invert, fft: dp.fft, hq: dp.hq};
+    }
+    // Another tab's view applied here: the page is fetched now if this tab is showing, when it is next shown otherwise.
+    function applyView(v){
+      if (!dp.info){ dp.pendingView = v; return; }
+      dp.applying = true;
+      try {
+        var nz = dp.info.nz, location = Math.max(nz > 1 ? 0 : 1, Math.min(v.location, nz)), sum = !!v.sum && nz > 1;
+        var refetch = !dp.tiles.length || location !== dp.location || sum !== dp.sum || v.scale !== dp.scale || v.singleView !== dp.singleView;
+        dp.scale = v.scale; dp.singleView = v.singleView; dp.pageScale = v.pageScale; scaleSelect.value = dp.scale;
+        dp.mode = v.mode; dp.manual = v.manual ? v.manual.slice() : null; dp.invert = v.invert; dp.fft = v.fft; dp.hq = v.hq;
+        if (dp.mode === "manual" && dp.manual) setManualInputs();
+        if (dp.mode === "global" && dp.path && !dp.global) fetchGlobal();
+        setPressed();
+        if (refetch) goTo(sum ? 0 : location); else draw();
+      } finally { dp.applying = false; }
+    }
+    function show(){
+      dp.visible = true; root.hidden = false;
+      if (dp.pendingView && dp.info){ var pv = dp.pendingView; dp.pendingView = null; applyView(pv); return; }
+      if (dp.released || dp.needFetch){
+        dp.released = dp.needFetch = false; dp.dirty = false;
+        dp.applying = true;   // a fetch of what this tab already showed is not a change to tell the others
+        try { if (dp.info) goTo(dp.sum ? 0 : dp.location); else if (dp.src) open(dp.src); } finally { dp.applying = false; }
+        return;
+      }
+      if (dp.dirty){ dp.dirty = false; draw(); return; }
+      // The canvas keeps its picture while hidden; only a stage that changed size needs a redraw.
+      if (dp.tiles.length){ var lay = layout(); if (!dp.lay || lay.perPage !== dp.lay.perPage || Math.abs(lay.scale - dp.lay.scale) > 1e-6) draw(); }
+    }
+    function hide(){ dp.visible = false; root.hidden = true; loupeOff(); }
+    // Let go of the fetched pixels (a tab not looked at for a while); shown again, it fetches its page afresh.
+    function release(){ if (!dp.tiles.length) return; dp.tiles = []; dp.fftTiles = []; dp.released = true; offscreen.width = offscreen.height = 0; canvas.width = canvas.height = 0; }
     setPressed();
-    return { open: open, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: draw, state: dp, root: root };
+    api = { open: open, next: function(){ step(1); }, prev: function(){ step(-1); }, setOverlay: function(fn){ dp.overlay = fn; draw(); }, redraw: draw, state: dp, root: root,
+            show: show, hide: hide, release: release, getView: getView, applyView: applyView };
+    return api;
   }
 
   // The modal instance the asset panels' Display buttons use (a movie opens
   // on the sum of its frames, an image on itself, a volume on its middle
   // slice), with the arrow keys stepping while it is open.
-  var displayPanel = makeDisplayPanel(els.displayPanelHost);
-  function openDisplayModal(src){
-    els.displayTitle.textContent = src.title || "Display";
-    els.displayModal.classList.add("open"); els.displayScrim.classList.add("open");
-    displayPanel.open(src);
-  }
-  function closeDisplayModal(){ els.displayModal.classList.remove("open"); els.displayScrim.classList.remove("open"); }
-  els.displayModalClose.addEventListener("click", closeDisplayModal);
-  els.displayScrim.addEventListener("click", closeDisplayModal);
-  document.addEventListener("keydown", function(e){
-    if (!els.displayModal.classList.contains("open") || els.browseModal.classList.contains("open")) return;
-    if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-    if (e.key === "ArrowRight" || e.key === "ArrowUp"){ displayPanel.next(); e.preventDefault(); }
-    else if (e.key === "ArrowLeft" || e.key === "ArrowDown"){ displayPanel.prev(); e.preventDefault(); }
-    else if (e.key === "Escape") closeDisplayModal();
-  });
+  // ---------- the Display window: a tab per file, as cisTEM's DisplayNotebook ----------
+  // Every Display button and expand icon adds a tab (or goes to the file's tab if it has one);
+  // each tab is a display panel of its own that keeps its fetched pixels, so flipping between
+  // tabs is a repaint with no request. The tabs looked at least recently beyond LIVE_PAGES let
+  // their pixels go and fetch again when shown; beyond MAX_TABS the oldest tab closes. The
+  // window is not modal: the page behind stays live (Side moves the window off the lists), the
+  // close button keeps the tabs for next time, Close All forgets them.
+  var displayWindow = (function(){
+    var MAX_TABS = 12, LIVE_PAGES = 8;
+    var tabs = [], active = null, previous = null, lock = false, seq = 0, hasKeys = false;
+    var strip = els.displayTabs, host = els.displayPanelHost;
+    function titleOf(src){ return src.title || (src.path || "").split("/").pop() || "Display"; }
+    function isOpen(){ return els.displayModal.classList.contains("open"); }
+    function oldest(list){ return list.slice().sort(function(a, b){ return a.used - b.used; })[0]; }
+    function open(src){
+      var tab = tabs.filter(function(t){ return t.src.path === src.path; })[0];
+      if (!tab){
+        if (tabs.length >= MAX_TABS) close(oldest(tabs.filter(function(t){ return t !== active; })));
+        tab = {src: src, used: 0};
+        tab.panel = makeDisplayPanel(host, {openFile: open, onViewChange: viewChanged});
+        tab.panel.hide();
+        tabs.push(tab);
+        tab.panel.open(src);
+        // A new tab shows its file the way the others are shown while the views are locked.
+        if (lock && active) tab.panel.applyView(active.panel.getView());
+      }
+      els.displayModal.classList.add("open"); hasKeys = true;
+      activate(tab);
+    }
+    function activate(tab){
+      if (active === tab){ renderStrip(); return; }
+      if (active){ active.panel.hide(); previous = active; }
+      active = tab; tab.used = ++seq;
+      els.displayTitle.textContent = titleOf(tab.src);
+      tab.panel.show();
+      renderStrip();
+      tabs.slice().sort(function(a, b){ return b.used - a.used; }).slice(LIVE_PAGES).forEach(function(t){ t.panel.release(); });
+    }
+    function close(tab){
+      var i = tabs.indexOf(tab); if (i < 0) return;
+      tabs.splice(i, 1); host.removeChild(tab.panel.root);
+      if (previous === tab) previous = null;
+      if (active === tab){ active = null; if (tabs.length) activate(tabs[Math.min(i, tabs.length - 1)]); else { renderStrip(); closeWindow(); } }
+      else renderStrip();
+    }
+    function closeAll(){ tabs.slice().forEach(close); }
+    function closeWindow(){ els.displayModal.classList.remove("open"); hasKeys = false; }
+    function renderStrip(){
+      strip.innerHTML = ""; strip.hidden = !tabs.length;
+      tabs.forEach(function(t, i){
+        var el = document.createElement("div"); el.className = "display-tab" + (t === active ? " active" : ""); el.setAttribute("role", "tab"); el.setAttribute("aria-selected", String(t === active));
+        el.title = t.src.path + (i < 9 ? "   (key " + (i + 1) + ")" : "");
+        var key = document.createElement("span"); key.className = "dp-tab-key"; key.textContent = i < 9 ? String(i + 1) : ""; el.appendChild(key);
+        var title = document.createElement("span"); title.className = "dp-tab-title"; title.textContent = titleOf(t.src); el.appendChild(title);
+        var x = document.createElement("button"); x.type = "button"; x.className = "dp-tab-close"; x.innerHTML = "&times;"; x.title = "Close this tab";
+        x.addEventListener("click", function(e){ e.stopPropagation(); close(t); }); el.appendChild(x);
+        el.addEventListener("click", function(){ activate(t); });
+        el.addEventListener("auxclick", function(e){ if (e.button === 1){ e.preventDefault(); close(t); } });
+        strip.appendChild(el);
+      });
+    }
+    function step(delta){ if (tabs.length > 1) activate(tabs[(tabs.indexOf(active) + delta + tabs.length) % tabs.length]); }
+    function pick(i){ if (tabs[i]) activate(tabs[i]); }
+    // Back to the tab looked at before this one: tapping Space blinks between two files.
+    function blink(){ if (previous && tabs.indexOf(previous) >= 0 && previous !== active) activate(previous); }
+    function viewChanged(view, from){ if (lock) tabs.forEach(function(t){ if (t.panel !== from) t.panel.applyView(view); }); }
+    function setLock(on){ lock = on; els.displayLockBtn.setAttribute("aria-pressed", String(on)); if (on && active) viewChanged(active.panel.getView(), active.panel); }
+    function setSide(on){ els.displaySideBtn.setAttribute("aria-pressed", String(on)); els.displayModal.classList.toggle("side", on); if (active) active.panel.redraw(); }
+    els.displayLockBtn.addEventListener("click", function(){ setLock(!lock); });
+    els.displaySideBtn.addEventListener("click", function(){ setSide(!els.displayModal.classList.contains("side")); });
+    els.displayCloseAllBtn.addEventListener("click", closeAll);
+    els.displayModalClose.addEventListener("click", closeWindow);
+    // The keys go to the window while the last click was in it; a click on the page behind gives them back.
+    document.addEventListener("pointerdown", function(e){ if (isOpen()) hasKeys = els.displayModal.contains(e.target); }, true);
+    document.addEventListener("keydown", function(e){
+      if (!isOpen() || !hasKeys || els.browseModal.classList.contains("open")) return;
+      if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      var panel = active && active.panel;
+      if (e.key === "ArrowRight" || e.key === "ArrowUp"){ if (panel) panel.next(); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowDown"){ if (panel) panel.prev(); }
+      else if (e.key === "Tab") step(e.shiftKey ? -1 : 1);
+      else if (e.key === " "){ if (e.target && e.target.tagName === "BUTTON") e.target.blur(); blink(); }
+      else if (/^[1-9]$/.test(e.key)) pick(Number(e.key) - 1);
+      else if (e.key === "Escape") closeWindow();
+      else return;
+      e.preventDefault();
+    });
+    return {open: open, isOpen: isOpen, hasKeyboard: function(){ return isOpen() && hasKeys; }, close: closeWindow};
+  })();
+  function openDisplayModal(src){ displayWindow.open(src); }
   els.movieDisplayBtn.addEventListener("click", function(){
     var movie = (state.movies || []).filter(function(m){ return m.MOVIE_ASSET_ID === state.selectedMovieId; })[0];
     if (!movie) return;

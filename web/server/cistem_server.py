@@ -3213,7 +3213,9 @@ def volume_preview(project_id, volume_id):
         return jsonify({"error": str(exc)}), 422
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, max-age=30"   # reuse for 30 s without a round trip; the ETag validates after that
+    # The picture of a recorded volume or classification does not change, so the browser may
+    # reuse it for a while (the Results pages step back and forth through rounds); the ETag validates after.
+    response.headers["Cache-Control"] = "private, max-age=300"
     return response
 
 
@@ -3684,7 +3686,9 @@ def _montage_response(path, sections, etag_key, what):
         return jsonify({"error": str(exc)}), 422
     response = app.response_class(png, mimetype="image/png")
     response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "private, max-age=30"   # reuse for 30 s without a round trip; the ETag validates after that
+    # The picture of a recorded volume or classification does not change, so the browser may
+    # reuse it for a while (the Results pages step back and forth through rounds); the ETag validates after.
+    response.headers["Cache-Control"] = "private, max-age=300"
     return response
 
 

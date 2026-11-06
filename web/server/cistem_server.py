@@ -1106,16 +1106,39 @@ def health():
                     "features": {"blush": {"available": info["available"], "reason": info["reason"], "device": info["device"]}}})
 
 
+# The version an installed server reports: `make install` writes this beside the server
+# (tools/write_version.py, the install-data-hook in the top-level Makefile.am) because
+# share/cistem/web/server is not a git checkout and git has nothing to say there.
+VERSION_FILE = Path(__file__).parent / "version.json"
+VERSION_FIELDS = ("commit", "commit_datetime", "branch")
+
+
+def version_info():
+    """What the home page shows under the logo: git's answer in a checkout, the
+    install's version.json otherwise, empty fields when neither is there."""
+    commit = _git(["rev-parse", "--short", "HEAD"])
+    if commit:
+        if _git(["status", "--porcelain"]):
+            commit += "-dirty"
+        return {"commit": commit, "commit_datetime": _git(["log", "-1", "--format=%ci"]),
+                "branch": _git(["rev-parse", "--abbrev-ref", "HEAD"]), "source": "git"}
+    try:
+        with open(VERSION_FILE) as f:
+            written = json.load(f)
+    except (OSError, ValueError):
+        written = None
+    if isinstance(written, dict) and written.get("commit"):
+        info = {k: written.get(k) for k in VERSION_FIELDS}
+        info["source"] = "file"
+        return info
+    info = {k: None for k in VERSION_FIELDS}
+    info["source"] = "none"
+    return info
+
+
 @app.route("/api/version")
 def version_route():
-    commit = _git(["rev-parse", "--short", "HEAD"])
-    if commit and _git(["status", "--porcelain"]):
-        commit += "-dirty"
-    return jsonify({
-        "commit": commit,
-        "commit_datetime": _git(["log", "-1", "--format=%ci"]),
-        "branch": _git(["rev-parse", "--abbrev-ref", "HEAD"]),
-    })
+    return jsonify(version_info())
 
 
 MOVIE_EXTENSIONS = {".mrc", ".mrcs", ".tif", ".tiff", ".eer"}

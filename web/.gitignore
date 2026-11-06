@@ -8,6 +8,9 @@ venv/
 # Project databases (one SQLite file per project, created at runtime)
 server/data/
 
+# Written beside an installed server by `make install` (tools/write_version.py)
+server/version.json
+
 # OS
 .DS_Store
 Thumbs.db

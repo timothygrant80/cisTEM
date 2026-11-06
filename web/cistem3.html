@@ -3858,9 +3858,9 @@ From branch : <span id="versionBranch">—</span></p>
         '<button class="small" data-role="activate" disabled title="Make the shown result the active one for this ' + cfg.rowLabel.toLowerCase() + ' — its asset will point at this run.">Make Active</button>' +
       '</div>' +
       '<div class="asset-toolbar ra-nav">' +
-        '<button class="small" data-role="prev" disabled>&larr; Previous</button>' +
+        '<button class="small" data-role="prev" disabled title="The ' + cfg.rowLabel.toLowerCase() + ' above this one, in the same job (P, or Up)">&larr; Previous</button>' +
         '<button class="small" data-role="addall" disabled title="' + cfg.addAllTitle + '">Add All To Group</button>' +
-        '<button class="small" data-role="next" disabled>Next &rarr;</button>' +
+        '<button class="small" data-role="next" disabled title="The ' + cfg.rowLabel.toLowerCase() + ' below this one, in the same job (N, or Down)">Next &rarr;</button>' +
       '</div>';
     var right = document.createElement("div"); right.className = "groupbox ra-right"; layout.appendChild(right);
     var rightLabel = document.createElement("span"); rightLabel.className = "groupbox-label"; rightLabel.textContent = cfg.titleWord; right.appendChild(rightLabel);
@@ -4189,6 +4189,7 @@ From branch : <span id="versionBranch">—</span></p>
       btn("define").addEventListener("click", function(){ openFilterDialog(page, cfg, applyFilterState); });
     }
     page.select = select;
+    page.step = step;   // N / P and Up / Down on the Results tab: the same step as the buttons
     return page;
   }
 
@@ -5620,16 +5621,20 @@ From branch : <span id="versionBranch">—</span></p>
   }
   RESULT_PAGES.refine3d = makeRefinementResultsPage();
   showResultsStage("motion_correction");
-  // Up / Down on the Results tab step through the shown page's list -- a refinement, startup or
-  // classification at a time, the rounds either side fetched ahead -- the quick flipping between
-  // rounds the desktop GUI's lists gave. Not while the Display window has the keys or a dialog is up.
+  // N / P and Up / Down on the Results tab step through the shown page's list -- the next or
+  // previous movie, image, refinement, startup or classification, the same step as the pages'
+  // Previous / Next buttons, the rounds either side fetched ahead where the page keeps them --
+  // the quick flipping between rounds the desktop GUI's lists gave. Not while the Display window
+  // has the keys, a dialog is up, or the key is typed into a field or held with a modifier.
   document.addEventListener("keydown", function(e){
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    var delta = (e.key === "ArrowDown" || e.key === "n" || e.key === "N") ? 1
+              : (e.key === "ArrowUp" || e.key === "p" || e.key === "P") ? -1 : 0;
+    if (!delta || e.ctrlKey || e.metaKey || e.altKey) return;
     if (pages.results.hidden || displayWindow.hasKeyboard()) return;
     if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
     if (document.querySelector(".modal.open:not(.display-modal), .log-drawer.open")) return;
     var pg = RESULT_PAGES[state.resultsStage]; if (!pg || !pg.step) return;
-    pg.step(e.key === "ArrowDown" ? 1 : -1); e.preventDefault();
+    pg.step(delta); e.preventDefault();
   });
 
   // ---------- run profile ----------

@@ -65,4 +65,11 @@ nobase_dist_pkgdata_DATA = \
 	web/server/symmetry.py \
 	web/server/volumes.py \
 	web/tools/fake_controller.py \
-	web/tools/write_job_results.py
+	web/tools/write_job_results.py \
+	web/tools/write_version.py
+
+# The installed server is not a git checkout, so the version the home page
+# shows (/api/version) is written beside it from this checkout at install time.
+# Fields git cannot supply are null and the install goes on.
+install-data-hook:
+	python3 $(top_srcdir)/web/tools/write_version.py --repo $(top_srcdir) $(DESTDIR)$(pkgdatadir)/web/server/version.json

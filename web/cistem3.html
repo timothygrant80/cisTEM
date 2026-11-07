@@ -833,10 +833,19 @@ table.rp-commands-table td:not(:first-child),table.rp-commands-table th:not(:fir
 .display-manual{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14.5px;}
 .display-manual canvas{border:1px solid var(--border);background:var(--surface);}
 .display-manual input[type=number]{width:110px;padding:3px 6px;font-size:14.5px;}
-/* The Display window is not modal: no scrim, the page behind it stays live. Side puts it at the
-   right so a Results list on the left can be used while it is open. */
-.modal.display-modal.side{left:auto;right:10px;top:10px;width:min(980px,58vw);height:calc(100% - 20px);max-height:none;transform:none;}
-.modal.display-modal.side.open{transform:none;}
+/* The Display window is not modal: no scrim, the page behind it stays live. Dock makes it a
+   column down the right of the window and the page area gives up the same width (the margin on
+   .pagearea below), so the lists and pictures behind reflow beside it instead of under it --
+   cisTEM's frame and its Display window side by side. --dock-w is the chosen width (dragged on
+   the dock's left edge, remembered); the min() keeps at least 420px of page whatever the window. */
+:root{--dock-w:42vw;}
+.modal.display-modal.docked{left:auto;right:0;top:0;width:min(var(--dock-w),calc(100vw - 420px));height:100%;max-height:none;transform:none;border-width:0 0 0 1px;box-shadow:-6px 0 18px rgba(0,0,0,0.12);transition:opacity .16s ease;}
+.modal.display-modal.docked.open{transform:none;}
+.app.display-docked .pagearea{margin-right:min(var(--dock-w),calc(100vw - 420px));}
+.dock-handle{display:none;position:absolute;left:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:1;}
+.dock-handle:hover,.dock-handle.dragging{background:var(--accent,#3B82F6);opacity:.35;}
+.modal.display-modal.docked .dock-handle{display:block;}
+.modal.display-modal.docked.resizing{transition:none;}
 .display-window-controls{display:flex;gap:6px;align-items:center;margin-left:auto;margin-right:14px;}
 .display-window-controls .dp-toggle[aria-pressed="true"]{background:var(--surface-sunken);box-shadow:inset 0 1px 2px rgba(0,0,0,.15);}
 .display-tabs{display:flex;gap:4px;padding:6px 18px 0;border-bottom:1px solid var(--border);overflow-x:auto;flex:0 0 auto;background:var(--surface-sunken);}
@@ -1924,12 +1933,13 @@ From branch : <span id="versionBranch">—</span></p>
     <div class="modal-title" id="displayTitle">Display</div>
     <div class="display-window-controls">
       <button class="small dp-toggle" id="displayLockBtn" aria-pressed="false" title="Show every tab the same way: the image number, scale, greys, invert and FFT of one tab apply to all of them, so files are compared like for like">Lock views</button>
-      <button class="small dp-toggle" id="displaySideBtn" aria-pressed="false" title="Put the window at the right of the page, leaving the lists on the left in reach, so another round or volume can be opened in a new tab without closing it">Side</button>
+      <button class="small dp-toggle" id="displaySideBtn" aria-pressed="false" title="Dock the window down the right of the page: the page shrinks to the left of it instead of being covered, so a Results list and the picture are both in view. Drag the dock’s left edge to change its width">Dock</button>
       <button class="small" id="displayCloseAllBtn" title="Close every tab">Close All</button>
     </div>
     <button class="log-close" id="displayModalClose" aria-label="Close">&times;</button>
   </div>
   <div class="display-tabs" id="displayTabs" role="tablist" title="The open files. Tab / Shift+Tab step through them, 1–9 pick one, Space goes back to the one looked at before"></div>
+  <div class="dock-handle" id="displayDockHandle" title="Drag to change the dock’s width"></div>
   <div class="modal-body">
     <div id="displayPanelHost"></div>
   </div>
@@ -2978,7 +2988,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseGoBtn","browseList",
    "browseTitle","browseNote",
-   "movieDisplayBtn","displayModal","displayModalClose","displayTitle","displayPanelHost","displayTabs","displayLockBtn","displaySideBtn","displayCloseAllBtn","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
+   "movieDisplayBtn","displayModal","displayModalClose","displayTitle","displayPanelHost","displayTabs","displayLockBtn","displaySideBtn","displayCloseAllBtn","displayDockHandle","appShell","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
@@ -7587,6 +7597,7 @@ From branch : <span id="versionBranch">—</span></p>
       }
       els.displayModal.classList.add("open"); hasKeys = true;
       activate(tab);
+      applyDock();
     }
     function activate(tab){
       if (active === tab){ renderStrip(); return; }
@@ -7605,7 +7616,7 @@ From branch : <span id="versionBranch">—</span></p>
       else renderStrip();
     }
     function closeAll(){ tabs.slice().forEach(close); }
-    function closeWindow(){ els.displayModal.classList.remove("open"); hasKeys = false; }
+    function closeWindow(){ els.displayModal.classList.remove("open"); hasKeys = false; applyDock(); }
     function renderStrip(){
       strip.innerHTML = ""; strip.hidden = !tabs.length;
       tabs.forEach(function(t, i){
@@ -7626,9 +7637,46 @@ From branch : <span id="versionBranch">—</span></p>
     function blink(){ if (previous && tabs.indexOf(previous) >= 0 && previous !== active) activate(previous); }
     function viewChanged(view, from){ if (lock) tabs.forEach(function(t){ if (t.panel !== from) t.panel.applyView(view); }); }
     function setLock(on){ lock = on; els.displayLockBtn.setAttribute("aria-pressed", String(on)); if (on && active) viewChanged(active.panel.getView(), active.panel); }
-    function setSide(on){ els.displaySideBtn.setAttribute("aria-pressed", String(on)); els.displayModal.classList.toggle("side", on); if (active) active.panel.redraw(); }
+    // Dock: the window becomes a column down the right and the page gives up that width
+    // (.app.display-docked), so the lists and pictures behind reflow beside it. The page only
+    // gives the width up while the window is open: closing or Escape hands it back and the
+    // dock comes back with the window. The choice and the dragged width are remembered.
+    var DOCK_MIN = 360, PAGE_MIN = 420;
+    var docked = localStorage.getItem("cistem3_display_dock") === "1";
+    var dockWidth = Number(localStorage.getItem("cistem3_display_dock_width")) || 0;
+    function pageReflowed(){
+      // the plots and the display panels size themselves on the window's resize event
+      window.dispatchEvent(new Event("resize"));
+      if (active) active.panel.redraw();
+    }
+    function applyDock(){
+      els.displaySideBtn.setAttribute("aria-pressed", String(docked));
+      els.displayModal.classList.toggle("docked", docked);
+      if (dockWidth) document.documentElement.style.setProperty("--dock-w", dockWidth + "px");
+      els.appShell.classList.toggle("display-docked", docked && isOpen());
+      pageReflowed();
+    }
+    function setDock(on){ docked = on; localStorage.setItem("cistem3_display_dock", on ? "1" : "0"); applyDock(); }
     els.displayLockBtn.addEventListener("click", function(){ setLock(!lock); });
-    els.displaySideBtn.addEventListener("click", function(){ setSide(!els.displayModal.classList.contains("side")); });
+    els.displaySideBtn.addEventListener("click", function(){ setDock(!docked); });
+    // The dock's left edge drags its width, the page following live.
+    els.displayDockHandle.addEventListener("pointerdown", function(e){
+      if (e.button !== 0) return;
+      e.preventDefault(); els.displayDockHandle.setPointerCapture(e.pointerId);
+      els.displayDockHandle.classList.add("dragging"); els.displayModal.classList.add("resizing");
+      function move(ev){
+        dockWidth = Math.round(Math.min(Math.max(window.innerWidth - ev.clientX, DOCK_MIN), window.innerWidth - PAGE_MIN));
+        document.documentElement.style.setProperty("--dock-w", dockWidth + "px");
+      }
+      function up(ev){
+        els.displayDockHandle.removeEventListener("pointermove", move); els.displayDockHandle.removeEventListener("pointerup", up); els.displayDockHandle.removeEventListener("pointercancel", up);
+        els.displayDockHandle.classList.remove("dragging"); els.displayModal.classList.remove("resizing");
+        localStorage.setItem("cistem3_display_dock_width", String(dockWidth));
+        pageReflowed();
+      }
+      els.displayDockHandle.addEventListener("pointermove", move); els.displayDockHandle.addEventListener("pointerup", up); els.displayDockHandle.addEventListener("pointercancel", up);
+    });
+    applyDock();
     els.displayCloseAllBtn.addEventListener("click", closeAll);
     els.displayModalClose.addEventListener("click", closeWindow);
     // The keys go to the window while the last click was in it; a click on the page behind gives them back.

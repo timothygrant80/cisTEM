@@ -813,7 +813,7 @@ table.rp-commands-table td:not(:first-child),table.rp-commands-table th:not(:fir
 .modal.browse-modal{z-index:23;}
 
 /* The preview is a picture, so it gets more room than the form modals. */
-.modal.display-modal{width:min(1400px,95vw);height:94%;max-height:94%;}   /* 95% of the window */
+.modal.display-modal{width:min(1400px,95vw);height:94%;max-height:94%;z-index:18;}   /* 95% of the window; z: under the scrim, see .docked below */
 .modal.display-modal .modal-body{display:flex;flex-direction:column;min-height:0;}
 #displayPanelHost{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
 /* The Display panel (cisTEM's DisplayPanel): toolbar, a dark scrolling stage
@@ -833,7 +833,9 @@ table.rp-commands-table td:not(:first-child),table.rp-commands-table th:not(:fir
 .display-manual{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14.5px;}
 .display-manual canvas{border:1px solid var(--border);background:var(--surface);}
 .display-manual input[type=number]{width:110px;padding:3px 6px;font-size:14.5px;}
-/* The Display window is not modal: no scrim, the page behind it stays live. Dock makes it a
+/* The Display window is not modal: no scrim, the page behind it stays live -- and what the page
+   opens next, a job's log drawer (z 20), a dialog and its scrim (19, 21), comes up over it, not
+   behind: it sits one tier under the scrim, above the page alone. Dock makes it a
    column down the right of the window and the page area gives up the same width (the margin on
    .pagearea below), so the lists and pictures behind reflow beside it instead of under it --
    cisTEM's frame and its Display window side by side. --dock-w is the chosen width (dragged on

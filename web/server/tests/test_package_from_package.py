@@ -59,9 +59,12 @@ class FromPackageTests(unittest.TestCase):
         self.assertEqual([r["psi"] for r in c2], [20.0 + i for i in range(N)])        # class 2 from source class 2
         # class 3 from the better-occupied of the two: class 1 for even particles, class 2 for odd
         self.assertEqual([r["psi"] for r in c3], [(10.0 if i % 2 == 0 else 20.0) + i for i in range(N)])
-        # occupancies randomised across the three classes, each within |U| * 200 / 3
-        self.assertTrue(all(0.0 <= r["occupancy"] <= 200.0 / 3 + 1e-6 for r in c1 + c2 + c3))
-        self.assertTrue(len({round(r["occupancy"], 3) for r in c1}) > 1)
+        # each particle starts wholly in one class, drawn at random, the classes of equal size
+        occ = [[r["occupancy"] for r in c] for c in (c1, c2, c3)]
+        for i in range(N):
+            self.assertEqual(sorted(occ[k][i] for k in range(3)), [0.0, 0.0, 100.0])
+        self.assertEqual([sum(1 for v in occ[k] if v == 100.0) for k in range(3)], [N // 3] * 3)
+        self.assertNotEqual([occ[0][i] for i in range(N)], [100.0] * (N // 3) + [0.0] * (N - N // 3))   # shuffled, not the first third
         # the angular distribution exists for the new symmetry
         self.assertTrue(refinements.load_angular_distribution(self.conn, out["refinement_id"], 1))
         # deleting the source keeps the stack the copy still points at; deleting the copy too removes it

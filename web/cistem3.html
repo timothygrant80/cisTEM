@@ -1657,7 +1657,6 @@ From branch : <span id="versionBranch">—</span></p>
     <div class="field" id="npCarryClassesField" hidden><label>Keep Particles Of Classes</label><div class="np-classes" id="npCarryClasses"></div></div>
     <div class="field" id="npClassSourcesField" hidden title="Which source class each new class takes its parameters from; several classes are resolved by the rule below."><label>Parameters For Each New Class</label><div class="np-classes" id="npClassSources"></div></div>
     <div class="field" id="npMultiRuleField" hidden><label for="npMultiRule">When Several Source Classes</label><select id="npMultiRule"><option value="best">Take the highest-occupancy class</option><option value="random">Take a class at random</option></select></div>
-    <div class="field field-checkbox" id="npRandomOccField" hidden title="Give each particle a random occupancy in every new class (the wizard&rsquo;s Randomise Occupancies), so a 3D classification starts unbiased; untick for 100% everywhere."><input type="checkbox" id="npRandomOcc" checked /><label for="npRandomOcc">Randomise occupancies</label></div>
     <div class="field" id="npSelectionField" hidden><label>Class Selection</label><div class="form-note" style="margin:0;" id="npSelectionLabel"></div></div>
     <div class="field field-checkbox" id="npRecentreField" hidden title="Move each pick by the x/y shift the classification found for it, so the new stack is cut around the particle's centre (the wizard's Re-centre picks page)."><input type="checkbox" id="npRecentre" checked /><label for="npRecentre">Re-centre picks using the classification&rsquo;s shifts</label></div>
     <div class="field field-checkbox" id="npDedupField" hidden title="After re-centring, two picks on the same image that fall within the threshold of each other are the same particle; the one that moved least is kept."><input type="checkbox" id="npDedup" checked /><label for="npDedup">Remove duplicate picks</label></div>
@@ -2999,7 +2998,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
    "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
-   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npRandomOccField","npRandomOcc","npProgress","npProgressFill","npProgressText","importProgress","importProgressFill","importProgressText","importImagesProgress","importImagesProgressFill","importImagesProgressText",
+   "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npProgress","npProgressFill","npProgressText","importProgress","importProgressFill","importProgressText","importImagesProgress","importImagesProgressFill","importImagesProgressText",
    "npRecentreField","npRecentre","npDedupField","npDedup","npDedupThresholdField","npDedupThreshold","npName","npMw","npSize","npSymmetry","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
    "ppGroupList","ppGroupAddBtn","ppGroupRenameBtn","ppGroupRemoveBtn","ppGroupInvertBtn","ppGroupFromImagesBtn",
    "ppSelectAllCheckbox","ppListBody","ppListNote","ppRemoveBtn","ppRemoveAllBtn","ppAddToGroupBtn","ppDisplayBtn",
@@ -9243,7 +9242,6 @@ From branch : <span id="versionBranch">—</span></p>
     var srcClasses = fromPkg ? (src.number_of_classes || 1) : 1;
     els.npCarryClassesField.hidden = !(fromPkg && srcClasses > 1 && !els.npCarryAll.checked);
     els.npClassSourcesField.hidden = els.npMultiRuleField.hidden = !(fromPkg && srcClasses > 1);
-    els.npRandomOccField.hidden = !(fromPkg && n > 1);
     if (!fromPkg) return;
     if (els.npCarryClasses.children.length !== srcClasses){
       els.npCarryClasses.innerHTML = "";
@@ -9474,7 +9472,6 @@ From branch : <span id="versionBranch">—</span></p>
         if (srcRows.some(function(r){ return !r.length; })){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Every new class needs at least one source class."; return; }
         body.class_sources = srcRows; body.multi_class_rule = els.npMultiRule.value;
       }
-      body.randomise_occupancies = els.npRandomOcc.checked;
     } else {
       if (els.npGroup.value === ""){ els.npNote.classList.add("blocked"); els.npNote.textContent = "Pick a particle position group."; return; }
       body.particle_group_id = Number(els.npGroup.value);

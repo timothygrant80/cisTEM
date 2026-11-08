@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import classification as c2d  # noqa: E402
 import db  # noqa: E402
 import refinement_packages as rp  # noqa: E402
+import refinements  # noqa: E402
 
 BOX, N = 24, 6
 
@@ -56,6 +57,14 @@ class FromStackTests(unittest.TestCase):
 
     def _create(self, **extra):
         return rp.create_package(self.conn, self.project, dict({"selection_ids": [self.selection], "name": "FromStack", "output_pixel_size": 1.5}, **extra))
+
+    def test_a_multi_class_package_starts_each_particle_in_one_class(self):
+        out = self._create(box_size=32, number_of_classes=2)
+        tables = [refinements.load_rows(self.conn, out["refinement_id"], k) for k in (1, 2)]
+        for a, b in zip(*tables):
+            self.assertEqual(sorted((a["occupancy"], b["occupancy"])), [0.0, 100.0])
+        self.assertEqual(sum(1 for r in tables[0] if r["occupancy"] == 100.0), 3 // 2 + 1)   # 3 particles: 2 in class 1, 1 in class 2, or the other way
+        self.assertNotEqual([r["occupancy"] for r in tables[0]], [100.0, 100.0, 100.0])
 
     def test_particles_are_copied_padded_and_shifted(self):
         out = self._create(box_size=32)

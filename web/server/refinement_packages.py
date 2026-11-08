@@ -584,6 +584,7 @@ def create_package(conn, project_id, params, log=None, progress=None):
     insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
                    number_of_classes, contained, refinement_id)
     rng = random.Random()
+    assigned = hard_class_assignment([c["position_in_stack"] for c in contained], number_of_classes, rng)
     class_rows = []
     for k in range(1, number_of_classes + 1):
         rows = []
@@ -592,7 +593,7 @@ def create_package(conn, project_id, params, log=None, progress=None):
             phi = rng.uniform(-1.0, 1.0) * 180.0
             theta = math.degrees(math.acos(max(-1.0, min(1.0, 2.0 * abs(rng.uniform(-1.0, 1.0)) - 1.0))))
             psi = rng.uniform(-1.0, 1.0) * 180.0
-            occupancy = 100.0 if number_of_classes == 1 else abs(rng.uniform(-1.0, 1.0) * (200.0 / number_of_classes))
+            occupancy = 100.0 if number_of_classes == 1 or assigned[c["position_in_stack"]] == k else 0.0
             rows.append((c["position_in_stack"], psi, theta, phi, 0.0, 0.0, c["defocus1"], c["defocus2"], c["defocus_angle"], c["phase_shift"],
                          occupancy, 0.0, 1.0, 0.0, 1, c["pixel_size"], c["voltage"], c["cs"], c["amplitude_contrast"], 0.0, 0.0, 0.0, 0.0, c["subset"]))
         class_rows.append(rows)
@@ -643,10 +644,11 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
     renumbered; `class_sources` gives each new class the source class(es) its
     parameters come from (default: new class i from source class i, cycling),
     several resolved by `multi_class_rule` "best" (highest occupancy) or
-    "random"; `randomise_occupancies` (default on with several classes) gives
-    each new class |U(-1,1)| x 200 / N as the wizard does, else 100. The box
-    and pixel size are the source's; symmetry, molecular weight, largest
-    dimension and class count are the caller's (prefilled from the source)."""
+    "random"; with several classes every particle starts wholly in one class
+    drawn at random (`hard_class_assignment()`; `randomise_occupancies` off,
+    an API knob, gives 100 in every class instead). The box and pixel size
+    are the source's; symmetry, molecular weight, largest dimension and class
+    count are the caller's (prefilled from the source)."""
     import refinements
 
     src_id = int(params["source_package_id"])
@@ -767,19 +769,29 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
     contained = ("SELECT s.ORIGINAL_PARTICLE_POSITION_ASSET_ID, s.PARENT_IMAGE_ASSET_ID, {pos}, s.X_POSITION, s.Y_POSITION, s.PIXEL_SIZE, s.DEFOCUS_1, s.DEFOCUS_2, "
                  "s.DEFOCUS_ANGLE, s.PHASE_SHIFT, s.SPHERICAL_ABERRATION, s.MICROSCOPE_VOLTAGE, s.AMPLITUDE_CONTRAST, s.ASSIGNED_SUBSET "
                  "FROM {src} s{join} ORDER BY s.POSITION_IN_STACK").format(pos=position_of, src=src_table, join=join_map.format("s"))
-    # |U(-1, 1)| x 200 / N as the wizard's Randomise Occupancies draws it, from SQLite's generator; else 100
-    occupancy_expression = "((random() & 9223372036854775807) / 9223372036854775807.0) * {:.10g}".format(200.0 / number_of_classes) if (randomise and number_of_classes > 1) else "100.0"
-    result_columns = ("r.PSI, r.THETA, r.PHI, r.XSHIFT, r.YSHIFT, r.DEFOCUS1, r.DEFOCUS2, r.DEFOCUS_ANGLE, r.PHASE_SHIFT, {occ}, r.LOGP, r.SIGMA, r.SCORE, "
-                      "r.IMAGE_IS_ACTIVE, r.PIXEL_SIZE, r.MICROSCOPE_VOLTAGE, r.MICROSCOPE_CS, r.AMPLITUDE_CONTRAST, r.BEAM_TILT_X, r.BEAM_TILT_Y, "
-                      "r.IMAGE_SHIFT_X, r.IMAGE_SHIFT_Y, r.ASSIGNED_SUBSET").format(occ=occupancy_expression)
+    # The starting occupancies: each particle wholly in one class drawn at random (a temp table of old position ->
+    # class, joined as `a`), else 100 everywhere.
     rng = np.random.default_rng( )
+    hard = randomise and number_of_classes > 1
+    if hard:
+        with conn:
+            conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_ASSIGN")
+            conn.execute("CREATE TEMP TABLE NEW_PACKAGE_ASSIGN(OLD INTEGER PRIMARY KEY, CLASS INTEGER)")
+            conn.executemany("INSERT INTO temp.NEW_PACKAGE_ASSIGN VALUES (?, ?)",
+                             zip(kept_positions.tolist( ), hard_class_assignment(kept_positions.tolist( ), number_of_classes, rng).values( )))
+    join_assign = " JOIN temp.NEW_PACKAGE_ASSIGN a ON a.OLD = r.POSITION_IN_STACK" if hard else ""
+    def result_columns(new_class):
+        occ = "CASE WHEN a.CLASS = {} THEN 100.0 ELSE 0.0 END".format(new_class) if hard else "100.0"
+        return ("r.PSI, r.THETA, r.PHI, r.XSHIFT, r.YSHIFT, r.DEFOCUS1, r.DEFOCUS2, r.DEFOCUS_ANGLE, r.PHASE_SHIFT, {occ}, r.LOGP, r.SIGMA, r.SCORE, "
+                "r.IMAGE_IS_ACTIVE, r.PIXEL_SIZE, r.MICROSCOPE_VOLTAGE, r.MICROSCOPE_CS, r.AMPLITUDE_CONTRAST, r.BEAM_TILT_X, r.BEAM_TILT_Y, "
+                "r.IMAGE_SHIFT_X, r.IMAGE_SHIFT_Y, r.ASSIGNED_SUBSET").format(occ=occ)
     class_rows = []
     for i, src in enumerate(sources):
         if progress:
             progress(i, number_of_classes, "Copying the parameters for class {} of {}".format(i + 1, number_of_classes))
         if len(src) == 1:
-            class_rows.append("SELECT {pos}, {cols} FROM REFINEMENT_RESULT_{rid}_{k} r{join}".format(
-                pos=("r.POSITION_IN_STACK" if carry_all else "m.NEW"), cols=result_columns, rid=rid, k=src[0], join=join_map.format("r")))
+            class_rows.append("SELECT {pos}, {cols} FROM REFINEMENT_RESULT_{rid}_{k} r{join}{assign}".format(
+                pos=("r.POSITION_IN_STACK" if carry_all else "m.NEW"), cols=result_columns(i + 1), rid=rid, k=src[0], join=join_map.format("r"), assign=join_assign))
             continue
         # the source class per kept particle: the highest occupancy among the sources, or one at random
         if rule == "random":
@@ -791,8 +803,8 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
             conn.execute("DROP TABLE IF EXISTS {}".format(choice_table))
             conn.execute("CREATE TEMP TABLE NEW_PACKAGE_CHOICE_{}(OLD INTEGER PRIMARY KEY, CLASS INTEGER)".format(i + 1))
             conn.executemany("INSERT INTO {} VALUES (?, ?)".format(choice_table), zip(kept_positions.tolist( ), chosen.tolist( )))
-        parts = ["SELECT {pos}, {cols} FROM REFINEMENT_RESULT_{rid}_{k} r JOIN {choice} c ON c.OLD = r.POSITION_IN_STACK AND c.CLASS = {k}{join}".format(
-            pos=("r.POSITION_IN_STACK" if carry_all else "m.NEW"), cols=result_columns, rid=rid, k=k, choice=choice_table, join=join_map.format("r")) for k in src]
+        parts = ["SELECT {pos}, {cols} FROM REFINEMENT_RESULT_{rid}_{k} r JOIN {choice} c ON c.OLD = r.POSITION_IN_STACK AND c.CLASS = {k}{join}{assign}".format(
+            pos=("r.POSITION_IN_STACK" if carry_all else "m.NEW"), cols=result_columns(i + 1), rid=rid, k=k, choice=choice_table, join=join_map.format("r"), assign=join_assign) for k in src]
         class_rows.append(" UNION ALL ".join(parts))
 
     insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
@@ -829,6 +841,7 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
             refinements_module.write_angular_distribution(conn, refinement_id, i + 1, hist)
     with conn:
         conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_MAP")
+        conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_ASSIGN")
         for i in range(number_of_classes):
             conn.execute("DROP TABLE IF EXISTS temp.NEW_PACKAGE_CHOICE_{}".format(i + 1))
     return {"refinement_package_asset_id": package_id, "name": name, "particles": len(kept_positions), "stack_filename": stack_path, "shared_stack": carry_all,
@@ -844,6 +857,36 @@ def next_package_id(conn):
     """The next free package id, reserved until insert_package() writes it --
     two packages being cut at once used to take the same id and stack path."""
     return _refinements().reserve_id("package", conn, "SELECT COALESCE(MAX(REFINEMENT_PACKAGE_ASSET_ID), 0) FROM REFINEMENT_PACKAGE_ASSETS")
+
+
+def hard_class_assignment(positions, number_of_classes, rng):
+    """The starting occupancies of a package with several classes: position ->
+    class, each particle wholly in one class drawn at random, the classes of
+    equal size (a shuffled round-robin).
+
+    The wizard's Randomise Occupancies gave each particle a random share of
+    every class, |U(-1,1)| x 200 / N. With every class then reconstructed
+    from the same particles at slightly different weights, the N references
+    differed by next to nothing, round one found the same logP for a
+    particle against each of them, and the occupancy update -- the soft-max
+    of the per-class logP weighted by the class averages -- handed every
+    particle the averages: the random start was erased in a round and the
+    classes stayed identical for good. (Before refine3d chose its noise
+    spectrum images deterministically, each class's run whitened with its own
+    curve, which shifted every particle of a task by several logP units in
+    one class or another; the exponential made that a random reassignment
+    every round, and that accident is what used to pull the classes apart.)
+    Starting each particle wholly in one class builds the N references from
+    disjoint subsets: each particle's own noise is in its own class's map, so
+    its logP favours that class, and the partition survives the early rounds
+    while real differences accumulate -- the way RELION seeds its classes.
+    `rng` is a `random.Random` or a numpy Generator (both have `shuffle`)."""
+    order = list(range(len(positions)))
+    rng.shuffle(order)
+    assigned = {}
+    for n, i in enumerate(order):
+        assigned[positions[i]] = n % number_of_classes + 1 if number_of_classes > 1 else 1
+    return {p: assigned[p] for p in positions}
 
 
 def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,

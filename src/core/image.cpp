@@ -10573,6 +10573,10 @@ void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& 
     SymmetryMatrix symmetry_matrices;
     RotationMatrix temp_matrix;
     symmetry_matrices.Init(wanted_symmetry);
+    if ( symmetry_matrices.is_helical ) {
+        MyPrintWithDetails("Error: helical symmetry (%s) is applied by Reconstruct3D only; this volume symmetriser knows rotations, not the rise\n", wanted_symmetry);
+        DEBUG_ABORT;
+    }
 
     buffer_image.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
     buffer_image.SetToConstant(0.0f);
@@ -10634,6 +10638,10 @@ void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix& wanted_matrix, fl
     SymmetryMatrix symmetry_matrices;
     RotationMatrix temp_matrix;
     symmetry_matrices.Init(wanted_symmetry);
+    if ( symmetry_matrices.is_helical ) {
+        MyPrintWithDetails("Error: helical symmetry (%s) is applied by Reconstruct3D only; this volume symmetriser knows rotations, not the rise\n", wanted_symmetry);
+        DEBUG_ABORT;
+    }
 
     buffer_image.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
     buffer_image.SetToConstant(0.0f);

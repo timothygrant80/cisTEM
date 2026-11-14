@@ -2,8 +2,13 @@
 
 SymmetryMatrix::SymmetryMatrix( ) {
     rot_mat            = NULL;
+    z_shift            = NULL;
     number_of_matrices = 0;
     symmetry_symbol    = "C";
+    is_helical         = false;
+    helical_rise       = 0.0f;
+    helical_twist      = 0.0f;
+    helical_copies     = 0;
     //	MyPrintWithDetails("Error: Constructor must be called with symmetry symbol\n");
     //	DEBUG_ABORT;
 }
@@ -17,14 +22,28 @@ SymmetryMatrix& SymmetryMatrix::operator=(const SymmetryMatrix* other_matrix) {
     if ( this != other_matrix ) {
         number_of_matrices = other_matrix->number_of_matrices;
         symmetry_symbol    = other_matrix->symmetry_symbol;
+        is_helical         = other_matrix->is_helical;
+        helical_rise       = other_matrix->helical_rise;
+        helical_twist      = other_matrix->helical_twist;
+        helical_copies     = other_matrix->helical_copies;
         if ( rot_mat != NULL ) {
             delete[] rot_mat;
             rot_mat = NULL;
+        }
+        if ( z_shift != NULL ) {
+            delete[] z_shift;
+            z_shift = NULL;
         }
         if ( number_of_matrices > 0 ) {
             rot_mat = new RotationMatrix[number_of_matrices];
             for ( int i = 0; i < number_of_matrices; i++ ) {
                 rot_mat[i] = other_matrix->rot_mat[i];
+            }
+            if ( other_matrix->z_shift != NULL ) {
+                z_shift = new float[number_of_matrices];
+                for ( int i = 0; i < number_of_matrices; i++ ) {
+                    z_shift[i] = other_matrix->z_shift[i];
+                }
             }
         }
     }
@@ -33,8 +52,89 @@ SymmetryMatrix& SymmetryMatrix::operator=(const SymmetryMatrix* other_matrix) {
 
 SymmetryMatrix::SymmetryMatrix(std::string wanted_symmetry_symbol) {
     rot_mat            = NULL;
+    z_shift            = NULL;
     number_of_matrices = 0;
+    is_helical         = false;
+    helical_rise       = 0.0f;
+    helical_twist      = 0.0f;
+    helical_copies     = 0;
     Init(wanted_symmetry_symbol);
+}
+
+bool SymmetryMatrix::IsHelicalSymbol(const std::string& symbol) {
+    std::string trimmed = symbol;
+    TrimLeft(trimmed);
+    return trimmed.length( ) > 0 && toupper(static_cast<unsigned char>(trimmed[0])) == 'H';
+}
+
+// "H<rise>,<twist>[,<copies>]": rise > 0 in A, twist in degrees, copies a positive integer or absent (0).
+bool SymmetryMatrix::ParseHelicalSymbol(const std::string& symbol, float& rise, float& twist, int& copies) {
+    std::string trimmed = symbol;
+    TrimLeft(trimmed);
+    TrimRight(trimmed);
+    if ( ! IsHelicalSymbol(trimmed) )
+        return false;
+
+    std::vector<std::string> fields;
+    std::string              rest = trimmed.substr(1);
+    size_t                   start = 0;
+    while ( true ) {
+        size_t comma = rest.find(',', start);
+        fields.push_back(rest.substr(start, comma == std::string::npos ? std::string::npos : comma - start));
+        if ( comma == std::string::npos )
+            break;
+        start = comma + 1;
+    }
+    if ( fields.size( ) < 2 || fields.size( ) > 3 )
+        return false;
+
+    double parsed_rise, parsed_twist;
+    long   parsed_copies = 0;
+    if ( ! StringToDouble(fields[0], parsed_rise) || ! StringToDouble(fields[1], parsed_twist) )
+        return false;
+    if ( fields.size( ) == 3 && (! StringToLong(fields[2], parsed_copies) || parsed_copies < 1) )
+        return false;
+    if ( ! (parsed_rise > 0.0) )
+        return false;
+
+    rise   = float(parsed_rise);
+    twist  = float(parsed_twist);
+    copies = int(parsed_copies);
+    return true;
+}
+
+// The copies that span 30% of the box, centred on the identity: 2 * int(0.15 * box / rise) + 1.
+int SymmetryMatrix::ReturnDefaultHelicalCopies(float box_size_in_angstroms) {
+    MyDebugAssertTrue(is_helical, "Not a helical symmetry");
+    return 2 * int(0.15f * box_size_in_angstroms / helical_rise) + 1;
+}
+
+// Build the operators for a helix: index 0 the identity, then n = +1, -1, +2, -2, ... with rotation n * twist
+// about z and shift n * rise along z. An even count is rounded up so the set stays centred.
+void SymmetryMatrix::SetHelicalCopies(int wanted_copies) {
+    MyDebugAssertTrue(is_helical, "Not a helical symmetry");
+    if ( wanted_copies < 1 ) {
+        MyPrintWithDetails("Error: Invalid number of helical copies: %i\n", wanted_copies);
+        DEBUG_ABORT;
+    }
+    if ( wanted_copies % 2 == 0 )
+        wanted_copies++;
+
+    if ( rot_mat != NULL )
+        delete[] rot_mat;
+    if ( z_shift != NULL )
+        delete[] z_shift;
+    helical_copies     = wanted_copies;
+    number_of_matrices = wanted_copies;
+    rot_mat            = new RotationMatrix[number_of_matrices];
+    z_shift            = new float[number_of_matrices];
+    for ( int k = 0; k < number_of_matrices; k++ ) {
+        int   n     = (k + 1) / 2 * (k % 2 == 0 ? -1 : 1); // 0, 1, -1, 2, -2, ...
+        float angle = deg_2_rad(n * helical_twist);
+        rot_mat[k].SetToValues(cosf(angle), sinf(angle), 0.000000, -sinf(angle), cosf(angle), 0.000000, 0.000000, 0.000000, 1.000000);
+        z_shift[k] = n * helical_rise;
+    }
+    symmetry_symbol = Format("H%g,%g,%i", helical_rise, helical_twist, helical_copies);
 }
 
 void SymmetryMatrix::Init(std::string wanted_symmetry_symbol) {
@@ -47,6 +147,42 @@ void SymmetryMatrix::Init(std::string wanted_symmetry_symbol) {
     if ( wanted_symmetry_symbol.length() < 1 ) {
         MyPrintWithDetails("Error: Must specify symmetry symbol\n");
         DEBUG_ABORT;
+    }
+
+    is_helical     = false;
+    helical_rise   = 0.0f;
+    helical_twist  = 0.0f;
+    helical_copies = 0;
+    if ( z_shift != NULL ) {
+        delete[] z_shift;
+        z_shift = NULL;
+    }
+
+    if ( IsHelicalSymbol(wanted_symmetry_symbol) ) {
+        float rise, twist;
+        int   copies;
+        if ( ! ParseHelicalSymbol(wanted_symmetry_symbol, rise, twist, copies) ) {
+            MyPrintWithDetails("Error: Invalid helical symmetry symbol (expected H<rise>,<twist>[,<copies>]): %s\n", wanted_symmetry_symbol);
+            DEBUG_ABORT;
+        }
+        symmetry_symbol = wanted_symmetry_symbol;
+        is_helical      = true;
+        helical_rise    = rise;
+        helical_twist   = twist;
+        if ( copies > 0 ) {
+            SetHelicalCopies(copies);
+        }
+        else {
+            // The identity alone until Reconstruct3D::Init picks the count from the box
+            if ( rot_mat != NULL )
+                delete[] rot_mat;
+            number_of_matrices = 1;
+            rot_mat            = new RotationMatrix[1];
+            z_shift            = new float[1];
+            rot_mat[0].SetToValues(1.000000, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000, 0.000000, 1.000000);
+            z_shift[0] = 0.0f;
+        }
+        return;
     }
     symmetry_type = char(toupper(wanted_symmetry_symbol[0]));
     if ( wanted_symmetry_symbol.length() == 1 ) {
@@ -507,6 +643,10 @@ SymmetryMatrix::~SymmetryMatrix( ) {
     if ( rot_mat != NULL ) {
         delete[] rot_mat;
         rot_mat = NULL;
+    }
+    if ( z_shift != NULL ) {
+        delete[] z_shift;
+        z_shift = NULL;
     }
 }
 

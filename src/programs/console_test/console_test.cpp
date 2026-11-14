@@ -106,6 +106,7 @@ class
     void TestRunProfileDiskOperations( );
     void TestCTFNodes( );
     void TestSpectrumImageMethods( );
+    void TestHelicalSymmetry( );
 #ifdef cisTEM_USING_LIBTORCH
     void TestLibTorch( );
 #endif
@@ -168,6 +169,7 @@ bool MyTestApp::DoCalculation( ) {
     TestRunProfileDiskOperations( );
     TestCTFNodes( );
     TestSpectrumImageMethods( );
+    TestHelicalSymmetry( );
 #ifdef cisTEM_USING_LIBTORCH
     TestLibTorch( );
 #endif
@@ -2194,6 +2196,248 @@ void MyTestApp::TestLibTorch( ) {
     EndTest( );
 }
 #endif
+
+// A helically symmetric filament for TestHelicalSymmetry: two Gaussian blobs per asymmetric unit, the
+// units following the screw (rise along z, twist about z; right-handed for positive twist and rise), the
+// filament spanning the box and tapered at the ends by a spherical mask so the test images look like
+// segments of a longer filament. The two blobs sit at different radii and azimuths, so the helical
+// symmetry is the only one the volume has.
+static void MakeHelicalTestVolume(Image& volume, int box, float pixel_size, float rise, float twist) {
+    const float sigma  = 2.0f;
+    const int   reach  = 7;
+    const float centre = float(box / 2);
+    const int   n_max  = int(0.5f * box * pixel_size / rise) + 1;
+
+    volume.Allocate(box, box, box, true);
+    volume.SetToConstant(0.0f);
+    for ( int n = -n_max; n <= n_max; n++ ) {
+        for ( int blob = 0; blob < 2; blob++ ) {
+            float angle     = deg_2_rad(n * twist + (blob == 0 ? 0.0f : 70.0f));
+            float radius    = (blob == 0 ? 18.0f : 10.0f);
+            float amplitude = (blob == 0 ? 1.0f : 0.7f);
+            float bx        = centre + radius * cosf(angle);
+            float by        = centre + radius * sinf(angle);
+            float bz        = centre + n * rise / pixel_size + (blob == 0 ? 0.0f : 1.5f);
+            for ( int k = std::max(0, int(bz) - reach); k <= std::min(box - 1, int(bz) + reach); k++ ) {
+                for ( int j = std::max(0, int(by) - reach); j <= std::min(box - 1, int(by) + reach); j++ ) {
+                    for ( int i = std::max(0, int(bx) - reach); i <= std::min(box - 1, int(bx) + reach); i++ ) {
+                        float d2 = powf(i - bx, 2) + powf(j - by, 2) + powf(k - bz, 2);
+                        volume.real_values[volume.ReturnReal1DAddressFromPhysicalCoord(i, j, k)] += amplitude * expf(-d2 / (2.0f * sigma * sigma));
+                    }
+                }
+            }
+        }
+    }
+    volume.CosineMask(0.45f * box, 6.0f);
+}
+
+// Pearson correlation of two real images of the same size inside a sphere (or disc) about the box centre.
+static float CorrelationAboutCentre(Image& a, Image& b, float radius) {
+    double sum_a = 0.0, sum_b = 0.0, sum_aa = 0.0, sum_bb = 0.0, sum_ab = 0.0;
+    long   n = 0;
+    for ( int k = 0; k < a.logical_z_dimension; k++ ) {
+        for ( int j = 0; j < a.logical_y_dimension; j++ ) {
+            for ( int i = 0; i < a.logical_x_dimension; i++ ) {
+                float d2 = powf(i - a.physical_address_of_box_center_x, 2) + powf(j - a.physical_address_of_box_center_y, 2) + powf(k - a.physical_address_of_box_center_z, 2);
+                if ( d2 > radius * radius )
+                    continue;
+                double va = a.ReturnRealPixelFromPhysicalCoord(i, j, k);
+                double vb = b.ReturnRealPixelFromPhysicalCoord(i, j, k);
+                sum_a += va;
+                sum_b += vb;
+                sum_aa += va * va;
+                sum_bb += vb * vb;
+                sum_ab += va * vb;
+                n++;
+            }
+        }
+    }
+    double mean_a = sum_a / n, mean_b = sum_b / n;
+    double var_a = sum_aa / n - mean_a * mean_a, var_b = sum_bb / n - mean_b * mean_b;
+    if ( var_a <= 0.0 || var_b <= 0.0 )
+        return 0.0f;
+    return float((sum_ab / n - mean_a * mean_b) / sqrt(var_a * var_b));
+}
+
+// A slice of a Fourier-space, quadrant-swapped volume brought back to real space for comparison.
+static void ExtractRealSpaceProjection(Image& volume_ft, RotationMatrix& matrix, Image& projection) {
+    projection.object_is_centred_in_box = false;
+    volume_ft.ExtractSliceByRotMatrix(projection, matrix, 0.45f);
+    projection.SwapRealSpaceQuadrants( );
+    projection.BackwardFFT( );
+}
+
+static void FourierVolumeToFilteredRealSpace(Image& volume_ft, Image& real_space, float low_pass) {
+    real_space.CopyFrom(&volume_ft);
+    real_space.CosineMask(low_pass, 0.03f);
+    real_space.SwapRealSpaceQuadrants( );
+    real_space.BackwardFFT( );
+}
+
+void MyTestApp::TestHelicalSymmetry( ) {
+    BeginTest("Helical symmetry (SymmetryMatrix, Reconstruct3D)");
+
+    const int   box        = 96;
+    const float pixel_size = 1.5f; // box = 144 A
+    const float rise       = 6.0f; // A
+    const float twist      = 50.0f; // degrees
+    const float compare_radius = 0.22f * box; // the copies reach the taper beyond this
+    const float low_pass       = 0.125f; // 1 / pixels; 12 A here
+
+    // The symbol: "H<rise>,<twist>" with the copy count decided by the box, or given as a third number
+    float parsed_rise, parsed_twist;
+    int   parsed_copies;
+    if ( ! SymmetryMatrix::ParseHelicalSymbol("H6,50", parsed_rise, parsed_twist, parsed_copies) )
+        FailTest;
+    if ( parsed_rise != 6.0f || parsed_twist != 50.0f || parsed_copies != 0 )
+        FailTest;
+    if ( ! SymmetryMatrix::ParseHelicalSymbol("h4.75,-165.3,9", parsed_rise, parsed_twist, parsed_copies) )
+        FailTest;
+    if ( fabsf(parsed_rise - 4.75f) > 1e-5f || fabsf(parsed_twist + 165.3f) > 1e-4f || parsed_copies != 9 )
+        FailTest;
+    if ( SymmetryMatrix::ParseHelicalSymbol("H6", parsed_rise, parsed_twist, parsed_copies) )
+        FailTest; // no twist
+    if ( SymmetryMatrix::ParseHelicalSymbol("H0,50", parsed_rise, parsed_twist, parsed_copies) )
+        FailTest; // no rise
+    if ( SymmetryMatrix::ParseHelicalSymbol("C3", parsed_rise, parsed_twist, parsed_copies) )
+        FailTest;
+    if ( SymmetryMatrix::IsHelicalSymbol("C3") || ! SymmetryMatrix::IsHelicalSymbol(" h6,50 ") )
+        FailTest;
+
+    // The operators: identity first, then +-1, +-2, ... rise and twist, so the insertion loops' special
+    // treatment of operator 0 still applies to the image itself.
+    SymmetryMatrix helix("H6,50,5");
+    if ( ! helix.is_helical || helix.number_of_matrices != 5 || helix.helical_copies != 5 )
+        FailTest;
+    if ( helix.z_shift[0] != 0.0f || helix.z_shift[1] != 6.0f || helix.z_shift[2] != -6.0f || helix.z_shift[3] != 12.0f || helix.z_shift[4] != -12.0f )
+        FailTest;
+    if ( fabsf(helix.rot_mat[1].m[0][0] - cosf(deg_2_rad(50.0f))) > 1e-5f || fabsf(helix.rot_mat[1].m[1][0] - sinf(deg_2_rad(50.0f))) > 1e-5f || helix.rot_mat[1].m[2][2] != 1.0f )
+        FailTest;
+    if ( fabsf(helix.rot_mat[4].m[0][0] - cosf(deg_2_rad(100.0f))) > 1e-5f || fabsf(helix.rot_mat[4].m[1][0] + sinf(deg_2_rad(100.0f))) > 1e-5f )
+        FailTest;
+    SymmetryMatrix unresolved("H6,50");
+    if ( unresolved.number_of_matrices != 1 || unresolved.helical_copies != 0 )
+        FailTest;
+    if ( unresolved.ReturnDefaultHelicalCopies(box * pixel_size) != 7 ) // 2 * int(0.15 * 144 / 6) + 1
+        FailTest;
+    unresolved.SetHelicalCopies(6); // rounded up to odd, and the symbol records the resolved count
+    if ( unresolved.number_of_matrices != 7 || unresolved.symmetry_symbol != "H6,50,7" )
+        FailTest;
+    SymmetryMatrix point_group("C3");
+    if ( point_group.is_helical || point_group.number_of_matrices != 3 )
+        FailTest;
+
+    Image truth;
+    MakeHelicalTestVolume(truth, box, pixel_size, rise, twist);
+    Image truth_ft;
+    truth_ft.CopyFrom(&truth);
+    truth_ft.ForwardFFT( );
+    truth_ft.SwapRealSpaceQuadrants( );
+
+    // 1. The operators against the truth: the projection of the volume moved by operator k (rotated by
+    // the operator, i.e. the image's Euler matrix left-multiplied) is the image itself shifted in-plane by
+    // the operator's rise times the axis row of the Euler matrix. The wrong sign must not pass.
+    {
+        const float     views[3][3] = {{30.0f, 90.0f, 20.0f}, {100.0f, 75.0f, -40.0f}, {200.0f, 95.0f, 160.0f}};
+        AnglesAndShifts angles;
+        RotationMatrix  operator_matrix;
+        Image           base, copy, expected, wrong;
+        base.Allocate(box, box, 1, false);
+        copy.Allocate(box, box, 1, false);
+        expected.Allocate(box, box, 1, false);
+        wrong.Allocate(box, box, 1, false);
+        for ( int view = 0; view < 3; view++ ) {
+            angles.Init(views[view][0], views[view][1], views[view][2], 0.0f, 0.0f);
+            for ( int k = 1; k < helix.number_of_matrices; k++ ) {
+                operator_matrix = helix.rot_mat[k] * angles.euler_matrix;
+                ExtractRealSpaceProjection(truth_ft, operator_matrix, copy);
+
+                float x_shift = helix.z_shift[k] / pixel_size * angles.euler_matrix.m[2][0];
+                float y_shift = helix.z_shift[k] / pixel_size * angles.euler_matrix.m[2][1];
+                base.object_is_centred_in_box = false;
+                truth_ft.ExtractSliceByRotMatrix(base, angles.euler_matrix, 0.45f);
+                expected.CopyFrom(&base);
+                expected.PhaseShift(x_shift, y_shift);
+                expected.SwapRealSpaceQuadrants( );
+                expected.BackwardFFT( );
+                wrong.CopyFrom(&base);
+                wrong.PhaseShift(-x_shift, -y_shift);
+                wrong.SwapRealSpaceQuadrants( );
+                wrong.BackwardFFT( );
+
+                float right_correlation = CorrelationAboutCentre(copy, expected, compare_radius);
+                float wrong_correlation = CorrelationAboutCentre(copy, wrong, compare_radius);
+                if ( right_correlation < 0.97f )
+                    FailTest;
+                if ( wrong_correlation > right_correlation - 0.15f )
+                    FailTest;
+            }
+        }
+    }
+
+    // 2. Reconstruction from a few side-ish views: with the helical symmetry the map must be much closer
+    // to the truth than without it, and than with the opposite hand.
+    {
+        const int number_of_images = 16;
+        global_random_number_generator.SetSeed(1234);
+
+        Reconstruct3D plain(box, box, box, pixel_size, 100.0f, 0.0f, 0.0f, "C1");
+        Reconstruct3D helical(box, box, box, pixel_size, 100.0f, 0.0f, 0.0f, "H6,50");
+        Reconstruct3D other_hand(box, box, box, pixel_size, 100.0f, 0.0f, 0.0f, "H6,-50");
+        if ( helical.symmetry_matrices.number_of_matrices != 7 || helical.symmetry_matrices.symmetry_symbol != "H6,50,7" )
+            FailTest; // the box resolved the default copy count
+
+        Particle particle(box, box);
+        particle.AllocateCTFImage(box, box);
+        particle.pixel_size                  = pixel_size;
+        particle.particle_occupancy          = 100.0f;
+        particle.parameter_average.occupancy = 100.0f;
+        particle.sigma_noise                 = 0.01f; // weight 1e4 per slice, so Calculate3DSimple's Wiener constant of 100 is negligible
+        particle.parameter_average.sigma     = 1.0f;
+        particle.particle_score              = 0.0f;
+        particle.particle_image->object_is_centred_in_box = false;
+
+        Image slice;
+        slice.Allocate(box, box, 1, false);
+        slice.object_is_centred_in_box = false;
+        for ( int image = 0; image < number_of_images; image++ ) {
+            float phi   = global_random_number_generator.GetUniformRandomSTD(0.0f, 360.0f);
+            float theta = global_random_number_generator.GetUniformRandomSTD(60.0f, 120.0f);
+            float psi   = global_random_number_generator.GetUniformRandomSTD(0.0f, 360.0f);
+            particle.alignment_parameters.Init(phi, theta, psi, 0.0f, 0.0f);
+            truth_ft.ExtractSliceByRotMatrix(slice, particle.alignment_parameters.euler_matrix, 0.45f);
+            particle.particle_image->CopyFrom(&slice);
+            plain.InsertSliceNoCTF(particle);
+            particle.particle_image->CopyFrom(&slice);
+            helical.InsertSliceNoCTF(particle);
+            particle.particle_image->CopyFrom(&slice);
+            other_hand.InsertSliceNoCTF(particle);
+        }
+
+        Image truth_filtered;
+        FourierVolumeToFilteredRealSpace(truth_ft, truth_filtered, low_pass);
+
+        float correlation[3];
+        Reconstruct3D* reconstructions[3] = {&plain, &helical, &other_hand};
+        for ( int r = 0; r < 3; r++ ) {
+            ReconstructedVolume volume;
+            volume.InitWithReconstruct3D(*reconstructions[r], pixel_size);
+            volume.Calculate3DSimple(*reconstructions[r]);
+            Image map;
+            FourierVolumeToFilteredRealSpace(*volume.density_map, map, low_pass);
+            correlation[r] = CorrelationAboutCentre(map, truth_filtered, compare_radius);
+        }
+        // Measured with this seed: 0.93 without symmetry, 0.99 with it, 0.31 with the other hand
+        if ( correlation[1] < 0.98f )
+            FailTest;
+        if ( correlation[0] > correlation[1] - 0.03f )
+            FailTest;
+        if ( correlation[2] > correlation[1] - 0.3f )
+            FailTest;
+    }
+
+    EndTest( );
+}
 
 void MyTestApp::BeginTest(const char* test_name) {
     // For access by other tests when running CheckDependencies

@@ -342,6 +342,21 @@ std::string UserInput::GetSymmetryFromUser(const char* my_text, const char* help
                     Printf("\nError: Must specify symmetry symbol!\n\n");
                 }
             }
+            else if ( SymmetryMatrix::IsHelicalSymbol(supplied_input) ) {
+                float rise, twist;
+                int   copies;
+                if ( SymmetryMatrix::ParseHelicalSymbol(supplied_input, rise, twist, copies) ) {
+                    DoGotValidAnswer(my_text, input);
+                    std::string my_string(input);
+                    return my_string;
+                }
+                if ( output_is_a_tty == true ) {
+                    MyPrintfRed("\nError: Helical symmetry must be H<rise>,<twist>[,<copies>] (rise in A, twist in degrees)!\n\n");
+                }
+                else {
+                    Printf("\nError: Helical symmetry must be H<rise>,<twist>[,<copies>] (rise in A, twist in degrees)!\n\n");
+                }
+            }
             else {
                 symmetry_type = toupper(static_cast<unsigned char>(supplied_input[0]));
 

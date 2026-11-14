@@ -11,6 +11,9 @@ class Reconstruct3D {
     float          average_score;
     float          score_weights_conversion;
     SymmetryMatrix symmetry_matrices;
+
+    // The dump-file header's symmetry field (DumpArrays / ReadArrayHeader / ReadArrays); 4 bytes before helical symbols
+    static constexpr int symmetry_symbol_field_length = 32;
     bool           edge_terms_were_added;
     bool           center_mass;
     int            correct_ewald_sphere;
@@ -36,6 +39,8 @@ class Reconstruct3D {
     void           Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, int wanted_correct_ewald_sphere = 0);
     void           InsertSliceWithCTF(Particle& particle_to_insert, float symmetry_weight = 1.0);
     void           InsertSliceNoCTF(Particle& particle_to_insert, float symmetry_weight = 1.0);
+    void           ResolveHelicalCopies( );
+    void           CalculateHelicalShiftFactors(Particle& particle, int operator_index, std::vector<std::complex<float>>& factor_x, std::vector<std::complex<float>>& factor_y);
     void           AddByLinearInterpolation(float& wanted_x_coordinate, float& wanted_y_coordinate, float& wanted_z_coordinate, std::complex<float>& wanted_value, std::complex<float>& ctf_value, float wanted_weight, bool complex_ctf = false);
     void           CompleteEdges( );
     float          Correct3DCTF(Image& buffer3d);

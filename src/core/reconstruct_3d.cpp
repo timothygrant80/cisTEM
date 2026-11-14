@@ -53,6 +53,14 @@ Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_
     Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_score, wanted_score_weights_conversion, wanted_correct_ewald_sphere);
 
     symmetry_matrices.Init(wanted_symmetry);
+    ResolveHelicalCopies( );
+}
+
+// A helix without an explicit copy count gets as many operators as span 30% of the box (see SymmetryMatrix).
+// Called wherever both the symbol and the box are known: the sized constructor, and Init after a symbol.
+void Reconstruct3D::ResolveHelicalCopies( ) {
+    if ( symmetry_matrices.is_helical && symmetry_matrices.helical_copies == 0 && logical_x_dimension > 0 && pixel_size > 0.0f )
+        symmetry_matrices.SetHelicalCopies(symmetry_matrices.ReturnDefaultHelicalCopies(logical_x_dimension * pixel_size));
 }
 
 Reconstruct3D::~Reconstruct3D( ) {
@@ -104,6 +112,28 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 
     edge_terms_were_added = false;
     center_mass           = false;
+    ResolveHelicalCopies( );
+}
+
+// Helical operator k moves the volume by z_shift[k] along its axis. The particle's projection of the moved
+// volume is the particle shifted in-plane by the image-frame components of that axis vector, which are the
+// axis row of the Euler matrix (the matrix maps image coordinates into the volume): the shift in pixels is
+// z_shift / pixel_size * (m[2][0], m[2][1]), independent of phi. Fourier space: one phase factor per axis, as
+// Image::PhaseShift tabulates them, multiplied per pixel in the insertion loops. factor_y is indexed from the
+// image's lowest logical y. The CTF is shift invariant, so the weights are the same as for the image itself.
+void Reconstruct3D::CalculateHelicalShiftFactors(Particle& particle, int operator_index, std::vector<std::complex<float>>& factor_x, std::vector<std::complex<float>>& factor_y) {
+    MyDebugAssertTrue(symmetry_matrices.is_helical && operator_index < symmetry_matrices.number_of_matrices, "Not a helical operator");
+    Image& image           = *particle.particle_image;
+    float  shift_in_pixels = symmetry_matrices.z_shift[operator_index] / particle.pixel_size;
+    float  x_shift         = shift_in_pixels * particle.alignment_parameters.euler_matrix.m[2][0];
+    float  y_shift         = shift_in_pixels * particle.alignment_parameters.euler_matrix.m[2][1];
+
+    factor_x.resize(image.logical_upper_bound_complex_x + 1);
+    for ( int i = 0; i <= image.logical_upper_bound_complex_x; i++ )
+        factor_x[i] = Return3DPhaseFromIndividualDimensions(ReturnPhaseFromShift(x_shift, i, image.logical_x_dimension), 0.0f, 0.0f);
+    factor_y.resize(image.logical_upper_bound_complex_y - image.logical_lower_bound_complex_y + 1);
+    for ( int j = image.logical_lower_bound_complex_y; j <= image.logical_upper_bound_complex_y; j++ )
+        factor_y[j - image.logical_lower_bound_complex_y] = Return3DPhaseFromIndividualDimensions(0.0f, ReturnPhaseFromShift(y_shift, j, image.logical_y_dimension), 0.0f);
 }
 
 void Reconstruct3D::InsertSliceWithCTF(Particle& particle_to_insert, float symmetry_weight) {
@@ -253,6 +283,14 @@ void Reconstruct3D::InsertSliceWithCTF(Particle& particle_to_insert, float symme
         if ( symmetry_matrices.number_of_matrices > 1 ) {
             particle_weight *= symmetry_weight;
             for ( k = 1; k < symmetry_matrices.number_of_matrices; k++ ) {
+                // A helical operator also moves the volume along its axis; the copy of the image inserted under it
+                // is the image shifted in-plane by that much (CalculateHelicalShiftFactors), one complex multiply per pixel.
+                std::complex<float>              inserted_value;
+                std::vector<std::complex<float>> factor_x, factor_y;
+                const bool                       shifted = symmetry_matrices.is_helical && symmetry_matrices.z_shift[k] != 0.0f;
+                const int                        lower_y = particle_to_insert.particle_image->logical_lower_bound_complex_y;
+                if ( shifted )
+                    CalculateHelicalShiftFactors(particle_to_insert, k, factor_x, factor_y);
                 for ( j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++ ) {
                     y_coordinate_2d = j;
                     y_coord_sq      = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
@@ -264,6 +302,9 @@ void Reconstruct3D::InsertSliceWithCTF(Particle& particle_to_insert, float symme
                         //						if (weight > 0.0)
                         //						{
                         pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i, j, 0);
+                        inserted_value = particle_to_insert.particle_image->complex_values[pixel_counter];
+                        if ( shifted )
+                            inserted_value *= factor_x[i] * factor_y[j - lower_y];
                         temp_matrix   = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
                         if ( correct_ewald_sphere != 0 ) {
                             theta = 0.5 * sqrtf(frequency_squared) * particle_to_insert.current_ctf.GetWavelength( );
@@ -273,15 +314,15 @@ void Reconstruct3D::InsertSliceWithCTF(Particle& particle_to_insert, float symme
                             z_coordinate_2d_ewald = correct_ewald_sphere * sqrtf(frequency_squared) * logical_x_dimension * sinf(theta);
                             temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
                             conjugate = conj(particle_to_insert.ctf_image->complex_values[pixel_counter]);
-                            AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], conjugate, weight, particle_to_insert.complex_ctf);
+                            AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, conjugate, weight, particle_to_insert.complex_ctf);
                             // Left beam
                             z_coordinate_2d_ewald = -z_coordinate_2d_ewald;
                             temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-                            AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
+                            AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
                         }
                         else {
                             temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-                            AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+                            AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
                         }
                         //						}
                     }
@@ -296,6 +337,9 @@ void Reconstruct3D::InsertSliceWithCTF(Particle& particle_to_insert, float symme
                     //					if (weight > 0.0)
                     //					{
                     pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0, j, 0);
+                    inserted_value = particle_to_insert.particle_image->complex_values[pixel_counter];
+                    if ( shifted )
+                        inserted_value *= factor_x[0] * factor_y[j - lower_y];
                     temp_matrix   = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
                     if ( correct_ewald_sphere != 0 ) {
                         theta = 0.5 * sqrtf(frequency_squared) * particle_to_insert.current_ctf.GetWavelength( );
@@ -305,15 +349,15 @@ void Reconstruct3D::InsertSliceWithCTF(Particle& particle_to_insert, float symme
                         z_coordinate_2d_ewald = correct_ewald_sphere * sqrtf(frequency_squared) * logical_x_dimension * sinf(theta);
                         temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
                         conjugate = conj(particle_to_insert.ctf_image->complex_values[pixel_counter]);
-                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], conjugate, weight, particle_to_insert.complex_ctf);
+                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, conjugate, weight, particle_to_insert.complex_ctf);
                         // Left beam
                         z_coordinate_2d_ewald = -z_coordinate_2d_ewald;
                         temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
+                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
                     }
                     else {
                         temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
                     }
                     //					}
                 }
@@ -407,6 +451,14 @@ void Reconstruct3D::InsertSliceNoCTF(Particle& particle_to_insert, float symmetr
         if ( symmetry_matrices.number_of_matrices > 1 ) {
             particle_weight *= symmetry_weight;
             for ( k = 1; k < symmetry_matrices.number_of_matrices; k++ ) {
+                // A helical operator also moves the volume along its axis; the copy of the image inserted under it
+                // is the image shifted in-plane by that much (CalculateHelicalShiftFactors), one complex multiply per pixel.
+                std::complex<float>              inserted_value;
+                std::vector<std::complex<float>> factor_x, factor_y;
+                const bool                       shifted = symmetry_matrices.is_helical && symmetry_matrices.z_shift[k] != 0.0f;
+                const int                        lower_y = particle_to_insert.particle_image->logical_lower_bound_complex_y;
+                if ( shifted )
+                    CalculateHelicalShiftFactors(particle_to_insert, k, factor_x, factor_y);
                 for ( j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++ ) {
                     y_coordinate_2d = j;
                     y_coord_sq      = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
@@ -420,7 +472,10 @@ void Reconstruct3D::InsertSliceNoCTF(Particle& particle_to_insert, float symmetr
                         temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
                         temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
                         pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i, j, 0);
-                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
+                        inserted_value = particle_to_insert.particle_image->complex_values[pixel_counter];
+                        if ( shifted )
+                            inserted_value *= factor_x[i] * factor_y[j - lower_y];
+                        AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, ctf_value, weight);
                         //						}
                     }
                 }
@@ -436,7 +491,10 @@ void Reconstruct3D::InsertSliceNoCTF(Particle& particle_to_insert, float symmetr
                     temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
                     temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
                     pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0, j, 0);
-                    AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
+                    inserted_value = particle_to_insert.particle_image->complex_values[pixel_counter];
+                    if ( shifted )
+                        inserted_value *= factor_x[0] * factor_y[j - lower_y];
+                    AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, inserted_value, ctf_value, weight);
                     //					}
                 }
             }
@@ -618,7 +676,7 @@ void Reconstruct3D::DumpArrays(std::string filename, bool insert_even) {
     int   count = 0;
     int   oddeven;
     int   center;
-    char  temp_char[9 * sizeof(int) + 5 * sizeof(float) + 4];
+    char  temp_char[9 * sizeof(int) + 5 * sizeof(float) + symmetry_symbol_field_length];
     char* char_pointer;
 
     std::ofstream b_stream(filename.c_str( ), std::fstream::out | std::fstream::binary);
@@ -683,11 +741,12 @@ void Reconstruct3D::DumpArrays(std::string filename, bool insert_even) {
         temp_char[count] = char_pointer[i];
         count++;
     };
-    for ( i = 0; i < 4; i++ )
+    MyDebugAssertTrue(symmetry_matrices.symmetry_symbol.length( ) <= symmetry_symbol_field_length, "Symmetry symbol too long for the dump header");
+    for ( i = 0; i < symmetry_symbol_field_length; i++ )
         temp_char[count + i] = ' ';
-    for ( i = 0; i < symmetry_matrices.symmetry_symbol.length( ); i++ )
+    for ( i = 0; i < symmetry_matrices.symmetry_symbol.length( ) && i < symmetry_symbol_field_length; i++ )
         temp_char[count + i] = symmetry_matrices.symmetry_symbol[i];
-    count += 4;
+    count += symmetry_symbol_field_length;
     oddeven = 1;
     if ( insert_even ) {
         oddeven = 2;
@@ -721,7 +780,7 @@ void Reconstruct3D::ReadArrayHeader(std::string filename, int& logical_x_dimensi
                                     int& original_x_dimension, int& original_y_dimension, int& original_z_dimension, int& images_processed, float& pixel_size, float& original_pixel_size,
                                     float& average_occupancy, float& average_score, float& score_weights_conversion, std::string& symmetry_symbol, bool& insert_even, bool& center_mass) {
     int   i;
-    int   count = 9 * sizeof(int) + 5 * sizeof(float) + 4;
+    int   count = 9 * sizeof(int) + 5 * sizeof(float) + symmetry_symbol_field_length;
     int   oddeven;
     int   center;
     char  temp_char[count];
@@ -792,9 +851,10 @@ void Reconstruct3D::ReadArrayHeader(std::string filename, int& logical_x_dimensi
         count++;
     };
     symmetry_symbol = "";
-    for ( i = 0; i < 4; i++ )
+    for ( i = 0; i < symmetry_symbol_field_length; i++ )
         symmetry_symbol += temp_char[count + i];
-    count += 4;
+    TrimRight(symmetry_symbol);
+    count += symmetry_symbol_field_length;
     char_pointer = (char*)&oddeven;
     for ( i = 0; i < sizeof(int); i++ ) {
         char_pointer[i] = temp_char[count];
@@ -821,7 +881,7 @@ void Reconstruct3D::ReadArrayHeader(std::string filename, int& logical_x_dimensi
 
 void Reconstruct3D::ReadArrays(std::string filename) {
     int   i;
-    int   count = 9 * sizeof(int) + 5 * sizeof(float) + 4;
+    int   count = 9 * sizeof(int) + 5 * sizeof(float) + symmetry_symbol_field_length;
     int   oddeven;
     int   center;
     char  temp_char[count];
@@ -905,9 +965,10 @@ void Reconstruct3D::ReadArrays(std::string filename) {
         count++;
     };
     input_symmetry_symbol = "";
-    for ( i = 0; i < 4; i++ )
+    for ( i = 0; i < symmetry_symbol_field_length; i++ )
         input_symmetry_symbol += temp_char[count + i];
-    count += 4;
+    TrimRight(input_symmetry_symbol);
+    count += symmetry_symbol_field_length;
     char_pointer = (char*)&oddeven;
     for ( i = 0; i < sizeof(int); i++ ) {
         char_pointer[i] = temp_char[count];

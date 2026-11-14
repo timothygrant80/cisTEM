@@ -461,6 +461,15 @@ void EulerSearch::SetSymmetryLimits( ) {
         MyPrintWithDetails("Error: Must specify symmetry symbol\n");
         DEBUG_ABORT;
     }
+    // A helix has no finite point group about the axis (a Cn part is not supported in the symbol), so the
+    // search covers every phi, as for C1; the reference is helical, so no view is redundant.
+    if ( SymmetryMatrix::IsHelicalSymbol(symmetry_symbol) ) {
+        phi_max     = 360.0;
+        theta_max   = 90.0;
+        test_mirror = true;
+
+        return;
+    }
     symmetry_type = char(toupper(symmetry_symbol[0]));
     if ( symmetry_symbol.length() == 1 ) {
         symmetry_number = 0;

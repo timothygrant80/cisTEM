@@ -190,6 +190,36 @@ class Refine3DTests(unittest.TestCase):
         self.assertAlmostEqual(views[1][0], 40.0)
         self.assertAlmostEqual(views[1][1] % 360.0, 210.0)
 
+    def test_helical_symbols(self):
+        """H<rise>,<twist>[,<copies>] (SymmetryMatrix::ParseHelicalSymbol): parsed, normalised,
+        one asymmetric unit, the identity alone for the angular distributions, and applied
+        from the start of an ab initio (there are no axes for align_symmetry to find)."""
+        import symmetry
+        import refinement_packages as rp
+        self.assertEqual(symmetry.parse_helical(" h6,50 "), (6.0, 50.0, 0))
+        self.assertEqual(symmetry.parse_helical("H4.75,-165.3,9"), (4.75, -165.3, 9))
+        self.assertEqual(symmetry.normalise("h6.0,50"), "H6,50")
+        self.assertEqual(symmetry.normalise("H4.75,-165.3,9"), "H4.75,-165.3,9")
+        self.assertEqual(symmetry.normalise(" d2 "), "D2")
+        self.assertEqual(symmetry.describe("H6,50"), "Helical: rise 6 A, twist 50 deg")
+        for bad in ("H6", "H0,50", "H6,50,0", "H6,x", "H", "H6,50,7,1"):
+            with self.assertRaises(ValueError, msg=bad):
+                symmetry.normalise(bad)
+            with self.assertRaises(ValueError, msg=bad):
+                rp.valid_symmetry(bad)
+        self.assertEqual(rp.valid_symmetry("h6,50"), "H6,50")
+        self.assertEqual(rp.valid_symmetry(None), "C1")
+        with self.assertRaises(ValueError):
+            rp.valid_symmetry("C5")   # not in the wizard's list
+        self.assertEqual(symmetry.parse_symbol("H6,50"), ("H", 0))
+        self.assertEqual(len(symmetry.matrices("H6,50")), 1)
+        self.assertEqual(ab.asymmetric_units("H6,50"), 1)
+        self.assertEqual(symmetry.symmetry_related_views(30.0, 40.0, 50.0, "H6,50"), symmetry.symmetry_related_views(30.0, 40.0, 50.0, "C1"))
+        self.assertFalse(ab.symmetry_applied_from_the_start({"symmetry": "C1", "always_apply_symmetry": True}))
+        self.assertFalse(ab.symmetry_applied_from_the_start({"symmetry": "D2", "always_apply_symmetry": False}))
+        self.assertTrue(ab.symmetry_applied_from_the_start({"symmetry": "D2", "always_apply_symmetry": True}))
+        self.assertTrue(ab.symmetry_applied_from_the_start({"symmetry": "H6,50", "always_apply_symmetry": False}))
+
     def test_angular_histogram_expands_symmetry(self):
         import refinements
         rows = [{"theta": 0.0, "phi": 0.0, "psi": 0.0, "image_is_active": 1}]

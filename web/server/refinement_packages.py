@@ -38,8 +38,22 @@ from pathlib import Path
 import numpy as np
 
 import db
+import symmetry as symmetry_module
 
 SYMMETRIES = ("C1", "C2", "C3", "C4", "D2", "D3", "D4", "I", "I2", "O", "T", "T2")  # SymmetryComboBox, in order
+
+
+def valid_symmetry(symbol):
+    """The package's symmetry as stored and handed to the programs: one of
+    SYMMETRIES, or a helix "H<rise>,<twist>[,<copies>]" (symmetry.normalise);
+    ValueError("unknown symmetry ...") otherwise."""
+    try:
+        normalised = symmetry_module.normalise(symbol or "C1")
+    except ValueError as exc:
+        raise ValueError("unknown symmetry {!r}: {}".format(symbol, exc))
+    if not symmetry_module.is_helical(normalised) and normalised not in SYMMETRIES:
+        raise ValueError("unknown symmetry {!r}".format(symbol))
+    return normalised
 
 _MRC_DTYPES = {0: np.int8, 1: np.int16, 2: np.float32, 6: np.uint16, 12: np.float16}
 
@@ -455,9 +469,7 @@ def create_package(conn, project_id, params, log=None, progress=None):
             "s" if len(missing_ctf) > 1 else "", ", ".join(str(i) for i in missing_ctf[:5]) + ("…" if len(missing_ctf) > 5 else ""),
             "have" if len(missing_ctf) > 1 else "has"))
 
-    symmetry = str(params.get("symmetry") or "C1").upper()
-    if symmetry not in SYMMETRIES:
-        raise ValueError("unknown symmetry {!r}".format(symmetry))
+    symmetry = valid_symmetry(params.get("symmetry"))
     molecular_weight = float(params.get("molecular_weight_kda") or 300.0)
     largest_dimension = float(params.get("largest_dimension_a") or 150.0)
     number_of_classes = max(1, int(params.get("number_of_classes") or 1))
@@ -665,9 +677,7 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
     rid = int(rid)
     source_classes = int(ref["NUMBER_OF_CLASSES"] or 1)
     number_of_classes = max(1, int(params.get("number_of_classes") or 1))
-    symmetry = str(params.get("symmetry") or pkg["SYMMETRY"] or "C1").upper()
-    if symmetry not in SYMMETRIES:
-        raise ValueError("unknown symmetry {}".format(symmetry))
+    symmetry = valid_symmetry(params.get("symmetry") or pkg["SYMMETRY"])
     molecular_weight = float(params.get("molecular_weight_kda") or pkg["MOLECULAR_WEIGHT"] or 300.0)
     largest_dimension = float(params.get("largest_dimension_a") or pkg["PARTICLE_SIZE"] or 150.0)
     box_size, output_pixel_size = int(pkg["STACK_BOX_SIZE"]), float(pkg["OUTPUT_PIXEL_SIZE"])

@@ -14,6 +14,7 @@ row below is transposed on the way in.
 """
 
 import math
+import re
 
 
 def _from_values(v):
@@ -207,10 +208,58 @@ _I2 = (
 )
 
 
+# A helix, "H<rise>,<twist>[,<copies>]" (SymmetryMatrix::ParseHelicalSymbol): rise in A
+# along z, twist in degrees about z, right-handed for positive values of both; copies the
+# number of operators reconstruct3d inserts each image under (odd, centred on the image
+# itself), or absent for as many as span 30% of the box, which reconstruct3d decides.
+_HELICAL_RE = re.compile(r"^H(\d+\.?\d*|\.\d+),(-?\d+\.?\d*|-?\.\d+)(?:,(\d+))?$")
+
+
+def is_helical(symbol):
+    return str(symbol or "").strip().upper().startswith("H")
+
+
+def parse_helical(symbol):
+    """'H6,50' -> (6.0, 50.0, 0); 'h4.75,-165.3,9' -> (4.75, -165.3, 9). Raises
+    ValueError for anything SymmetryMatrix::ParseHelicalSymbol() would refuse."""
+    s = "".join(str(symbol or "").split()).upper()
+    m = _HELICAL_RE.match(s)
+    if not m:
+        raise ValueError("helical symmetry must be H<rise>,<twist>[,<copies>] (rise in A, twist in degrees), not '{}'".format(symbol))
+    rise, twist, copies = float(m.group(1)), float(m.group(2)), int(m.group(3) or 0)
+    if rise <= 0.0:
+        raise ValueError("helical symmetry needs a rise above 0 A, not '{}'".format(symbol))
+    if m.group(3) is not None and copies < 1:
+        raise ValueError("helical symmetry needs at least one copy, not '{}'".format(symbol))
+    return rise, twist, copies
+
+
+def normalise(symbol):
+    """The symbol as the programs and the database get it: upper case, no spaces,
+    a helix as H<rise>,<twist>[,<copies>] with the numbers as %g. Raises
+    ValueError for a symbol SymmetryMatrix::Init() would refuse."""
+    if is_helical(symbol):
+        rise, twist, copies = parse_helical(symbol)
+        return "H{:g},{:g}".format(rise, twist) + (",{}".format(copies) if copies else "")
+    kind, n = parse_symbol(symbol)
+    return "{}{}".format(kind, n if n else "")
+
+
+def describe(symbol):
+    """'H6,50' -> 'Helical: rise 6 A, twist 50 deg'; a point group as itself."""
+    if is_helical(symbol):
+        rise, twist, copies = parse_helical(symbol)
+        return "Helical: rise {:g} A, twist {:g} deg".format(rise, twist) + (", {} copies".format(copies) if copies else "")
+    return normalise(symbol)
+
+
 def parse_symbol(symbol):
-    """'D7' -> ('D', 7); 'I' -> ('I', 0). Raises ValueError for anything
-    SymmetryMatrix::Init() would refuse."""
+    """'D7' -> ('D', 7); 'I' -> ('I', 0); a helix -> ('H', 0) once its numbers
+    parse. Raises ValueError for anything SymmetryMatrix::Init() would refuse."""
     s = (symbol or "C1").strip().upper()
+    if is_helical(s):
+        parse_helical(s)
+        return "H", 0
     if not s or s[0] not in "CDTOI":
         raise ValueError("unknown symmetry '{}'".format(symbol))
     n = 0
@@ -224,8 +273,13 @@ def parse_symbol(symbol):
 
 
 def matrices(symbol):
-    """SymmetryMatrix::Init(): the rotation matrices of the point group."""
+    """SymmetryMatrix::Init(): the rotation matrices of the point group. A helix
+    gives the identity alone: its operators carry a translation too, and the
+    only use here (angular distributions) wants the views a point group
+    relates, of which a helix has none."""
     kind, n = parse_symbol(symbol)
+    if kind == "H":
+        return [_from_values((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0))]
     if kind == "C":
         out = []
         for i in range(n):

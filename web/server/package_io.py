@@ -440,9 +440,7 @@ def import_package(conn, project_id, params, log=None):
         raise ValueError("cannot read the parameter file: {}".format(metadata_path or "(none)"))
     n_images, box = int(head["nz"]), int(head["nx"])
 
-    symmetry = str(params.get("symmetry") or "C1").upper()
-    if symmetry not in rp.SYMMETRIES:
-        raise ValueError("unknown symmetry {!r}".format(symmetry))
+    symmetry = rp.valid_symmetry(params.get("symmetry"))
     molecular_weight = float(params.get("molecular_weight_kda") or 300.0)
     largest_dimension = float(params.get("largest_dimension_a") or 150.0)
     white = bool(params.get("protein_is_white"))

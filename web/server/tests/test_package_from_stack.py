@@ -58,6 +58,14 @@ class FromStackTests(unittest.TestCase):
     def _create(self, **extra):
         return rp.create_package(self.conn, self.project, dict({"selection_ids": [self.selection], "name": "FromStack", "output_pixel_size": 1.5}, **extra))
 
+    def test_a_helical_symmetry_is_stored_normalised_and_a_bad_one_refused(self):
+        pid = self._create(symmetry=" h6.0,50 ")["refinement_package_asset_id"]
+        self.assertEqual(self.conn.execute("SELECT SYMMETRY FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID = ?", (pid,)).fetchone()[0], "H6,50")
+        with self.assertRaises(ValueError):
+            self._create(symmetry="H6")
+        with self.assertRaises(ValueError):
+            self._create(symmetry="X2")
+
     def test_a_multi_class_package_starts_each_particle_in_one_class(self):
         out = self._create(box_size=32, number_of_classes=2)
         tables = [refinements.load_rows(self.conn, out["refinement_id"], k) for k in (1, 2)]

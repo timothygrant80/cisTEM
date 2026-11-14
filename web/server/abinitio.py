@@ -71,6 +71,7 @@ import job_runner
 import refinement_packages
 import starfile
 import volumes
+import symmetry as symmetry_module
 from stages import merge3d, prepare_stack, prepare_stack_classaverage, reconstruct3d, refine3d
 
 STAGE = "ab_initio_3d"
@@ -107,7 +108,8 @@ PLEASE_CREATE_PACKAGE_MESSAGE = ("Please create a refinement package (in the ass
 # ---------------------------------------------------------------------------
 
 def asymmetric_units(symmetry):
-    """ReturnNumberofAsymmetricUnits()."""
+    """ReturnNumberofAsymmetricUnits(); 1 for a helix, whose copies are a
+    reconstruction choice rather than a group order."""
     s = str(symmetry or "C1").strip().upper()
     kind, num = s[0], s[1:]
     n = int(num) if num.isdigit() else 0
@@ -122,6 +124,17 @@ def asymmetric_units(symmetry):
     if kind == "I":
         return 60
     return 1
+
+
+def symmetry_applied_from_the_start(settings):
+    """Whether the first rounds already reconstruct with the symmetry: when asked
+    for (Always Apply Symmetry), and always for a helix, which has no axes
+    align_symmetry could find three quarters of the way through the first start
+    (its operators are a screw along z, not a point group's rotations)."""
+    sym = settings["symmetry"]
+    if sym == "C1":
+        return False
+    return bool(settings["always_apply_symmetry"]) or symmetry_module.is_helical(sym)
 
 
 def percent_used_plan(number_of_particles, number_of_classes, symmetry, auto, start_percent, end_percent):
@@ -393,7 +406,7 @@ def settings_from_params(params, pkg):
         "always_apply_symmetry": _flag(params, "always_apply_symmetry", DEFAULTS["always_apply_symmetry"]),
         "apply_blurring": _flag(params, "apply_blurring", DEFAULTS["apply_blurring"]),
         "smoothing_factor": _num(params, "smoothing_factor", DEFAULTS["smoothing_factor"]),
-        "symmetry": str(params.get("symmetry") or pkg["SYMMETRY"] or "C1").strip().upper(),
+        "symmetry": refinement_packages.valid_symmetry(params.get("symmetry") or pkg["SYMMETRY"]),
         "use_class_averages": str(params.get("input_mode") or "images").strip().lower().startswith("class"),
         "images_per_class": max(1, _num(params, "images_per_class", DEFAULTS["images_per_class"], int)),
         "number_of_classes": max(1, _num(params, "number_of_classes", pkg["NUMBER_OF_CLASSES"] or 1, int)),
@@ -546,9 +559,7 @@ def validate(conn, params):
         raise ValueError("refinement package {!r} contains no particles".format(pkg["NAME"]))
     if not pkg["STACK_FILENAME"] or not os.path.isfile(pkg["STACK_FILENAME"]):
         raise ValueError("the particle stack {} is missing".format(pkg["STACK_FILENAME"]))
-    sym = str(params.get("symmetry") or pkg["SYMMETRY"] or "C1").strip().upper()
-    if sym not in refinement_packages.SYMMETRIES:
-        raise ValueError("unknown symmetry {!r}".format(sym))
+    sym = refinement_packages.valid_symmetry(params.get("symmetry") or pkg["SYMMETRY"])
     if _flag(params, "use_blush", False):
         info = blush.availability()
         if not info["available"]:
@@ -628,7 +639,7 @@ def _start(conn, project_id, job_id, params, profile):
     pixel_size = float(pkg["OUTPUT_PIXEL_SIZE"] or contained[0]["PIXEL_SIZE"] or 1.0)
     box = int(pkg["STACK_BOX_SIZE"])
     plan = percent_used_plan(n, classes, s["symmetry"], s["auto_percent_used"], s["start_percent_used"], s["end_percent_used"])
-    apply_symmetry = bool(s["always_apply_symmetry"] and s["symmetry"] != "C1")
+    apply_symmetry = symmetry_applied_from_the_start(s)
     mask_radius = min(s["mask_radius"], box * 0.45 * pixel_size)
     state = {
         "phase": None, "start": 0, "round": 0, "starts": s["number_of_starts"], "rounds": s["number_of_rounds"],
@@ -1256,7 +1267,7 @@ def _cycle(conn, project_id, parent_id, state):
         sched = round_schedule(state["round"], state["rounds"], s["initial_resolution_limit"], s["final_resolution_limit"], state["plan"], state["apply_symmetry"])
         state.update({"current_high_res": sched["high_res"], "next_high_res": sched["next_high_res"], "current_percent_used": sched["percent_used"]})
         at_three_quarters = state["round"] == int(math.floor(state["rounds"] * 0.75 + 0.5))
-        if at_three_quarters and s["symmetry"] != "C1" and not s["always_apply_symmetry"] and state["start"] == 0:
+        if at_three_quarters and s["symmetry"] != "C1" and not symmetry_applied_from_the_start(s) and state["start"] == 0:
             # align_symmetry runs here for minutes: record that the merge is consumed and
             # the alignment is what is running, so a server restart resumes at the
             # alignment instead of finishing the round a second time.

@@ -854,7 +854,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       (not state["stack_precomputed"]) or state.get("use_class_averages", False), False, state["invert_contrast"], False, False, False, True,
                       use_ref, False, True,
                       str(scratch / "startup_dump_file_{}_odd_{}.dump".format(k, j)),
-                      str(scratch / "startup_dump_file_{}_even_{}.dump".format(k, j)), 0, 1]
+                      str(scratch / "startup_dump_file_{}_even_{}.dump".format(k, j)), 0, 1, symmetry_module.is_helical(symmetry)]
             tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -887,7 +887,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half)
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius"], outer,
                                                 str(scratch / "startup_dump_file_{}_odd_.dump".format(k)), str(scratch / "startup_dump_file_{}_even_.dump".format(k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"]]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"], symmetry_module.is_helical(state["settings"]["symmetry"]) and bool(state["apply_symmetry"])]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge {}".format(parent["NAME"], "initial" if state["initial"] else n_out + 1), parent)
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

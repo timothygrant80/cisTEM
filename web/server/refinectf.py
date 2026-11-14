@@ -47,6 +47,7 @@ import progress_store
 import refinements
 import starfile
 import volumes
+import symmetry as symmetry_module
 from abinitio import (merge_profile, _new_child, _parent_row, _profile, _task, _load_state, _save, now_iso, particle_range,
                       default_statistics, write_statistics, read_statistics, pooled_part_ssnr, average_sigma)
 from refine3d import _num, _flag, PLEASE_CREATE_PACKAGE_MESSAGE, CHILD_RECON, CHILD_MERGE
@@ -572,7 +573,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       s["smoothing_factor"], 1.0,
                       True, s["adjust_score_for_defocus"], state["invert_contrast"], False, s["autocrop_images"], False, False,
                       use_ref, True, True,
-                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1]
+                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1, symmetry_module.is_helical(state["symmetry"])]
             tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -597,7 +598,7 @@ def _launch_merge(conn, project_id, job_id, state):
         stats.append(st)
         tasks.append(_task(merge3d, k, k + 1, ["/dev/null", "/dev/null", out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0, symmetry_module.is_helical(state["symmetry"])]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge3d".format(parent["NAME"]), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

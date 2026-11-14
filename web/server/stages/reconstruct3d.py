@@ -1,6 +1,6 @@
 """`reconstruct3d` as a step of an ab-initio 3D reconstruction.
 
-The reconstruction leg of a 3D round: reconstruct3d on a particle range, dumping its half-set arrays for merge3d (AbInitioManager::SetupReconstructionJob, format ttttttttiiffffffffffbbbbbbbbbbttii).
+The reconstruction leg of a 3D round: reconstruct3d on a particle range, dumping its half-set arrays for merge3d (AbInitioManager::SetupReconstructionJob, format ttttttttiiffffffffffbbbbbbbbbbttiib; the last, impose_helical_symmetry, is cisTEM3's: the real-space helical symmetrisation of the final maps, on for a helical package).
 Not a stage of its own: server/abinitio.py submits these as hidden child
 jobs (STAGE "abinitio_reconstruct3d") of an ab_initio_3d job; this module is what the
 runner needs of an adapter -- the program, and a finalize() with nothing to
@@ -10,7 +10,7 @@ The argument list is built in abinitio.py next to the values.
 
 PROGRAM = {"name": "reconstruct3d", "executable": "reconstruct3d"}
 
-ARGUMENT_TYPES = "ttttttttiiffffffffffbbbbbbbbbbttii"
+ARGUMENT_TYPES = "ttttttttiiffffffffffbbbbbbbbbbttiib"
 ARGUMENT_NAMES = (
     "input_particle_stack",
     "input_star_filename",
@@ -46,6 +46,7 @@ ARGUMENT_NAMES = (
     "dump_file_2",
     "correct_ewald_sphere",
     "max_threads",
+    "impose_helical_symmetry",
 )
 assert len(ARGUMENT_NAMES) == len(ARGUMENT_TYPES)
 

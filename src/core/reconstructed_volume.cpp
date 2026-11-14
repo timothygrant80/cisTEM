@@ -10,6 +10,7 @@ ReconstructedVolume::ReconstructedVolume(float wanted_molecular_mass_in_kDa) {
     was_corrected          = false;
     //	has_statistics = false;
     has_been_filtered        = false;
+    impose_helical_symmetry_in_real_space = false;
     pixel_size               = 0.0;
     symmetry_symbol          = "C1";
     current_resolution_limit = -1.0;
@@ -152,6 +153,16 @@ void ReconstructedVolume::Deallocate( ) {
         current_projection.Deallocate( );
         projection_initialized = false;
     }
+}
+
+// The real-space helical symmetrisation of a finished map (density_map real and centred), the central 30% of the
+// box averaged over the screw and the rest filled from it, within the outer mask radius; only when asked for and
+// the symmetry is helical, so point groups are untouched.
+void ReconstructedVolume::ImposeHelicalSymmetryIfAsked(float original_pixel_size, float outer_mask_radius) {
+    if ( ! impose_helical_symmetry_in_real_space || ! symmetry_matrices.is_helical )
+        return;
+    MyDebugAssertTrue(density_map != NULL && density_map->is_in_real_space, "The map must be in real space");
+    density_map->ImposeHelicalSymmetryInRealSpace(symmetry_matrices.helical_rise / original_pixel_size, symmetry_matrices.helical_twist, 0.3f, outer_mask_radius / original_pixel_size);
 }
 
 void ReconstructedVolume::InitWithReconstruct3D(Reconstruct3D& image_reconstruction, float wanted_pixel_size) {
@@ -617,6 +628,7 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D& reconstruction, int& ori
     if ( pixel_size != original_pixel_size )
         density_map->Resize(original_box_size, original_box_size, original_box_size);
     density_map->BackwardFFT( );
+    ImposeHelicalSymmetryIfAsked(original_pixel_size, outer_mask_radius);
     CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
     //	output_3d.mask_volume_in_voxels = output_3d1.mask_volume_in_voxels;
     output_file.OpenFile(output_volume, true);
@@ -709,6 +721,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* 
         density_map->CosineMask(0.45, 0.1);
     //	else density_map->CosineMask(0.5, original_pixel_size / 10.0);
     density_map->BackwardFFT( );
+    ImposeHelicalSymmetryIfAsked(original_pixel_size, outer_mask_radius);
     // Need to run Correct3D if cropping was not used
     // Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
     //if (intermediate_box_size == box_size) Correct3D(outer_mask_radius / original_pixel_size);
@@ -802,6 +815,7 @@ void ReconstructedVolume::FinalizeML(Reconstruct3D& reconstruction, Image* densi
     density_map->BackwardFFT( );
     if ( intermediate_box_size == box_size )
         Correct3D(outer_mask_radius / original_pixel_size);
+    ImposeHelicalSymmetryIfAsked(original_pixel_size, outer_mask_radius);
     CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
     output_file.OpenFile(output_volume, true);
     density_map->WriteSlices(&output_file, 1, density_map->logical_z_dimension);

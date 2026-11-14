@@ -107,6 +107,7 @@ class
     void TestCTFNodes( );
     void TestSpectrumImageMethods( );
     void TestHelicalSymmetry( );
+    void TestHelicalRealSpaceSymmetrisation( );
 #ifdef cisTEM_USING_LIBTORCH
     void TestLibTorch( );
 #endif
@@ -170,6 +171,7 @@ bool MyTestApp::DoCalculation( ) {
     TestCTFNodes( );
     TestSpectrumImageMethods( );
     TestHelicalSymmetry( );
+    TestHelicalRealSpaceSymmetrisation( );
 #ifdef cisTEM_USING_LIBTORCH
     TestLibTorch( );
 #endif
@@ -2199,10 +2201,10 @@ void MyTestApp::TestLibTorch( ) {
 
 // A helically symmetric filament for TestHelicalSymmetry: two Gaussian blobs per asymmetric unit, the
 // units following the screw (rise along z, twist about z; right-handed for positive twist and rise), the
-// filament spanning the box and tapered at the ends by a spherical mask so the test images look like
-// segments of a longer filament. The two blobs sit at different radii and azimuths, so the helical
+// filament spanning the box and (unless taper is off) tapered at the ends by a spherical mask so the test
+// images look like segments of a longer filament. The two blobs sit at different radii and azimuths, so the helical
 // symmetry is the only one the volume has.
-static void MakeHelicalTestVolume(Image& volume, int box, float pixel_size, float rise, float twist) {
+static void MakeHelicalTestVolume(Image& volume, int box, float pixel_size, float rise, float twist, bool taper = true) {
     const float sigma  = 2.0f;
     const int   reach  = 7;
     const float centre = float(box / 2);
@@ -2228,7 +2230,8 @@ static void MakeHelicalTestVolume(Image& volume, int box, float pixel_size, floa
             }
         }
     }
-    volume.CosineMask(0.45f * box, 6.0f);
+    if ( taper )
+        volume.CosineMask(0.45f * box, 6.0f);
 }
 
 // Pearson correlation of two real images of the same size inside a sphere (or disc) about the box centre.
@@ -2435,6 +2438,127 @@ void MyTestApp::TestHelicalSymmetry( ) {
         if ( correlation[2] > correlation[1] - 0.3f )
             FailTest;
     }
+
+    EndTest( );
+}
+
+// Pearson correlation of two real volumes inside a cylinder about the box-centre z axis, over the z range
+// [z_low, z_high) relative to the centre.
+static float CorrelationInCylinder(Image& a, Image& b, float radius, float z_low, float z_high) {
+    double sum_a = 0.0, sum_b = 0.0, sum_aa = 0.0, sum_bb = 0.0, sum_ab = 0.0;
+    long   n = 0;
+    for ( int k = 0; k < a.logical_z_dimension; k++ ) {
+        float z = k - a.physical_address_of_box_center_z;
+        if ( z < z_low || z >= z_high )
+            continue;
+        for ( int j = 0; j < a.logical_y_dimension; j++ ) {
+            for ( int i = 0; i < a.logical_x_dimension; i++ ) {
+                if ( powf(i - a.physical_address_of_box_center_x, 2) + powf(j - a.physical_address_of_box_center_y, 2) > radius * radius )
+                    continue;
+                double va = a.ReturnRealPixelFromPhysicalCoord(i, j, k), vb = b.ReturnRealPixelFromPhysicalCoord(i, j, k);
+                sum_a += va;
+                sum_b += vb;
+                sum_aa += va * va;
+                sum_bb += vb * vb;
+                sum_ab += va * vb;
+                n++;
+            }
+        }
+    }
+    double mean_a = sum_a / n, mean_b = sum_b / n;
+    double var_a = sum_aa / n - mean_a * mean_a, var_b = sum_bb / n - mean_b * mean_b;
+    if ( var_a <= 0.0 || var_b <= 0.0 )
+        return 0.0f;
+    return float((sum_ab / n - mean_a * mean_b) / sqrt(var_a * var_b));
+}
+
+// Root mean square of a real volume inside the same cylinder and z range.
+static float RmsInCylinder(Image& a, float radius, float z_low, float z_high) {
+    double sum = 0.0;
+    long   n   = 0;
+    for ( int k = 0; k < a.logical_z_dimension; k++ ) {
+        float z = k - a.physical_address_of_box_center_z;
+        if ( z < z_low || z >= z_high )
+            continue;
+        for ( int j = 0; j < a.logical_y_dimension; j++ )
+            for ( int i = 0; i < a.logical_x_dimension; i++ )
+                if ( powf(i - a.physical_address_of_box_center_x, 2) + powf(j - a.physical_address_of_box_center_y, 2) <= radius * radius ) {
+                    sum += powf(a.ReturnRealPixelFromPhysicalCoord(i, j, k), 2);
+                    n++;
+                }
+    }
+    return float(sqrt(sum / n));
+}
+
+void MyTestApp::TestHelicalRealSpaceSymmetrisation( ) {
+    BeginTest("Helical symmetry in real space");
+
+    const int   box        = 96;
+    const float pixel_size = 1.5f;
+    const float rise       = 6.0f; // A, 4 px
+    const float twist      = 50.0f;
+    const float radius     = 30.0f; // px: the blobs reach 18 + 3 sigma
+    const float end        = 0.5f * box - 8.0f; // blobs within reach of the box faces are cut in the truth itself
+
+    Image full, tapered;
+    MakeHelicalTestVolume(full, box, pixel_size, rise, twist, false);
+    // A boxed segment: the filament fading along z over the outer 20% of the box
+    tapered.CopyFrom(&full);
+    for ( int k = 0; k < box; k++ ) {
+        float t = (fabsf(k - tapered.physical_address_of_box_center_z) - 0.3f * box) / (0.2f * box);
+        float w = t <= 0.0f ? 1.0f : (t >= 1.0f ? 0.0f : 0.5f * (1.0f + cosf(PI * t)));
+        for ( int j = 0; j < box; j++ )
+            for ( int i = 0; i < box; i++ )
+                tapered.real_values[tapered.ReturnReal1DAddressFromPhysicalCoord(i, j, k)] *= w;
+    }
+
+    // 1. An exactly helical volume is left as it is, in the middle and at the ends
+    Image test;
+    test.CopyFrom(&full);
+    test.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 0.45f * box);
+    if ( CorrelationInCylinder(test, full, radius, -end, end) < 0.995f )
+        FailTest;
+
+    // 2. A tapered filament gets its ends filled from its middle: the end zone's amplitude comes back
+    // (its shape already correlates, a taper being a smooth scaling) and the whole stays the truth
+    float full_rms = RmsInCylinder(full, radius, 0.35f * box, end);
+    if ( RmsInCylinder(tapered, radius, 0.35f * box, end) > 0.7f * full_rms )
+        FailTest;
+    test.CopyFrom(&tapered);
+    test.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 0.45f * box);
+    // The zone's mean takes in the faded copies near the box ends, so the filled amplitude sits below the
+    // untapered truth (0.79 of it here), as RELION's does; the shape is the truth's
+    float filled_rms = RmsInCylinder(test, radius, 0.35f * box, end);
+    if ( filled_rms < 0.75f * full_rms || filled_rms > 1.05f * full_rms )
+        FailTest;
+    if ( CorrelationInCylinder(test, full, radius, 0.35f * box, end) < 0.98f )
+        FailTest;
+    if ( CorrelationInCylinder(test, full, radius, -end, end) < 0.99f )
+        FailTest;
+
+    // 3. Noise averages down over the copies, and the other hand averages the structure away
+    Image noisy;
+    noisy.CopyFrom(&full);
+    global_random_number_generator.SetSeed(99);
+    noisy.AddGaussianNoise(1.0f);
+    float noisy_before = CorrelationInCylinder(noisy, full, radius, -end, end);
+    test.CopyFrom(&noisy);
+    test.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 0.45f * box);
+    float noisy_after = CorrelationInCylinder(test, full, radius, -end, end);
+    test.CopyFrom(&noisy);
+    test.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, -twist, 0.3f, 0.45f * box);
+    float other_hand = CorrelationInCylinder(test, full, radius, -end, end);
+    // Measured: 0.47 before, 0.90 after, 0.17 with the other hand
+    if ( noisy_after < noisy_before + 0.3f )
+        FailTest;
+    if ( other_hand > noisy_before )
+        FailTest;
+
+    // 4. Outside the cylinder nothing changes
+    test.CopyFrom(&noisy);
+    test.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 20.0f);
+    if ( test.ReturnRealPixelFromPhysicalCoord(2, 2, box / 2) != noisy.ReturnRealPixelFromPhysicalCoord(2, 2, box / 2) )
+        FailTest;
 
     EndTest( );
 }

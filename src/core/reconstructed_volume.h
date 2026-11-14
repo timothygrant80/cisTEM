@@ -35,6 +35,9 @@ class ReconstructedVolume {
     bool was_corrected;
     //	bool						has_statistics;
     bool has_been_filtered;
+    // reconstruct3d / merge3d's "Impose helical symmetry in real space": the final maps (half maps and the
+    // filtered map) through Image::ImposeHelicalSymmetryInRealSpace when the symmetry is helical, else nothing
+    bool impose_helical_symmetry_in_real_space;
     bool whitened_projection;
 
     ReconstructedVolume(float wanted_molecular_mass_in_kDa = 0.0);
@@ -45,6 +48,7 @@ class ReconstructedVolume {
 
     void CopyAllButVolume(const ReconstructedVolume* other_volume);
     void Deallocate( );
+    void ImposeHelicalSymmetryIfAsked(float original_pixel_size, float outer_mask_radius);
     void InitWithReconstruct3D(Reconstruct3D& image_reconstruction, float wanted_pixel_size);
     void InitWithDimensions(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, std::string = "C1");
     void PrepareForProjections(float low_resolution_limit, float high_resolution_limit, bool approximate_binning = false, bool apply_binning = true);

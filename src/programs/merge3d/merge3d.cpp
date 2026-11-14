@@ -37,6 +37,7 @@ void Merge3DApp::DoInteractiveUserInput( ) {
     dump_file_seed_1               = my_input->GetFilenameFromUser("Seed for input dump filenames for odd particles", "The seed name of the first dump files with the intermediate reconstruction arrays", "dump_file_seed_1_.dat", false);
     dump_file_seed_2               = my_input->GetFilenameFromUser("Seed for input dump filenames for even particles", "The seed name of the second dump files with the intermediate reconstruction arrays", "dump_file_seed_2_.dat", false);
     number_of_dump_files           = my_input->GetIntFromUser("Number of dump files", "The number of dump files that should be read from disk and merged", "1", 1);
+    bool impose_helical_symmetry   = my_input->GetYesNoFromUser("Impose helical symmetry in real space", "For a helical symmetry (H<rise>,<twist>): average the central 30% of the final maps over the screw and fill the rest of the box from it, so the maps are helical end to end (ignored for point groups)", "No");
 
     delete my_input;
 
@@ -46,7 +47,7 @@ void Merge3DApp::DoInteractiveUserInput( ) {
     float    weiner_nominator            = 1.0f;
     float    alignment_res               = 5.0f;
     //	my_current_job.Reset(14);
-    my_current_job.ManualSetArguments("ttttfffttibtiff", output_reconstruction_1.c_str(),
+    my_current_job.ManualSetArguments("ttttfffttibtiffb", output_reconstruction_1.c_str(),
                                       output_reconstruction_2.c_str(),
                                       output_reconstruction_filtered.c_str(),
                                       output_resolution_statistics.c_str(),
@@ -60,7 +61,8 @@ void Merge3DApp::DoInteractiveUserInput( ) {
                                       orthogonal_views_filename.c_str(),
                                       number_of_dump_files,
                                       weiner_nominator,
-                                      alignment_res);
+                                      alignment_res,
+                                      impose_helical_symmetry);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -82,6 +84,7 @@ bool Merge3DApp::DoCalculation( ) {
     float    weiner_nominator               = my_current_job.arguments[13].ReturnFloatArgument( );
     // FOR LOCRES HACK..
     float alignment_res = my_current_job.arguments[14].ReturnFloatArgument( );
+    bool  impose_helical_symmetry = my_current_job.arguments[15].ReturnBoolArgument( );
 
     ResolutionStatistics* resolution_statistics = NULL;
     resolution_statistics                       = new ResolutionStatistics;
@@ -186,6 +189,9 @@ bool Merge3DApp::DoCalculation( ) {
 
     Printf("\nFinished reading arrays\n");
 
+    output_3d1.impose_helical_symmetry_in_real_space = impose_helical_symmetry;
+    output_3d2.impose_helical_symmetry_in_real_space = impose_helical_symmetry;
+    output_3d.impose_helical_symmetry_in_real_space  = impose_helical_symmetry;
     output_3d1.FinalizeSimple(my_reconstruction_1, original_x_dimension, original_pixel_size, pixel_size,
                               inner_mask_radius, outer_mask_radius, mask_falloff, output_reconstruction_1);
     output_3d2.FinalizeSimple(my_reconstruction_2, original_x_dimension, original_pixel_size, pixel_size,

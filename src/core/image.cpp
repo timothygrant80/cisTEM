@@ -10622,6 +10622,126 @@ void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& 
     Consume(&buffer_image);
 }
 
+// Impose a helical symmetry on a real-space, centred volume, as RELION's imposeHelicalSymmetryInRealSpace does:
+// inside a cylinder of max_radius about the box-centre z axis, every voxel of the central z_fraction of the box
+// becomes the mean of the volume at its screw-related positions (n * twist about z, n * rise along z, the
+// operators Reconstruct3D inserts under, for every n whose position lies inside the box), and the rest of the box
+// is then filled from that central zone through the nearest screw step, so the map is helical end to end; the
+// ends of a reconstruction, which fewer copies reached, become copies of its middle. Trilinear interpolation,
+// one z slice per thread. Outside the cylinder the volume is left as it is.
+void Image::ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_in_degrees, float z_fraction, float max_radius_in_pixels) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Not in real space");
+    MyDebugAssertTrue(logical_z_dimension > 1, "Not a volume");
+    MyDebugAssertTrue(rise_in_pixels > 0.0f, "The rise must be positive");
+    MyDebugAssertTrue(z_fraction > 0.0f && z_fraction <= 1.0f, "The central fraction must be in (0, 1]");
+
+    if ( max_radius_in_pixels <= 0.0f )
+        max_radius_in_pixels = ReturnSmallestLogicalDimension( ) / 2.0f - 1.0f;
+
+    const float centre_x           = physical_address_of_box_center_x;
+    const float centre_y           = physical_address_of_box_center_y;
+    const float centre_z           = physical_address_of_box_center_z;
+    const float max_radius_squared = powf(max_radius_in_pixels, 2);
+    const float zone_half_height   = 0.5f * z_fraction * logical_z_dimension;
+    // Sources must keep their trilinear neighbours inside the box
+    const float source_x_min = 0.0f, source_x_max = logical_x_dimension - 1.001f;
+    const float source_y_min = 0.0f, source_y_max = logical_y_dimension - 1.001f;
+    const float source_z_min = 0.0f, source_z_max = logical_z_dimension - 1.001f;
+    const int   max_steps    = int(ceilf(logical_z_dimension / rise_in_pixels)) + 1;
+
+    std::vector<float> cosines(2 * max_steps + 1), sines(2 * max_steps + 1);
+    for ( int n = -max_steps; n <= max_steps; n++ ) {
+        cosines[n + max_steps] = cosf(deg_2_rad(n * twist_in_degrees));
+        sines[n + max_steps]   = sinf(deg_2_rad(n * twist_in_degrees));
+    }
+
+    Image buffer;
+    buffer.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+    buffer.CopyFrom(this);
+
+    // The value at a physical coordinate, trilinear; the caller keeps the coordinate inside the box
+    auto sample = [](Image& image, float x, float y, float z) {
+        int   ix = int(x), iy = int(y), iz = int(z);
+        float fx = x - ix, fy = y - iy, fz = z - iz;
+        float v = 0.0f;
+        for ( int dz = 0; dz <= 1; dz++ ) {
+            float wz = dz ? fz : 1.0f - fz;
+            for ( int dy = 0; dy <= 1; dy++ ) {
+                float wy = dy ? fy : 1.0f - fy;
+                for ( int dx = 0; dx <= 1; dx++ ) {
+                    float wx = dx ? fx : 1.0f - fx;
+                    v += wx * wy * wz * image.real_values[image.ReturnReal1DAddressFromPhysicalCoord(ix + dx, iy + dy, iz + dz)];
+                }
+            }
+        }
+        return v;
+    };
+
+    // 1. The central zone: the mean over every screw-related position inside the box
+#pragma omp parallel for schedule(dynamic)
+    for ( int k = 0; k < logical_z_dimension; k++ ) {
+        float z = k - centre_z;
+        if ( fabsf(z) > zone_half_height )
+            continue;
+        int n_low  = int(ceilf((source_z_min - centre_z - z) / rise_in_pixels));
+        int n_high = int(floorf((source_z_max - centre_z - z) / rise_in_pixels));
+        for ( int j = 0; j < logical_y_dimension; j++ ) {
+            float y = j - centre_y;
+            for ( int i = 0; i < logical_x_dimension; i++ ) {
+                float x = i - centre_x;
+                if ( x * x + y * y > max_radius_squared )
+                    continue;
+                double sum   = 0.0;
+                int    count = 0;
+                for ( int n = n_low; n <= n_high; n++ ) {
+                    float c = cosines[n + max_steps], s = sines[n + max_steps];
+                    float source_x = c * x - s * y + centre_x;
+                    float source_y = s * x + c * y + centre_y;
+                    float source_z = z + n * rise_in_pixels + centre_z;
+                    if ( source_x < source_x_min || source_x > source_x_max || source_y < source_y_min || source_y > source_y_max || source_z < source_z_min || source_z > source_z_max )
+                        continue;
+                    sum += sample(*this, source_x, source_y, source_z);
+                    count++;
+                }
+                if ( count > 0 )
+                    buffer.real_values[buffer.ReturnReal1DAddressFromPhysicalCoord(i, j, k)] = float(sum / count);
+            }
+        }
+    }
+
+    // 2. The rest of the box: the zone's value at the screw step that lands nearest the centre
+    Image zone;
+    zone.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+    zone.CopyFrom(&buffer);
+#pragma omp parallel for schedule(dynamic)
+    for ( int k = 0; k < logical_z_dimension; k++ ) {
+        float z = k - centre_z;
+        if ( fabsf(z) <= zone_half_height )
+            continue;
+        int   n        = -myroundint(z / rise_in_pixels);
+        float c        = cosines[n + max_steps], s = sines[n + max_steps];
+        float source_z = z + n * rise_in_pixels + centre_z;
+        if ( source_z < source_z_min || source_z > source_z_max )
+            continue;
+        for ( int j = 0; j < logical_y_dimension; j++ ) {
+            float y = j - centre_y;
+            for ( int i = 0; i < logical_x_dimension; i++ ) {
+                float x = i - centre_x;
+                if ( x * x + y * y > max_radius_squared )
+                    continue;
+                float source_x = c * x - s * y + centre_x;
+                float source_y = s * x + c * y + centre_y;
+                if ( source_x < source_x_min || source_x > source_x_max || source_y < source_y_min || source_y > source_y_max )
+                    continue;
+                buffer.real_values[buffer.ReturnReal1DAddressFromPhysicalCoord(i, j, k)] = sample(zone, source_x, source_y, source_z);
+            }
+        }
+    }
+
+    Consume(&buffer);
+}
+
 void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels, std::string wanted_symmetry) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");

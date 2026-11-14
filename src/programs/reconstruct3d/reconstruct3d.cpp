@@ -27,6 +27,7 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
     std::string output_reconstruction_filtered;
     std::string output_resolution_statistics;
     std::string my_symmetry    = "C1";
+    bool        impose_helical_symmetry = false;
     int      first_particle = 1;
     int      last_particle  = 0;
     float    pixel_size     = 1;
@@ -67,6 +68,7 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
     output_reconstruction_filtered = my_input->GetFilenameFromUser("Output filtered reconstruction", "The final 3D reconstruction, containing from all data and optimally filtered", "my_filtered_reconstruction.mrc", false);
     output_resolution_statistics   = my_input->GetFilenameFromUser("Output resolution statistics", "The text file with the resolution statistics for the final reconstruction", "my_statistics.txt", false);
     my_symmetry                    = my_input->GetSymmetryFromUser("Particle symmetry", "The assumed symmetry of the particle to be reconstructed", "C1");
+    impose_helical_symmetry        = my_input->GetYesNoFromUser("Impose helical symmetry in real space", "For a helical symmetry (H<rise>,<twist>): average the central 30% of the final maps over the screw and fill the rest of the box from it, so the maps are helical end to end (ignored for point groups)", "No");
     first_particle                 = my_input->GetIntFromUser("First particle to include (0 = first in stack)", "The first particle in the stack that should be included in the reconstruction", "1", 0);
     last_particle                  = my_input->GetIntFromUser("Last particle to include (0 = last in stack)", "The last particle in the stack that should be included in the reconstruction", "0", 0);
     pixel_size                     = my_input->GetFloatFromUser("Pixel size of reconstruction (A)", "Pixel size of the output reconstruction in Angstroms", "1.0", 0.0);
@@ -110,7 +112,7 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
 
     //	my_current_job.Reset(33);
     //	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.c_str(),
-    my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbttii", input_particle_stack.c_str(),
+    my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbttiib", input_particle_stack.c_str(),
                                       input_star_filename.c_str(),
                                       input_reconstruction.c_str(),
                                       output_reconstruction_1.c_str(),
@@ -128,7 +130,8 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
                                       dump_file_1.c_str(),
                                       dump_file_2.c_str(),
                                       correct_ewald_sphere,
-                                      max_threads);
+                                      max_threads,
+                                      impose_helical_symmetry);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -169,6 +172,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
     std::string dump_file_2          = my_current_job.arguments[31].ReturnStringArgument( );
     int      correct_ewald_sphere = my_current_job.arguments[32].ReturnIntegerArgument( );
     int      max_threads          = my_current_job.arguments[33].ReturnIntegerArgument( );
+    bool     impose_helical_symmetry = my_current_job.arguments[34].ReturnBoolArgument( );
 
     // When multiple particle groups are present this boolean will be set true via a call to star_file.ReturnTrueIfThereAreMultipleParticleGroups).
     // We need to apply the exposure filter during reconstruction. For now, this is only used in reconstruction 3d's from tilt series data.
@@ -1294,6 +1298,9 @@ bool Reconstruct3DApp::DoCalculation( ) {
         return true;
     }
 
+    output_3d1.impose_helical_symmetry_in_real_space = impose_helical_symmetry;
+    output_3d2.impose_helical_symmetry_in_real_space = impose_helical_symmetry;
+    output_3d.impose_helical_symmetry_in_real_space  = impose_helical_symmetry;
     output_3d1.FinalizeSimple(my_reconstruction_1, original_box_size, original_pixel_size, pixel_size,
                               inner_mask_radius, outer_mask_radius, mask_falloff, output_reconstruction_1);
     output_3d2.FinalizeSimple(my_reconstruction_2, original_box_size, original_pixel_size, pixel_size,

@@ -108,9 +108,12 @@ PLEASE_CREATE_PACKAGE_MESSAGE = ("Please create a refinement package (in the ass
 # ---------------------------------------------------------------------------
 
 def asymmetric_units(symmetry):
-    """ReturnNumberofAsymmetricUnits(); 1 for a helix, whose copies are a
-    reconstruction choice rather than a group order."""
+    """ReturnNumberofAsymmetricUnits(); for a helix the cyclic order of its
+    multi-start (1 for a one-start): the screw copies are a reconstruction
+    choice rather than a group order."""
     s = str(symmetry or "C1").strip().upper()
+    if symmetry_module.is_helical(s):
+        return symmetry_module.parse_helical(s)[3]
     kind, num = s[0], s[1:]
     n = int(num) if num.isdigit() else 0
     if kind == "C":

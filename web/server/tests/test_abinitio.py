@@ -191,18 +191,30 @@ class Refine3DTests(unittest.TestCase):
         self.assertAlmostEqual(views[1][1] % 360.0, 210.0)
 
     def test_helical_symbols(self):
-        """H<rise>,<twist>[,<copies>] (SymmetryMatrix::ParseHelicalSymbol): parsed, normalised,
+        """H<rise>,<twist>[,<copies>][,C<n>] (SymmetryMatrix::ParseHelicalSymbol): parsed, normalised,
         one asymmetric unit, the identity alone for the angular distributions, and applied
         from the start of an ab initio (there are no axes for align_symmetry to find)."""
         import symmetry
         import refinement_packages as rp
-        self.assertEqual(symmetry.parse_helical(" h6,50 "), (6.0, 50.0, 0))
-        self.assertEqual(symmetry.parse_helical("H4.75,-165.3,9"), (4.75, -165.3, 9))
+        self.assertEqual(symmetry.parse_helical(" h6,50 "), (6.0, 50.0, 0, 1))
+        self.assertEqual(symmetry.parse_helical("H4.75,-165.3,9"), (4.75, -165.3, 9, 1))
+        self.assertEqual(symmetry.parse_helical("H15,12,C3"), (15.0, 12.0, 0, 3))
+        self.assertEqual(symmetry.parse_helical("h15,12,9,c3"), (15.0, 12.0, 9, 3))
+        self.assertEqual(symmetry.parse_helical("H15,12,C3,9"), (15.0, 12.0, 9, 3))
         self.assertEqual(symmetry.normalise("h6.0,50"), "H6,50")
         self.assertEqual(symmetry.normalise("H4.75,-165.3,9"), "H4.75,-165.3,9")
+        self.assertEqual(symmetry.normalise("h15,12,c3,9"), "H15,12,9,C3")
+        self.assertEqual(symmetry.normalise("H15,12,C1"), "H15,12")
         self.assertEqual(symmetry.normalise(" d2 "), "D2")
         self.assertEqual(symmetry.describe("H6,50"), "Helical: rise 6 A, twist 50 deg")
-        for bad in ("H6", "H0,50", "H6,50,0", "H6,x", "H", "H6,50,7,1"):
+        self.assertEqual(symmetry.describe("H15,12,C3"), "Helical: rise 15 A, twist 12 deg, 3 starts (C3)")
+        self.assertEqual(symmetry.parse_symbol("H15,12,C3"), ("H", 3))
+        self.assertEqual(len(symmetry.matrices("H15,12,C3")), 3)
+        self.assertEqual(ab.asymmetric_units("H15,12,C3"), 3)
+        import autorefine
+        self.assertEqual(autorefine.asymmetric_units("H15,12,C3"), 3)
+        self.assertEqual(autorefine.asymmetric_units("H15,12"), 1)
+        for bad in ("H6", "H0,50", "H6,50,0", "H6,x", "H", "H6,50,7,1", "H15,12,C0", "H15,12,C2,C3", "H15,12,C3,9,1"):
             with self.assertRaises(ValueError, msg=bad):
                 symmetry.normalise(bad)
             with self.assertRaises(ValueError, msg=bad):
@@ -211,7 +223,7 @@ class Refine3DTests(unittest.TestCase):
         self.assertEqual(rp.valid_symmetry(None), "C1")
         with self.assertRaises(ValueError):
             rp.valid_symmetry("C5")   # not in the wizard's list
-        self.assertEqual(symmetry.parse_symbol("H6,50"), ("H", 0))
+        self.assertEqual(symmetry.parse_symbol("H6,50"), ("H", 1))
         self.assertEqual(len(symmetry.matrices("H6,50")), 1)
         self.assertEqual(ab.asymmetric_units("H6,50"), 1)
         self.assertEqual(symmetry.symmetry_related_views(30.0, 40.0, 50.0, "H6,50"), symmetry.symmetry_related_views(30.0, 40.0, 50.0, "C1"))

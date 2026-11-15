@@ -115,7 +115,7 @@ def asymmetric_units(symbol):
         kind, n = symmetry_module.parse_symbol(symbol)
     except ValueError:
         return 1
-    return {"C": n, "D": 2 * n, "T": 12, "O": 24, "I": 60}.get(kind, 1)
+    return {"C": n, "D": 2 * n, "T": 12, "O": 24, "I": 60, "H": n}.get(kind, 1)   # a helix: its multi-start Cn
 
 
 def percent_for_resolution(resolution_a, number_of_particles, symbol, number_of_classes):

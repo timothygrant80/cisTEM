@@ -2203,8 +2203,9 @@ void MyTestApp::TestLibTorch( ) {
 // units following the screw (rise along z, twist about z; right-handed for positive twist and rise), the
 // filament spanning the box and (unless taper is off) tapered at the ends by a spherical mask so the test
 // images look like segments of a longer filament. The two blobs sit at different radii and azimuths, so the helical
-// symmetry is the only one the volume has.
-static void MakeHelicalTestVolume(Image& volume, int box, float pixel_size, float rise, float twist, bool taper = true) {
+// symmetry is the only one the volume has, unless cyclic_order asks for a multi-start (the units repeated
+// about the axis).
+static void MakeHelicalTestVolume(Image& volume, int box, float pixel_size, float rise, float twist, bool taper = true, int cyclic_order = 1) {
     const float sigma  = 2.0f;
     const int   reach  = 7;
     const float centre = float(box / 2);
@@ -2213,13 +2214,13 @@ static void MakeHelicalTestVolume(Image& volume, int box, float pixel_size, floa
     volume.Allocate(box, box, box, true);
     volume.SetToConstant(0.0f);
     for ( int n = -n_max; n <= n_max; n++ ) {
-        for ( int blob = 0; blob < 2; blob++ ) {
-            float angle     = deg_2_rad(n * twist + (blob == 0 ? 0.0f : 70.0f));
-            float radius    = (blob == 0 ? 18.0f : 10.0f);
-            float amplitude = (blob == 0 ? 1.0f : 0.7f);
+        for ( int blob = 0; blob < 2 * cyclic_order; blob++ ) {
+            float angle     = deg_2_rad(n * twist + (blob % 2 == 0 ? 0.0f : 70.0f) + (blob / 2) * 360.0f / cyclic_order);
+            float radius    = (blob % 2 == 0 ? 18.0f : 10.0f);
+            float amplitude = (blob % 2 == 0 ? 1.0f : 0.7f);
             float bx        = centre + radius * cosf(angle);
             float by        = centre + radius * sinf(angle);
-            float bz        = centre + n * rise / pixel_size + (blob == 0 ? 0.0f : 1.5f);
+            float bz        = centre + n * rise / pixel_size + (blob % 2 == 0 ? 0.0f : 1.5f);
             for ( int k = std::max(0, int(bz) - reach); k <= std::min(box - 1, int(bz) + reach); k++ ) {
                 for ( int j = std::max(0, int(by) - reach); j <= std::min(box - 1, int(by) + reach); j++ ) {
                     for ( int i = std::max(0, int(bx) - reach); i <= std::min(box - 1, int(bx) + reach); i++ ) {
@@ -2289,20 +2290,33 @@ void MyTestApp::TestHelicalSymmetry( ) {
 
     // The symbol: "H<rise>,<twist>" with the copy count decided by the box, or given as a third number
     float parsed_rise, parsed_twist;
-    int   parsed_copies;
-    if ( ! SymmetryMatrix::ParseHelicalSymbol("H6,50", parsed_rise, parsed_twist, parsed_copies) )
+    int   parsed_copies, parsed_order;
+    if ( ! SymmetryMatrix::ParseHelicalSymbol("H6,50", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
         FailTest;
-    if ( parsed_rise != 6.0f || parsed_twist != 50.0f || parsed_copies != 0 )
+    if ( parsed_rise != 6.0f || parsed_twist != 50.0f || parsed_copies != 0 || parsed_order != 1 )
         FailTest;
-    if ( ! SymmetryMatrix::ParseHelicalSymbol("h4.75,-165.3,9", parsed_rise, parsed_twist, parsed_copies) )
+    if ( ! SymmetryMatrix::ParseHelicalSymbol("h4.75,-165.3,9", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
         FailTest;
-    if ( fabsf(parsed_rise - 4.75f) > 1e-5f || fabsf(parsed_twist + 165.3f) > 1e-4f || parsed_copies != 9 )
+    if ( fabsf(parsed_rise - 4.75f) > 1e-5f || fabsf(parsed_twist + 165.3f) > 1e-4f || parsed_copies != 9 || parsed_order != 1 )
         FailTest;
-    if ( SymmetryMatrix::ParseHelicalSymbol("H6", parsed_rise, parsed_twist, parsed_copies) )
+    // A multi-start: C<n> as the third or fourth field, the copies before or after it
+    if ( ! SymmetryMatrix::ParseHelicalSymbol("H15,12,C3", parsed_rise, parsed_twist, parsed_copies, parsed_order) || parsed_copies != 0 || parsed_order != 3 )
+        FailTest;
+    if ( ! SymmetryMatrix::ParseHelicalSymbol("H15,12,9,c3", parsed_rise, parsed_twist, parsed_copies, parsed_order) || parsed_copies != 9 || parsed_order != 3 )
+        FailTest;
+    if ( ! SymmetryMatrix::ParseHelicalSymbol("H15,12,C3,9", parsed_rise, parsed_twist, parsed_copies, parsed_order) || parsed_copies != 9 || parsed_order != 3 )
+        FailTest;
+    if ( SymmetryMatrix::ParseHelicalSymbol("H15,12,C0", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
+        FailTest;
+    if ( SymmetryMatrix::ParseHelicalSymbol("H15,12,3,5", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
+        FailTest; // two copy counts
+    if ( SymmetryMatrix::ParseHelicalSymbol("H15,12,C2,C3", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
+        FailTest;
+    if ( SymmetryMatrix::ParseHelicalSymbol("H6", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
         FailTest; // no twist
-    if ( SymmetryMatrix::ParseHelicalSymbol("H0,50", parsed_rise, parsed_twist, parsed_copies) )
+    if ( SymmetryMatrix::ParseHelicalSymbol("H0,50", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
         FailTest; // no rise
-    if ( SymmetryMatrix::ParseHelicalSymbol("C3", parsed_rise, parsed_twist, parsed_copies) )
+    if ( SymmetryMatrix::ParseHelicalSymbol("C3", parsed_rise, parsed_twist, parsed_copies, parsed_order) )
         FailTest;
     if ( SymmetryMatrix::IsHelicalSymbol("C3") || ! SymmetryMatrix::IsHelicalSymbol(" h6,50 ") )
         FailTest;
@@ -2328,6 +2342,20 @@ void MyTestApp::TestHelicalSymmetry( ) {
         FailTest;
     SymmetryMatrix point_group("C3");
     if ( point_group.is_helical || point_group.number_of_matrices != 3 )
+        FailTest;
+    // A two-start: every screw step at both Cn rotations, the identity first, the symbol keeping the Cn
+    SymmetryMatrix two_start("H6,50,5,C2");
+    if ( two_start.number_of_matrices != 10 || two_start.helical_cyclic_order != 2 || two_start.helical_copies != 5 )
+        FailTest;
+    if ( two_start.z_shift[0] != 0.0f || two_start.z_shift[1] != 0.0f || two_start.z_shift[2] != 6.0f || two_start.z_shift[3] != 6.0f || two_start.z_shift[4] != -6.0f )
+        FailTest;
+    if ( fabsf(two_start.rot_mat[1].m[0][0] + 1.0f) > 1e-5f || fabsf(two_start.rot_mat[3].m[0][0] - cosf(deg_2_rad(230.0f))) > 1e-5f || fabsf(two_start.rot_mat[3].m[1][0] - sinf(deg_2_rad(230.0f))) > 1e-5f )
+        FailTest;
+    SymmetryMatrix unresolved_two_start("H6,50,C3");
+    if ( unresolved_two_start.number_of_matrices != 3 || unresolved_two_start.helical_copies != 0 )
+        FailTest; // the Cn alone until the box decides the screw steps
+    unresolved_two_start.SetHelicalCopies(5);
+    if ( unresolved_two_start.number_of_matrices != 15 || unresolved_two_start.symmetry_symbol != "H6,50,5,C3" )
         FailTest;
 
     Image truth;
@@ -2436,6 +2464,60 @@ void MyTestApp::TestHelicalSymmetry( ) {
         if ( correlation[0] > correlation[1] - 0.03f )
             FailTest;
         if ( correlation[2] > correlation[1] - 0.3f )
+            FailTest;
+    }
+
+    // 3. A two-start helix from the same few views: the Cn in the symbol doubles the insertions and the
+    // map gets closer to the truth than the one-start symbol's, which is still right, only emptier.
+    {
+        const int   number_of_images = 4;
+        const float sharper          = 0.25f; // 6 A: coverage, not the symmetry, is what differs
+        Image       two_start_truth, two_start_truth_ft;
+        MakeHelicalTestVolume(two_start_truth, box, pixel_size, rise, twist, true, 2);
+        two_start_truth_ft.CopyFrom(&two_start_truth);
+        two_start_truth_ft.ForwardFFT( );
+        two_start_truth_ft.SwapRealSpaceQuadrants( );
+        global_random_number_generator.SetSeed(4321);
+
+        Reconstruct3D one_start(box, box, box, pixel_size, 100.0f, 0.0f, 0.0f, "H6,50");
+        Reconstruct3D with_cn(box, box, box, pixel_size, 100.0f, 0.0f, 0.0f, "H6,50,C2");
+        if ( with_cn.symmetry_matrices.number_of_matrices != 14 || with_cn.symmetry_matrices.symmetry_symbol != "H6,50,7,C2" )
+            FailTest;
+
+        Particle particle(box, box);
+        particle.AllocateCTFImage(box, box);
+        particle.pixel_size                  = pixel_size;
+        particle.particle_occupancy          = 100.0f;
+        particle.parameter_average.occupancy = 100.0f;
+        particle.sigma_noise                 = 0.01f;
+        particle.parameter_average.sigma     = 1.0f;
+        particle.particle_score              = 0.0f;
+        particle.particle_image->object_is_centred_in_box = false;
+        Image slice;
+        slice.Allocate(box, box, 1, false);
+        slice.object_is_centred_in_box = false;
+        for ( int image = 0; image < number_of_images; image++ ) {
+            particle.alignment_parameters.Init(global_random_number_generator.GetUniformRandomSTD(0.0f, 360.0f), global_random_number_generator.GetUniformRandomSTD(60.0f, 120.0f), global_random_number_generator.GetUniformRandomSTD(0.0f, 360.0f), 0.0f, 0.0f);
+            two_start_truth_ft.ExtractSliceByRotMatrix(slice, particle.alignment_parameters.euler_matrix, 0.45f);
+            particle.particle_image->CopyFrom(&slice);
+            one_start.InsertSliceNoCTF(particle);
+            particle.particle_image->CopyFrom(&slice);
+            with_cn.InsertSliceNoCTF(particle);
+        }
+        Image truth_filtered;
+        FourierVolumeToFilteredRealSpace(two_start_truth_ft, truth_filtered, sharper);
+        float          correlation[2];
+        Reconstruct3D* reconstructions[2] = {&one_start, &with_cn};
+        for ( int r = 0; r < 2; r++ ) {
+            ReconstructedVolume volume;
+            volume.InitWithReconstruct3D(*reconstructions[r], pixel_size);
+            volume.Calculate3DSimple(*reconstructions[r]);
+            Image map;
+            FourierVolumeToFilteredRealSpace(*volume.density_map, map, sharper);
+            correlation[r] = CorrelationAboutCentre(map, truth_filtered, compare_radius);
+        }
+        // Measured with this seed: 0.979 with the one-start symbol, 0.989 with C2
+        if ( correlation[1] < 0.95f || correlation[1] < correlation[0] + 0.005f )
             FailTest;
     }
 
@@ -2554,7 +2636,31 @@ void MyTestApp::TestHelicalRealSpaceSymmetrisation( ) {
     if ( other_hand > noisy_before )
         FailTest;
 
-    // 4. Outside the cylinder nothing changes
+    // 4. A two-start helix: its Cn is averaged over as well, so order 2 holds the exact volume and beats
+    // order 1 on the noisy one; the wrong order averages the structure away (measured: 0.61, 0.74, 0.43)
+    {
+        Image two_start, test2, noisy2;
+        MakeHelicalTestVolume(two_start, box, pixel_size, rise, twist, false, 2);
+        test2.CopyFrom(&two_start);
+        test2.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 0.45f * box, 2);
+        if ( CorrelationInCylinder(test2, two_start, radius, -end, end) < 0.995f )
+            FailTest;
+        noisy2.CopyFrom(&two_start);
+        noisy2.AddGaussianNoise(1.0f);
+        test2.CopyFrom(&noisy2);
+        test2.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 0.45f * box, 1);
+        float order_one = CorrelationInCylinder(test2, two_start, radius, -end, end);
+        test2.CopyFrom(&noisy2);
+        test2.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 0.45f * box, 2);
+        float order_two = CorrelationInCylinder(test2, two_start, radius, -end, end);
+        test2.CopyFrom(&noisy2);
+        test2.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 0.45f * box, 3);
+        float order_three = CorrelationInCylinder(test2, two_start, radius, -end, end);
+        if ( order_two < order_one + 0.02f || order_three > order_one )
+            FailTest;
+    }
+
+    // 5. Outside the cylinder nothing changes
     test.CopyFrom(&noisy);
     test.ImposeHelicalSymmetryInRealSpace(rise / pixel_size, twist, 0.3f, 20.0f);
     if ( test.ReturnRealPixelFromPhysicalCoord(2, 2, box / 2) != noisy.ReturnRealPixelFromPhysicalCoord(2, 2, box / 2) )

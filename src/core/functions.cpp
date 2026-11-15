@@ -796,9 +796,17 @@ int ReturnNumberofAsymmetricUnits(std::string symmetry) {
     MyDebugAssertTrue(current_symmetry_string.length() > 0, "symmetry string is blank");
     symmetry_type = toupper(static_cast<unsigned char>(current_symmetry_string[0]));
 
-    // A helix: the number of copies is a reconstruction choice (SymmetryMatrix), not a group order
-    if ( SymmetryMatrix::IsHelicalSymbol(current_symmetry_string) )
-        return 1;
+    // A helix: the number of copies is a reconstruction choice (SymmetryMatrix), not a group order; the
+    // multi-start Cn is the only point group it has
+    if ( SymmetryMatrix::IsHelicalSymbol(current_symmetry_string) ) {
+        float rise, twist;
+        int   copies, cyclic_order;
+        if ( ! SymmetryMatrix::ParseHelicalSymbol(current_symmetry_string, rise, twist, copies, cyclic_order) ) {
+            MyPrintWithDetails("Error: Invalid helical symmetry symbol: %s\n", current_symmetry_string);
+            DEBUG_ABORT;
+        }
+        return cyclic_order;
+    }
 
     if ( current_symmetry_string.length() == 1 ) {
         symmetry_number = 0;

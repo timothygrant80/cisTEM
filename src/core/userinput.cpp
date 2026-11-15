@@ -344,17 +344,17 @@ std::string UserInput::GetSymmetryFromUser(const char* my_text, const char* help
             }
             else if ( SymmetryMatrix::IsHelicalSymbol(supplied_input) ) {
                 float rise, twist;
-                int   copies;
-                if ( SymmetryMatrix::ParseHelicalSymbol(supplied_input, rise, twist, copies) ) {
+                int   copies, cyclic_order;
+                if ( SymmetryMatrix::ParseHelicalSymbol(supplied_input, rise, twist, copies, cyclic_order) ) {
                     DoGotValidAnswer(my_text, input);
                     std::string my_string(input);
                     return my_string;
                 }
                 if ( output_is_a_tty == true ) {
-                    MyPrintfRed("\nError: Helical symmetry must be H<rise>,<twist>[,<copies>] (rise in A, twist in degrees)!\n\n");
+                    MyPrintfRed("\nError: Helical symmetry must be H<rise>,<twist>[,<copies>][,C<n>] (rise in A, twist in degrees)!\n\n");
                 }
                 else {
-                    Printf("\nError: Helical symmetry must be H<rise>,<twist>[,<copies>] (rise in A, twist in degrees)!\n\n");
+                    Printf("\nError: Helical symmetry must be H<rise>,<twist>[,<copies>][,C<n>] (rise in A, twist in degrees)!\n\n");
                 }
             }
             else {

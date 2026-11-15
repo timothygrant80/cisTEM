@@ -232,7 +232,7 @@ class Image {
     void                RotateQuadrants(Image& rotated_image, int quad_i);
     void                Rotate3DByRotationMatrixAndOrApplySymmetry(RotationMatrix& wanted_matrix, float wanted_max_radius_in_pixels = 0.0, std::string wanted_symmetry = "C1"); // use identiy matrix to just impose sym
     void                Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, std::string wanted_symmetry = "C1"); // like above but with shift
-    void                ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_in_degrees, float z_fraction = 0.3f, float max_radius_in_pixels = 0.0f);
+    void                ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_in_degrees, float z_fraction = 0.3f, float max_radius_in_pixels = 0.0f, int cyclic_order = 1);
     void                Rotate3DThenShiftThenApplySymmetry(RotationMatrix& wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, std::string wanted_symmetry = "C1");
     void                GenerateReferenceProjections(Image* projections, EulerSearch& parameters, float resolution);
     void                RotateFourier2DGenerateIndex(Kernel2D**& kernel_index, float psi_max, float psi_step, float psi_start, bool invert_angle = false);

@@ -3,6 +3,7 @@
 SymmetryMatrix::SymmetryMatrix( ) {
     rot_mat            = NULL;
     z_shift            = NULL;
+    helical_cyclic_order = 1;
     number_of_matrices = 0;
     symmetry_symbol    = "C";
     is_helical         = false;
@@ -26,6 +27,7 @@ SymmetryMatrix& SymmetryMatrix::operator=(const SymmetryMatrix* other_matrix) {
         helical_rise       = other_matrix->helical_rise;
         helical_twist      = other_matrix->helical_twist;
         helical_copies     = other_matrix->helical_copies;
+        helical_cyclic_order = other_matrix->helical_cyclic_order;
         if ( rot_mat != NULL ) {
             delete[] rot_mat;
             rot_mat = NULL;
@@ -53,6 +55,7 @@ SymmetryMatrix& SymmetryMatrix::operator=(const SymmetryMatrix* other_matrix) {
 SymmetryMatrix::SymmetryMatrix(std::string wanted_symmetry_symbol) {
     rot_mat            = NULL;
     z_shift            = NULL;
+    helical_cyclic_order = 1;
     number_of_matrices = 0;
     is_helical         = false;
     helical_rise       = 0.0f;
@@ -67,8 +70,9 @@ bool SymmetryMatrix::IsHelicalSymbol(const std::string& symbol) {
     return trimmed.length( ) > 0 && toupper(static_cast<unsigned char>(trimmed[0])) == 'H';
 }
 
-// "H<rise>,<twist>[,<copies>]": rise > 0 in A, twist in degrees, copies a positive integer or absent (0).
-bool SymmetryMatrix::ParseHelicalSymbol(const std::string& symbol, float& rise, float& twist, int& copies) {
+// "H<rise>,<twist>[,<copies>][,C<n>]": rise > 0 in A, twist in degrees, copies a positive integer or absent (0),
+// C<n> the cyclic order of a multi-start helix or absent (1); the two optional fields in either order.
+bool SymmetryMatrix::ParseHelicalSymbol(const std::string& symbol, float& rise, float& twist, int& copies, int& cyclic_order) {
     std::string trimmed = symbol;
     TrimLeft(trimmed);
     TrimRight(trimmed);
@@ -85,21 +89,33 @@ bool SymmetryMatrix::ParseHelicalSymbol(const std::string& symbol, float& rise, 
             break;
         start = comma + 1;
     }
-    if ( fields.size( ) < 2 || fields.size( ) > 3 )
+    if ( fields.size( ) < 2 || fields.size( ) > 4 )
         return false;
 
     double parsed_rise, parsed_twist;
-    long   parsed_copies = 0;
+    long   parsed_copies = 0, parsed_order = 1;
+    bool   have_copies = false, have_order = false;
     if ( ! StringToDouble(fields[0], parsed_rise) || ! StringToDouble(fields[1], parsed_twist) )
         return false;
-    if ( fields.size( ) == 3 && (! StringToLong(fields[2], parsed_copies) || parsed_copies < 1) )
-        return false;
+    for ( size_t f = 2; f < fields.size( ); f++ ) {
+        if ( fields[f].length( ) > 1 && toupper(static_cast<unsigned char>(fields[f][0])) == 'C' ) {
+            if ( have_order || ! StringToLong(fields[f].substr(1), parsed_order) || parsed_order < 1 )
+                return false;
+            have_order = true;
+        }
+        else {
+            if ( have_copies || ! StringToLong(fields[f], parsed_copies) || parsed_copies < 1 )
+                return false;
+            have_copies = true;
+        }
+    }
     if ( ! (parsed_rise > 0.0) )
         return false;
 
-    rise   = float(parsed_rise);
-    twist  = float(parsed_twist);
-    copies = int(parsed_copies);
+    rise         = float(parsed_rise);
+    twist        = float(parsed_twist);
+    copies       = int(parsed_copies);
+    cyclic_order = int(parsed_order);
     return true;
 }
 
@@ -109,8 +125,9 @@ int SymmetryMatrix::ReturnDefaultHelicalCopies(float box_size_in_angstroms) {
     return 2 * int(0.15f * box_size_in_angstroms / helical_rise) + 1;
 }
 
-// Build the operators for a helix: index 0 the identity, then n = +1, -1, +2, -2, ... with rotation n * twist
-// about z and shift n * rise along z. An even count is rounded up so the set stays centred.
+// Build the operators for a helix: screw steps n = 0, +1, -1, +2, -2, ... with rotation n * twist about z and
+// shift n * rise along z, each combined with every rotation m * 360 / cyclic_order of the multi-start Cn; index 0
+// is the identity. An even count of screw steps is rounded up so the set stays centred.
 void SymmetryMatrix::SetHelicalCopies(int wanted_copies) {
     MyDebugAssertTrue(is_helical, "Not a helical symmetry");
     if ( wanted_copies < 1 ) {
@@ -125,16 +142,22 @@ void SymmetryMatrix::SetHelicalCopies(int wanted_copies) {
     if ( z_shift != NULL )
         delete[] z_shift;
     helical_copies     = wanted_copies;
-    number_of_matrices = wanted_copies;
+    number_of_matrices = wanted_copies * helical_cyclic_order;
     rot_mat            = new RotationMatrix[number_of_matrices];
     z_shift            = new float[number_of_matrices];
-    for ( int k = 0; k < number_of_matrices; k++ ) {
-        int   n     = (k + 1) / 2 * (k % 2 == 0 ? -1 : 1); // 0, 1, -1, 2, -2, ...
-        float angle = deg_2_rad(n * helical_twist);
-        rot_mat[k].SetToValues(cosf(angle), sinf(angle), 0.000000, -sinf(angle), cosf(angle), 0.000000, 0.000000, 0.000000, 1.000000);
-        z_shift[k] = n * helical_rise;
+    int k              = 0;
+    for ( int step = 0; step < wanted_copies; step++ ) {
+        int n = (step + 1) / 2 * (step % 2 == 0 ? -1 : 1); // 0, 1, -1, 2, -2, ...
+        for ( int m = 0; m < helical_cyclic_order; m++ ) {
+            float angle = deg_2_rad(n * helical_twist + m * 360.0f / helical_cyclic_order);
+            rot_mat[k].SetToValues(cosf(angle), sinf(angle), 0.000000, -sinf(angle), cosf(angle), 0.000000, 0.000000, 0.000000, 1.000000);
+            z_shift[k] = n * helical_rise;
+            k++;
+        }
     }
     symmetry_symbol = Format("H%g,%g,%i", helical_rise, helical_twist, helical_copies);
+    if ( helical_cyclic_order > 1 )
+        symmetry_symbol += Format(",C%i", helical_cyclic_order);
 }
 
 void SymmetryMatrix::Init(std::string wanted_symmetry_symbol) {
@@ -149,10 +172,11 @@ void SymmetryMatrix::Init(std::string wanted_symmetry_symbol) {
         DEBUG_ABORT;
     }
 
-    is_helical     = false;
-    helical_rise   = 0.0f;
-    helical_twist  = 0.0f;
-    helical_copies = 0;
+    is_helical           = false;
+    helical_rise         = 0.0f;
+    helical_twist        = 0.0f;
+    helical_copies       = 0;
+    helical_cyclic_order = 1;
     if ( z_shift != NULL ) {
         delete[] z_shift;
         z_shift = NULL;
@@ -160,27 +184,31 @@ void SymmetryMatrix::Init(std::string wanted_symmetry_symbol) {
 
     if ( IsHelicalSymbol(wanted_symmetry_symbol) ) {
         float rise, twist;
-        int   copies;
-        if ( ! ParseHelicalSymbol(wanted_symmetry_symbol, rise, twist, copies) ) {
-            MyPrintWithDetails("Error: Invalid helical symmetry symbol (expected H<rise>,<twist>[,<copies>]): %s\n", wanted_symmetry_symbol);
+        int   copies, cyclic_order;
+        if ( ! ParseHelicalSymbol(wanted_symmetry_symbol, rise, twist, copies, cyclic_order) ) {
+            MyPrintWithDetails("Error: Invalid helical symmetry symbol (expected H<rise>,<twist>[,<copies>][,C<n>]): %s\n", wanted_symmetry_symbol);
             DEBUG_ABORT;
         }
-        symmetry_symbol = wanted_symmetry_symbol;
-        is_helical      = true;
-        helical_rise    = rise;
-        helical_twist   = twist;
+        symmetry_symbol      = wanted_symmetry_symbol;
+        is_helical           = true;
+        helical_rise         = rise;
+        helical_twist        = twist;
+        helical_cyclic_order = cyclic_order;
         if ( copies > 0 ) {
             SetHelicalCopies(copies);
         }
         else {
-            // The identity alone until Reconstruct3D::Init picks the count from the box
+            // The Cn alone (the identity for a one-start helix) until Reconstruct3D::Init picks the count from the box
             if ( rot_mat != NULL )
                 delete[] rot_mat;
-            number_of_matrices = 1;
-            rot_mat            = new RotationMatrix[1];
-            z_shift            = new float[1];
-            rot_mat[0].SetToValues(1.000000, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000, 0.000000, 1.000000);
-            z_shift[0] = 0.0f;
+            number_of_matrices = cyclic_order;
+            rot_mat            = new RotationMatrix[number_of_matrices];
+            z_shift            = new float[number_of_matrices];
+            for ( int m = 0; m < cyclic_order; m++ ) {
+                float angle = deg_2_rad(m * 360.0f / cyclic_order);
+                rot_mat[m].SetToValues(cosf(angle), sinf(angle), 0.000000, -sinf(angle), cosf(angle), 0.000000, 0.000000, 0.000000, 1.000000);
+                z_shift[m] = 0.0f;
+            }
         }
         return;
     }

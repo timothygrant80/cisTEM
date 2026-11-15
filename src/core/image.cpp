@@ -10627,14 +10627,16 @@ void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix& 
 // becomes the mean of the volume at its screw-related positions (n * twist about z, n * rise along z, the
 // operators Reconstruct3D inserts under, for every n whose position lies inside the box), and the rest of the box
 // is then filled from that central zone through the nearest screw step, so the map is helical end to end; the
-// ends of a reconstruction, which fewer copies reached, become copies of its middle. Trilinear interpolation,
+// ends of a reconstruction, which fewer copies reached, become copies of its middle. A multi-start helix's Cn
+// (cyclic_order) is averaged over as well, every screw step at every multiple of 360 / n. Trilinear interpolation,
 // one z slice per thread. Outside the cylinder the volume is left as it is.
-void Image::ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_in_degrees, float z_fraction, float max_radius_in_pixels) {
+void Image::ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_in_degrees, float z_fraction, float max_radius_in_pixels, int cyclic_order) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");
     MyDebugAssertTrue(logical_z_dimension > 1, "Not a volume");
     MyDebugAssertTrue(rise_in_pixels > 0.0f, "The rise must be positive");
     MyDebugAssertTrue(z_fraction > 0.0f && z_fraction <= 1.0f, "The central fraction must be in (0, 1]");
+    MyDebugAssertTrue(cyclic_order >= 1, "The cyclic order must be at least 1");
 
     if ( max_radius_in_pixels <= 0.0f )
         max_radius_in_pixels = ReturnSmallestLogicalDimension( ) / 2.0f - 1.0f;
@@ -10650,10 +10652,14 @@ void Image::ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_i
     const float source_z_min = 0.0f, source_z_max = logical_z_dimension - 1.001f;
     const int   max_steps    = int(ceilf(logical_z_dimension / rise_in_pixels)) + 1;
 
-    std::vector<float> cosines(2 * max_steps + 1), sines(2 * max_steps + 1);
+    // The rotation of screw step n combined with Cn member m, at [(n + max_steps) * cyclic_order + m]
+    std::vector<float> cosines((2 * max_steps + 1) * cyclic_order), sines((2 * max_steps + 1) * cyclic_order);
     for ( int n = -max_steps; n <= max_steps; n++ ) {
-        cosines[n + max_steps] = cosf(deg_2_rad(n * twist_in_degrees));
-        sines[n + max_steps]   = sinf(deg_2_rad(n * twist_in_degrees));
+        for ( int m = 0; m < cyclic_order; m++ ) {
+            float angle                                      = deg_2_rad(n * twist_in_degrees + m * 360.0f / cyclic_order);
+            cosines[(n + max_steps) * cyclic_order + m] = cosf(angle);
+            sines[(n + max_steps) * cyclic_order + m]   = sinf(angle);
+        }
     }
 
     Image buffer;
@@ -10695,14 +10701,18 @@ void Image::ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_i
                 double sum   = 0.0;
                 int    count = 0;
                 for ( int n = n_low; n <= n_high; n++ ) {
-                    float c = cosines[n + max_steps], s = sines[n + max_steps];
-                    float source_x = c * x - s * y + centre_x;
-                    float source_y = s * x + c * y + centre_y;
                     float source_z = z + n * rise_in_pixels + centre_z;
-                    if ( source_x < source_x_min || source_x > source_x_max || source_y < source_y_min || source_y > source_y_max || source_z < source_z_min || source_z > source_z_max )
+                    if ( source_z < source_z_min || source_z > source_z_max )
                         continue;
-                    sum += sample(*this, source_x, source_y, source_z);
-                    count++;
+                    for ( int m = 0; m < cyclic_order; m++ ) {
+                        float c = cosines[(n + max_steps) * cyclic_order + m], s = sines[(n + max_steps) * cyclic_order + m];
+                        float source_x = c * x - s * y + centre_x;
+                        float source_y = s * x + c * y + centre_y;
+                        if ( source_x < source_x_min || source_x > source_x_max || source_y < source_y_min || source_y > source_y_max )
+                            continue;
+                        sum += sample(*this, source_x, source_y, source_z);
+                        count++;
+                    }
                 }
                 if ( count > 0 )
                     buffer.real_values[buffer.ReturnReal1DAddressFromPhysicalCoord(i, j, k)] = float(sum / count);
@@ -10720,7 +10730,7 @@ void Image::ImposeHelicalSymmetryInRealSpace(float rise_in_pixels, float twist_i
         if ( fabsf(z) <= zone_half_height )
             continue;
         int   n        = -myroundint(z / rise_in_pixels);
-        float c        = cosines[n + max_steps], s = sines[n + max_steps];
+        float c        = cosines[(n + max_steps) * cyclic_order], s = sines[(n + max_steps) * cyclic_order]; // the zone is Cn-averaged already
         float source_z = z + n * rise_in_pixels + centre_z;
         if ( source_z < source_z_min || source_z > source_z_max )
             continue;

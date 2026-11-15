@@ -162,7 +162,7 @@ void ReconstructedVolume::ImposeHelicalSymmetryIfAsked(float original_pixel_size
     if ( ! impose_helical_symmetry_in_real_space || ! symmetry_matrices.is_helical )
         return;
     MyDebugAssertTrue(density_map != NULL && density_map->is_in_real_space, "The map must be in real space");
-    density_map->ImposeHelicalSymmetryInRealSpace(symmetry_matrices.helical_rise / original_pixel_size, symmetry_matrices.helical_twist, 0.3f, outer_mask_radius / original_pixel_size);
+    density_map->ImposeHelicalSymmetryInRealSpace(symmetry_matrices.helical_rise / original_pixel_size, symmetry_matrices.helical_twist, 0.3f, outer_mask_radius / original_pixel_size, symmetry_matrices.helical_cyclic_order);
 }
 
 void ReconstructedVolume::InitWithReconstruct3D(Reconstruct3D& image_reconstruction, float wanted_pixel_size) {

@@ -3359,10 +3359,17 @@ def list_refinements(project_id):
 @app.route("/api/projects/<project_id>/refinements/<int:refinement_id>", methods=["GET"])
 @auth.project_access_required
 def get_refinement(project_id, refinement_id):
-    """One refinement with each class's FSC / SSNR curve and angular distribution."""
+    """One refinement with each class's FSC / SSNR curve and angular distribution;
+    one a Refine CTF job wrote also carries `ctf_refinement` (refinectf.ctf_refinement_result)."""
     conn = db.get_conn(project_id)
-    d = refinements.get_refinement(conn, refinement_id)
-    conn.close()
+    try:
+        d = refinements.get_refinement(conn, refinement_id)
+        if d is not None and d.get("job_id"):
+            job = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (d["job_id"],)).fetchone()
+            if job is not None and job["STAGE"] == refinectf.STAGE:
+                d["ctf_refinement"] = refinectf.ctf_refinement_result(conn, job)
+    finally:
+        conn.close()
     if d is None:
         return jsonify({"error": "no such refinement"}), 404
     return jsonify(d)
@@ -3444,6 +3451,7 @@ def refine3d_defaults(project_id):
             return jsonify({"error": "no such refinement package"}), 404
         out = refine3d.package_defaults(pkg)
         out["defaults"] = refine3d.DEFAULTS
+        out["symmetry"] = pkg["SYMMETRY"] or "C1"
         # The Generate 3D and Refine CTF panels share this route: their own
         # size-derived defaults ride along.
         out["particle_size"] = float(pkg["PARTICLE_SIZE"] or 150.0)
@@ -3481,6 +3489,7 @@ def auto_refine3d_defaults(project_id):
             return jsonify({"error": "no such refinement package"}), 404
         out = autorefine.package_defaults(pkg)
         out["defaults"] = autorefine.DEFAULTS
+        out["symmetry"] = pkg["SYMMETRY"] or "C1"
         out["number_of_classes"] = int(pkg["NUMBER_OF_CLASSES"] or 1)
         out["volumes"] = [{"volume_asset_id": r["VOLUME_ASSET_ID"], "name": r["NAME"], "x_size": r["X_SIZE"], "pixel_size": r["PIXEL_SIZE"],
                            "fits": r["X_SIZE"] == pkg["STACK_BOX_SIZE"] and abs(float(r["PIXEL_SIZE"] or 0) - float(pkg["OUTPUT_PIXEL_SIZE"] or 0)) <= 0.01}
@@ -3501,8 +3510,10 @@ def auto_refine3d_defaults(project_id):
 def refinectf_picture(project_id, job_id, which):
     """A Refine CTF job's beam-tilt pictures: the measured phase-difference
     spectrum (`phase_difference`) or the phase pattern the found tilt
-    predicts (`beam_tilt`), from Assets/PhaseDifferences."""
-    if which not in ("phase_difference", "beam_tilt"):
+    predicts (`beam_tilt`), from Assets/PhaseDifferences; or, from the
+    Zernike fit, the measured and fitted odd and even phase maps
+    (`odd_measured`, `odd_fitted`, `even_measured`, `even_fitted`)."""
+    if which not in ("phase_difference", "beam_tilt") + refinectf.ABERRATION_PICTURES:
         return jsonify({"error": "unknown picture"}), 404
     row = _fetch_job_row(project_id, job_id)
     if row is None or row["STAGE"] != refinectf.STAGE:

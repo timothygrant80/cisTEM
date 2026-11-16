@@ -10,7 +10,7 @@ The argument list is built in abinitio.py next to the values.
 
 PROGRAM = {"name": "refine3d", "executable": "refine3d"}
 
-ARGUMENT_TYPES = "ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb"
+ARGUMENT_TYPES = "ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibbt"
 ARGUMENT_NAMES = (
     "input_particle_images",
     "input_star_filename",
@@ -65,6 +65,7 @@ ARGUMENT_NAMES = (
     "class_number",
     "ignore_input_parameters",
     "defocus_bias",
+    "aberration_file",
 )
 assert len(ARGUMENT_NAMES) == len(ARGUMENT_TYPES)
 

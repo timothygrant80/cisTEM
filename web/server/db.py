@@ -231,6 +231,15 @@ CREATE TABLE IF NOT EXISTS REFINEMENT_LIST(
   RESOLUTION_STATISTICS_BOX_SIZE INTEGER, RESOLUTION_STATISTICS_PIXEL_SIZE REAL, PERCENT_USED REAL
 );
 
+-- Our own addition, no cisTEM equivalent: a refinement's higher-order aberrations (web/CLAUDE.md,
+-- "Higher-order aberrations"), one row per optics group -- group 0 the default for every particle --
+-- with the odd and even Zernike coefficient lists (JSON arrays, RELION's ordering and convention) and the
+-- orders they were fitted to. cisTEM keeps only a beam tilt, per particle, in the result tables.
+CREATE TABLE IF NOT EXISTS REFINEMENT_ABERRATIONS(
+  REFINEMENT_ID INTEGER, GROUP_NUMBER INTEGER, ODD_ORDER INTEGER, EVEN_ORDER INTEGER, ODD_JSON TEXT, EVEN_JSON TEXT,
+  PRIMARY KEY(REFINEMENT_ID, GROUP_NUMBER)
+);
+
 -- Our own addition, no cisTEM equivalent -- see module docstring.
 CREATE TABLE IF NOT EXISTS JOBS(
   JOB_ID TEXT PRIMARY KEY,

@@ -44,13 +44,14 @@ import numpy as np
 
 import db
 import progress_store
+import aberrations
 import refinements
 import starfile
 import volumes
 import symmetry as symmetry_module
 from abinitio import (merge_profile, _new_child, _parent_row, _profile, _task, _load_state, _save, now_iso, particle_range,
                       default_statistics, write_statistics, read_statistics, pooled_part_ssnr, average_sigma)
-from refine3d import _num, _flag, PLEASE_CREATE_PACKAGE_MESSAGE, CHILD_RECON, CHILD_MERGE
+from refine3d import _num, _flag, _impose_helical, PLEASE_CREATE_PACKAGE_MESSAGE, CHILD_RECON, CHILD_MERGE
 from stages import estimate_beamtilt as beamtilt_adapter, merge3d, reconstruct3d, refine_ctf as refine_ctf_adapter
 
 STAGE = "refine_ctf"
@@ -61,9 +62,13 @@ MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE = 10.0  # defines.h
 # RefineCTFPanel::SetDefaults(); the size-dependent ones follow the package.
 DEFAULTS = {
     "refine_defocus": True, "refine_beam_tilt": True, "high_resolution_limit_a": 3.5,
+    # the higher-order aberrations (RELION's three choices; the orders are RELION's defaults)
+    "estimate_trefoil": False, "estimate_fourth_order": False, "odd_zernike_order": 3, "even_zernike_order": 4,
     "defocus_search_range_a": 500.0, "defocus_search_step_a": 20.0, "inner_mask_radius_a": 0.0,
     "score_to_weight_constant": 2.0, "adjust_score_for_defocus": True, "score_threshold": 0.0, "reconstruction_resolution_limit_a": 0.0,
     "autocrop_images": False, "apply_blurring": False, "smoothing_factor": 1.0,
+    # cisTEM3's own: the real-space helical symmetrisation of the final maps (reconstruct3d / merge3d's last argument); only a helical package feels it.
+    "impose_helical_symmetry": True,
     "use_mask": False, "auto_mask": True, "mask_edge_a": 10.0, "outside_mask_weight": 0.0, "low_pass_outside_mask": False, "mask_filter_resolution_a": 20.0,
 }
 
@@ -84,13 +89,80 @@ def settings_from_params(params, pkg):
     return s
 
 
-def refinement_name(rid, refine_defocus, refine_beam_tilt):
-    """RunRefinementJob()'s names."""
-    if refine_defocus and refine_beam_tilt:
-        return "Defocus & Beam Tilt Refinement #{}".format(rid)
+def refinement_name(rid, refine_defocus, refine_beam_tilt, zernike=False):
+    """RunRefinementJob()'s names, "Aberration" for the Zernike fit."""
+    optics = "Aberration" if zernike else "Beam Tilt"
+    if refine_defocus and (refine_beam_tilt or zernike):
+        return "Defocus & {} Refinement #{}".format(optics, rid)
     if refine_defocus:
         return "Defocus Refinement #{}".format(rid)
-    return "Beam Tilt Refinement #{}".format(rid)
+    return "{} Refinement #{}".format(optics, rid)
+
+
+# ---- the higher-order aberrations (web/CLAUDE.md, "Higher-order aberrations")
+
+def uses_zernike(settings, input_sets):
+    """Whether the odd aberrations are handled by the Zernike fit rather than cisTEM's beam-tilt grid search:
+    asked for (trefoil or fourth-order estimation), or forced because the input refinement already carries an
+    odd set -- the grid search on top of it would count the tilt twice."""
+    return bool(settings["estimate_trefoil"] or settings["estimate_fourth_order"]
+                or any(any(v != 0.0 for v in st.get("odd", [])) for st in input_sets or []))
+
+
+def _default_set(sets):
+    found = next((st for st in sets or [] if int(st.get("group", 0)) == 0), None)
+    return dict(found) if found else {"group": 0, "odd": [], "even": [], "odd_order": 0, "even_order": 0}
+
+
+def _weighted_rms(fit):
+    """The residual of a fit as the RMS of the wrapped phase difference, weighted as the fit was (ring-normalised
+    and by each ring's coherence), so rings beyond the data's resolution do not swamp it."""
+    w = np.nan_to_num(fit["weight"])
+    r = np.nan_to_num(aberrations._wrap(fit["measured_phase"] - fit["fitted_phase"]))
+    return float(np.sqrt(np.sum(w * r * r) / np.sum(w))) if np.sum(w) > 0 else 0.0
+
+
+def fit_refinement_aberrations(sums_path, box_size, pixel_size, cs_mm, voltage_kv, settings, input_sets):
+    """The fits from refine_ctf's sums file for a refinement (one optics group, 0): the odd set is fitted whole
+    (the sum measures the total odd phase, the projections carrying none) whenever beam tilt, trefoil or an
+    existing odd set is in play, and trimmed to beam tilt and shift unless trefoil was asked for; the even
+    residual is added to the input's even set when fourth-order estimation was asked for. Returns the new set,
+    the beam tilt the odd set contains (mrad, A), the diagnostic half-plane maps and a summary."""
+    s = settings
+    current = _default_set(input_sets)
+    odd_order, even_order = max(1, int(s["odd_zernike_order"])), max(0, int(s["even_zernike_order"]))
+    rho, phi = aberrations.half_plane_frequencies(box_size, box_size, pixel_size)
+    even_sums, S = aberrations.load_sums(sums_path)
+    high, low = float(s["high_resolution_limit_a"]), float(s["low_resolution_limit_a"])
+    new = {"group": 0, "odd": [float(v) for v in current["odd"]], "even": [float(v) for v in current["even"]],
+           "odd_order": int(current.get("odd_order") or 0), "even_order": int(current.get("even_order") or 0)}
+    maps, summary = {}, {"high_resolution_limit_a": high, "low_resolution_limit_a": low}
+    if s["refine_beam_tilt"] or s["estimate_trefoil"] or any(v != 0.0 for v in current["odd"]):
+        fit = aberrations.fit_odd(S, rho, phi, odd_order, high, None, low)
+        odd = np.array(fit["coefficients"], dtype=np.float64)
+        if not s["estimate_trefoil"]:
+            for i in range(odd.size):          # beam tilt and shift only: the order-1 and the m = +-1 order-3 terms
+                m, n = aberrations.odd_index_to_mn(i)
+                if n > 3 or abs(m) == 3:
+                    odd[i] = 0.0
+        new["odd"], new["odd_order"] = [float(v) for v in odd], odd_order
+        maps["odd_measured"], maps["odd_fitted"] = fit["measured_phase"], fit["fitted_phase"]
+        summary["odd_phase_rms"] = _weighted_rms(fit)
+    if s["estimate_fourth_order"]:
+        fit = aberrations.fit_even(even_sums, rho, phi, even_order, high, low)
+        residual = np.array(fit["coefficients"], dtype=np.float64)
+        base = np.zeros(max(residual.size, len(current["even"])))
+        base[:len(current["even"])] = current["even"]
+        base[:residual.size] += residual
+        new["even"], new["even_order"] = [float(v) for v in base], max(even_order, int(current.get("even_order") or 0))
+        maps["even_measured"], maps["even_fitted"] = fit["measured_phase"], fit["fitted_phase"]
+        summary["even_phase_rms"] = _weighted_rms(fit)
+    tilt_x, tilt_y, shift_x, shift_y, rest = aberrations.beam_tilt_from_odd(new["odd"], cs_mm, voltage_kv) if new["odd"] else (0.0, 0.0, 0.0, 0.0, np.zeros(6))
+    summary.update({"beam_tilt_x_mrad": float(tilt_x), "beam_tilt_y_mrad": float(tilt_y), "particle_shift_x_a": float(shift_x), "particle_shift_y_a": float(shift_y),
+                    "trefoil": [float(rest[2]), float(rest[5])] if rest.size >= 6 else [0.0, 0.0],
+                    "fourfold": [new["even"][4], new["even"][8]] if len(new["even"]) >= 9 else [0.0, 0.0],
+                    "odd_order": new["odd_order"], "even_order": new["even_order"]})
+    return {"set": new, "maps": maps, "summary": summary}
 
 
 def defocus_histogram(changes, search_range, step):
@@ -347,11 +419,15 @@ def _start(conn, project_id, job_id, params, profile):
         "mask_file": mask["FILENAME"] if mask is not None else None, "mask_asset_id": mask["VOLUME_ASSET_ID"] if mask is not None else -1,
         "child_job_id": None, "child_task_count": 0, "child_done": 0, "history": [], "started_at": now_iso(), "scratch": str(scratch),
         "volume_ids": [], "beam_tilt": None, "defocus_histogram": None, "progress_files": [],
+        "input_aberrations": refinements.load_aberrations(conn, ref["REFINEMENT_ID"]), "aberrations": None,
     }
+    state["zernike"] = uses_zernike(s, state["input_aberrations"])
     _store_rows(state, "input", class_rows)
     with conn:
         conn.execute("UPDATE JOBS SET STATUS='running', STARTED_AT=?, PROGRESS=0 WHERE JOB_ID=?", (now_iso(), job_id))
-    what = " and ".join(w for w, on in (("defocus", s["refine_defocus"]), ("beam tilt", s["refine_beam_tilt"])) if on)
+    what = " and ".join(w for w, on in (("defocus", s["refine_defocus"]), ("beam tilt", s["refine_beam_tilt"] and not state["zernike"]),
+                                        ("odd aberrations (Zernike order {})".format(int(s["odd_zernike_order"])), state["zernike"]),
+                                        ("even aberrations (order {})".format(int(s["even_zernike_order"])), s["estimate_fourth_order"])) if on)
     _log(project_id, job_id, "Refine CTF ({}) of {!r} from {!r}: {} particles, {} class{}, {:.2f} Å limit, ±{:.0f} Å in {:.0f} Å steps; refinement profile {!r}, reconstruction profile {!r}".format(
         what, pkg["NAME"], ref["NAME"], n, classes, "" if classes == 1 else "es", s["high_resolution_limit_a"], s["defocus_search_range_a"], s["defocus_search_step_a"],
         profile["name"], recon_profile["name"]))
@@ -424,6 +500,8 @@ def _launch_refinement(conn, project_id, job_id, state):
     stats_file = str(scratch / "input_stats_{}_1.txt".format(input_id))
     write_statistics(stats_file, stats, state["pixel_size"])
     phase_image = str(scratch / "phase_output.mrc")
+    aberration_sums = str(scratch / "aberration_sums.mrc")
+    aberration_file = refinements.write_aberration_file(conn, input_id, scratch / "aberrations_input.txt")
     jobs = max(1, min(n, state["refinement_jobs"]))
     tasks, progress_files = [], []
     for j in range(1, jobs + 1):
@@ -434,13 +512,13 @@ def _launch_refinement(conn, project_id, job_id, state):
                   progress, "/dev/null", phase_image, "/dev/null", "/dev/null",
                   first, last, state["pixel_size"], state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                   s["low_resolution_limit_a"], s["high_resolution_limit_a"], s["defocus_search_range_a"], s["defocus_search_step_a"], 1.0,
-                  s["refine_defocus"], s["refine_beam_tilt"], True, state["invert_contrast"], False, not s["apply_blurring"], True,
-                  j - 1, jobs, 1]
+                  s["refine_defocus"], bool(s["refine_beam_tilt"] or state.get("zernike")), True, state["invert_contrast"], False, not s["apply_blurring"], True,
+                  j - 1, jobs, 1, aberration_file, aberration_sums]
         tasks.append(_task(refine_ctf_adapter, j - 1, j, values))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_REFINE, "{} · refine_ctf".format(parent["NAME"]), parent)
     state.update({"phase": "refine", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
-                  "progress_files": progress_files, "phase_image": phase_image, "refinement_jobs_this_round": jobs})
+                  "progress_files": progress_files, "phase_image": phase_image, "aberration_sums": aberration_sums, "refinement_jobs_this_round": jobs})
     _log(project_id, job_id, "{} ({} task{}) -> Refinement #{} — child job {}".format(
         "Refining defocus and calculating phase difference image" if s["refine_defocus"] and s["refine_beam_tilt"]
         else "Refining defocus" if s["refine_defocus"] else "Calculating phase difference image", len(tasks), "" if len(tasks) == 1 else "s", rid, child))
@@ -547,6 +625,48 @@ def _apply_beam_tilt(conn, project_id, job_id, state, child_id):
     _store_rows(state, "output", class_rows)
 
 
+def _fit_aberrations(conn, project_id, job_id, state):
+    """The Zernike fit in place of the beam-tilt grid search: the new set, the beam tilt it contains written to
+    the live result (the particle rows' tilt and shift columns go to zero, since the set now carries them and
+    the programs apply both), and the diagnostic phase maps under Assets/PhaseDifferences."""
+    path = state["aberration_sums"]
+    if not os.path.isfile(path):
+        raise ValueError("refine_ctf did not write the aberration sums {}".format(path))
+    result = fit_refinement_aberrations(path, state["box_size"], state["pixel_size"], state["cs"], state["voltage"], state["settings"], state["input_aberrations"])
+    rid = state["output_refinement_id"]
+    out_dir = phase_difference_dir(project_id)
+    files = {}
+    for name, half in result["maps"].items():
+        full = aberrations.full_grid(np.nan_to_num(aberrations._wrap(half)), odd=name.startswith("odd"))     # wrapped: the fitted surface is shown modulo 2 pi
+        files[name] = str(out_dir / "refinement_{}_{}.mrc".format(rid, name))
+        volumes.write_mrc_volume(files[name], full[None, :, :].astype(np.float32), state["pixel_size"])
+    summary = result["summary"]
+    state["aberrations"] = {"sets": [result["set"]], "files": files, "summary": summary}
+    state["beam_tilt"] = {"beam_tilt_x_mrad": summary["beam_tilt_x_mrad"], "beam_tilt_y_mrad": summary["beam_tilt_y_mrad"],
+                          "particle_shift_x_a": summary["particle_shift_x_a"], "particle_shift_y_a": summary["particle_shift_y_a"],
+                          "score": None, "significance": None, "significant": True, "method": "zernike",
+                          "phase_difference_file": files.get("odd_measured"), "beam_tilt_file": files.get("odd_fitted")}
+    _log(project_id, job_id, "Aberrations fitted from {:.0f} to {:.2f} Å: beam tilt {:.3f}, {:.3f} mrad, shift {:.2f}, {:.2f} Å{}{}".format(
+        summary["low_resolution_limit_a"], summary["high_resolution_limit_a"], summary["beam_tilt_x_mrad"], summary["beam_tilt_y_mrad"],
+        summary["particle_shift_x_a"], summary["particle_shift_y_a"],
+        "; trefoil {:.1f}, {:.1f}".format(*summary["trefoil"]) if state["settings"]["estimate_trefoil"] else "",
+        "; four-fold astigmatism {:.1f}, {:.1f}; even residual {:.3f} rad RMS".format(summary["fourfold"][0], summary["fourfold"][1], summary.get("even_phase_rms", 0.0))
+        if state["settings"]["estimate_fourth_order"] else ""))
+    class_rows = _load_rows(state, "output")
+    for rows in class_rows:
+        rows["beam_tilt_x"], rows["beam_tilt_y"] = 0.0, 0.0
+        rows["image_shift_x"], rows["image_shift_y"] = 0.0, 0.0
+    _store_rows(state, "output", class_rows)
+
+
+def _output_aberration_file(conn, state):
+    """The aberration file for the steps after the fit: the fitted set, else the input refinement's."""
+    scratch = Path(state["scratch"])
+    if state.get("aberrations"):
+        return refinements.write_aberration_sets(state["aberrations"]["sets"], scratch / "aberrations_output.txt", "refinement {}".format(state["output_refinement_id"]))
+    return refinements.write_aberration_file(conn, state["input_refinement_id"], scratch / "aberrations_input.txt")
+
+
 def _launch_reconstruction(conn, project_id, job_id, state):
     """SetupReconstructionJob() + RunReconstructionJob()."""
     s = state["settings"]
@@ -560,6 +680,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
         starfile.write_params(p, rows)
         written.append(p)
     jobs = max(1, min(n, state["reconstruction_jobs"]))
+    aberration_file = _output_aberration_file(conn, state)
     tasks = []
     index = 0
     for k in range(classes):
@@ -573,7 +694,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       s["smoothing_factor"], 1.0,
                       True, s["adjust_score_for_defocus"], state["invert_contrast"], False, s["autocrop_images"], False, False,
                       use_ref, True, True,
-                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1, symmetry_module.is_helical(state["symmetry"])]
+                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1, _impose_helical(state), aberration_file]
             tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -598,7 +719,7 @@ def _launch_merge(conn, project_id, job_id, state):
         stats.append(st)
         tasks.append(_task(merge3d, k, k + 1, ["/dev/null", "/dev/null", out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0, symmetry_module.is_helical(state["symmetry"])]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0, _impose_helical(state)]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge3d".format(parent["NAME"]), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
@@ -703,7 +824,11 @@ def _advance(conn, project_id, parent_id, state, child_id):
             h = state["defocus_histogram"]
             _log(project_id, parent_id, "Refined defocus of {} particles; {} changed by more than one step".format(
                 got, sum(c for centre, c in zip(h["centres"], h["counts"]) if abs(centre) > s["defocus_search_step_a"] * 0.5)))
-        if s["refine_beam_tilt"]:
+        if state.get("zernike"):
+            progress_store.note(parent_id, 0, 0, "fitting the aberrations")
+            _fit_aberrations(conn, project_id, parent_id, state)
+            _launch_reconstruction(conn, project_id, parent_id, state)
+        elif s["refine_beam_tilt"]:
             _launch_beam_tilt(conn, project_id, parent_id, state)
         else:
             _launch_reconstruction(conn, project_id, parent_id, state)
@@ -782,7 +907,8 @@ def _record(conn, project_id, parent_id, state):
             "MASK_FILTER_RESOLUTION": s["mask_filter_resolution_a"],
         })
     ref = {"refinement_id": rid, "refinement_package_asset_id": state["package_id"],
-           "name": refinement_name(rid, s["refine_defocus"], s["refine_beam_tilt"]), "resolution_statistics_are_generated": False,
+           "name": refinement_name(rid, s["refine_defocus"], s["refine_beam_tilt"], bool(state.get("zernike"))), "resolution_statistics_are_generated": False,
+           "aberrations": state["aberrations"]["sets"] if state.get("aberrations") else None,
            "starting_refinement_id": state["input_refinement_id"], "number_of_particles": state["number_of_particles"], "number_of_classes": classes,
            "resolution_statistics_box_size": state["box_size"], "resolution_statistics_pixel_size": state["pixel_size"], "percent_used": 100.0,
            "job_id": parent_id}
@@ -899,7 +1025,7 @@ def live_result(conn, row):
         "label": last["label"] if last else "CTF refinement", "refinement_id": rid, "phase": state["phase"], "round": 0, "rounds": 1,
         "number_of_classes": state["number_of_classes"], "has_picture": bool(files) and bool(last), "current_volume": files[0] if files and last else None,
         "estimated_resolution": last.get("estimated_resolution") if last else None, "history": state.get("history", []),
-        "defocus_histogram": hist, "beam_tilt": state.get("beam_tilt"),
+        "defocus_histogram": hist, "beam_tilt": state.get("beam_tilt"), "aberrations": state.get("aberrations"),
         "refine_defocus": state["settings"]["refine_defocus"], "refine_beam_tilt": state["settings"]["refine_beam_tilt"],
         "fsc": [{"resolution": s["resolution"], "fsc": s["fsc"], "part_fsc": s["part_fsc"]} for s in stats if s["resolution"]],
         "pixel_size": state["pixel_size"], "volume_ids": state.get("volume_ids", []), "package_name": state.get("package_name"),
@@ -923,5 +1049,36 @@ def beam_tilt_picture(conn, row, which):
     (Assets/PhaseDifferences), as a PNG through the image preview renderer."""
     state = _load_state(conn, row["JOB_ID"])
     bt = (state or {}).get("beam_tilt") or {}
-    path = bt.get("phase_difference_file" if which == "phase_difference" else "beam_tilt_file")
+    files = ((state or {}).get("aberrations") or {}).get("files") or {}
+    path = files.get(which) if which in ABERRATION_PICTURES else bt.get("phase_difference_file" if which == "phase_difference" else "beam_tilt_file")
     return path if path and os.path.isfile(path) else None
+
+
+ABERRATION_PICTURES = ("odd_measured", "odd_fitted", "even_measured", "even_fitted")
+
+
+def ctf_refinement_result(conn, row):
+    """What the Refine 3D results page shows under a refinement a Refine CTF job
+    wrote -- cisTEM keeps these in the panel's live view only, this keeps them with
+    the refinement: the recorded defocus-change histogram, the beam tilt with
+    its significance, the Zernike fit's summary and sets, and which of the
+    phase pictures (served by /jobs/<id>/refinectf/<which>.png) are on disk.
+    None when the job's state is gone."""
+    state = _load_state(conn, row["JOB_ID"])
+    if not state:
+        return None
+    s = state["settings"]
+    bt = dict(state.get("beam_tilt") or {})
+    for k in ("phase_difference_file", "beam_tilt_file"):
+        bt.pop(k, None)
+    ab = state.get("aberrations")
+    pictures = [w for w in ("phase_difference", "beam_tilt") + ABERRATION_PICTURES if beam_tilt_picture(conn, row, w)]
+    return {
+        "job_id": row["JOB_ID"], "job_number": row["JOB_NUMBER"], "status": row["STATUS"],
+        "refine_defocus": bool(s.get("refine_defocus")), "refine_beam_tilt": bool(s.get("refine_beam_tilt")), "zernike": bool(state.get("zernike")),
+        "defocus_search_range_a": s.get("defocus_search_range_a"), "defocus_search_step_a": s.get("defocus_search_step_a"),
+        "low_resolution_limit_a": s.get("low_resolution_limit_a"), "high_resolution_limit_a": s.get("high_resolution_limit_a"),
+        "defocus_histogram": state.get("defocus_histogram"), "beam_tilt": bt or None,
+        "aberrations": {"summary": ab.get("summary"), "sets": ab.get("sets")} if ab else None,
+        "pictures": pictures,
+    }

@@ -33,7 +33,7 @@ import volumes
 import symmetry as symmetry_module
 from abinitio import (merge_profile, _new_child, _parent_row, _profile, _task, _load_state, _save, now_iso, particle_range, read_statistics,
                       pooled_part_ssnr)
-from refine3d import _num, _flag, PLEASE_CREATE_PACKAGE_MESSAGE, CHILD_RECON, CHILD_MERGE
+from refine3d import _num, _flag, _impose_helical, _aberration_file, PLEASE_CREATE_PACKAGE_MESSAGE, CHILD_RECON, CHILD_MERGE
 from stages import merge3d, reconstruct3d
 
 STAGE = "generate3d"
@@ -43,6 +43,8 @@ DEFAULTS = {
     "inner_mask_radius_a": 0.0, "score_to_weight_constant": 2.0, "adjust_score_for_defocus": True, "score_threshold": 0.0,
     "reconstruction_resolution_limit_a": 0.0, "autocrop_images": False, "save_half_maps": False, "overwrite_statistics": True,
     "apply_ewald_correction": False, "ewald_inverse_hand": False,
+    # cisTEM3's own: the real-space helical symmetrisation of the final maps (reconstruct3d / merge3d's last argument); only a helical package feels it.
+    "impose_helical_symmetry": True,
 }
 
 
@@ -169,6 +171,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     jobs = max(1, min(n, state["reconstruction_jobs"]))
     ewald = ewald_flag(s["apply_ewald_correction"], s["ewald_inverse_hand"])
     tasks = []
+    aberration_file = _aberration_file(conn, state)
     index = 0
     for k in range(classes):
         for j in range(1, jobs + 1):
@@ -178,7 +181,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       s["reconstruction_resolution_limit_a"], 0.0, s["score_to_weight_constant"], s["score_threshold"], 1.0, 1.0,
                       True, s["adjust_score_for_defocus"], state["invert_contrast"], False, s["autocrop_images"], False, False,
                       False, True, True,
-                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), ewald, 1, symmetry_module.is_helical(state["symmetry"])]
+                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), ewald, 1, _impose_helical(state), aberration_file]
             tasks.append(_task(reconstruct3d, index, k * 1000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -208,7 +211,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half if s["save_half_maps"] else ["", ""])
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", int(state.get("number_of_dump_files") or 1), 1.0, 5.0, symmetry_module.is_helical(state["symmetry"])]))
+                                                k + 1, False, "", int(state.get("number_of_dump_files") or 1), 1.0, 5.0, _impose_helical(state)]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge3d".format(parent["NAME"]), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

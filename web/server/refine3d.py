@@ -69,6 +69,8 @@ DEFAULTS = {
     "refine_ctf": False, "defocus_search_range_a": 500.0, "defocus_search_step_a": 50.0,
     "score_to_weight_constant": 2.0, "adjust_score_for_defocus": True, "score_threshold": 0.0, "reconstruction_resolution_limit_a": 0.0,
     "autocrop_images": False, "apply_blurring": False, "smoothing_factor": 1.0, "autocenter": False,
+    # cisTEM3's own: the real-space helical symmetrisation of the final maps (reconstruct3d / merge3d's last argument); only a helical package feels it.
+    "impose_helical_symmetry": True,
     "use_mask": False, "auto_mask": True, "mask_edge_a": 10.0, "outside_mask_weight": 0.0, "low_pass_outside_mask": False, "mask_filter_resolution_a": 20.0,
     # Blush regularisation of the reference between rounds (blush.py); not in cisTEM's panel.
     "use_blush": False, "blush_input": "Unfiltered half-map sum",
@@ -105,6 +107,17 @@ def _flag(params, key, default):
     if isinstance(v, str):
         return v.strip().lower() in ("1", "true", "yes", "on")
     return bool(v)
+
+
+def _aberration_file(conn, state):
+    """The aberration file the programs read (refinements.write_aberration_file): the input refinement's
+    higher-order aberrations in the job's scratch, or "none" when it has none."""
+    return refinements.write_aberration_file(conn, state.get("input_refinement_id"), Path(state["scratch"]) / "aberrations.txt")
+
+
+def _impose_helical(state):
+    """reconstruct3d / merge3d's last argument: the panel's Impose Helical Symmetry checkbox, which only a helical package feels."""
+    return symmetry_module.is_helical(state["symmetry"]) and bool(state["settings"].get("impose_helical_symmetry", True))
 
 
 def settings_from_params(params, pkg):
@@ -304,6 +317,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     jobs = max(1, min(n, state["reconstruction_jobs"]))
     scratch = Path(state["scratch"])
     tasks = []
+    aberration_file = _aberration_file(conn, state)
     index = 0
     for k in range(classes):
         use_ref = bool(s["apply_blurring"] and state["reference_files"][k])
@@ -316,7 +330,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       s["smoothing_factor"], 1.0,
                       True, s["adjust_score_for_defocus"], state["invert_contrast"], False, s["autocrop_images"], False, s["autocenter"],
                       use_ref, True, True,
-                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1, symmetry_module.is_helical(state["symmetry"])]
+                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1, _impose_helical(state), aberration_file]
             tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -346,7 +360,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half)
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0, symmetry_module.is_helical(state["symmetry"])]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, 5.0, _impose_helical(state)]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge {}".format(parent["NAME"], rid), parent)
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
@@ -379,6 +393,7 @@ def _launch_refinement(conn, project_id, job_id, state):
         stats_files.append(sp)
     jobs = max(1, min(n, state["refinement_jobs"]))
     tasks, outputs = [], []
+    aberration_file = _aberration_file(conn, state)
     index = 0
     for k in range(classes):
         for j in range(1, jobs + 1):
@@ -394,7 +409,7 @@ def _launch_refinement(conn, project_id, job_id, state):
                       s["defocus_search_range_a"], s["defocus_search_step_a"], 1.0,
                       s["global"], not s["global"], s["refine_psi"], s["refine_theta"], s["refine_phi"], s["refine_x_shift"], s["refine_y_shift"],
                       False, s["focused_classification"], s["refine_ctf"], True, state["invert_contrast"], False, not s["apply_blurring"], True,
-                      1, False, k, not s["also_refine_input"], False]
+                      1, False, k, not s["also_refine_input"], False, aberration_file]
             tasks.append(_task(refine3d_adapter, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)

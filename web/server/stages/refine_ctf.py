@@ -20,7 +20,7 @@ import os
 
 PROGRAM = {"name": "refine_ctf", "executable": "refine_ctf"}
 
-ARGUMENT_TYPES = "ttttbtttttiifffffffffbbbbbbbiii"
+ARGUMENT_TYPES = "ttttbtttttiifffffffffbbbbbbbiiitt"
 ARGUMENT_NAMES = (
     "input_particle_images",
     "input_star_filename",
@@ -53,6 +53,8 @@ ARGUMENT_NAMES = (
     "image_number_for_gui",
     "number_of_jobs_per_image_in_gui",
     "max_threads",
+    "aberration_file",
+    "output_aberration_sums",
 )
 assert len(ARGUMENT_NAMES) == len(ARGUMENT_TYPES)
 

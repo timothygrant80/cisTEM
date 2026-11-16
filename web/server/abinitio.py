@@ -96,6 +96,8 @@ DEFAULTS = {
     "always_apply_symmetry": False,
     "apply_blurring": False,
     "smoothing_factor": 1.0,
+    # cisTEM3's own: the real-space helical symmetrisation of the final maps (reconstruct3d / merge3d's last argument); only a helical package feels it.
+    "impose_helical_symmetry": True,
     "images_per_class": 5,
     "number_of_classes": 1,
 }
@@ -380,6 +382,11 @@ def _num(params, key, default, cast=float):
         return cast(default)
 
 
+def _impose_helical(state, symmetry):
+    """reconstruct3d / merge3d's last argument: the panel's Impose Helical Symmetry checkbox, felt only once the (helical) symmetry is applied -- `symmetry` is C1 until then."""
+    return symmetry_module.is_helical(symmetry) and bool(state["settings"].get("impose_helical_symmetry", True))
+
+
 def _flag(params, key, default):
     v = params.get(key)
     if v is None or v == "":
@@ -409,6 +416,7 @@ def settings_from_params(params, pkg):
         "always_apply_symmetry": _flag(params, "always_apply_symmetry", DEFAULTS["always_apply_symmetry"]),
         "apply_blurring": _flag(params, "apply_blurring", DEFAULTS["apply_blurring"]),
         "smoothing_factor": _num(params, "smoothing_factor", DEFAULTS["smoothing_factor"]),
+        "impose_helical_symmetry": _flag(params, "impose_helical_symmetry", DEFAULTS["impose_helical_symmetry"]),
         "symmetry": refinement_packages.valid_symmetry(params.get("symmetry") or pkg["SYMMETRY"]),
         "use_class_averages": str(params.get("input_mode") or "images").strip().lower().startswith("class"),
         "images_per_class": max(1, _num(params, "images_per_class", DEFAULTS["images_per_class"], int)),
@@ -857,7 +865,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       (not state["stack_precomputed"]) or state.get("use_class_averages", False), False, state["invert_contrast"], False, False, False, True,
                       use_ref, False, True,
                       str(scratch / "startup_dump_file_{}_odd_{}.dump".format(k, j)),
-                      str(scratch / "startup_dump_file_{}_even_{}.dump".format(k, j)), 0, 1, symmetry_module.is_helical(symmetry)]
+                      str(scratch / "startup_dump_file_{}_even_{}.dump".format(k, j)), 0, 1, _impose_helical(state, symmetry), "none"]
             tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -878,6 +886,7 @@ def _launch_merge(conn, project_id, job_id, state):
     n_out = _output_number(state)
     outer = min(s["mask_radius"], state["active_box"] * 0.45 * state["active_pixel_size"])
     wiener = wiener_nominator(state["round"], state["rounds"], state["start"])
+    symmetry = s["symmetry"] if state["apply_symmetry"] else "C1"
     tasks, outputs, stats, halves = [], [], [], []
     for k in range(classes):
         name = "startup3d_initial_{}_{}.mrc".format(n_out, k) if state["initial"] else "startup3d_{}_{}.mrc".format(n_out, k)
@@ -890,7 +899,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half)
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius"], outer,
                                                 str(scratch / "startup_dump_file_{}_odd_.dump".format(k)), str(scratch / "startup_dump_file_{}_even_.dump".format(k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"], symmetry_module.is_helical(state["settings"]["symmetry"]) and bool(state["apply_symmetry"])]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), wiener, state["current_high_res"], _impose_helical(state, symmetry)]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · merge {}".format(parent["NAME"], "initial" if state["initial"] else n_out + 1), parent)
     state.update({"phase": "initial_merge" if state["initial"] else "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,
@@ -944,7 +953,7 @@ def _launch_refinement(conn, project_id, job_id, state):
                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
                       True, False, True, True, True, True, True, False, False, False,
                       (not state["stack_precomputed"]) or state.get("use_class_averages", False), state["invert_contrast"], False, not s["apply_blurring"], False,
-                      1, False, k, False, False]
+                      1, False, k, False, False, "none"]
             tasks.append(_task(refine3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)

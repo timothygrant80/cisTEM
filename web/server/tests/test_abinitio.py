@@ -190,6 +190,24 @@ class Refine3DTests(unittest.TestCase):
         self.assertAlmostEqual(views[1][0], 40.0)
         self.assertAlmostEqual(views[1][1] % 360.0, 210.0)
 
+    def test_impose_helical_symmetry_follows_the_checkbox_for_a_helical_package_only(self):
+        """reconstruct3d / merge3d's last argument: the panel's Impose Helical Symmetry
+        (default on) for a helical package, never for a point group; ab-initio's only once
+        the symmetry is applied (the symbol handed to the programs is C1 before that)."""
+        import refine3d
+        self.assertTrue(refine3d._impose_helical({"symmetry": "H6,50", "settings": {}}))
+        self.assertTrue(refine3d._impose_helical({"symmetry": "H6,50,C2", "settings": {"impose_helical_symmetry": True}}))
+        self.assertFalse(refine3d._impose_helical({"symmetry": "H6,50", "settings": {"impose_helical_symmetry": False}}))
+        self.assertFalse(refine3d._impose_helical({"symmetry": "C1", "settings": {"impose_helical_symmetry": True}}))
+        self.assertFalse(refine3d._impose_helical({"symmetry": "D7", "settings": {}}))
+        state = {"settings": {"impose_helical_symmetry": True}}
+        self.assertTrue(ab._impose_helical(state, "H6,50"))
+        self.assertFalse(ab._impose_helical(state, "C1"))
+        self.assertFalse(ab._impose_helical({"settings": {"impose_helical_symmetry": False}}, "H6,50"))
+        pkg = {"SYMMETRY": "H6,50", "PARTICLE_SIZE": 100, "NUMBER_OF_CLASSES": 1}
+        self.assertTrue(ab.settings_from_params({"refinement_package_id": 1}, pkg)["impose_helical_symmetry"])
+        self.assertFalse(ab.settings_from_params({"refinement_package_id": 1, "impose_helical_symmetry": "false"}, pkg)["impose_helical_symmetry"])
+
     def test_helical_symbols(self):
         """H<rise>,<twist>[,<copies>][,C<n>] (SymmetryMatrix::ParseHelicalSymbol): parsed, normalised,
         one asymmetric unit, the identity alone for the angular distributions, and applied
@@ -653,3 +671,66 @@ class MergeProfileTests(unittest.TestCase):
         out = ab.merge_profile(self._profile(2, True, 3), 8)
         self.assertEqual(out["run_commands"][0]["overridden_total_copies"], 8)
         self.assertEqual(out["run_commands"][0]["copies"], 2)
+
+
+class LaunchStepTests(unittest.TestCase):
+    """The reconstruction and merge launch steps run for real against a stubbed runner,
+    so a name only one of them defines (`symmetry`, 2026-11-15: a NameError in
+    _launch_merge failed every ab-initio at its first merge) fails here first."""
+
+    def _state(self, tmp, symmetry, apply_symmetry, impose=True):
+        s = dict(ab.DEFAULTS)
+        s.update({"symmetry": symmetry, "impose_helical_symmetry": impose, "apply_blurring": False, "use_blush": False,
+                  "inner_mask_radius": 0.0, "mask_radius": 60.0, "smoothing_factor": 1.0})
+        state = {"settings": s, "number_of_particles": 4, "number_of_classes": 2, "initial": False, "scratch": tmp,
+                 "reconstruction_jobs": 2, "apply_symmetry": apply_symmetry, "active_stack": "stack.mrc", "active_pixel_size": 1.5,
+                 "molecular_weight": 300.0, "active_box": 64, "next_high_res": 12.0, "current_high_res": 15.0,
+                 "stack_precomputed": True, "invert_contrast": False, "reference_files": ["a.mrc", "b.mrc"],
+                 "current_percent_used": 50.0, "rounds": 2, "start": 0, "round": 1, "number_of_dump_files": 2, "reconstruction_profile": "Local"}
+        rows = [{"position_in_stack": i + 1, "psi": 0.0, "theta": 0.0, "phi": 0.0, "x_shift": 0.0, "y_shift": 0.0, "defocus_1": 10000.0,
+                 "defocus_2": 10000.0, "defocus_angle": 0.0, "phase_shift": 0.0, "occupancy": 100.0, "logp": 0.0, "sigma": 1.0,
+                 "score": float(i), "image_is_active": 1, "pixel_size": 1.5, "voltage": 300.0, "cs": 2.7, "amplitude_contrast": 0.07,
+                 "beam_tilt_x": 0.0, "beam_tilt_y": 0.0, "image_shift_x": 0.0, "image_shift_y": 0.0, "assigned_subset": 1 + i % 2}
+                for i in range(4)]
+        ab._store_rows(state, "output", [rows, rows])
+        return state
+
+    def _launch(self, step, state):
+        submitted = []
+
+        class Runtime:
+            def append_log(self, *a, **k): pass
+            def submit_child(self, project_id, child, adapter, tasks, profile): submitted.append((adapter, tasks))
+
+        saved = (ab._runtime, ab._parent_row, ab._new_child, ab._profile)
+        ab._runtime, ab._parent_row, ab._new_child, ab._profile = Runtime(), (lambda conn, j: {"NAME": "Job 1"}), (lambda *a: "child"), (lambda name: None)
+        try:
+            step(None, "p", "j", state)
+        finally:
+            ab._runtime, ab._parent_row, ab._new_child, ab._profile = saved
+        return submitted[0]
+
+    def _last_arg(self, task):
+        return task["args"][-1]["value"]
+
+    def test_merge_and_reconstruction_take_the_round_s_symmetry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = self._state(tmp, "H6,50", True)
+            adapter, tasks = self._launch(ab._launch_merge, state)
+            self.assertEqual(adapter.PROGRAM["name"], "merge3d")
+            self.assertEqual(len(tasks), 2)
+            self.assertTrue(all(self._last_arg(t) for t in tasks))
+            state = self._state(tmp, "H6,50", True)
+            adapter, tasks = self._launch(ab._launch_reconstruction, state)
+            self.assertEqual(adapter.PROGRAM["name"], "reconstruct3d")
+            self.assertEqual(len(tasks), 4)
+            self.assertEqual(tasks[0]["args"][7]["value"], "H6,50")
+            self.assertTrue(all(t["args"][-2]["value"] for t in tasks))
+            # before the symmetry is applied the round is C1 and nothing is imposed
+            state = self._state(tmp, "H6,50", False)
+            self.assertFalse(any(self._last_arg(t) for t in self._launch(ab._launch_merge, state)[1]))
+            adapter, tasks = self._launch(ab._launch_reconstruction, state)
+            self.assertEqual(tasks[0]["args"][7]["value"], "C1")
+            # a point group never imposes
+            state = self._state(tmp, "O", True)
+            self.assertFalse(any(self._last_arg(t) for t in self._launch(ab._launch_merge, state)[1]))

@@ -38,6 +38,7 @@ from pathlib import Path
 import numpy as np
 
 import db
+import refinements
 import symmetry as symmetry_module
 
 SYMMETRIES = ("C1", "C2", "C3", "C4", "D2", "D3", "D4", "I", "I2", "O", "T", "T2")  # SymmetryComboBox, in order
@@ -821,6 +822,7 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
                    number_of_classes, contained, refinement_id, white_protein=bool(pkg["STACK_HAS_WHITE_PROTEIN"]))
     insert_initial_refinement(conn, refinement_id, package_id, "Parameters from {}".format(ref["NAME"]), class_rows, box_size, output_pixel_size, molecular_weight, angular=False,
                               number_of_particles=len(kept_positions))
+    refinements.copy_aberrations(conn, ref["REFINEMENT_ID"], refinement_id)   # the higher-order aberrations come along with the parameters
     # The angular distributions, for the new symmetry. A class copied from one source class has that class's
     # angles, so the bins are computed once per source class (from the source table, for the kept particles) and
     # each new class costs only its occupancy column -- nothing at all at 100% -- where rebuilding from the new
@@ -1024,6 +1026,7 @@ def delete_package(conn, package_id, remove_stack=True):
                 for prefix in ("REFINEMENT_RESULT", "REFINEMENT_RESOLUTION_STATISTICS", "REFINEMENT_ANGULAR_DISTRIBUTION"):
                     conn.execute("DROP TABLE IF EXISTS {}_{}_{}".format(prefix, r["REFINEMENT_ID"], k))
             conn.execute("DROP TABLE IF EXISTS REFINEMENT_DETAILS_{}".format(r["REFINEMENT_ID"]))
+            conn.execute("DELETE FROM REFINEMENT_ABERRATIONS WHERE REFINEMENT_ID=?", (r["REFINEMENT_ID"],))
         conn.execute("DELETE FROM REFINEMENT_LIST WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (package_id,))
         # cisTEM's Delete also drops the class selections made on this package's classifications.
         for (sid,) in conn.execute("SELECT SELECTION_ID FROM CLASSIFICATION_SELECTION_LIST WHERE REFINEMENT_PACKAGE_ID=?", (package_id,)).fetchall():

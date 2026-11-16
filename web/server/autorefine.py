@@ -63,7 +63,7 @@ import volumes
 from abinitio import (merge_profile, _new_child, _parent_row, _profile, _task, _load_state, _save, now_iso, particle_range,
                       default_statistics, write_statistics, read_statistics, update_occupancies, pooled_part_ssnr,
                       average_sigma, angular_step as calculate_angular_step)
-from refine3d import _num, _flag, PLEASE_CREATE_PACKAGE_MESSAGE, CHILD_REFINE, CHILD_RECON, CHILD_MERGE
+from refine3d import _num, _flag, _impose_helical, _aberration_file, PLEASE_CREATE_PACKAGE_MESSAGE, CHILD_REFINE, CHILD_RECON, CHILD_MERGE
 from stages import merge3d, reconstruct3d, refine3d as refine3d_adapter
 import symmetry as symmetry_module
 
@@ -73,6 +73,8 @@ STAGE = "auto_refine3d"
 DEFAULTS = {
     "high_resolution_limit_a": 20.0, "inner_mask_radius_a": 0.0, "number_of_results_to_refine": 20,
     "autocrop_images": False, "apply_blurring": False, "smoothing_factor": 1.0, "autocenter": True,
+    # cisTEM3's own: the real-space helical symmetrisation of the final maps (reconstruct3d / merge3d's last argument); only a helical package feels it.
+    "impose_helical_symmetry": True,
     "use_mask": False, "auto_mask": True, "mask_edge_a": 10.0, "outside_mask_weight": 0.0, "low_pass_outside_mask": False,
     "mask_filter_resolution_a": 20.0,
     # Blush regularisation of the reference between rounds (blush.py / blush_phase.py); not in cisTEM's panel.
@@ -511,6 +513,7 @@ def _launch_refinement(conn, project_id, job_id, state):
     classification_limit = _classification_limit(state)
     jobs = max(1, min(n, state["refinement_jobs"]))
     tasks, outputs = [], []
+    aberration_file = _aberration_file(conn, state)
     index = 0
     for k in range(classes_to_run):
         limit = state["class_high_res_limits"][k]
@@ -526,7 +529,7 @@ def _launch_refinement(conn, project_id, job_id, state):
                       s["search_range_x_a"], s["search_range_y_a"], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
                       False, False, True, True, True, True, True,
                       False, False, False, True, state["invert_contrast"], False, not s["apply_blurring"], True,
-                      1, True, k, False, False]
+                      1, True, k, False, False, aberration_file]
             tasks.append(_task(refine3d_adapter, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -675,6 +678,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
     state["reconstruction_limits"] = limits_rec
     state["score_weights"] = weights
     tasks = []
+    aberration_file = _aberration_file(conn, state)
     index = 0
     for k in range(classes):
         use_ref = bool(s["apply_blurring"] and state["reference_asset_ids"][k] != -1 and state["reference_files"][k])
@@ -686,7 +690,7 @@ def _launch_reconstruction(conn, project_id, job_id, state):
                       limits_rec[k], state["class_high_res_limits"][k], weights[k], score_threshold, s["smoothing_factor"], 1.0,
                       True, True, state["invert_contrast"], False, s["autocrop_images"], False, s["autocenter"],
                       use_ref, True, True,
-                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1, symmetry_module.is_helical(state["symmetry"])]
+                      str(scratch / "dump_file_{}_{}_odd_{}.dump".format(rid, k, j)), str(scratch / "dump_file_{}_{}_even_{}.dump".format(rid, k, j)), 0, 1, _impose_helical(state), aberration_file]
             tasks.append(_task(reconstruct3d, index, k * 1000000 + j, values))
             index += 1
     parent = _parent_row(conn, job_id)
@@ -716,7 +720,7 @@ def _launch_merge(conn, project_id, job_id, state):
         halves.append(half)
         tasks.append(_task(merge3d, k, k + 1, [half[0], half[1], out, st, state["molecular_weight"], s["inner_mask_radius_a"], s["mask_radius_a"],
                                                 str(scratch / "dump_file_{}_{}_odd_.dump".format(rid, k)), str(scratch / "dump_file_{}_{}_even_.dump".format(rid, k)),
-                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, state["class_high_res_limits"][k], symmetry_module.is_helical(state["symmetry"])]))
+                                                k + 1, False, "", _required_count(state, "number_of_dump_files"), 1.0, state["class_high_res_limits"][k], _impose_helical(state)]))
     parent = _parent_row(conn, job_id)
     child = _new_child(conn, job_id, CHILD_MERGE, "{} · round {} merge3d".format(parent["NAME"], state["round"] + 1), parent)
     state.update({"phase": "merge", "child_job_id": child, "child_task_count": len(tasks), "child_done": 0,

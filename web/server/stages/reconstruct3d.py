@@ -10,7 +10,7 @@ The argument list is built in abinitio.py next to the values.
 
 PROGRAM = {"name": "reconstruct3d", "executable": "reconstruct3d"}
 
-ARGUMENT_TYPES = "ttttttttiiffffffffffbbbbbbbbbbttiib"
+ARGUMENT_TYPES = "ttttttttiiffffffffffbbbbbbbbbbttiibt"
 ARGUMENT_NAMES = (
     "input_particle_stack",
     "input_star_filename",
@@ -47,6 +47,7 @@ ARGUMENT_NAMES = (
     "correct_ewald_sphere",
     "max_threads",
     "impose_helical_symmetry",
+    "aberration_file",
 )
 assert len(ARGUMENT_NAMES) == len(ARGUMENT_TYPES)
 

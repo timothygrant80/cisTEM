@@ -128,7 +128,8 @@ def export_package(conn, package_id, refinement_id, class_number, fmt, stack_pat
     else:
         stack_path = _with_ext(stack_path, ".mrcs")
         metadata_path = _with_ext(metadata_path, ".star", force=True)
-        files.extend(write_relion(conn, pkg, particles, rows, stack_path, metadata_path, relion3=(fmt == "relion3"), log=log))
+        files.extend(write_relion(conn, pkg, particles, rows, stack_path, metadata_path, relion3=(fmt == "relion3"), log=log,
+                                  aberrations=refinements.load_aberrations(conn, refinement_id)))
     return {"format": fmt, "files": files, "particles": len(rows), "refinement_id": int(refinement_id), "class_number": class_number}
 
 
@@ -162,10 +163,14 @@ _RELION_PARTICLE_LABELS = ["_rlnMicrographName", "_rlnCoordinateX", "_rlnCoordin
                            "_rlnMagnification", "_rlnDetectorPixelSize", "_rlnAngleRot", "_rlnAngleTilt", "_rlnAnglePsi"]
 
 
-def write_relion(conn, pkg, particles, rows, stack_path, star_path, relion3=False, log=None):
+def write_relion(conn, pkg, particles, rows, stack_path, star_path, relion3=False, log=None, aberrations=None):
     """The Relion branch of the export wizard: the particle stack rewritten
     for Relion, the particles star, and for Relion 3.1 the micrograph and
-    motion-correction star files."""
+    motion-correction star files. `aberrations` (the refinement's sets, as
+    refinements.load_aberrations returns them) go into the Relion 3.1 optics
+    group as rlnOddZernike / rlnEvenZernike -- the same numbers in the same
+    convention (web/CLAUDE.md, "Higher-order aberrations") -- and the rows'
+    beam tilt, one value per refinement in cisTEM, as rlnBeamTiltX / Y."""
     box = int(pkg["STACK_BOX_SIZE"])
     first = particles[0]
     pixel_size = float(first["PIXEL_SIZE"] or pkg["OUTPUT_PIXEL_SIZE"] or 1.0)
@@ -199,10 +204,23 @@ def write_relion(conn, pkg, particles, rows, stack_path, star_path, relion3=Fals
     base = os.path.splitext(star_path)[0]
     with open(star_path, "w") as fh:
         if relion3:
-            _star_loop(fh, "data_optics", ["_rlnOpticsGroup", "_rlnOpticsGroupName", "_rlnAmplitudeContrast", "_rlnSphericalAberration",
-                                           "_rlnVoltage", "_rlnImagePixelSize", "_rlnImageSize", "_rlnImageDimensionality"])
-            fh.write("%i %s %f %f %f %f %i %i\n" % (1, "opticsGroup1", float(first["AMPLITUDE_CONTRAST"] or 0.07), float(first["SPHERICAL_ABERRATION"] or 2.7),
-                                                    float(first["MICROSCOPE_VOLTAGE"] or 300.0), pixel_size, box, 2))
+            optics_labels = ["_rlnOpticsGroup", "_rlnOpticsGroupName", "_rlnAmplitudeContrast", "_rlnSphericalAberration",
+                             "_rlnVoltage", "_rlnImagePixelSize", "_rlnImageSize", "_rlnImageDimensionality"]
+            optics_values = ["%i %s %f %f %f %f %i %i" % (1, "opticsGroup1", float(first["AMPLITUDE_CONTRAST"] or 0.07), float(first["SPHERICAL_ABERRATION"] or 2.7),
+                                                      float(first["MICROSCOPE_VOLTAGE"] or 300.0), pixel_size, box, 2)]
+            default_set = next((s for s in (aberrations or []) if int(s.get("group", 0)) == 0), None)
+            if default_set and (any(default_set.get("odd")) or any(default_set.get("even"))):
+                if any(default_set.get("odd")):
+                    optics_labels.append("_rlnOddZernike")
+                    optics_values.append("[" + ",".join("%.8g" % v for v in default_set["odd"]) + "]")
+                if any(default_set.get("even")):
+                    optics_labels.append("_rlnEvenZernike")
+                    optics_values.append("[" + ",".join("%.8g" % v for v in default_set["even"]) + "]")
+            elif rows and (float(rows[0].get("beam_tilt_x") or 0.0) or float(rows[0].get("beam_tilt_y") or 0.0)):
+                optics_labels += ["_rlnBeamTiltX", "_rlnBeamTiltY"]
+                optics_values.append("%f %f" % (float(rows[0]["beam_tilt_x"]), float(rows[0]["beam_tilt_y"])))
+            _star_loop(fh, "data_optics", optics_labels)
+            fh.write(" ".join(optics_values) + "\n")
             _star_loop(fh, "data_particles", _RELION_PARTICLE_LABELS + ["_rlnOriginXAngst", "_rlnOriginYAngst", "_rlnOpticsGroup", "_rlnRandomSubset"])
         else:
             _star_loop(fh, "data_", _RELION_PARTICLE_LABELS + ["_rlnOriginX", "_rlnOriginY"])

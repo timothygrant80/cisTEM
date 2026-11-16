@@ -24,6 +24,7 @@ counts each assigned view once, which is the same picture for C1 and a
 coarser one otherwise.
 """
 import itertools
+import json
 import math
 import os
 import threading
@@ -31,6 +32,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
+import aberrations
 import db
 import starfile
 import symmetry as symmetry_module
@@ -383,11 +385,73 @@ def add_refinement(conn, ref, class_rows, class_stats, class_details, angular=Tr
             conn.execute("INSERT INTO {} VALUES (?, ?)".format(list_table), (n, rid))
         conn.execute("UPDATE REFINEMENT_PACKAGE_ASSETS SET LAST_REFINEMENT_ID=?, NUMBER_OF_REFINEMENTS=COALESCE(NUMBER_OF_REFINEMENTS, 0) + 1 "
                      "WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (rid, package_id))
+    # The higher-order aberrations follow the refinement chain like the beam tilt in the rows: a refinement
+    # started from another inherits its sets unless the driver supplies new ones (Refine CTF's fit).
+    starting = ref.get("starting_refinement_id")
+    if ref.get("aberrations") is not None:
+        save_aberrations(conn, rid, ref["aberrations"])
+    elif starting is not None and int(starting) >= 0 and int(starting) != rid:
+        copy_aberrations(conn, starting, rid)
     release_id("refinement", rid)   # only now: the id stays reserved until the row that MAX(REFINEMENT_ID) would see is in
 
 
 _DETAIL_DEFAULTS = {"REFERENCE_VOLUME_ASSET_ID": -1, "RECONSTRUCTED_VOLUME_ASSET_ID": -1, "RECONSTRUCTION_ID": -1, "MASK_ASSET_ID": -1,
                     "AVERAGE_OCCUPANCY": 100.0, "MASK_EDGE_WIDTH": 10.0, "MASK_FILTER_RESOLUTION": 20.0, "SHOULD_REFINE_INPUT_PARAMS": 1}
+
+
+# ---- higher-order aberrations (web/CLAUDE.md, "Higher-order aberrations"): per refinement, per optics group
+
+def load_aberrations(conn, refinement_id):
+    """The refinement's aberration sets: [{group, odd_order, even_order, odd, even}], group 0 the default
+    for every particle; [] when it has none."""
+    out = []
+    for r in conn.execute("SELECT GROUP_NUMBER, ODD_ORDER, EVEN_ORDER, ODD_JSON, EVEN_JSON FROM REFINEMENT_ABERRATIONS WHERE REFINEMENT_ID=? ORDER BY GROUP_NUMBER",
+                          (int(refinement_id),)).fetchall():
+        out.append({"group": int(r["GROUP_NUMBER"]), "odd_order": int(r["ODD_ORDER"] or 0), "even_order": int(r["EVEN_ORDER"] or 0),
+                    "odd": [float(v) for v in json.loads(r["ODD_JSON"] or "[]")], "even": [float(v) for v in json.loads(r["EVEN_JSON"] or "[]")]})
+    return out
+
+
+def save_aberrations(conn, refinement_id, sets):
+    """Replace the refinement's aberration sets (a list as load_aberrations returns; [] or None clears)."""
+    with conn:
+        conn.execute("DELETE FROM REFINEMENT_ABERRATIONS WHERE REFINEMENT_ID=?", (int(refinement_id),))
+        for s in sets or []:
+            conn.execute("INSERT INTO REFINEMENT_ABERRATIONS VALUES (?,?,?,?,?,?)",
+                         (int(refinement_id), int(s.get("group", 0)), int(s.get("odd_order", 0)), int(s.get("even_order", 0)),
+                          json.dumps([float(v) for v in s.get("odd", [])]), json.dumps([float(v) for v in s.get("even", [])])))
+
+
+def copy_aberrations(conn, from_refinement_id, to_refinement_id):
+    save_aberrations(conn, to_refinement_id, load_aberrations(conn, from_refinement_id))
+
+
+def delete_aberrations(conn, refinement_id):
+    conn.execute("DELETE FROM REFINEMENT_ABERRATIONS WHERE REFINEMENT_ID=?", (int(refinement_id),))
+
+
+def aberrations_have_coefficients(sets):
+    return any(any(v != 0.0 for v in s.get("odd", [])) or any(v != 0.0 for v in s.get("even", [])) for s in sets or [])
+
+
+def write_aberration_sets(sets, path, comment=""):
+    """The aberration file the programs read (src/core/aberration_table.h: one line per group,
+    `<group> <n_odd> <odd...> <n_even> <even...>`) for a list of sets as load_aberrations returns them, or
+    "none" when none has a non-zero coefficient, which is what every program takes for no aberrations."""
+    if not aberrations_have_coefficients(sets):
+        return "none"
+    with open(path, "w") as fh:
+        fh.write("# {}group n_odd odd... n_even even...\n".format(comment + ": " if comment else ""))
+        for s in sets:
+            fh.write(" ".join([str(int(s.get("group", 0))), str(len(s["odd"]))] + ["%.8g" % v for v in s["odd"]] +
+                              [str(len(s["even"]))] + ["%.8g" % v for v in s["even"]]) + "\n")
+    return str(path)
+
+
+def write_aberration_file(conn, refinement_id, path):
+    """write_aberration_sets() for a refinement's sets ("none" for a refinement without any, or no refinement)."""
+    sets = load_aberrations(conn, refinement_id) if refinement_id is not None and int(refinement_id) >= 0 else []
+    return write_aberration_sets(sets, path, "refinement {}".format(int(refinement_id)) if sets else "")
 
 
 def _result_tuples(table):
@@ -449,6 +513,16 @@ _LIST_SELECT = ("SELECT r.*, rp.NAME AS PACKAGE_NAME, rp.SYMMETRY, j.JOB_NUMBER 
 def _refinement_json(conn, row, with_classes=False):
     d = {k.lower(): row[k] for k in row.keys()}
     d["resolution_statistics_are_generated"] = bool(row["RESOLUTION_STATISTICS_ARE_GENERATED"])
+    d["aberrations"] = load_aberrations(conn, row["REFINEMENT_ID"])
+    if d["aberrations"]:
+        # the beam tilt and shift each odd set contains, for the page (aberrations.beam_tilt_from_odd needs Cs and the voltage)
+        table = "REFINEMENT_RESULT_{}_1".format(int(row["REFINEMENT_ID"]))
+        first = conn.execute("SELECT MICROSCOPE_CS, MICROSCOPE_VOLTAGE FROM {} LIMIT 1".format(table)).fetchone() if _table_exists(conn, table) else None
+        cs, kv = (float(first["MICROSCOPE_CS"] or 2.7), float(first["MICROSCOPE_VOLTAGE"] or 300.0)) if first else (2.7, 300.0)
+        for st in d["aberrations"]:
+            if any(st.get("odd")):
+                tx, ty, sx, sy, _rest = aberrations.beam_tilt_from_odd(st["odd"], cs, kv)
+                st.update({"beam_tilt_x_mrad": float(tx), "beam_tilt_y_mrad": float(ty), "particle_shift_x_a": float(sx), "particle_shift_y_a": float(sy)})
     details = load_details(conn, row["REFINEMENT_ID"])
     d["classes"] = []
     for k in range(1, int(row["NUMBER_OF_CLASSES"] or 1) + 1):

@@ -1930,6 +1930,7 @@ From branch : <span id="versionBranch">—</span></p>
 <div class="modal plot-modal" id="plotModal">
   <div class="modal-head">
     <div class="modal-title" id="plotModalTitle">Angular Distribution</div>
+    <button class="small" id="plotModalSaveText" title="Save the plotted values as a text file (cisTEM's resolution statistics layout)" hidden>Save Text</button>
     <button class="small" id="plotModalSave" title="Save the plot as shown here as a PNG image">Save PNG</button>
     <button class="log-close" id="plotModalClose" aria-label="Close">&times;</button>
   </div>
@@ -2436,6 +2437,8 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"3D Reconstruction", enabledBy:"apply_blurring",
          tooltip:"A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."},
+        {key:"impose_helical_symmetry", label:"Impose Helical Symmetry?", type:"checkbox", default:true, group:"3D Reconstruction",
+         tooltip:"For a helical package only: after each reconstruction the half maps and the filtered map have their central 30% averaged over every screw step (and every start of a multi-start) and the rest of the box filled from it, RELION's real-space symmetrisation. Off, the maps carry only the symmetry imposed in Fourier space during insertion. Greyed for a point-group package, which never feels it."},
         {key:"images_per_class", label:"Images per Class", unit:"", type:"number", step:"1", min:1, max:500, default:"5", group:"Class Averages",
          tooltip:"How many randomly drawn members go into each class average made for the reconstruction. The number of averages per selected class is the smallest class's size divided by this, kept between 2500 and 20000 averages in all."}
       ],
@@ -2519,6 +2522,8 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The global search can be limited in Y (measured from the box centre); 0.15 x the largest dimension by default."},
         {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Crop the particle images to a minimum size determined by the mask radius to accelerate 3D reconstruction. Usually not recommended, as it increases interpolation artifacts."},
+        {key:"impose_helical_symmetry", label:"Impose Helical Symmetry?", type:"checkbox", default:true, group:"Reconstruction",
+         tooltip:"For a helical package only: after each reconstruction the half maps and the filtered map have their central 30% averaged over every screw step (and every start of a multi-start) and the rest of the box filled from it, RELION's real-space symmetrisation. Off, the maps carry only the symmetry imposed in Fourier space during insertion. Greyed for a point-group package, which never feels it."},
         {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Insert each particle at multiple orientations weighted by a likelihood function; enable if the refinement appears to over-fit."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
@@ -2559,6 +2564,7 @@ From branch : <span id="versionBranch">—</span></p>
             ["Number of Results to Refine", "For a global search, an angular grid search is performed and the alignment parameters for the N best matching projections are then refined further in a local refinement. Only the set of parameters yielding the best score (correlation coefficient) is kept. Increasing N will increase the chances of finding the correct particle orientations but will slow down the search. A value of 20 is recommended."],
             ["Search Range in X/Y (Å)", "The global search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are found. This is useful when the particle density is high and particles end up close to each other. In this case, it is usually still possible to align all particles in a cluster of particles (assuming they do not significantly overlap). The values provided here for the search range should be set to exclude the possibility that the same particle is selected twice and counted as two different particles."],
             ["Autocrop Images?", "Should the particle images be cropped to a minimum size determined by the mask radius to accelerate 3D reconstruction? This is usually not recommended as it increases interpolation artifacts."],
+            ["Impose Helical Symmetry?", "For a helical package: the final half maps and filtered map are symmetrised in real space after each reconstruction, their central 30% averaged over every screw step and the rest of the box filled from it (RELION's real-space symmetrisation). A point-group package never feels it."],
             ["Apply Likelihood Blurring?", "Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."],
             ["Smoothing Factor", "A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."],
             ["Use Auto-Masking?", "Should the 3D reconstructions be masked? Masking can suppress spurious density features that could be amplified during the iterative refinement. Masking should only be disabled if it appears to interfere with the reconstruction process."]
@@ -2657,6 +2663,8 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The reconstruction can be accelerated by limiting its resolution; keep it higher than the refinement resolution of the following cycle. 0 = maximum."},
         {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality; do not use when finalising."},
+        {key:"impose_helical_symmetry", label:"Impose Helical Symmetry?", type:"checkbox", default:true, group:"Reconstruction",
+         tooltip:"For a helical package only: after each reconstruction the half maps and the filtered map have their central 30% averaged over every screw step (and every start of a multi-start) and the rest of the box filled from it, RELION's real-space symmetrisation. Off, the maps carry only the symmetry imposed in Fourier space during insertion. Greyed for a point-group package, which never feels it."},
         {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Insert each particle at multiple orientations weighted by a likelihood function."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
@@ -2712,7 +2720,8 @@ From branch : <span id="versionBranch">—</span></p>
             ["Adjust Score for Defocus?", "Scores sometimes depend on the amount of image defocus. A larger defocus amplifies low-resolution features in the image and this may lead to higher particle scores compared to particles from an image with a small defocus. Adjusting the scores for this difference makes sure that particles with smaller defocus are not systematically downweighted by the above B-factor weighting."],
             ["Score Threshold", "Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage. A value = 0 will select all particles; 0 < value <= 1 will be interpreted as a percentage; value > 1 will be interpreted as a fixed score threshold."],
             ["Resolution Limit (Å)", "The reconstruction calculation can be accelerated by limiting its resolution. It is important to make sure that the resolution limit entered here is higher than the resolution used for refinement in the following cycle."],
-            ["Autocrop Images?", "The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."]
+            ["Autocrop Images?", "The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."],
+            ["Impose Helical Symmetry?", "For a helical package: the final half maps and filtered map are symmetrised in real space after each reconstruction, their central 30% averaged over every screw step and the rest of the box filled from it (RELION's real-space symmetrisation). A point-group package never feels it."]
           ]}
         ],
         references: [
@@ -2741,17 +2750,23 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters).",
          dynamicOptions:{endpoint:"/refinement-packages", listKey:"refinement_packages", value:"refinement_package_asset_id", label:"name", countKey:"particle_count", countLabel:"particles", emptyText:"No refinement packages yet — create one on the Assets tab"}},
         {key:"input_refinement_id", label:"Input Parameters", unit:"", type:"select", options:[], group:"Input",
-         tooltip:"The refinement whose angles, shifts and occupancies are kept and whose defocus values are refined; the package's current references are the volumes they are refined against."},
+         tooltip:"The refinement whose angles, shifts and occupancies are kept and whose defocus values are refined."},
+        {key:"reference_note", label:"Active 3D References", unit:"", type:"references", group:"Input",
+         tooltip:"The volume each class is refined against: the package's current references, set by the last ab-initio or refinement run and changed here per class. Every class needs one; cisTEM would reconstruct a missing one first, this panel asks for it."},
         {key:"use_mask", label:"Use a Mask?", type:"checkbox", default:false, group:"Input",
          tooltip:"Multiply the reference by a mask volume before the refinement instead of auto-masking it."},
         {key:"mask_volume_id", label:"Mask Volume", unit:"", type:"select", options:[], group:"Input", enabledBy:"use_mask",
          tooltip:"Any volume asset of the same box size; voxels above zero are inside the mask."},
         {key:"refine_beam_tilt", label:"Refine Beam Tilt Parms.", type:"checkbox", default:true, group:"Input",
          tooltip:"Estimate one beam tilt (and particle shift) for the whole data set from the phase differences between the aligned particles and their projections, and write it into every particle."},
+        {key:"estimate_trefoil", label:"Estimate Trefoil?", type:"checkbox", default:false, group:"Input",
+         tooltip:"Fit the antisymmetric aberrations as odd Zernike polynomials (order 3: beam tilt, particle shift and three-fold trefoil) to the phase differences, RELION's model, in place of cisTEM's beam-tilt grid search. The coefficients are stored with the refinement and applied by every later refinement and reconstruction."},
+        {key:"estimate_fourth_order", label:"Estimate 4th-Order Aberrations?", type:"checkbox", default:false, group:"Input",
+         tooltip:"Fit the symmetric aberrations as even Zernike polynomials (order 4: a spherical-aberration error and four-fold astigmatism) to the CTF phases, RELION's model. Needs data well beyond 4 Å; fitted between the Low-Resolution and Hi-Res Limits."},
         {key:"refine_defocus", label:"Refine Defocus Params.", type:"checkbox", default:true, group:"Input",
          tooltip:"Search each particle's defocus around its current value (Defocus Search Range / Step in the expert options) against the reference at the Hi-Res Limit."},
-        {key:"high_resolution_limit_a", label:"Hi-Res Limit", unit:"Å", type:"number", step:"0.1", min:0, default:"3.5", group:"Input", enabledBy:"refine_defocus",
-         tooltip:"The high-resolution limit of the data used for the defocus search. Defocus refinement only pays off with data that reaches better than about 4 Å; 3.5 Å by default."},
+        {key:"high_resolution_limit_a", label:"Hi-Res Limit", unit:"Å", type:"number", step:"0.1", min:0, default:"3.5", group:"Input",
+         tooltip:"The high-resolution limit of the data used for the defocus search and the aberration fits. Defocus refinement only pays off with data that reaches better than about 4 Å; 3.5 Å by default."},
         {key:"reconstruction_run_profile", label:"Reconstruction Run Profile", unit:"", type:"select", options:[], group:"Run Profiles",
          tooltip:"The run profile for the reconstruct3d and merge3d steps; the profile in the run bar below runs refine_ctf and estimate_beamtilt (cisTEM's Refinement Run Profile)."}
       ],
@@ -2766,6 +2781,10 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The range of defocus values to search for each particle, from the current value minus the range to plus the range, keeping the astigmatism constant."},
         {key:"defocus_search_step_a", label:"Defocus Search Step", unit:"Å", type:"number", step:"5", min:1, default:"20", group:"CTF Refinement",
          tooltip:"The step of the defocus search."},
+        {key:"odd_zernike_order", label:"Odd Zernike Order", unit:"", type:"number", step:"2", min:1, max:9, default:"3", group:"CTF Refinement",
+         tooltip:"The highest order of the antisymmetric Zernike polynomials fitted for beam tilt and trefoil: 3 as in RELION; 5 adds the fifth-order terms, for very high resolution data."},
+        {key:"even_zernike_order", label:"Even Zernike Order", unit:"", type:"number", step:"2", min:0, max:10, default:"4", group:"CTF Refinement",
+         tooltip:"The highest order of the symmetric Zernike polynomials fitted for the 4th-order aberrations: 4 as in RELION; 6 adds the sixth-order terms."},
         {key:"score_to_weight_constant", label:"Score to Weight Constant", unit:"Å²", type:"number", step:"0.5", min:0, default:"2", group:"Reconstruction",
          tooltip:"Particles are weighted in the reconstruction by a B-factor of (score – average score) x constant x 0.25. Values between 0 and 10 are reasonable (0 disables weighting)."},
         {key:"adjust_score_for_defocus", label:"Adjust Score for Defocus?", type:"checkbox", default:true, group:"Reconstruction",
@@ -2776,6 +2795,8 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The reconstruction can be accelerated by limiting its resolution. 0 = maximum."},
         {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality."},
+        {key:"impose_helical_symmetry", label:"Impose Helical Symmetry?", type:"checkbox", default:true, group:"Reconstruction",
+         tooltip:"For a helical package only: after each reconstruction the half maps and the filtered map have their central 30% averaged over every screw step (and every start of a multi-start) and the rest of the box filled from it, RELION's real-space symmetrisation. Off, the maps carry only the symmetry imposed in Fourier space during insertion. Greyed for a point-group package, which never feels it."},
         {key:"apply_blurring", label:"Apply Likelihood Blurring?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Insert each particle at multiple orientations weighted by a likelihood function."},
         {key:"smoothing_factor", label:"Smoothing Factor", unit:"", type:"number", step:"0.05", min:0, max:1, default:"1", group:"Reconstruction", enabledBy:"apply_blurring",
@@ -2799,8 +2820,11 @@ From branch : <span id="versionBranch">—</span></p>
           {heading: "Program Options"},
           {options: [
             ["Input Refinement Package", "The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."],
-            ["Input Parameters", "The refinement whose angles, shifts and occupancies are kept and whose defocus values are refined. The package's current references (set by the last refinement, or on the Refine 3D panel) are the volumes each particle is compared with; with several classes each particle uses its highest-occupancy class."],
+            ["Input Parameters", "The refinement whose angles, shifts and occupancies are kept and whose defocus values are refined."],
+            ["Active 3D References", "The volume each class's particles are compared with: the package's current references, which the last ab-initio or refinement run set and which a different choice here changes at once, for this and every later refinement of the package. With several classes each particle uses its highest-occupancy class's reference. Every class needs one; cisTEM reconstructs a missing one from the input parameters first, this panel asks for one to be chosen."],
             ["Refine Beam Tilt Parms.", "Estimate one beam tilt and particle shift for the data set. The beam tilt is written into every particle in milliradians (with the shift in Å) and used by later refinements and reconstructions. A tilt whose predicted phase pattern does not match the measured one well enough is set to zero."],
+            ["Estimate Trefoil?", "Fit the antisymmetric (odd) aberrations as Zernike polynomials to the phase differences between the particles and their projections, as RELION's CTF refinement does: beam tilt, particle shift and three-fold trefoil at order 3 (the Odd Zernike Order expert option raises it). This replaces cisTEM's beam-tilt grid search; the beam tilt is read off the Zernike coefficients. The coefficients are stored with the refinement, inherited by every refinement started from it and applied by refine3d and reconstruct3d, so the particles' own beam tilt columns are set to zero when a set exists. A refinement whose input already carries a set is always fitted this way."],
+            ["Estimate 4th-Order Aberrations?", "Fit the symmetric (even) aberrations as Zernike polynomials to the phases of the CTF, as RELION does: a spherical-aberration error and four-fold astigmatism at order 4 (the Even Zernike Order expert option raises it). The fit is a residual to the CTF the particles were refined with and is added to the input refinement's set. It needs data that reach well beyond 4 Å, between the Low-Resolution Limit and the Hi-Res Limit; on a small frequency range the spherical, defocus-like and constant terms trade off against each other, so judge the fit by its phase maps on the Jobs tab rather than by single coefficients."],
             ["Refine Defocus Params.", "Search each particle's defocus (both astigmatic values together, keeping the astigmatism) around its current value, in steps of the Defocus Search Step over the Defocus Search Range."],
             ["Hi-Res Limit (Å)", "The high-resolution limit of the data used for the defocus search. It should be at or somewhat beyond the resolution of the reference; 3.5 Å by default."],
             ["Run Profiles", "The refinement profile (the run bar) runs refine_ctf and the beam-tilt search; the reconstruction profile runs reconstruct3d and merge3d."]
@@ -2815,6 +2839,7 @@ From branch : <span id="versionBranch">—</span></p>
             ["Score Threshold", "Particles with a score lower than the threshold are excluded from the reconstruction. 0 selects all; 0 < value <= 1 is a percentage; value > 1 is a fixed score threshold."],
             ["Resolution Limit (Å)", "The reconstruction can be accelerated by limiting its resolution; 0 uses the full resolution."],
             ["Autocrop Images?", "Crop the particle boxes to speed up the reconstruction, at a slight cost in quality."],
+            ["Impose Helical Symmetry?", "For a helical package: the final half maps and filtered map are symmetrised in real space after each reconstruction, their central 30% averaged over every screw step and the rest of the box filled from it (RELION's real-space symmetrisation). A point-group package never feels it."],
             ["Apply Likelihood Blurring? / Smoothing Factor", "Insert each particle at multiple orientations weighted by a likelihood function; the factor narrows the range of likelihoods used."],
             ["Use AutoMasking?", "Auto-mask the reference before the refinement. With a supplied mask volume the mask's edge width, outside weight and optional low-pass filter outside the mask apply instead."]
           ]}
@@ -2857,6 +2882,8 @@ From branch : <span id="versionBranch">—</span></p>
          tooltip:"The reconstruction can be accelerated by limiting its resolution. 0 = maximum."},
         {key:"autocrop_images", label:"Autocrop Images?", type:"checkbox", default:false, group:"Reconstruction",
          tooltip:"Crop the particle boxes to speed up the reconstruction, at a slight cost in quality; do not use when finalising."},
+        {key:"impose_helical_symmetry", label:"Impose Helical Symmetry?", type:"checkbox", default:true, group:"Reconstruction",
+         tooltip:"For a helical package only: after each reconstruction the half maps and the filtered map have their central 30% averaged over every screw step (and every start of a multi-start) and the rest of the box filled from it, RELION's real-space symmetrisation. Off, the maps carry only the symmetry imposed in Fourier space during insertion. Greyed for a point-group package, which never feels it."},
         {key:"save_half_maps", label:"Also Save Half-Maps?", type:"checkbox", default:false, group:"Output",
          tooltip:"If yes, the reconstruction half maps are also saved as '_map1' and '_map2' beside the map in Assets/Volumes."},
         {key:"overwrite_statistics", label:"Overwrite Statistics?", type:"checkbox", default:true, group:"Output",
@@ -2884,6 +2911,7 @@ From branch : <span id="versionBranch">—</span></p>
             ["Score Threshold", "Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage. A value = 0 will select all particles; 0 < value <= 1 will be interpreted as a percentage; value > 1 will be interpreted as a fixed score threshold."],
             ["Resolution Limit (Å)", "The reconstruction calculation can be accelerated by limiting its resolution. It is important to make sure that the resolution limit entered here is higher than the resolution used for refinement in the following cycle."],
             ["Autocrop Images?", "The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."],
+            ["Impose Helical Symmetry?", "For a helical package: the final half maps and filtered map are symmetrised in real space after each reconstruction, their central 30% averaged over every screw step and the rest of the box filled from it (RELION's real-space symmetrisation). A point-group package never feels it."],
             ["Also Save Half-Maps?", "If yes, the reconstruction half maps will also be saved as '_map1' and '_map2' in the volume assets folder."],
             ["Overwrite Statistics?", "If yes, the resolution statistics (essentially the FSC) for the input refinement will be overwritten."],
             ["Apply Ewald Sphere Correction? / Apply For Inverse Hand?", "Correct the reconstruction for the curvature of the Ewald sphere, for the map's hand or for the inverse hand. (cisTEM's own panel hands reconstruct3d the opposite of what its buttons say; here Yes means corrected.)"]
@@ -2999,7 +3027,7 @@ From branch : <span id="versionBranch">—</span></p>
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseGoBtn","browseList",
    "browseTitle","browseNote",
-   "movieDisplayBtn","displayModal","displayModalClose","displayTitle","displayPanelHost","displayTabs","displayLockBtn","displaySideBtn","displayCloseAllBtn","displayDockHandle","appShell","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
+   "movieDisplayBtn","displayModal","displayModalClose","displayTitle","displayPanelHost","displayTabs","displayLockBtn","displaySideBtn","displayCloseAllBtn","displayDockHandle","appShell","plotScrim","plotModal","plotModalClose","plotModalSave","plotModalSaveText","plotModalTitle","plotModalSvg","paramsScrim","paramsModal","paramsTitle","paramsClasses","paramsClose","paramsBody","paramsStatus","paramsSave","paramsSaveStar",
    "assetpageMovies","assetpageImages","assetpageParticles","assetpageRefine","assetpageVolumes","assetpagePlaceholder","placeholderPanelLabel",
    "volGroupList","volGroupAddBtn","volGroupRenameBtn","volGroupRemoveBtn","volGroupInvertBtn","volSelectAllCheckbox","volListBody","volRemoveBtn","volAddToGroupBtn","volDisplayBtn",
    "rpkgList","rpkgNewBtn","rpkgRenameBtn","rpkgDeleteBtn","rpkgDisplayBtn","rpkgImportBtn","rpkgExportBtn",
@@ -5336,19 +5364,52 @@ From branch : <span id="versionBranch">—</span></p>
   }
   // A zoom icon on a plot block: the plot redrawn at window size in #plotModal.
   // `titleFn()` names the overlay, `drawFn(svg)` draws the current data into it.
-  function addPlotZoom(block, titleFn, drawFn){
+  function addPlotZoom(block, titleFn, drawFn, textFn){
     var frame = document.createElement("div"); frame.className = "ang-frame";
     block.svg.parentNode.insertBefore(frame, block.svg); frame.appendChild(block.svg);
     var zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "fig-expand"; zoom.title = "Enlarge";
     zoom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>'; frame.appendChild(zoom);
-    zoom.addEventListener("click", function(){ openPlotModal(titleFn(), drawFn); });
+    zoom.addEventListener("click", function(){ openPlotModal(titleFn(), drawFn, textFn); });
     return zoom;
   }
-  function openPlotModal(title, draw){
+  // text: optional, a function returning the plotted values as text for the Save Text button.
+  var plotModalText = null;
+  function openPlotModal(title, draw, text){
     els.plotModalTitle.textContent = title;
+    plotModalText = text || null; els.plotModalSaveText.hidden = !text;
     els.plotModal.classList.add("open"); els.plotScrim.classList.add("open");
     els.plotModalSvg.removeAttribute("viewBox");
     draw(els.plotModalSvg);
+  }
+  function plotModalFileStem(){ return (els.plotModalTitle.textContent || "plot").replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, ""); }
+  // An FSC plot's values as text, in the layout of cisTEM's resolution statistics
+  // files (refine3d's input, merge3d's output: shell, resolution, ring radius in
+  // reciprocal pixels, FSC, part FSC, and the square roots of the part and
+  // reconstruction SSNR), one block per class when several are plotted. A curve
+  // without shells or SSNR (a live view's) leaves those columns out.
+  function fscText(fsc){
+    var classes = fsc.stats && fsc.stats.length && fsc.stats[0] && fsc.stats[0].statistics !== undefined ? fsc.stats : null;
+    var blocks = classes ? classes.map(function(c, i){ return {label: "Class " + (c.class_number != null ? c.class_number : i + 1), rows: c.statistics || []}; }) : [{label: null, rows: fsc.stats || []}];
+    var ps = typeof fsc.ps === "number" && fsc.ps > 0 ? fsc.ps : null;
+    var rows0 = blocks[0].rows[0] || {};
+    var withShell = rows0.shell != null, withSsnr = rows0.part_ssnr != null;
+    var head = "C" + (withShell ? "        SHELL" : "") + "     RESOLUTION" + (ps ? "    RING_RADIUS" : "") + "            FSC       Part_FSC" + (withSsnr ? "  Part_SSNR^0.5   Rec_SSNR^0.5" : "");
+    var f = function(v){ return (v == null ? 0 : Number(v)).toFixed(4).padStart(15); };
+    var out = ["C " + (fsc.title || "Fourier Shell Correlation")];
+    blocks.forEach(function(b){
+      if (b.label) out.push("C " + b.label);
+      out.push(head);
+      b.rows.forEach(function(s, i){
+        var line = withShell ? String((s.shell != null ? s.shell : i) + 1).padStart(14) : "";
+        line += " " + f(s.resolution);
+        if (ps) line += " " + f(s.resolution ? ps / s.resolution : 0);
+        line += " " + f(s.fsc) + " " + f(s.part_fsc);
+        if (withSsnr) line += " " + f(Math.sqrt(Math.max(s.part_ssnr || 0, 0))) + " " + f(Math.sqrt(Math.max(s.rec_ssnr || 0, 0)));
+        out.push(line.replace(/^ /, ""));
+      });
+      out.push("");
+    });
+    return out.join("\n");
   }
   function closePlotModal(){ els.plotModal.classList.remove("open"); els.plotScrim.classList.remove("open"); }
   // cisTEM's RefinementParametersDialog (MyRefinementResultsPanel::PopupParametersClick):
@@ -5445,14 +5506,81 @@ From branch : <span id="versionBranch">—</span></p>
       img.src = url;
     });
   }
+  els.plotModalSaveText.addEventListener("click", function(){
+    if (!plotModalText) return;
+    saveBlob(new Blob([plotModalText()], {type: "text/plain"}), plotModalFileStem() + ".txt");
+  });
   els.plotModalSave.addEventListener("click", function(){
     var btn = els.plotModalSave; btn.disabled = true;
-    var name = (els.plotModalTitle.textContent || "plot").replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") + ".png";
+    var name = plotModalFileStem() + ".png";
     svgToPngBlob(els.plotModalSvg, 2).then(function(blob){ saveBlob(blob, name); })
       .catch(function(err){ alert("Could not save the plot: " + err.message); })
       .then(function(){ btn.disabled = false; });
   });
   document.addEventListener("keydown", function(e){ if (e.key === "Escape" && els.plotModal.classList.contains("open")) closePlotModal(); });
+  // The CTF-specific output of a Refine CTF job: the defocus-change histogram
+  // (RefineCTFPanel's DefocusHistorgramPlotPanel), the measured phase-difference
+  // spectrum with the pattern the found beam tilt predicts, and the Zernike fit's
+  // measured and fitted phase maps with a summary line. Shared by the Jobs tab's
+  // live view (filled from the live result as the job runs) and the CTF Refinement
+  // section of the Refine 3D results page (filled from the finished job's record,
+  // the refinement's `ctf_refinement`): cisTEM shows these in the panel while the
+  // job runs and nowhere after. The caller places the pieces; render() fills them.
+  function makeCtfRefinementViews(){
+    var hist = makePlotBlock("Defocus change", [["ra-swatch-logp", "particles per step"]]);
+    var tiltRow = document.createElement("div"); tiltRow.className = "c2d-plots"; tiltRow.style.marginTop = "12px"; tiltRow.hidden = true;
+    var tiltFigs = ["phase_difference", "beam_tilt"].map(function(which, i){
+      var fig = classMontageFigure(i ? "Phase pattern the found beam tilt predicts" : "Measured phase-difference spectrum"); fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); tiltRow.appendChild(fig.root);
+      fig.left.textContent = i ? "Predicted beam-tilt phases" : "Measured phase differences"; fig.which = which; return fig;
+    });
+    var abRow = document.createElement("div"); abRow.className = "c2d-plots"; abRow.style.marginTop = "12px"; abRow.hidden = true;
+    var abSummary = document.createElement("div"); abSummary.className = "hint"; abSummary.style.marginTop = "6px"; abSummary.hidden = true;
+    var abFigs = [["odd_measured", "Measured antisymmetric phases"], ["odd_fitted", "Fitted odd Zernike phases"], ["even_measured", "Measured symmetric phase offsets"], ["even_fitted", "Fitted even Zernike phases"]].map(function(spec){
+      var fig = classMontageFigure(spec[1] + " (centred Fourier plane, radians)"); fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); abRow.appendChild(fig.root);
+      fig.left.textContent = spec[1]; fig.which = spec[0]; return fig;
+    });
+    var views = {hist: hist, tiltRow: tiltRow, abRow: abRow, abSummary: abSummary, last: null};
+    views.drawHistogram = function(svg){
+      var r = views.last || {}, h = r.defocus_histogram;
+      drawLinePlot(svg, r.refine_defocus && h && h.centres && h.centres.length ? [{xs: h.centres, ys: h.counts, cls: "line-x", dots: "dot-x"}] : [],
+        {xLabel: "defocus change (\u00c5)", yLabel: "particles", yMin: 0, emptyText: r.refine_defocus ? "No particle has been refined yet." : "Defocus refinement is off."});
+    };
+    // result: a live result or a refinement's ctf_refinement; the pictures come from
+    // /jobs/<jobId>/refinectf/<which>.png, those the record lists (`pictures`) or, live,
+    // every one the job has made so far.
+    views.render = function(result, jobId, urls){
+      views.last = result;
+      var h = result.defocus_histogram;
+      views.drawHistogram(hist.svg);
+      hist.title.textContent = "Defocus change" + (h && h.n ? " (" + h.n + " particles)" : "");
+      var has = function(which, fallback){ return result.pictures ? result.pictures.indexOf(which) >= 0 : fallback; };
+      var bt = result.beam_tilt;
+      tiltRow.hidden = !bt || !(has("phase_difference", true) || has("beam_tilt", true));
+      if (bt){
+        tiltFigs.forEach(function(f){
+          f.root.hidden = !has(f.which, true);
+          if (f.root.hidden) return;
+          f.right.textContent = f.which === "beam_tilt" ? (bt.significant ? bt.beam_tilt_x_mrad.toFixed(2) + ", " + bt.beam_tilt_y_mrad.toFixed(2) + " mrad \u00b7 shift " + bt.particle_shift_x_a.toFixed(2) + ", " + bt.particle_shift_y_a.toFixed(2) + " \u00c5" : "not significant \u2014 set to zero")
+            : bt.method === "zernike" ? "from the Zernike fit" : "significance " + Number(bt.significance).toFixed(2);
+          figLoading(f.img, f.status, "Loading\u2026"); f.img.style.maxWidth = "360px";
+          loadFigure(f.img, f.status, "/jobs/" + jobId + "/refinectf/" + f.which + ".png", true, "phase image", urls);
+        });
+      }
+      var ab = result.aberrations, abFiles = (ab && ab.files) || {};
+      abRow.hidden = !ab; abSummary.hidden = !ab;
+      if (ab){
+        abFigs.forEach(function(f){
+          f.root.hidden = !has(f.which, !!abFiles[f.which]);
+          if (f.root.hidden) return;
+          f.right.textContent = "";
+          figLoading(f.img, f.status, "Loading\u2026"); f.img.style.maxWidth = "360px";
+          loadFigure(f.img, f.status, "/jobs/" + jobId + "/refinectf/" + f.which + ".png", true, "phase map", urls);
+        });
+        abSummary.textContent = describeAberrationSummary(ab.summary, ab.sets);
+      }
+    };
+    return views;
+  }
   function makeRefinementResultsPage(){
     var page = {items: [], packages: [], packageId: null, selectedId: null, classIndex: 0, current: null, showDetails: false, pictures: makePictureCache(24), full: {}, fullPending: {}};
     var root = document.createElement("div"); root.className = "results-subpage"; root.hidden = true;
@@ -5481,6 +5609,7 @@ From branch : <span id="versionBranch">—</span></p>
       ["Search Range X / Y", function(r, c){ return c ? fmtVal(c.search_range_x, 1) + " / " + fmtVal(c.search_range_y, 1) + " Å" : "—"; }],
       ["Percent Used", function(r){ return fmtVal(r.percent_used, 1) + " %"; }],
       ["Refine CTF", function(r, c){ return c ? fmtYesNo(c.should_refine_ctf) : "—"; }],
+      ["Aberrations", function(r){ var t = describeAberrationSummary(null, r.aberrations); return t ? t.replace(/^Aberrations \([^)]*\): /, "") : "none"; }],
       ["Auto-Mask / Mask", function(r, c){ return c ? fmtYesNo(c.should_automask) + " / " + (c.should_use_supplied_mask ? "volume #" + c.mask_asset_id : "none") : "—"; }],
       ["Average Occupancy", function(r, c){ return c ? fmtVal(c.average_occupancy, 2) + " %" : "—"; }],
       ["Estimated Resolution", function(r, c){ return c ? fmtVal(c.estimated_resolution, 2) + " Å" : "—"; }],
@@ -5503,7 +5632,7 @@ From branch : <span id="versionBranch">—</span></p>
     var classRow = document.createElement("div"); classRow.className = "c2d-pkg-row"; classRow.innerHTML = '<label>Class</label><select data-role="class"></select>'; resultBox.appendChild(classRow);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); resultBox.appendChild(plot.root);
     var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
-    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight); });
+    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight); }, function(){ return fscText(lastFsc); });
     // The reconstruction and the angular distribution side by side at equal width, the
     // distribution with a zoom icon that opens it at window size; Download saves the shown map.
     var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; resultBox.appendChild(pair);
@@ -5518,6 +5647,28 @@ From branch : <span id="versionBranch">—</span></p>
     paramsBtn.addEventListener("click", function(){ if (page.current) openParamsDialog(page.current, page.classIndex); });
     var dlVolume = null;
     dlBtn.addEventListener("click", function(){ if (dlVolume != null) downloadFile("/volumes/" + dlVolume + "/file.mrc", "volume.mrc", dlBtn); });
+    // CTF Refinement: for a refinement a Refine CTF job wrote, what its live view showed --
+    // the defocus-change histogram, the beam-tilt phase pictures, the Zernike fit's maps.
+    var ctfBox = document.createElement("div"); ctfBox.style.marginTop = "16px"; ctfBox.hidden = true; resultBox.appendChild(ctfBox);
+    var ctfHead = document.createElement("div"); ctfHead.className = "ra-plot-head"; ctfHead.innerHTML = '<span class="ra-plot-title">CTF Refinement</span>'; ctfBox.appendChild(ctfHead);
+    var ctfNote = document.createElement("span"); ctfNote.className = "hint"; ctfHead.appendChild(ctfNote);
+    var ctf = makeCtfRefinementViews();
+    ctf.hist.root.style.marginTop = "6px"; ctfBox.appendChild(ctf.hist.root);
+    addPlotZoom(ctf.hist, function(){ return "Defocus change \u2014 " + (page.current ? page.current.name : ""); }, function(svg){ ctf.drawHistogram(svg); });
+    ctfBox.appendChild(ctf.tiltRow); ctfBox.appendChild(ctf.abRow); ctfBox.appendChild(ctf.abSummary);
+    function showCtf(full){
+      var r = full.ctf_refinement;
+      ctfBox.hidden = !r;
+      if (!r) return;
+      var parts = [];
+      if (r.job_number) parts.push("Job " + r.job_number);
+      parts.push(r.refine_defocus ? "defocus searched \u00b1" + fmtVal(r.defocus_search_range_a, 0) + " \u00c5 in " + fmtVal(r.defocus_search_step_a, 0) + " \u00c5 steps" : "defocus not refined");
+      parts.push(r.zernike ? "aberrations fitted as Zernike polynomials" : r.refine_beam_tilt ? "beam tilt from the grid search" : "beam tilt not refined");
+      parts.push(fmtVal(r.low_resolution_limit_a, 0) + "\u2013" + fmtVal(r.high_resolution_limit_a, 1) + " \u00c5");
+      ctfNote.textContent = parts.join(" \u00b7 ");
+      ctf.hist.root.hidden = !r.refine_defocus;   // the note says defocus was not refined; the live view keeps the empty plot's message
+      ctf.render(r, r.job_id, page.pictures);
+    }
     els.resultsPages.appendChild(root);
     page.root = root;
     var pkgSelect = left.querySelector('[data-role="package"]'), tbody = left.querySelector("tbody"), classSelect = classRow.querySelector("select");
@@ -5608,7 +5759,7 @@ From branch : <span id="versionBranch">—</span></p>
         classSelect.innerHTML = "";
         full.classes.forEach(function(c, i){ var o = document.createElement("option"); o.value = i; o.textContent = "#" + c.class_number + (c.estimated_resolution ? " (" + Number(c.estimated_resolution).toFixed(2) + " Å" + (full.classes.length > 1 ? ", " + Number(c.average_occupancy).toFixed(1) + "%" : "") + ")" : ""); o.selected = i === page.classIndex; classSelect.appendChild(o); });
         classRow.hidden = full.classes.length <= 1;
-        showClass(); prefetchNeighbours();
+        showCtf(full); showClass(); prefetchNeighbours();
       }).catch(function(err){ fig.status.textContent = "Could not load this refinement: " + err.message; });
     }
     function showClass(){
@@ -6667,6 +6818,17 @@ From branch : <span id="versionBranch">—</span></p>
   // `enabledWhen: {key, value}` is the same idea for a select governor --
   // live only while that select holds that value (Find CTF's frame count
   // follows Estimate Using = Movies, cf. EnableMovieProcessingIfAppropriate()).
+  // The Impose Helical Symmetry checkbox (every 3D panel) only means anything
+  // for a helical package: greyed, as a field under enabledBy is, for a point group.
+  function syncHelicalField(symbol){
+    var input = els.expertFields && els.expertFields.querySelector('[data-key="impose_helical_symmetry"]');
+    if (!input) return;
+    var helical = !!(symbol && parseHelical(String(symbol)));
+    input.disabled = !helical;
+    var wrap = input.closest(".field");
+    if (wrap) wrap.classList.toggle("field-disabled", !helical);
+  }
+
   function conditionalGovernor(f){ return f.enabledBy || f.enabledByNot || (f.enabledWhen && f.enabledWhen.key); }
 
   function syncConditionalFields(container, fields){
@@ -9426,6 +9588,31 @@ From branch : <span id="versionBranch">—</span></p>
     else { select.value = symbol; }
     helixFields.hidden = select.value !== "H";
   }
+  // A refinement's higher-order aberrations in words: the beam tilt the odd set contains, the trefoil and
+  // four-fold terms, and the fitted orders. `summary` is the Refine CTF driver's (with the tilt in mrad); `sets`
+  // the refinement's stored sets, from which the same numbers are derived when there is no summary.
+  function describeAberrationSummary(summary, sets){
+    var set = (sets || []).filter(function(s){ return !s.group; })[0] || (sets || [])[0];
+    if (!summary && !set) return "";
+    var odd = (set && set.odd) || [], even = (set && set.even) || [];
+    var parts = [];
+    var tiltSource = (summary && summary.beam_tilt_x_mrad != null) ? summary : (set && set.beam_tilt_x_mrad != null ? set : null);
+    if (tiltSource) parts.push("beam tilt " + Number(tiltSource.beam_tilt_x_mrad).toFixed(3) + ", " + Number(tiltSource.beam_tilt_y_mrad).toFixed(3) + " mrad");
+    if (tiltSource && tiltSource.particle_shift_x_a != null && (Math.abs(tiltSource.particle_shift_x_a) > 1e-3 || Math.abs(tiltSource.particle_shift_y_a) > 1e-3)) parts.push("shift " + Number(tiltSource.particle_shift_x_a).toFixed(2) + ", " + Number(tiltSource.particle_shift_y_a).toFixed(2) + " Å");
+    var trefoil = summary ? summary.trefoil : (odd.length >= 6 ? [odd[2], odd[5]] : null);
+    if (trefoil && (trefoil[0] || trefoil[1])) parts.push("trefoil Z3\u00b1\u00b3 " + Number(trefoil[0]).toFixed(1) + ", " + Number(trefoil[1]).toFixed(1));
+    var four = summary ? summary.fourfold : (even.length >= 9 ? [even[4], even[8]] : null);
+    if (four && (four[0] || four[1])) parts.push("four-fold Z4\u00b1\u2074 " + Number(four[0]).toFixed(1) + ", " + Number(four[1]).toFixed(1));
+    if (even.length >= 7 && even[6]) parts.push("Z4\u2070 " + Number(even[6]).toFixed(1));
+    var orders = [];
+    if ((summary && summary.odd_order) || (set && set.odd_order)) orders.push("odd order " + ((summary && summary.odd_order) || set.odd_order));
+    if ((summary && summary.even_order) || (set && set.even_order)) orders.push("even order " + ((summary && summary.even_order) || set.even_order));
+    if (orders.length) parts.push(orders.join(", "));
+    if (summary && summary.odd_phase_rms != null) parts.push("odd residual " + Number(summary.odd_phase_rms).toFixed(3) + " rad");
+    if (summary && summary.even_phase_rms != null) parts.push("even residual " + Number(summary.even_phase_rms).toFixed(3) + " rad");
+    return parts.length ? "Aberrations (RELION's Zernike convention, coefficients in radians at 1 Å⁻¹): " + parts.join(" · ") : "";
+  }
+
   function describeSymmetry(symbol){
     var h = parseHelical(symbol);
     if (!h) return symbol;
@@ -9710,6 +9897,7 @@ From branch : <span id="versionBranch">—</span></p>
           }
           sym.value = d.symmetry;
         }
+        syncHelicalField(sym ? sym.value : d.symmetry);
         var classes = els.paramFields.querySelector('[data-key="number_of_classes"]');
         if (classes && d.number_of_classes) classes.value = d.number_of_classes;
         [["mask_radius_a", d.mask_radius_a], ["search_range_x_a", d.search_range_x_a], ["search_range_y_a", d.search_range_y_a]].forEach(function(pair){
@@ -9749,6 +9937,8 @@ From branch : <span id="versionBranch">—</span></p>
   STAGES.ab_initio_3d.wire = function(paramFields){
     var pkg = paramFields.querySelector('[data-key="refinement_package_id"]');
     if (pkg) pkg.addEventListener("change", function(){ abinitioPackageChanged(false); });
+    var sym = paramFields.querySelector('[data-key="symmetry"]');
+    if (sym) sym.addEventListener("change", function(){ syncHelicalField(sym.value); });
     abinitioFillProfiles();
   };
   STAGES.ab_initio_3d.afterDynamicLoad = function(key, refreshing){ if (key === "refinement_package_id") abinitioPackageChanged(refreshing); };
@@ -9763,6 +9953,7 @@ From branch : <span id="versionBranch">—</span></p>
       return r.json();
     }).then(function(d){
       if (pkg.value !== pkgId) return;
+      syncHelicalField(d.symmetry);
       var inputs = els.paramFields.querySelector('[data-key="input_refinement_id"]');
       if (inputs){
         inputs.innerHTML = "";
@@ -9796,7 +9987,8 @@ From branch : <span id="versionBranch">—</span></p>
   // a change is saved at once through PATCH /refinement-packages/:id/references
   // (cisTEM edits references_for_next_refinement in memory and writes it to
   // the same table when the refinement starts).
-  function refine3dFillReferences(container, pkgId, references, volumes){
+  function refine3dFillReferences(container, pkgId, references, volumes, afterChange){
+    afterChange = afterChange || function(){ refine3dPackageChanged(true); };
     container.innerHTML = "";
     if (!references.length){ container.textContent = "—"; return; }
     var table = document.createElement("table");
@@ -9825,7 +10017,7 @@ From branch : <span id="versionBranch">—</span></p>
           if (!resp.ok) return resp.json().catch(function(){ return {}; }).then(function(e){ throw new Error(e.error || ("HTTP " + resp.status)); });
         }).catch(function(err){
           alert("Could not change the reference: " + err.message);
-        }).then(function(){ refine3dPackageChanged(true); });
+        }).then(afterChange);
       });
       td2.appendChild(sel); tr.appendChild(td2);
       tbody.appendChild(tr);
@@ -9863,6 +10055,7 @@ From branch : <span id="versionBranch">—</span></p>
       return r.json();
     }).then(function(d){
       if (pkg.value !== pkgId) return;
+      syncHelicalField(d.symmetry);
       var vols = d.volumes || [];
       function fillVolumes(sel, preferred, onlyFitting){
         if (!sel) return;
@@ -9906,6 +10099,7 @@ From branch : <span id="versionBranch">—</span></p>
       return r.json();
     }).then(function(d){
       if (pkg.value !== pkgId || state.currentStage !== stageKey) return;
+      syncHelicalField(d.symmetry);
       var inputs = els.paramFields.querySelector('[data-key="input_refinement_id"]');
       if (inputs){
         inputs.innerHTML = "";
@@ -9921,6 +10115,8 @@ From branch : <span id="versionBranch">—</span></p>
         if (!(d.volumes || []).length){ var none = document.createElement("option"); none.value = ""; none.textContent = "No volumes yet"; mask.appendChild(none); }
         else if (keepMask !== null && Array.from(mask.options).some(function(o){ return o.value === keepMask; })) mask.value = keepMask;
       }
+      var note = els.paramFields.querySelector('[data-key="reference_note"]');
+      if (note) refine3dFillReferences(note, pkgId, d.references || [], d.volumes || [], function(){ refinementInputsPackageChanged(stageKey, true); });
       var defaults = stageKey === "generate3d" ? (d.generate3d || {}) : (d.refine_ctf || {});
       if (!refreshing) Object.keys(defaults).forEach(function(k){
         var input = els.expertFields.querySelector('[data-key="' + k + '"]');
@@ -9930,7 +10126,7 @@ From branch : <span id="versionBranch">—</span></p>
       cf.missingReference = null;
       if (stageKey === "refine_ctf"){
         var missing = (d.references || []).filter(function(r){ return !(r.volume_asset_id >= 0); }).map(function(r){ return r.class_number; });
-        if (missing.length) cf.missingReference = "Class " + missing.join(", ") + " has no reference volume yet — run Ab-Initio 3D, Auto Refine or Refine 3D first, or pick one on the Refine 3D panel.";
+        if (missing.length) cf.missingReference = "Class " + missing.join(", ") + " has no reference volume yet — pick one in the Active 3D References list, or run Ab-Initio 3D, Auto Refine or Refine 3D first.";
       }
       updateStartButton();
     }).catch(function(){});
@@ -10823,7 +11019,7 @@ From branch : <span id="versionBranch">—</span></p>
     var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
     var plot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); box.appendChild(plot.root);
     var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
-    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight); });
+    addPlotZoom(plot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps, lastFsc.highlight); }, function(){ return fscText(lastFsc); });
     var pair = document.createElement("div"); pair.className = "c2d-plots rf-pair"; pair.style.marginTop = "12px"; box.appendChild(pair);
     var card = document.createElement("div"); card.className = "live-orth-card"; pair.appendChild(card);
     card.innerHTML = '<div class="live-orth-head"><span class="ra-plot-title">Reconstruction</span>' +
@@ -11054,30 +11250,16 @@ From branch : <span id="versionBranch">—</span></p>
     refine_ctf: function(body){
       var box = document.createElement("div"); box.style.gridColumn = "1 / -1"; body.appendChild(box);
       var plots = document.createElement("div"); plots.className = "c2d-plots"; box.appendChild(plots);
-      var hist = makePlotBlock("Defocus change", [["ra-swatch-logp", "particles per step"]]); plots.appendChild(hist.root);
+      var ctf = makeCtfRefinementViews(); plots.appendChild(ctf.hist.root);
       var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.appendChild(fscPlot.root);
-      var tiltRow = document.createElement("div"); tiltRow.className = "c2d-plots"; tiltRow.style.marginTop = "12px"; box.appendChild(tiltRow);
-      var tiltFigs = ["phase_difference", "beam_tilt"].map(function(which, i){
-        var fig = classMontageFigure(i ? "Phase pattern the found beam tilt predicts" : "Measured phase-difference spectrum"); fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); tiltRow.appendChild(fig.root);
-        fig.left.textContent = i ? "Predicted beam-tilt phases" : "Measured phase differences"; fig.which = which; return fig;
-      });
+      var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
+      addPlotZoom(fscPlot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps); }, function(){ return fscText(lastFsc); });
+      box.appendChild(ctf.tiltRow); box.appendChild(ctf.abRow); box.appendChild(ctf.abSummary);
       var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); box.appendChild(fig.root);
       return function(result, base, urls){
-        var h = result.defocus_histogram;
-        drawLinePlot(hist.svg, h && h.centres && h.centres.length ? [{xs: h.centres, ys: h.counts, cls: "line-x", dots: "dot-x"}] : [],
-          {xLabel: "defocus change (Å)", yLabel: "particles", yMin: 0, emptyText: result.refine_defocus ? "No particle has been refined yet." : "Defocus refinement is off."});
-        hist.title.textContent = "Defocus change" + (h && h.n ? " (" + h.n + " particles)" : "");
-        drawFscPlot(fscPlot.svg, result.fsc || [], result.pixel_size);
-        var bt = result.beam_tilt;
-        tiltRow.hidden = !bt;
-        if (bt){
-          tiltFigs.forEach(function(f){
-            f.right.textContent = f.which === "beam_tilt" ? (bt.significant ? bt.beam_tilt_x_mrad.toFixed(2) + ", " + bt.beam_tilt_y_mrad.toFixed(2) + " mrad · shift " + bt.particle_shift_x_a.toFixed(2) + ", " + bt.particle_shift_y_a.toFixed(2) + " Å" : "not significant — set to zero")
-              : "significance " + Number(bt.significance).toFixed(2);
-            figLoading(f.img, f.status, "Loading…"); f.img.style.maxWidth = "360px";
-            loadFigure(f.img, f.status, "/jobs/" + live.jobId + "/refinectf/" + f.which + ".png", true, "phase image", urls);
-          });
-        }
+        ctf.render(result, live.jobId, urls);
+        lastFsc = {stats: result.fsc || [], ps: result.pixel_size, title: "Fourier Shell Correlation \u2014 " + result.label + (result.refinement_id ? " (Refinement #" + result.refinement_id + ")" : "")};
+        drawFscPlot(fscPlot.svg, lastFsc.stats, lastFsc.ps);
         var est = (result.estimated_resolution || []).filter(function(v){ return v != null; });
         fig.left.textContent = result.label + (result.refinement_id ? " — Refinement #" + result.refinement_id : "") + (est.length ? " · est. " + est.map(function(v){ return Number(v).toFixed(2); }).join(" / ") + " Å" : "");
         var job = selectedJob(), running = job && !TERMINAL_STATUSES[job.status];

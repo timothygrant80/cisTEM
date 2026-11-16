@@ -344,6 +344,10 @@ void Particle::InitCTF(float voltage_kV, float spherical_aberration_mm, float am
     //	MyDebugAssertTrue(! ctf_is_initialized, "CTF already initialized");
 
     ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.0, 0.0, pixel_size, phase_shift, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
+    if ( aberration_table != nullptr )
+        aberration_table->ApplyTo(ctf_parameters, aberration_group);
+    else
+        ctf_parameters.ClearZernikeCoefficients( );
     ctf_is_initialized = true;
 }
 
@@ -535,7 +539,7 @@ void Particle::CalculateProjection(Image& projection_image, ReconstructedVolume&
     MyDebugAssertTrue(ctf_image_calculated, "CTF image not initialized");
 
     input_3d.CalculateProjection(projection_image, *ctf_image, alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
-    if ( current_ctf.GetBeamTiltX( ) != 0.0f || current_ctf.GetBeamTiltY( ) != 0.0f )
+    if ( current_ctf.HasBeamTilt( ) )
         projection_image.ConjugateMultiplyPixelWise(*beamtilt_image);
 }
 

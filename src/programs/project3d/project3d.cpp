@@ -78,6 +78,7 @@ void Project3DApp::DoInteractiveUserInput( ) {
     apply_mask  = my_input->GetYesNoFromUser("Apply mask", "Should the particles be masked with the circular mask?", "No");
     add_noise   = my_input->GetYesNoFromUser("Add noise", "Should the Gaussian noise be added?", "No");
 
+    std::string aberration_file = my_input->GetFilenameFromUser("Aberration file", "Zernike coefficients of the higher-order aberrations per optics group (written by cisTEM3's Refine CTF), or none", "none", false);
 #ifdef _OPENMP
     max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
 #else
@@ -87,7 +88,7 @@ void Project3DApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     //	my_current_job.Reset(14);
-    my_current_job.ManualSetArguments("tttiifffftbbbbbfit", input_star_filename.c_str(),
+    my_current_job.ManualSetArguments("tttiifffftbbbbbfitt", input_star_filename.c_str(),
                                       input_reconstruction.c_str(),
                                       ouput_projection_stack.c_str(),
                                       first_particle,
@@ -104,7 +105,8 @@ void Project3DApp::DoInteractiveUserInput( ) {
                                       project_based_on_star,
                                       angular_step,
                                       max_threads,
-                                      output_star_file.c_str());
+                                      output_star_file.c_str(),
+                                      aberration_file.c_str());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -135,6 +137,10 @@ bool Project3DApp::DoCalculation( ) {
     float    angular_step          = my_current_job.arguments[15].ReturnFloatArgument( );
     int      max_threads           = my_current_job.arguments[16].ReturnIntegerArgument( );
     std::string output_star_file      = my_current_job.arguments[17].ReturnStringArgument( );
+    std::string     aberration_file = my_current_job.arguments[18].ReturnStringArgument( ); // "none" for no higher-order aberrations
+    AberrationTable aberration_table;
+    if ( ! aberration_table.ReadFromFile(aberration_file) )
+        SendErrorAndCrash(Format("Error: Could not read the aberration file %s\n", aberration_file));
 
     Image               projection_image;
     Image               final_image;
@@ -278,7 +284,7 @@ bool Project3DApp::DoCalculation( ) {
     ProgressBar* my_progress = new ProgressBar(number_of_projections_to_calculate);
     projection_3d.CopyFrom(input_3d.density_map);
 
-#pragma omp parallel num_threads(max_threads) default(none) shared(global_random_number_generator, input_star_file, first_particle, last_particle, apply_CTF, apply_shifts, \
+#pragma omp parallel num_threads(max_threads) default(none) shared(aberration_table, global_random_number_generator, input_star_file, first_particle, last_particle, apply_CTF, apply_shifts, \
                                                                    pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d, input_file, global_euler_search, number_of_projections_to_calculate, project_based_on_star, output_params) private(current_image, input_parameters, my_parameters, my_ctf, projection_image, final_image, variance)
     {
 
@@ -292,6 +298,8 @@ bool Project3DApp::DoCalculation( ) {
                 input_parameters = input_star_file.ReturnLine(lines_to_process[current_image]);
                 my_parameters.Init(input_parameters.phi, input_parameters.theta, input_parameters.psi, input_parameters.x_shift, input_parameters.y_shift);
                 my_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, -input_parameters.beam_tilt_x / 1000.0f, -input_parameters.beam_tilt_y / 1000.0f, -input_parameters.image_shift_x, -input_parameters.image_shift_y);
+                // Simulate (rather than correct) the higher-order aberrations: the odd terms negated, like the beam tilt above
+                aberration_table.ApplyTo(my_ctf, input_parameters.beam_tilt_group, true);
             }
             else {
                 my_parameters.Init(global_euler_search.list_of_search_parameters[current_image][0], global_euler_search.list_of_search_parameters[current_image][1], 0.0, 0.0, 0.0f);

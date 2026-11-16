@@ -70,6 +70,10 @@ class Particle {
     bool                 ctf_image_calculated;
     Image*               beamtilt_image;
     bool                 beamtilt_image_calculated;
+    // Higher-order aberrations (aberration_table.h) applied by InitCTF: the table the program loaded, if any, and the
+    // particle's optics group in it
+    const AberrationTable* aberration_table = nullptr;
+    int                    aberration_group = 0;
     Image*               particle_image;
     // Scratch kept between calls (one Particle per thread): MLBlur's working images and its per-row and
     // per-column tables, and ReturnLogLikelihood's images. Allocating them per call made FFT plans under the

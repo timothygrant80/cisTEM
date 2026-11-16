@@ -8768,7 +8768,7 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt, bool
 
             complex_values[pixel_counter] *= ctf_value;
 
-            if ( apply_beam_tilt && (ctf_to_apply.GetBeamTiltX( ) != 0.0f || ctf_to_apply.GetBeamTiltY( ) != 0.0f) )
+            if ( apply_beam_tilt && ctf_to_apply.HasBeamTilt( ) )
                 complex_values[pixel_counter] *= ctf_to_apply.EvaluateBeamTiltPhaseShift(frequency_squared, azimuth);
 
             pixel_counter++;

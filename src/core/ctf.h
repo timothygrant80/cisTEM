@@ -20,6 +20,17 @@ class CTF {
     float particle_shift_y; // pixels
     float particle_shift; // A
     float particle_shift_azimuth; // rad
+    float pixel_size; // A. Kept so the Zernike aberration terms can be evaluated at spatial frequencies in 1/A
+    // Higher-order aberrations as Zernike coefficients in RELION 3.1's ordering and convention (see zernike.h and
+    // SetZernikeCoefficients). Empty, or all zero, when not in use; the m and n orders are cached per coefficient.
+    std::vector<float> odd_zernike_coefficients;
+    std::vector<float> even_zernike_coefficients;
+    std::vector<int>   odd_zernike_m;
+    std::vector<int>   odd_zernike_n;
+    std::vector<int>   even_zernike_m;
+    std::vector<int>   even_zernike_n;
+    bool               has_odd_zernike  = false;
+    bool               has_even_zernike = false;
     // Fitting parameters
     float lowest_frequency_for_fitting;
     float highest_frequency_for_fitting;
@@ -101,6 +112,10 @@ class CTF {
     void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
     void SetEnvelope(float wanted_acceleration_voltage, float wanted_pixel_size_angstrom, float dose_rate);
     void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
+    void SetZernikeCoefficients(const std::vector<float>& wanted_odd_coefficients, const std::vector<float>& wanted_even_coefficients);
+    void ClearZernikeCoefficients( );
+    // The six odd coefficients (orders 1 and 3) equivalent to a beam tilt (rad) and particle shift (A); RELION's TiltHelper::insertTilt
+    static std::vector<float> OddZernikeCoefficientsForBeamTilt(float beam_tilt_x_in_radians, float beam_tilt_y_in_radians, float particle_shift_x_in_angstroms, float particle_shift_y_in_angstroms, float spherical_aberration_in_mm, float acceleration_voltage_in_kv);
     void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
     void SetLowestFrequencyForFitting(float wanted_lowest_frequency_in_reciprocal_pixels);
 
@@ -118,6 +133,8 @@ class CTF {
     float               PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
     std::complex<float> EvaluateBeamTiltPhaseShift(float squared_spatial_frequency, float azimuth);
     float               PhaseShiftGivenBeamTiltAndShift(float squared_spatial_frequency, float beam_tilt, float particle_shift = 0.0f);
+    float               OddZernikePhaseShift(float squared_spatial_frequency, float azimuth);
+    float               EvenZernikePhaseShift(float squared_spatial_frequency, float azimuth);
     float               PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(float squared_spatial_frequency, float defocus);
     float               DefocusGivenAzimuth(float azimuth);
     float               BeamTiltGivenAzimuth(float azimuth);
@@ -189,6 +206,17 @@ class CTF {
     inline float GetWavelength( ) { return wavelength; };
 
     inline float GetSampleThickness( ) { return sample_thickness; };
+
+    inline float GetPixelSize( ) { return pixel_size; };
+
+    inline bool HasZernikeCoefficients( ) { return has_odd_zernike || has_even_zernike; };
+
+    // Whether EvaluateBeamTiltPhaseShift is anything but 1: a beam tilt, a particle shift or odd Zernike terms
+    inline bool HasBeamTilt( ) { return beam_tilt_x != 0.0f || beam_tilt_y != 0.0f || particle_shift_x != 0.0f || particle_shift_y != 0.0f || has_odd_zernike; };
+
+    inline const std::vector<float>& GetOddZernikeCoefficients( ) { return odd_zernike_coefficients; };
+
+    inline const std::vector<float>& GetEvenZernikeCoefficients( ) { return even_zernike_coefficients; };
 
     int   ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
     float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);

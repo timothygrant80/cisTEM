@@ -108,6 +108,8 @@ class
     void TestSpectrumImageMethods( );
     void TestHelicalSymmetry( );
     void TestHelicalRealSpaceSymmetrisation( );
+    void TestZernikeAberrations( );
+    void TestAberrationTable( );
 #ifdef cisTEM_USING_LIBTORCH
     void TestLibTorch( );
 #endif
@@ -172,6 +174,8 @@ bool MyTestApp::DoCalculation( ) {
     TestSpectrumImageMethods( );
     TestHelicalSymmetry( );
     TestHelicalRealSpaceSymmetrisation( );
+    TestZernikeAberrations( );
+    TestAberrationTable( );
 #ifdef cisTEM_USING_LIBTORCH
     TestLibTorch( );
 #endif
@@ -2684,6 +2688,147 @@ void MyTestApp::BeginTest(const char* test_name) {
     }
 
     Printf(": ");
+}
+
+// The Zernike basis in RELION's ordering, and the CTF class applying odd and even coefficient sets: a beam tilt plus
+// particle shift written as odd coefficients must give the same phase factor as cisTEM's own beam tilt, and an even
+// Z4^0 term must subtract from the CTF argument (see CTF::SetZernikeCoefficients for the conventions).
+void MyTestApp::TestZernikeAberrations( ) {
+    BeginTest("Zernike Aberrations");
+
+    if ( zernike::NumberOfOddCoefficients(3) != 6 || zernike::NumberOfOddCoefficients(5) != 12 )
+        FailTest;
+    if ( zernike::NumberOfEvenCoefficients(4) != 9 || zernike::NumberOfEvenCoefficients(6) != 16 )
+        FailTest;
+
+    const int expected_odd_m[6]  = {-1, 1, -3, -1, 1, 3};
+    const int expected_odd_n[6]  = {1, 1, 3, 3, 3, 3};
+    const int expected_even_m[9] = {0, -2, 0, 2, -4, -2, 0, 2, 4};
+    const int expected_even_n[9] = {0, 2, 2, 2, 4, 4, 4, 4, 4};
+    int       m, n;
+    for ( int i = 0; i < 6; i++ ) {
+        zernike::OddIndexToMN(i, m, n);
+        if ( m != expected_odd_m[i] || n != expected_odd_n[i] )
+            FailTest;
+    }
+    for ( int i = 0; i < 9; i++ ) {
+        zernike::EvenIndexToMN(i, m, n);
+        if ( m != expected_even_m[i] || n != expected_even_n[i] )
+            FailTest;
+    }
+
+    // Radial polynomials against their closed forms
+    const double rho = 0.37;
+    if ( fabs(zernike::RadialPolynomial(1, 1, rho) - rho) > 1e-12 )
+        FailTest;
+    if ( fabs(zernike::RadialPolynomial(0, 2, rho) - (2.0 * rho * rho - 1.0)) > 1e-12 )
+        FailTest;
+    if ( fabs(zernike::RadialPolynomial(1, 3, rho) - (3.0 * pow(rho, 3) - 2.0 * rho)) > 1e-12 )
+        FailTest;
+    if ( fabs(zernike::RadialPolynomial(0, 4, rho) - (6.0 * pow(rho, 4) - 6.0 * rho * rho + 1.0)) > 1e-12 )
+        FailTest;
+    if ( fabs(zernike::RadialPolynomial(2, 4, rho) - (4.0 * pow(rho, 4) - 3.0 * rho * rho)) > 1e-12 )
+        FailTest;
+    if ( zernike::RadialPolynomial(1, 2, rho) != 0.0 )
+        FailTest;
+    if ( fabs(zernike::EvaluateCartesian(-3, 3, 0.1, -0.2) - zernike::Evaluate(-3, 3, sqrt(0.05), atan2(-0.2, 0.1))) > 1e-12 )
+        FailTest;
+
+    const float pixel_size  = 1.2f;
+    const float beam_tilt_x = 0.3e-3f; // rad
+    const float beam_tilt_y = -0.2e-3f;
+    const float shift_x     = 1.5f; // A
+    const float shift_y     = -0.7f;
+
+    CTF tilted_ctf;
+    tilted_ctf.Init(300.0f, 2.7f, 0.07f, 12000.0f, 11000.0f, 30.0f, 0.0f, 0.5f / pixel_size, -10.0f, pixel_size, 0.0f, beam_tilt_x, beam_tilt_y, shift_x, shift_y);
+    CTF odd_ctf(300.0f, 2.7f, 0.07f, 12000.0f, 11000.0f, 30.0f, pixel_size, 0.0f);
+    odd_ctf.SetZernikeCoefficients(CTF::OddZernikeCoefficientsForBeamTilt(beam_tilt_x, beam_tilt_y, shift_x, shift_y, 2.7f, 300.0f), std::vector<float>( ));
+
+    std::vector<float> even_coefficients(9, 0.0f);
+    even_coefficients[6] = 0.1f; // Z4^0, a spherical aberration error
+    CTF even_ctf(300.0f, 2.7f, 0.07f, 12000.0f, 11000.0f, 30.0f, pixel_size, 0.0f);
+    even_ctf.SetZernikeCoefficients(std::vector<float>( ), even_coefficients);
+    CTF plain_ctf(300.0f, 2.7f, 0.07f, 12000.0f, 11000.0f, 30.0f, pixel_size, 0.0f);
+
+    for ( int radius = 0; radius <= 20; radius++ ) {
+        const float spatial_frequency         = 0.5f * radius / 20.0f; // reciprocal pixels, up to Nyquist
+        const float squared_spatial_frequency = spatial_frequency * spatial_frequency;
+        const float rho_in_reciprocal_angstroms = spatial_frequency / pixel_size;
+        for ( int angle = 0; angle < 24; angle++ ) {
+            const float azimuth = -PIf + angle * (2.0f * PIf / 24.0f);
+            if ( std::abs(tilted_ctf.EvaluateBeamTiltPhaseShift(squared_spatial_frequency, azimuth) - odd_ctf.EvaluateBeamTiltPhaseShift(squared_spatial_frequency, azimuth)) > 1e-4f )
+                FailTest;
+            const float expected_ctf = -sinf(plain_ctf.PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency, azimuth) - 0.1f * (6.0f * powf(rho_in_reciprocal_angstroms, 4) - 6.0f * powf(rho_in_reciprocal_angstroms, 2) + 1.0f));
+            if ( fabsf(even_ctf.Evaluate(squared_spatial_frequency, azimuth) - expected_ctf) > 1e-4f )
+                FailTest;
+        }
+    }
+
+    // All-zero sets count as none, and copies carry the coefficients
+    plain_ctf.SetZernikeCoefficients(std::vector<float>(6, 0.0f), std::vector<float>(9, 0.0f));
+    if ( plain_ctf.HasZernikeCoefficients( ) )
+        FailTest;
+    if ( plain_ctf.EvaluateBeamTiltPhaseShift(0.1f, 0.3f) != std::complex<float>(1.0f, 0.0f) )
+        FailTest;
+    CTF copied_ctf;
+    copied_ctf.CopyFrom(even_ctf);
+    if ( copied_ctf.GetEvenZernikeCoefficients( ) != even_coefficients || ! copied_ctf.HasZernikeCoefficients( ) )
+        FailTest;
+    if ( even_ctf.IsAlmostEqualTo(&plain_ctf) || ! copied_ctf.IsAlmostEqualTo(&even_ctf) )
+        FailTest;
+
+    EndTest( );
+}
+
+// The per-group aberration file the programs read: round trip, the group-0 fallback, and application to a CTF
+void MyTestApp::TestAberrationTable( ) {
+    BeginTest("Aberration Table");
+
+    const std::string filename = (std::filesystem::temp_directory_path( ) / "cistem_console_test_aberrations.txt").string( );
+
+    AberrationTable written;
+    AberrationSet   default_set;
+    default_set.group        = 0;
+    default_set.odd_zernike  = {0.1f, -0.2f, 0.0f, 0.3f, -0.4f, 0.05f};
+    default_set.even_zernike = {0.0f, 0.0f, 0.0f, 0.0f, 0.01f, 0.0f, -0.02f, 0.0f, 0.03f};
+    AberrationSet group_two;
+    group_two.group       = 2;
+    group_two.odd_zernike = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    written.sets.push_back(default_set);
+    written.sets.push_back(group_two);
+    if ( ! written.WriteToFile(filename) )
+        FailTest;
+
+    AberrationTable read;
+    if ( ! read.ReadFromFile(filename) || read.sets.size( ) != 2 )
+        FailTest;
+    if ( read.ForGroup(2) == nullptr || read.ForGroup(2)->group != 2 || ! read.ForGroup(2)->IsEmpty( ) )
+        FailTest;
+    if ( read.ForGroup(7) == nullptr || read.ForGroup(7)->group != 0 || read.ForGroup(7)->IsEmpty( ) )
+        FailTest;
+    if ( read.ForGroup(0)->odd_zernike != default_set.odd_zernike || read.ForGroup(0)->even_zernike != default_set.even_zernike )
+        FailTest;
+    std::filesystem::remove(filename);
+
+    AberrationTable none;
+    if ( ! none.ReadFromFile("none") || ! none.IsEmpty( ) || none.ForGroup(0) != nullptr )
+        FailTest;
+    if ( none.ReadFromFile(filename) ) // the file is gone: a named file that cannot be read is an error
+        FailTest;
+
+    CTF ctf(300.0f, 2.7f, 0.07f, 12000.0f, 11000.0f, 30.0f, 1.0f, 0.0f);
+    read.ApplyTo(ctf, 5);
+    if ( ctf.GetOddZernikeCoefficients( ) != default_set.odd_zernike || ! ctf.HasZernikeCoefficients( ) )
+        FailTest;
+    read.ApplyTo(ctf, 5, true); // negated: the odd terms flip, the even terms (part of the CTF) do not
+    if ( ctf.GetOddZernikeCoefficients( )[1] != 0.2f || ctf.GetEvenZernikeCoefficients( )[8] != 0.03f )
+        FailTest;
+    read.ApplyTo(ctf, 2);
+    if ( ctf.HasZernikeCoefficients( ) )
+        FailTest;
+
+    EndTest( );
 }
 
 void MyTestApp::EndTest( ) {

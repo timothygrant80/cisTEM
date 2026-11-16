@@ -18,6 +18,7 @@ CTF::CTF( ) {
     particle_shift         = 0;
     sample_thickness       = 0;
     particle_shift_azimuth = 0;
+    pixel_size             = 0;
     // Fitting parameters
     lowest_frequency_for_fitting    = 0;
     highest_frequency_for_fitting   = 0;
@@ -118,6 +119,7 @@ void CTF::Init(float wanted_acceleration_voltage_in_kV, // keV
     highest_frequency_for_fitting = wanted_highest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
     astigmatism_tolerance         = wanted_astigmatism_tolerance_in_angstroms / pixel_size_in_angstroms;
     sample_thickness              = wanted_sample_thickness_in_nm * 10.0 / pixel_size_in_angstroms;
+    pixel_size                    = pixel_size_in_angstroms;
 
     // gcc catches the zero division somehow, but intel returns a nan. Needed for handling the real and complex terms of the CTF separately.
     if ( fabs(amplitude_contrast - 1.0) < 1e-3 )
@@ -469,17 +471,27 @@ float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(float squared_spatia
 }
 
 float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth) {
-    return PIf * wavelength * squared_spatial_frequency * (DefocusGivenAzimuth(azimuth) - 0.5f * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
+    float phase_shift = PIf * wavelength * squared_spatial_frequency * (DefocusGivenAzimuth(azimuth) - 0.5f * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
+    // RELION's CTF argument is the negative of ours and its even Zernike terms add to it, so they subtract from ours (see SetZernikeCoefficients)
+    if ( has_even_zernike )
+        phase_shift -= EvenZernikePhaseShift(squared_spatial_frequency, azimuth);
+    return phase_shift;
 }
 
 std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_frequency, float azimuth) {
     MyDebugAssertTrue(squared_spatial_frequency >= 0.0f, "Bad squared spatial frequency: %f", squared_spatial_frequency);
     // Save some time if no beam tilt
-    if ( beam_tilt == 0.0f && particle_shift == 0.0f ) {
+    if ( beam_tilt == 0.0f && particle_shift == 0.0f && ! has_odd_zernike ) {
         return 1.0f + I * 0.0f;
     }
     else {
-        float phase_shift = PhaseShiftGivenBeamTiltAndShift(squared_spatial_frequency, BeamTiltGivenAzimuth(azimuth), ParticleShiftGivenAzimuth(azimuth));
+        float phase_shift = 0.0f;
+        if ( beam_tilt != 0.0f || particle_shift != 0.0f )
+            phase_shift = PhaseShiftGivenBeamTiltAndShift(squared_spatial_frequency, BeamTiltGivenAzimuth(azimuth), ParticleShiftGivenAzimuth(azimuth));
+        // The odd Zernike terms are RELION's, which multiply the projection by exp(+i phase); this factor is applied to the
+        // image (Particle::BeamTiltMultiplyImage) or conjugated onto the projection, hence the minus sign (see SetZernikeCoefficients)
+        if ( has_odd_zernike )
+            phase_shift -= OddZernikePhaseShift(squared_spatial_frequency, azimuth);
         //		Printf("p1 = %g\n", phase_shift);
         //		phase_shift = fmodf(phase_shift, 2.0f * (float)PI);
         //		if (phase_shift > PI) phase_shift -= 2.0f * PI;
@@ -539,6 +551,8 @@ bool CTF::IsAlmostEqualTo(CTF* wanted_ctf, float delta_defocus) {
         return false;
     if ( fabsf(this->particle_shift_y - wanted_ctf->particle_shift_y) > 0.001 )
         return false;
+    if ( this->odd_zernike_coefficients != wanted_ctf->odd_zernike_coefficients || this->even_zernike_coefficients != wanted_ctf->even_zernike_coefficients )
+        return false;
 
     delta = fabsf(this->additional_phase_shift - wanted_ctf->additional_phase_shift);
     delta = fmodf(delta, 2.0f * (float)PI);
@@ -556,6 +570,8 @@ bool CTF::IsAlmostEqualTo(CTF* wanted_ctf, float delta_defocus) {
 }
 
 bool CTF::BeamTiltIsAlmostEqualTo(CTF* wanted_ctf, float delta_beam_tilt) {
+    if ( this->odd_zernike_coefficients != wanted_ctf->odd_zernike_coefficients )
+        return false;
     if ( fabsf(this->beam_tilt_x - wanted_ctf->beam_tilt_x) > delta_beam_tilt )
         return false;
     if ( fabsf(this->beam_tilt_y - wanted_ctf->beam_tilt_y) > delta_beam_tilt )
@@ -581,6 +597,8 @@ void CTF::CopyFrom(CTF other_ctf) {
     precomputed_amplitude_contrast_term = other_ctf.precomputed_amplitude_contrast_term;
     squared_wavelength                  = other_ctf.squared_wavelength;
     cubed_wavelength                    = other_ctf.cubed_wavelength;
+    pixel_size                          = other_ctf.pixel_size;
+    SetZernikeCoefficients(other_ctf.odd_zernike_coefficients, other_ctf.even_zernike_coefficients);
 }
 
 // Enforce the convention that df1 > df2 and -90 < angast < 90
@@ -613,6 +631,9 @@ void CTF::ChangePixelSize(float old_pixel_size, float new_pixel_size) {
     //
     squared_wavelength = powf(wavelength, 2);
     cubed_wavelength   = powf(wavelength, 3);
+    // The Zernike terms are evaluated in 1/A and so do not change; the conversion from reciprocal pixels does
+    if ( pixel_size > 0.0f )
+        pixel_size = new_pixel_size;
 }
 
 float CTF::ReturnAzimuthToUseFor1DPlots( ) {
@@ -938,4 +959,82 @@ int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[
     }
 
     return -1;
+}
+/*
+ * Higher-order aberrations as Zernike coefficients, in RELION 3.1's ordering and convention (zernike.h), so that
+ * a coefficient list copied from rlnOddZernike / rlnEvenZernike reproduces RELION's optics model here:
+ *   - RELION's CTF argument is the negative of PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth, with its even
+ *     terms added (gamma_relion = -gamma + sum_even; both programs then take -sin), so the even terms are
+ *     subtracted from our phase shift.
+ *   - RELION multiplies the projection by exp(i sum_odd); we multiply the image by the beam-tilt factor
+ *     (Particle::BeamTiltMultiplyImage), or its conjugate onto the projection (Particle::CalculateProjection),
+ *     so the odd terms enter EvaluateBeamTiltPhaseShift with a minus sign.
+ *   - Both are evaluated at the spatial frequency in 1/A, as RELION does, hence the stored pixel size.
+ * Either list may be empty. An all-zero list is treated as absent, so no cost is added to CTF evaluation.
+ */
+void CTF::SetZernikeCoefficients(const std::vector<float>& wanted_odd_coefficients, const std::vector<float>& wanted_even_coefficients) {
+    odd_zernike_coefficients  = wanted_odd_coefficients;
+    even_zernike_coefficients = wanted_even_coefficients;
+    odd_zernike_m.resize(odd_zernike_coefficients.size( ));
+    odd_zernike_n.resize(odd_zernike_coefficients.size( ));
+    even_zernike_m.resize(even_zernike_coefficients.size( ));
+    even_zernike_n.resize(even_zernike_coefficients.size( ));
+    has_odd_zernike  = false;
+    has_even_zernike = false;
+    for ( size_t i = 0; i < odd_zernike_coefficients.size( ); i++ ) {
+        zernike::OddIndexToMN(int(i), odd_zernike_m[i], odd_zernike_n[i]);
+        if ( odd_zernike_coefficients[i] != 0.0f )
+            has_odd_zernike = true;
+    }
+    for ( size_t i = 0; i < even_zernike_coefficients.size( ); i++ ) {
+        zernike::EvenIndexToMN(int(i), even_zernike_m[i], even_zernike_n[i]);
+        if ( even_zernike_coefficients[i] != 0.0f )
+            has_even_zernike = true;
+    }
+    MyDebugAssertTrue(pixel_size > 0.0f || ! (has_odd_zernike || has_even_zernike), "The pixel size must be set (CTF::Init) before Zernike coefficients can be used");
+}
+
+void CTF::ClearZernikeCoefficients( ) {
+    SetZernikeCoefficients(std::vector<float>( ), std::vector<float>( ));
+}
+
+// Sum of coefficient * Z_n^m at a spatial frequency rho (1/A) and azimuth; accumulated in double, the terms partly cancel
+static float SumOfZernikeTerms(const std::vector<float>& coefficients, const std::vector<int>& m, const std::vector<int>& n, float rho, float azimuth) {
+    double sum = 0.0;
+    for ( size_t i = 0; i < coefficients.size( ); i++ ) {
+        if ( coefficients[i] != 0.0f )
+            sum += double(coefficients[i]) * zernike::Evaluate(m[i], n[i], double(rho), double(azimuth));
+    }
+    return float(sum);
+}
+
+// The odd (antisymmetric) aberration phase in radians, in RELION's projection-side convention
+float CTF::OddZernikePhaseShift(float squared_spatial_frequency, float azimuth) {
+    if ( ! has_odd_zernike )
+        return 0.0f;
+    return SumOfZernikeTerms(odd_zernike_coefficients, odd_zernike_m, odd_zernike_n, sqrtf(squared_spatial_frequency) / pixel_size, azimuth);
+}
+
+// The even (symmetric) aberration phase in radians, in RELION's convention (added to RELION's CTF argument)
+float CTF::EvenZernikePhaseShift(float squared_spatial_frequency, float azimuth) {
+    if ( ! has_even_zernike )
+        return 0.0f;
+    return SumOfZernikeTerms(even_zernike_coefficients, even_zernike_m, even_zernike_n, sqrtf(squared_spatial_frequency) / pixel_size, azimuth);
+}
+
+/*
+ * PhaseShiftGivenBeamTiltAndShift, written in 1/A, is 2 pi Cs lambda^2 k^3 tilt(az) - 2 pi k shift(az) with
+ * k^3 cos(az) = (Z3^1 + 2 Z1^1) / 3 and k cos(az) = Z1^1 (likewise sin with Z3^-1, Z1^-1). The returned list is in
+ * RELION's convention, i.e. of the opposite sign (SetZernikeCoefficients), which makes it the same conversion as
+ * RELION's TiltHelper::insertTilt: Z3x = -2 pi Cs[A] lambda^2 tilt_x / 3 and Z1x = 2 Z3x + 2 pi shift_x.
+ */
+std::vector<float> CTF::OddZernikeCoefficientsForBeamTilt(float beam_tilt_x_in_radians, float beam_tilt_y_in_radians, float particle_shift_x_in_angstroms, float particle_shift_y_in_angstroms, float spherical_aberration_in_mm, float acceleration_voltage_in_kv) {
+    const double       wavelength = ReturnWavelenthInAngstroms(acceleration_voltage_in_kv);
+    const double       tilt_scale = 2.0 * PI * double(spherical_aberration_in_mm) * 1.0e7 * wavelength * wavelength;
+    std::vector<float> coefficients(6, 0.0f);
+    coefficients[4] = float(-tilt_scale * beam_tilt_x_in_radians / 3.0);
+    coefficients[3] = float(-tilt_scale * beam_tilt_y_in_radians / 3.0);
+    coefficients[1] = float(2.0 * coefficients[4] + 2.0 * PI * particle_shift_x_in_angstroms);
+    coefficients[0] = float(2.0 * coefficients[3] + 2.0 * PI * particle_shift_y_in_angstroms);
+    return coefficients;
 }

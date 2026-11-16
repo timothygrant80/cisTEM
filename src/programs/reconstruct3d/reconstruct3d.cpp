@@ -102,6 +102,7 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
     dump_file_1 = my_input->GetFilenameFromUser("Output dump filename for odd particles", "The name of the first dump file with the intermediate reconstruction arrays", "dump_file_1.dat", false);
     dump_file_2 = my_input->GetFilenameFromUser("Output dump filename for even particles", "The name of the second dump file with the intermediate reconstruction arrays", "dump_file_2.dat", false);
 
+    std::string aberration_file = my_input->GetFilenameFromUser("Aberration file", "Zernike coefficients of the higher-order aberrations per optics group (written by cisTEM3's Refine CTF), or none", "none", false);
 #ifdef _OPENMP
     max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
 #else
@@ -112,7 +113,7 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
 
     //	my_current_job.Reset(33);
     //	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.c_str(),
-    my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbttiib", input_particle_stack.c_str(),
+    my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbttiibt", input_particle_stack.c_str(),
                                       input_star_filename.c_str(),
                                       input_reconstruction.c_str(),
                                       output_reconstruction_1.c_str(),
@@ -131,7 +132,8 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
                                       dump_file_2.c_str(),
                                       correct_ewald_sphere,
                                       max_threads,
-                                      impose_helical_symmetry);
+                                      impose_helical_symmetry,
+                                      aberration_file.c_str());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -173,6 +175,10 @@ bool Reconstruct3DApp::DoCalculation( ) {
     int      correct_ewald_sphere = my_current_job.arguments[32].ReturnIntegerArgument( );
     int      max_threads          = my_current_job.arguments[33].ReturnIntegerArgument( );
     bool     impose_helical_symmetry = my_current_job.arguments[34].ReturnBoolArgument( );
+    std::string     aberration_file = my_current_job.arguments[35].ReturnStringArgument( ); // "none" for no higher-order aberrations
+    AberrationTable aberration_table;
+    if ( ! aberration_table.ReadFromFile(aberration_file) )
+        SendErrorAndCrash(Format("Error: Could not read the aberration file %s\n", aberration_file));
 
     // When multiple particle groups are present this boolean will be set true via a call to star_file.ReturnTrueIfThereAreMultipleParticleGroups).
     // We need to apply the exposure filter during reconstruction. For now, this is only used in reconstruction 3d's from tilt series data.
@@ -723,7 +729,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
         my_progress = new ProgressBar(images_to_process_per_thread);
     current_image = 0;
 
-#pragma omp parallel num_threads(max_threads) default(none) shared(input_3d, input_star_file, input_stack, resolution_limit_rec, original_box_size, box_size,                                                                                                                                                       \
+#pragma omp parallel num_threads(max_threads) default(none) shared(aberration_table, input_3d, input_star_file, input_stack, resolution_limit_rec, original_box_size, box_size,                                                                                                                                                       \
                                                                    first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, crop_images, symmetry_weight, score_threshold, use_input_reconstruction,                                                                     \
                                                                    pixel_size, my_progress, outer_mask_radius, mask_falloff, current_image, padded_box_size, binning_factor,                                                                                                                                        \
                                                                    rotational_blurring, number_of_rotations, psi_step, psi_start, smoothing_factor, intermediate_box_size, original_pixel_size, calculate_complex_ctf, parameter_averages,                                                                          \
@@ -818,6 +824,8 @@ bool Reconstruct3DApp::DoCalculation( ) {
             //	input_parameters.SwapPsiAndPhi();
             input_particle.location_in_stack = input_parameters.position_in_stack;
             input_particle.pixel_size        = pixel_size;
+            input_particle.aberration_table = &aberration_table;
+            input_particle.aberration_group = input_parameters.beam_tilt_group;
             input_particle.is_masked         = false;
 
             input_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y, calculate_complex_ctf);

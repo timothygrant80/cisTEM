@@ -339,6 +339,7 @@ void Refine3DApp::DoInteractiveUserInput( ) {
     threshold_input_3d             = my_input->GetYesNoFromUser("Threshold input reconstruction", "Should the input reconstruction thresholded to suppress some of the background noise", "No");
     // Add phase flip option, normalize option, remove input statistics & use statistics
 
+    std::string aberration_file = my_input->GetFilenameFromUser("Aberration file", "Zernike coefficients of the higher-order aberrations per optics group (written by cisTEM3's Refine CTF), or none", "none", false);
 #ifdef _OPENMP
     max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
 #else
@@ -352,7 +353,7 @@ void Refine3DApp::DoInteractiveUserInput( ) {
     bool ignore_input_angles = false;
     bool defocus_bias        = false;
     //	my_current_job.Reset(53);
-    my_current_job.ManualSetArguments("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb", input_particle_images.c_str(),
+    my_current_job.ManualSetArguments("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibbt", input_particle_images.c_str(),
                                       input_star_filename.c_str(),
                                       input_reconstruction.c_str(),
                                       input_reconstruction_statistics.c_str(), use_statistics,
@@ -371,7 +372,8 @@ void Refine3DApp::DoInteractiveUserInput( ) {
                                       refine_psi, refine_theta, refine_phi, refine_x, refine_y,
                                       calculate_matching_projections, apply_2D_masking, ctf_refinement, normalize_particles,
                                       invert_contrast, exclude_blank_edges, normalize_input_3d, threshold_input_3d,
-                                      max_threads, local_global_refine, current_class, ignore_input_angles, defocus_bias);
+                                      max_threads, local_global_refine, current_class, ignore_input_angles, defocus_bias,
+                                      aberration_file.c_str());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -440,6 +442,10 @@ bool Refine3DApp::DoCalculation( ) {
     int  current_class                    = my_current_job.arguments[50].ReturnIntegerArgument( ); // global - but ignore
     bool ignore_input_angles              = my_current_job.arguments[51].ReturnBoolArgument( ); // during global search, ignore the starting parameters (this helps reduce bias)
     bool defocus_bias                     = my_current_job.arguments[52].ReturnBoolArgument( ); // during ab-initio 3D, biases random selection of particles towards higher defocus values
+    std::string     aberration_file = my_current_job.arguments[53].ReturnStringArgument( ); // "none" for no higher-order aberrations
+    AberrationTable aberration_table;
+    if ( ! aberration_table.ReadFromFile(aberration_file) )
+        SendErrorAndCrash(Format("Error: Could not read the aberration file %s\n", aberration_file));
 
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
@@ -1021,7 +1027,7 @@ bool Refine3DApp::DoCalculation( ) {
 
     current_projection = 0;
 
-#pragma omp parallel num_threads(max_threads) default(none) shared(parameter_average, input_3d, input_star_file, input_stack, max_threads, search_particle,                                                                                                                                                                              \
+#pragma omp parallel num_threads(max_threads) default(none) shared(aberration_table, parameter_average, input_3d, input_star_file, input_stack, max_threads, search_particle,                                                                                                                                                                              \
                                                                    first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d,                                                                                           \
                                                                    refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, percent_used, output_shifts_file, local_refinement,                                                                                           \
                                                                    binning_factor_refine, low_resolution_limit, input_statistics, output_star_file, current_projection, local_global_refine, signed_CC_limit, defocus_bias,                                                                                                              \
@@ -1166,6 +1172,8 @@ bool Refine3DApp::DoCalculation( ) {
 
             // The following line would allow using particles with different pixel sizes
             refine_particle_local.pixel_size    = input_3d_local.pixel_size;
+            refine_particle_local.aberration_table = &aberration_table;
+            refine_particle_local.aberration_group = input_parameters.beam_tilt_group;
             refine_particle_local.is_normalized = normalize_particles;
             refine_particle_local.sigma_noise   = input_parameters.sigma / binning_factor_refine;
             //		refine_particle_local.logp = -std::numeric_limits<float>::max();
@@ -1309,6 +1317,8 @@ bool Refine3DApp::DoCalculation( ) {
                     //				my_time_in = DateTime::UNow();
                     search_particle_local.ResetImageFlags( );
                     search_particle_local.pixel_size = search_reference_3d_local.pixel_size;
+                    search_particle_local.aberration_table = &aberration_table;
+                    search_particle_local.aberration_group = input_parameters.beam_tilt_group;
                     if ( mask_radius_search == 0.0 ) {
                         search_particle_local.mask_radius = search_particle_local.particle_image->logical_x_dimension / 2 * search_particle_local.pixel_size - mask_falloff;
                     }

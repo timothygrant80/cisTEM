@@ -29,6 +29,8 @@ noinst_HEADERS = core/stopwatch.h \
                  core/matrix.h \
                  core/symmetry_matrix.h \
                  core/ctf.h \
+                 core/zernike.h \
+                 core/aberration_table.h \
                  core/curve.h \
                  core/angles_and_shifts.h \
                  core/parameter_constraints.h \
@@ -460,6 +462,8 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/myapp.cpp \
                        core/empirical_distribution.cpp \
                        core/ctf.cpp \
+                       core/zernike.cpp \
+                       core/aberration_table.cpp \
                        core/numeric_text_file.cpp \
                        core/progressbar.cpp \
                        core/downhill_simplex.cpp \

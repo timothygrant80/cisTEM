@@ -260,7 +260,7 @@ def _record_particle(contained, p, image, position_in_stack):
         "position_id": p["PARTICLE_POSITION_ASSET_ID"], "image_id": p["PARENT_IMAGE_ASSET_ID"],
         "position_in_stack": position_in_stack, "x": float(p["X_POSITION"]), "y": float(p["Y_POSITION"]),
         "pixel_size": ps, "defocus1": d1, "defocus2": d2, "defocus_angle": float(p["DEFOCUS_ANGLE"] or 0.0),
-        "phase_shift": float(p["ADDITIONAL_PHASE_SHIFT"] or 0.0), "cs": float(p["SPHERICAL_ABERRATION"] or 2.7),
+        "phase_shift": float(p["ADDITIONAL_PHASE_SHIFT"] or 0.0), "cs": 2.7 if p["SPHERICAL_ABERRATION"] is None else float(p["SPHERICAL_ABERRATION"]),  # 0 is a real value (a Cs-corrected microscope)
         "voltage": float(p["VOLTAGE"] or 300.0), "amplitude_contrast": float(p["AMPLITUDE_CONTRAST"] or 0.07),
     })
 

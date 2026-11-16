@@ -155,7 +155,7 @@ def _image_args(image, input_file, pixel_size, output_stack, st):
         A("text", input_file),                              # 0  micrograph
         A("float", pixel_size),                             # 1
         A("float", image["CTF_VOLTAGE"] or image["VOLTAGE"] or 300.0),  # 2  kV
-        A("float", image["CTF_CS"] or image["SPHERICAL_ABERRATION"] or 2.7),  # 3  mm
+        A("float", next((v for v in (image["CTF_CS"], image["SPHERICAL_ABERRATION"]) if v is not None), 2.7)),  # 3  mm; 0 is a real value (a Cs-corrected microscope)
         A("float", image["AMPLITUDE_CONTRAST"] or 0.07),    # 4
         A("float", image["ADDITIONAL_PHASE_SHIFT"] or 0.0),  # 5  rad
         A("float", image["DEFOCUS1"] or 0.0),               # 6  A

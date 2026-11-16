@@ -181,10 +181,9 @@ def load_details(conn, refinement_id):
 def estimated_resolution(stats, pixel_size, use_part_fsc=True):
     """ResolutionStatistics::ReturnEstimatedResolution(): the resolution
     where the FSC first drops below 0.143, midway between shells, never
-    better than Nyquist. Reported from the **particle** FSC here (cisTEM's
-    GUI reports the plain FSC; the part FSC, corrected for the mask and
-    the particle count, is the one this app records and shows, at the
-    author's request)."""
+    better than Nyquist -- of the **particle** FSC, as cisTEM's GUI reports
+    it (ReturnEstimatedResolution's use_part_fsc defaults to true; every
+    panel's "Est. Res." and the FSC panel's title are this number)."""
     key = "part_fsc" if use_part_fsc else "fsc"
     est = 0.0
     for i in range(1, len(stats)):
@@ -518,7 +517,7 @@ def _refinement_json(conn, row, with_classes=False):
         # the beam tilt and shift each odd set contains, for the page (aberrations.beam_tilt_from_odd needs Cs and the voltage)
         table = "REFINEMENT_RESULT_{}_1".format(int(row["REFINEMENT_ID"]))
         first = conn.execute("SELECT MICROSCOPE_CS, MICROSCOPE_VOLTAGE FROM {} LIMIT 1".format(table)).fetchone() if _table_exists(conn, table) else None
-        cs, kv = (float(first["MICROSCOPE_CS"] or 2.7), float(first["MICROSCOPE_VOLTAGE"] or 300.0)) if first else (2.7, 300.0)
+        cs, kv = (2.7 if first["MICROSCOPE_CS"] is None else float(first["MICROSCOPE_CS"]), float(first["MICROSCOPE_VOLTAGE"] or 300.0)) if first else (2.7, 300.0)
         for st in d["aberrations"]:
             if any(st.get("odd")):
                 tx, ty, sx, sy, _rest = aberrations.beam_tilt_from_odd(st["odd"], cs, kv)

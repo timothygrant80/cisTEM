@@ -7236,7 +7236,7 @@ From branch : <span id="versionBranch">—</span></p>
     var api;
     var DISPLAY_SCALES = [["fit", "Fit"], [3, "300%"], [2, "200%"], [1.5, "150%"], [1, "100%"], [0.66, "66%"], [0.5, "50%"], [0.33, "33%"], [0.25, "25%"], [0.1, "10%"]];
     // location: the first image of the page shown (1-based; 0 = the frame sum); tiles: the page's sections as float32 rows.
-    var dp = { path: null, title: "", pixelSize: null, info: null, bin: 1, w: 0, h: 0, location: 1, sum: false, singleView: false, pageScale: null, tiles: [], fftTiles: [], pageCount: 0, seq: 0,
+    var dp = { path: null, title: "", pixelSize: null, info: null, bin: 1, w: 0, h: 0, location: 1, sum: false, singleView: false, pageScale: null, tiles: [], fftTiles: [], pageCount: 0, seq: 0, label: true,
                mode: "auto", manual: null, global: null, invert: false, fft: false, hq: false, scale: "fit", showHist: false, overlay: null, selected: null, lay: null, low: 0, high: 0,
                // A hidden tab fetches and draws nothing: what it would have done is noted and done when it is shown.
                visible: true, needFetch: false, dirty: false, released: false, src: null, pendingView: null, applying: false };
@@ -7264,8 +7264,10 @@ From branch : <span id="versionBranch">—</span></p>
     });
     sep();
     var invertBtn = button("Invert", "Invert the contrast", "dp-toggle"), fftBtn = button("FFT", "Show the power spectrum of each image as displayed", "dp-toggle"),
-        hqBtn = button("High Quality", "Smooth the picture when it is scaled", "dp-toggle"), histBtn = button("Histogram", "Show the histogram of the grey values", "dp-toggle");
+        hqBtn = button("High Quality", "Smooth the picture when it is scaled", "dp-toggle"), histBtn = button("Histogram", "Show the histogram of the grey values", "dp-toggle"),
+        labelBtn = button("Label", "Write each image's number in its bottom-left corner, as cisTEM's display does", "dp-toggle");
     [invertBtn, fftBtn, hqBtn, histBtn].forEach(function(b){ b.setAttribute("aria-pressed", "false"); });
+    labelBtn.setAttribute("aria-pressed", "true");
     var stage = document.createElement("div"); stage.className = "display-stage"; root.appendChild(stage);
     var canvas = document.createElement("canvas"); stage.appendChild(canvas);
     var message = document.createElement("div"); message.className = "dp-message"; message.textContent = "No image open."; stage.appendChild(message);
@@ -7459,6 +7461,15 @@ From branch : <span id="versionBranch">—</span></p>
         for (var r2 = 1; r2 < down; r2++){ var y = Math.round(r2 * th) + 0.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
         ctx.restore();
       }
+      if (dp.label && !dp.sum && dp.info && dp.info.nz > 1){
+        ctx.save(); ctx.font = "12px " + getComputedStyle(document.body).fontFamily; ctx.textBaseline = "bottom";
+        for (var li = 0; li < dp.tiles.length; li++){
+          var ltext = String(dp.location + li), lx = (li % across) * tw + 1, ly = Math.floor(li / across + 1) * th, lw = ctx.measureText(ltext).width + 6;   // + 1: clear of the tile border drawn on the column's left edge
+          ctx.fillStyle = "#000"; ctx.fillRect(lx, ly - 16, lw, 16);
+          ctx.fillStyle = "#fff"; ctx.fillText(ltext, lx + 3, ly - 2);
+        }
+        ctx.restore();
+      }
       if (dp.selected != null && dp.selected >= dp.location && dp.selected < dp.location + dp.tiles.length){
         var si = dp.selected - dp.location, tx = (si % across) * tw, ty = Math.floor(si / across) * th;
         ctx.save(); ctx.strokeStyle = "#2F5FA6"; ctx.lineWidth = 3; ctx.strokeRect(tx + 1.5, ty + 1.5, tw - 3, th - 3); ctx.restore();
@@ -7539,7 +7550,7 @@ From branch : <span id="versionBranch">—</span></p>
     function setPressed(){
       Object.keys(modeBtns).forEach(function(k){ modeBtns[k].setAttribute("aria-pressed", String(dp.mode === k)); });
       invertBtn.setAttribute("aria-pressed", String(dp.invert)); fftBtn.setAttribute("aria-pressed", String(dp.fft));
-      hqBtn.setAttribute("aria-pressed", String(dp.hq)); histBtn.setAttribute("aria-pressed", String(dp.showHist));
+      hqBtn.setAttribute("aria-pressed", String(dp.hq)); histBtn.setAttribute("aria-pressed", String(dp.showHist)); labelBtn.setAttribute("aria-pressed", String(dp.label));
       manual.hidden = !(dp.showHist || dp.mode === "manual");
       lowInput.disabled = highInput.disabled = dp.mode !== "manual";
     }
@@ -7564,6 +7575,7 @@ From branch : <span id="versionBranch">—</span></p>
     fftBtn.addEventListener("click", function(){ dp.fft = !dp.fft; setPressed(); draw(); notify(); });
     hqBtn.addEventListener("click", function(){ dp.hq = !dp.hq; setPressed(); draw(); notify(); });
     histBtn.addEventListener("click", function(){ dp.showHist = !dp.showHist; setPressed(); draw(); });
+    labelBtn.addEventListener("click", function(){ dp.label = !dp.label; setPressed(); paintCanvas(); notify(); });
     scaleSelect.addEventListener("change", function(){ dp.scale = scaleSelect.value; dp.singleView = false; draw(); notify(); });
     prevBtn.addEventListener("click", function(){ step(-1); });
     nextBtn.addEventListener("click", function(){ step(1); });
@@ -7700,7 +7712,7 @@ From branch : <span id="versionBranch">—</span></p>
     // How the file is shown, for Lock views: the image number, scale, greys and toggles (not the file).
     function getView(){
       return {location: dp.location, sum: dp.sum, scale: dp.scale, singleView: dp.singleView, pageScale: dp.pageScale,
-              mode: dp.mode, manual: dp.manual ? dp.manual.slice() : null, invert: dp.invert, fft: dp.fft, hq: dp.hq};
+              mode: dp.mode, manual: dp.manual ? dp.manual.slice() : null, invert: dp.invert, fft: dp.fft, hq: dp.hq, label: dp.label};
     }
     // Another tab's view applied here: the page is fetched now if this tab is showing, when it is next shown otherwise.
     function applyView(v){
@@ -7710,7 +7722,7 @@ From branch : <span id="versionBranch">—</span></p>
         var nz = dp.info.nz, location = Math.max(nz > 1 ? 0 : 1, Math.min(v.location, nz)), sum = !!v.sum && nz > 1;
         var refetch = !dp.tiles.length || location !== dp.location || sum !== dp.sum || v.scale !== dp.scale || v.singleView !== dp.singleView;
         dp.scale = v.scale; dp.singleView = v.singleView; dp.pageScale = v.pageScale; scaleSelect.value = dp.scale;
-        dp.mode = v.mode; dp.manual = v.manual ? v.manual.slice() : null; dp.invert = v.invert; dp.fft = v.fft; dp.hq = v.hq;
+        dp.mode = v.mode; dp.manual = v.manual ? v.manual.slice() : null; dp.invert = v.invert; dp.fft = v.fft; dp.hq = v.hq; dp.label = v.label !== false;
         if (dp.mode === "manual" && dp.manual) setManualInputs();
         if (dp.mode === "global" && dp.path && !dp.global) fetchGlobal();
         setPressed();

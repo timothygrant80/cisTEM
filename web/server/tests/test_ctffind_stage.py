@@ -48,6 +48,18 @@ class CtffindStageTests(unittest.TestCase):
         self.assertEqual(values[41:49], [False, True, True, 30.0, 3.0, 1.4, False, False])
         self.assertIs(values[23], True)  # resample if the pixel is too small
 
+    def test_a_spherical_aberration_of_zero_is_sent_as_zero(self):
+        # A Cs-corrected microscope's 0 mm is a value, not an absent one: until 2026-11-16 `or 2.7` replaced it,
+        # and the fit of such data with 2.7 mm reached 6.7 A where the GUI's with 0 reached 3.3 A.
+        with self.conn:
+            self.conn.execute("UPDATE IMAGE_ASSETS SET SPHERICAL_ABERRATION=0.0 WHERE IMAGE_ASSET_ID=7")
+        values = [a["value"] for a in ctffind.build_tasks(self.conn, self.project, {"image_group_id": 5})[0]["args"]]
+        self.assertEqual(values[6], 0.0)
+        with self.conn:
+            self.conn.execute("UPDATE IMAGE_ASSETS SET SPHERICAL_ABERRATION=NULL WHERE IMAGE_ASSET_ID=7")
+        values = [a["value"] for a in ctffind.build_tasks(self.conn, self.project, {"image_group_id": 5})[0]["args"]]
+        self.assertEqual(values[6], 2.7)
+
     def test_thickness_options_and_result_are_stored(self):
         params = {"image_group_id": 5, "fit_nodes": True, "fit_nodes_1d": False, "fit_nodes_low_res_a": 25, "fit_nodes_high_res_a": 4,
                   "fit_nodes_downweight": True, "resample_if_pixel_too_small": False, "target_pixel_size_a": 1.6, "search_tilt": True}

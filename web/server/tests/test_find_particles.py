@@ -101,6 +101,13 @@ class WriteSpeedAndProgressTests(unittest.TestCase):
         self.conn.close()
         db.PROJECTS_ROOT = self._root
 
+    def test_a_spherical_aberration_of_zero_is_sent_as_zero(self):
+        with self.conn as c:
+            c.execute("UPDATE ESTIMATED_CTF_PARAMETERS SET SPHERICAL_ABERRATION=0.0 WHERE CTF_ESTIMATION_ID=1")
+            c.execute("UPDATE IMAGE_ASSETS SET SPHERICAL_ABERRATION=0.0 WHERE IMAGE_ASSET_ID=1")
+        task = [t for t in fp.build_tasks(self.conn, self.project, {"image_group_id": 5, "threshold": 6.0, "characteristic_radius": 80.0, "maximum_radius": 100.0}) if t["ref"] == 1][0]
+        self.assertEqual(task["args"][3]["value"], 0.0)
+
     def test_group_membership_index_exists(self):
         names = {r[0] for r in self.conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
         self.assertIn("idx_position_group_members_asset", names)

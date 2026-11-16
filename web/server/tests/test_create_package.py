@@ -137,3 +137,20 @@ class CreatePackageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ContainedParticleCsTests(unittest.TestCase):
+    """_record_particle(): a Cs of 0 (a Cs-corrected microscope) reaches the package as 0, not as the 2.7 default."""
+
+    def row(self, cs):
+        return {"PARTICLE_POSITION_ASSET_ID": 1, "PARENT_IMAGE_ASSET_ID": 1, "X_POSITION": 60.0, "Y_POSITION": 45.0, "PIXEL_SIZE": 1.5,
+                "TILT_ANGLE": 0.0, "TILT_AXIS": 0.0, "DEFOCUS1": 15000.0, "DEFOCUS2": 14000.0, "DEFOCUS_ANGLE": 10.0,
+                "ADDITIONAL_PHASE_SHIFT": 0.0, "SPHERICAL_ABERRATION": cs, "VOLTAGE": 300.0, "AMPLITUDE_CONTRAST": 0.07}
+
+    def test_zero_is_kept_and_only_an_unset_value_defaults(self):
+        image = np.zeros((96, 128), dtype=np.float32)
+        out = []
+        rp._record_particle(out, self.row(0.0), image, 1)
+        rp._record_particle(out, self.row(None), image, 2)
+        rp._record_particle(out, self.row(2.0), image, 3)
+        self.assertEqual([c["cs"] for c in out], [0.0, 2.7, 2.0])

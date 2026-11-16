@@ -159,7 +159,7 @@ def build_tasks(conn, project_id, params):
             A("text", diagnostic),                       # 3  output diagnostic image
             A("float", pixel_size),                      # 4
             A("float", image["VOLTAGE"] or 300.0),       # 5  kV
-            A("float", image["SPHERICAL_ABERRATION"] or 2.7),  # 6  mm
+            A("float", 2.7 if image["SPHERICAL_ABERRATION"] is None else image["SPHERICAL_ABERRATION"]),  # 6  mm; 0 is a real value (a Cs-corrected microscope), only an unset one defaults
             A("float", amplitude_contrast),              # 7
             A("int", box_size),                          # 8
             A("float", min_res),                         # 9

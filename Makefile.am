@@ -26,6 +26,7 @@ nobase_dist_pkgdata_DATA = \
 	web/reference/dashboard.html \
 	web/refine3d-strategy.png \
 	web/server/abinitio.py \
+	web/server/aberrations.py \
 	web/server/auth.py \
 	web/server/autorefine.py \
 	web/server/blush.py \

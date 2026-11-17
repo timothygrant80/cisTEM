@@ -105,6 +105,16 @@ class CreatePackageTests(unittest.TestCase):
         self.assertTrue(all(m.startswith("Cutting particles from image") for d, t, m in seen[:-1]))
         self.assertEqual(seen[-2][:2], (5, 5))
 
+    def test_the_images_optics_group_is_cut_into_the_package(self):
+        with self.conn as c:
+            c.execute("UPDATE IMAGE_ASSETS SET OPTICS_GROUP=3 WHERE IMAGE_ASSET_ID=2")
+        res = rp.create_package(self.conn, self.project, {"particle_group_id": 0, "box_size": 32, "number_of_classes": 1})
+        pid, rid = res["refinement_package_asset_id"], res["refinement_id"]
+        got = [r[0] for r in self.conn.execute("SELECT OPTICS_GROUP FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} ORDER BY POSITION_IN_STACK".format(pid))]
+        self.assertEqual(got, [0, 0, 3, 3, 3])
+        import refinements
+        self.assertEqual(refinements.load_table(self.conn, rid, 1)["beam_tilt_group"].tolist(), [0, 0, 3, 3, 3])
+
     def test_running_creations_are_listed_with_their_timing(self):
         import cistem_server
         auth_path = auth.AUTH_DB_PATH

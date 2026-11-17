@@ -39,10 +39,12 @@ import symmetry as symmetry_module
 
 RESULT_COLUMNS = ("POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT",
                   "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS",
-                  "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y", "ASSIGNED_SUBSET")
+                  "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y", "ASSIGNED_SUBSET", "BEAM_TILT_GROUP")
 RESULT_KEYS = ("position_in_stack", "psi", "theta", "phi", "x_shift", "y_shift", "defocus_1", "defocus_2", "defocus_angle", "phase_shift",
                "occupancy", "logp", "sigma", "score", "image_is_active", "pixel_size", "voltage", "cs", "amplitude_contrast",
-               "beam_tilt_x", "beam_tilt_y", "image_shift_x", "image_shift_y", "assigned_subset")
+               "beam_tilt_x", "beam_tilt_y", "image_shift_x", "image_shift_y", "assigned_subset", "beam_tilt_group")
+# BEAM_TILT_GROUP (cisTEM's column name; the optics group, 0 for none) came last, 2026-11-17: a result table written
+# before then lacks it and reads as 0 (load_table), and every table written since has it (RESULT_DDL).
 
 DETAIL_COLUMNS = ("CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS",
                   "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP",
@@ -60,7 +62,8 @@ DETAIL_DDL = ("CLASS_NUMBER INTEGER PRIMARY KEY, REFERENCE_VOLUME_ASSET_ID INTEG
               "MASK_FILTER_RESOLUTION REAL")
 RESULT_DDL = ("POSITION_IN_STACK INTEGER PRIMARY KEY, PSI REAL, THETA REAL, PHI REAL, XSHIFT REAL, YSHIFT REAL, DEFOCUS1 REAL, DEFOCUS2 REAL, DEFOCUS_ANGLE REAL, "
               "PHASE_SHIFT REAL, OCCUPANCY REAL, LOGP REAL, SIGMA REAL, SCORE REAL, IMAGE_IS_ACTIVE INTEGER, PIXEL_SIZE REAL, MICROSCOPE_VOLTAGE REAL, "
-              "MICROSCOPE_CS REAL, AMPLITUDE_CONTRAST REAL, BEAM_TILT_X REAL, BEAM_TILT_Y REAL, IMAGE_SHIFT_X REAL, IMAGE_SHIFT_Y REAL, ASSIGNED_SUBSET INTEGER")
+              "MICROSCOPE_CS REAL, AMPLITUDE_CONTRAST REAL, BEAM_TILT_X REAL, BEAM_TILT_Y REAL, IMAGE_SHIFT_X REAL, IMAGE_SHIFT_Y REAL, ASSIGNED_SUBSET INTEGER, "
+              "BEAM_TILT_GROUP INTEGER")
 
 THETA_BINS, PHI_BINS = 18, 72
 
@@ -116,10 +119,12 @@ def load_table(conn, refinement_id, class_number, keys=None):
         raise ValueError("refinement {} has no results for class {}".format(refinement_id, class_number))
     keys = tuple(keys) if keys else RESULT_KEYS
     columns = [RESULT_COLUMNS[RESULT_KEYS.index(k)] for k in keys]
+    present = {row[1].upper() for row in conn.execute("PRAGMA table_info({})".format(table))}
     dt = starfile.table_dtype(keys)
     cur = conn.cursor()
     cur.row_factory = None   # plain tuples: a million rows in about a second rather than four as sqlite3.Row objects
-    cur.execute("SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) for c in columns), table))
+    # a column the table predates (BEAM_TILT_GROUP) reads as 0
+    cur.execute("SELECT {} FROM {} ORDER BY POSITION_IN_STACK".format(", ".join("COALESCE({}, 0)".format(c) if c in present else "0" for c in columns), table))
     # straight from the cursor's tuples into one flat float array, never a list of them (a third faster than fetchall + np.array)
     plain = np.fromiter(itertools.chain.from_iterable(cur), dtype=float).reshape(-1, len(keys))
     out = np.zeros(len(plain), dtype=dt)

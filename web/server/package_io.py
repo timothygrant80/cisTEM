@@ -489,7 +489,8 @@ def import_package(conn, project_id, params, log=None):
                          s.get("occupancy", 0.0), s.get("logp", 0.0), s.get("sigma", 0.0), s.get("score", 0.0), int(s.get("image_is_active", 1)),
                          ps, s.get("voltage", 300.0), s.get("cs", cs), s.get("amplitude_contrast", 0.07),
                          s.get("beam_tilt_x", 0.0), s.get("beam_tilt_y", 0.0), s.get("image_shift_x", 0.0), s.get("image_shift_y", 0.0),
-                         int(s.get("assigned_subset") or 0)))
+                         int(s.get("assigned_subset") or 0), int(s.get("beam_tilt_group") or 0)))
+            contained[-1]["optics_group"] = int(s.get("beam_tilt_group") or 0)
         label = "cisTEM Import"
     else:
         pixel_size = form_float("pixel_size_a", "pixel size")
@@ -524,8 +525,10 @@ def import_package(conn, project_id, params, log=None):
             contained.append({"position_id": pos, "image_id": -1, "position_in_stack": pos, "x": x, "y": y, "pixel_size": pixel_size,
                               "defocus1": r["defocus_1"], "defocus2": r["defocus_2"], "defocus_angle": r["defocus_angle"], "phase_shift": r["phase_shift"],
                               "cs": cs, "voltage": voltage, "amplitude_contrast": amplitude_contrast, "subset": subset})
+            group = int(r.get("optics_group") or 0)   # a RELION 3.1 star's rlnOpticsGroup (read_relion_star), else 0
+            contained[-1]["optics_group"] = group
             rows.append((pos, r["psi"], r["theta"], r["phi"], xs, ys, r["defocus_1"], r["defocus_2"], r["defocus_angle"], r["phase_shift"],
-                         occupancy, logp, sigma, score, active, pixel_size, voltage, cs, amplitude_contrast, 0.0, 0.0, 0.0, 0.0, subset))
+                         occupancy, logp, sigma, score, active, pixel_size, voltage, cs, amplitude_contrast, 0.0, 0.0, 0.0, 0.0, subset, group))
     if len({c["position_in_stack"] for c in contained}) != len(contained):
         raise ValueError("the parameter file repeats a position in the stack")
 

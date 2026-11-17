@@ -314,6 +314,11 @@ def finalize(conn, project_id, job, sent_tasks, task_rows, log):
     return {"alignments_written": written, "tasks_skipped": skipped}
 
 
+def _movie_field(movie, column):
+    """A movie row's column, None when the row predates it (the optics group columns, 2026-11-17)."""
+    return movie[column] if column in movie.keys() else None
+
+
 def _point_image_asset(conn, movie, alignment_id, output_file, x_size, y_size, pixel_size, voltage):
     """Make `alignment_id` the movie's *active* alignment: the movie's one
     image asset now *is* this aligned sum. cisTEM keeps the active choice
@@ -334,11 +339,13 @@ def _point_image_asset(conn, movie, alignment_id, output_file, x_size, y_size, p
         return existing["IMAGE_ASSET_ID"]
     cur = conn.execute(
         "INSERT INTO IMAGE_ASSETS(NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "
-        "CTF_ESTIMATION_ID, X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) "
-        "VALUES (?,?,1,?,?,-1,?,?,?,?,?,?)",
+        "CTF_ESTIMATION_ID, X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE, "
+        "OPTICS_GROUP, BEAM_SHIFT_X, BEAM_SHIFT_Y, ACQUISITION_TIME) "
+        "VALUES (?,?,1,?,?,-1,?,?,?,?,?,?,?,?,?,?)",
         (
             movie["NAME"] + "_aligned", output_file, movie_id, alignment_id, x_size, y_size,
             pixel_size, voltage, movie["SPHERICAL_ABERRATION"], movie["PROTEIN_IS_WHITE"],
+            _movie_field(movie, "OPTICS_GROUP"), _movie_field(movie, "BEAM_SHIFT_X"), _movie_field(movie, "BEAM_SHIFT_Y"), _movie_field(movie, "ACQUISITION_TIME"),
         ),
     )
     conn.execute("INSERT OR IGNORE INTO IMAGE_GROUP_MEMBERS(GROUP_ID, IMAGE_ASSET_ID) VALUES (0, ?)", (cur.lastrowid,))

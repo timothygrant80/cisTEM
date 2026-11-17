@@ -947,12 +947,14 @@ def _write_motion_correction_results(project_id, job):
             cur = conn.execute(
                 "INSERT INTO IMAGE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "
-                "X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, SPHERICAL_ABERRATION, PROTEIN_IS_WHITE, "
+                "OPTICS_GROUP, BEAM_SHIFT_X, BEAM_SHIFT_Y, ACQUISITION_TIME) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     movie["NAME"] + "_aligned", output_file, 1, movie["MOVIE_ASSET_ID"], alignment_id,
                     movie["X_SIZE"], movie["Y_SIZE"], final_pixel_size, movie["VOLTAGE"],
                     movie["SPHERICAL_ABERRATION"], movie["PROTEIN_IS_WHITE"],
+                    movie["OPTICS_GROUP"], movie["BEAM_SHIFT_X"], movie["BEAM_SHIFT_Y"], movie["ACQUISITION_TIME"],
                 ),
             )
             # An aligned micrograph is an image asset like any other, so it

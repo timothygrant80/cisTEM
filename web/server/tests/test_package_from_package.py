@@ -111,6 +111,25 @@ class FromPackageTests(unittest.TestCase):
         self.assertTrue(any("class 2 of 2" in c[2] for c in calls))
         self.assertEqual(max(c[0] for c in calls if "Copying particles" in c[2]), N // 2)
 
+    def test_the_optics_group_comes_along(self):
+        # 2026-11-17: the group is a column of the contained particles and of every result table; a source
+        # written before the column (the fixture's rows have none) copies as group 0.
+        self.conn.execute("UPDATE REFINEMENT_PACKAGE_CONTAINED_PARTICLES_1 SET OPTICS_GROUP = 1 + (POSITION_IN_STACK % 2)")
+        self.conn.execute("UPDATE REFINEMENT_RESULT_1_1 SET BEAM_TILT_GROUP = 1 + (POSITION_IN_STACK % 2)")
+        self.conn.execute("UPDATE REFINEMENT_RESULT_1_2 SET BEAM_TILT_GROUP = 1 + (POSITION_IN_STACK % 2)")
+        self.conn.commit()
+        res = rp.create_package_from_package(self.conn, self.project, {"source_package_id": 1, "source_refinement_id": 1, "number_of_classes": 2})
+        pid, rid = res["refinement_package_asset_id"], res["refinement_id"]
+        got = [r[0] for r in self.conn.execute("SELECT OPTICS_GROUP FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} ORDER BY POSITION_IN_STACK".format(pid))]
+        self.assertEqual(got, [1 + (i + 1) % 2 for i in range(N)])
+        table = refinements.load_table(self.conn, rid, 1)
+        self.assertEqual(table["beam_tilt_group"].tolist(), [1 + (i + 1) % 2 for i in range(N)])
+        # a result table that predates the column reads as group 0
+        self.conn.execute("CREATE TABLE REFINEMENT_RESULT_77_1 AS SELECT * FROM REFINEMENT_RESULT_1_1")
+        self.conn.execute("ALTER TABLE REFINEMENT_RESULT_77_1 DROP COLUMN BEAM_TILT_GROUP")
+        self.conn.commit()
+        self.assertEqual(refinements.load_table(self.conn, 77, 1)["beam_tilt_group"].tolist(), [0] * N)
+
     def test_refinement_must_belong_to_the_source(self):
         with self.assertRaises(ValueError):
             rp.create_package_from_package(self.conn, self.project, {"source_package_id": 1, "source_refinement_id": 99})

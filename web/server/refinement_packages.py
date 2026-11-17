@@ -262,6 +262,7 @@ def _record_particle(contained, p, image, position_in_stack):
         "pixel_size": ps, "defocus1": d1, "defocus2": d2, "defocus_angle": float(p["DEFOCUS_ANGLE"] or 0.0),
         "phase_shift": float(p["ADDITIONAL_PHASE_SHIFT"] or 0.0), "cs": 2.7 if p["SPHERICAL_ABERRATION"] is None else float(p["SPHERICAL_ABERRATION"]),  # 0 is a real value (a Cs-corrected microscope)
         "voltage": float(p["VOLTAGE"] or 300.0), "amplitude_contrast": float(p["AMPLITUDE_CONTRAST"] or 0.07),
+        "optics_group": int(p["OPTICS_GROUP"] or 0) if "OPTICS_GROUP" in p.keys() else 0,   # the image's optics group at cutting time
     })
 
 
@@ -289,7 +290,7 @@ def _zero_float_and_normalize(box):
 def _particles_of_group(conn, group_id):
     return conn.execute(
         "SELECT pp.PARTICLE_POSITION_ASSET_ID, pp.PARENT_IMAGE_ASSET_ID, pp.X_POSITION, pp.Y_POSITION, "
-        "ia.FILENAME, ia.PIXEL_SIZE, ia.VOLTAGE, ia.SPHERICAL_ABERRATION, ia.PROTEIN_IS_WHITE, "
+        "ia.FILENAME, ia.PIXEL_SIZE, ia.VOLTAGE, ia.SPHERICAL_ABERRATION, ia.PROTEIN_IS_WHITE, ia.OPTICS_GROUP, "
         "ce.DEFOCUS1, ce.DEFOCUS2, ce.DEFOCUS_ANGLE, ce.ADDITIONAL_PHASE_SHIFT, ce.AMPLITUDE_CONTRAST, ce.TILT_ANGLE, ce.TILT_AXIS "
         "FROM PARTICLE_POSITION_ASSETS pp "
         "JOIN PARTICLE_POSITION_GROUP_MEMBERS m ON m.PARTICLE_POSITION_ASSET_ID = pp.PARTICLE_POSITION_ASSET_ID AND m.GROUP_ID = ? "
@@ -375,7 +376,7 @@ def _particles_of_selections(conn, params):
             return None
         if iid not in image_rows:
             row = conn.execute(
-                "SELECT ia.IMAGE_ASSET_ID, ia.FILENAME, ia.PIXEL_SIZE, ia.VOLTAGE, ia.SPHERICAL_ABERRATION, ia.PROTEIN_IS_WHITE, "
+                "SELECT ia.IMAGE_ASSET_ID, ia.FILENAME, ia.PIXEL_SIZE, ia.VOLTAGE, ia.SPHERICAL_ABERRATION, ia.PROTEIN_IS_WHITE, ia.OPTICS_GROUP, "
                 "ce.DEFOCUS1, ce.DEFOCUS2, ce.DEFOCUS_ANGLE, ce.ADDITIONAL_PHASE_SHIFT, ce.AMPLITUDE_CONTRAST, ce.TILT_ANGLE, ce.TILT_AXIS "
                 "FROM IMAGE_ASSETS ia LEFT JOIN ESTIMATED_CTF_PARAMETERS ce ON ce.CTF_ESTIMATION_ID = ia.CTF_ESTIMATION_ID "
                 "WHERE ia.IMAGE_ASSET_ID = ?", (iid,)).fetchone()
@@ -418,7 +419,7 @@ def _particles_of_selections(conn, params):
                      "FILENAME": img["FILENAME"], "PIXEL_SIZE": img["PIXEL_SIZE"], "VOLTAGE": img["VOLTAGE"], "SPHERICAL_ABERRATION": img["SPHERICAL_ABERRATION"],
                      "PROTEIN_IS_WHITE": img["PROTEIN_IS_WHITE"], "DEFOCUS1": img["DEFOCUS1"], "DEFOCUS2": img["DEFOCUS2"], "DEFOCUS_ANGLE": img["DEFOCUS_ANGLE"],
                      "ADDITIONAL_PHASE_SHIFT": img["ADDITIONAL_PHASE_SHIFT"], "AMPLITUDE_CONTRAST": img["AMPLITUDE_CONTRAST"],
-                     "TILT_ANGLE": img["TILT_ANGLE"], "TILT_AXIS": img["TILT_AXIS"]})
+                     "TILT_ANGLE": img["TILT_ANGLE"], "TILT_AXIS": img["TILT_AXIS"], "OPTICS_GROUP": img["OPTICS_GROUP"]})
     return rows, copies, {"members": len(members), "duplicates_removed": removed, "recentred": recentre, "copied": len(copies)}
 
 
@@ -578,7 +579,8 @@ def create_package(conn, project_id, params, log=None, progress=None):
                         "pixel_size": float(row["PIXEL_SIZE"] or ps), "defocus1": float(row["DEFOCUS_1"] or 0.0), "defocus2": float(row["DEFOCUS_2"] or 0.0),
                         "defocus_angle": float(row["DEFOCUS_ANGLE"] or 0.0), "phase_shift": float(row["PHASE_SHIFT"] or 0.0),
                         "cs": float(row["SPHERICAL_ABERRATION"] or 2.7), "voltage": float(row["MICROSCOPE_VOLTAGE"] or 300.0),
-                        "amplitude_contrast": float(row["AMPLITUDE_CONTRAST"] or 0.07), "subset": int(row["ASSIGNED_SUBSET"] or (1 + (first + k) % 2))})
+                        "amplitude_contrast": float(row["AMPLITUDE_CONTRAST"] or 0.07), "subset": int(row["ASSIGNED_SUBSET"] or (1 + (first + k) % 2)),
+                        "optics_group": int(row["OPTICS_GROUP"] or 0) if "OPTICS_GROUP" in row.keys() else 0})
                 n += len(chunk)
                 if progress:
                     progress(n, total, "Copying particles from the stack of package {}".format(pid))
@@ -608,7 +610,8 @@ def create_package(conn, project_id, params, log=None, progress=None):
             psi = rng.uniform(-1.0, 1.0) * 180.0
             occupancy = 100.0 if number_of_classes == 1 or assigned[c["position_in_stack"]] == k else 0.0
             rows.append((c["position_in_stack"], psi, theta, phi, 0.0, 0.0, c["defocus1"], c["defocus2"], c["defocus_angle"], c["phase_shift"],
-                         occupancy, 0.0, 1.0, 0.0, 1, c["pixel_size"], c["voltage"], c["cs"], c["amplitude_contrast"], 0.0, 0.0, 0.0, 0.0, c["subset"]))
+                         occupancy, 0.0, 1.0, 0.0, 1, c["pixel_size"], c["voltage"], c["cs"], c["amplitude_contrast"], 0.0, 0.0, 0.0, 0.0, c["subset"],
+                         int(c.get("optics_group") or 0)))
         class_rows.append(rows)
     insert_initial_refinement(conn, refinement_id, package_id, "Random Parameters", class_rows, box_size, output_pixel_size, molecular_weight)
     return dict(source, refinement_package_asset_id=package_id, name=name, particles=len(contained), stack_filename=stack_path,
@@ -778,8 +781,9 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
     position_of = "s.POSITION_IN_STACK" if carry_all else "m.NEW"
     join_map = "" if carry_all else " JOIN temp.NEW_PACKAGE_MAP m ON m.OLD = {}.POSITION_IN_STACK"
     contained = ("SELECT s.ORIGINAL_PARTICLE_POSITION_ASSET_ID, s.PARENT_IMAGE_ASSET_ID, {pos}, s.X_POSITION, s.Y_POSITION, s.PIXEL_SIZE, s.DEFOCUS_1, s.DEFOCUS_2, "
-                 "s.DEFOCUS_ANGLE, s.PHASE_SHIFT, s.SPHERICAL_ABERRATION, s.MICROSCOPE_VOLTAGE, s.AMPLITUDE_CONTRAST, s.ASSIGNED_SUBSET "
-                 "FROM {src} s{join} ORDER BY s.POSITION_IN_STACK").format(pos=position_of, src=src_table, join=join_map.format("s"))
+                 "s.DEFOCUS_ANGLE, s.PHASE_SHIFT, s.SPHERICAL_ABERRATION, s.MICROSCOPE_VOLTAGE, s.AMPLITUDE_CONTRAST, s.ASSIGNED_SUBSET, {group} "
+                 "FROM {src} s{join} ORDER BY s.POSITION_IN_STACK").format(pos=position_of, src=src_table, join=join_map.format("s"),
+                                                                          group=_group_column(conn, src_table, "s"))
     # The starting occupancies: each particle wholly in one class drawn at random (a temp table of old position ->
     # class, joined as `a`), else 100 everywhere.
     rng = np.random.default_rng( )
@@ -791,11 +795,13 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
             conn.executemany("INSERT INTO temp.NEW_PACKAGE_ASSIGN VALUES (?, ?)",
                              zip(kept_positions.tolist( ), hard_class_assignment(kept_positions.tolist( ), number_of_classes, rng).values( )))
     join_assign = " JOIN temp.NEW_PACKAGE_ASSIGN a ON a.OLD = r.POSITION_IN_STACK" if hard else ""
+    # the source's optics group column, or 0 when its tables predate it (every class of a refinement is written alike)
+    group_column = _group_column(conn, "REFINEMENT_RESULT_{}_{}".format(rid, sources[0][0]), "r", "BEAM_TILT_GROUP")
     def result_columns(new_class):
         occ = "CASE WHEN a.CLASS = {} THEN 100.0 ELSE 0.0 END".format(new_class) if hard else "100.0"
         return ("r.PSI, r.THETA, r.PHI, r.XSHIFT, r.YSHIFT, r.DEFOCUS1, r.DEFOCUS2, r.DEFOCUS_ANGLE, r.PHASE_SHIFT, {occ}, r.LOGP, r.SIGMA, r.SCORE, "
                 "r.IMAGE_IS_ACTIVE, r.PIXEL_SIZE, r.MICROSCOPE_VOLTAGE, r.MICROSCOPE_CS, r.AMPLITUDE_CONTRAST, r.BEAM_TILT_X, r.BEAM_TILT_Y, "
-                "r.IMAGE_SHIFT_X, r.IMAGE_SHIFT_Y, r.ASSIGNED_SUBSET").format(occ=occ)
+                "r.IMAGE_SHIFT_X, r.IMAGE_SHIFT_Y, r.ASSIGNED_SUBSET, {group}").format(occ=occ, group=group_column)
     class_rows = []
     for i, src in enumerate(sources):
         if progress:
@@ -907,7 +913,8 @@ def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_si
     """Database::AddRefinementPackageAsset(): the REFINEMENT_PACKAGE_ASSETS row
     and the package's four tables. `contained` are dicts with position_id,
     image_id, position_in_stack, x, y, pixel_size, defocus1/2, defocus_angle,
-    phase_shift, cs, voltage, amplitude_contrast, subset. Every class starts
+    phase_shift, cs, voltage, amplitude_contrast, subset and optics_group
+    (the image's at cutting time, 0 for none). Every class starts
     at "generate from parameters" (reference -1) and `refinement_id` is the
     package's first refinement, which the caller writes."""
     with conn:
@@ -920,17 +927,18 @@ def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_si
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}(ORIGINAL_PARTICLE_POSITION_ASSET_ID INTEGER PRIMARY KEY, "
                      "PARENT_IMAGE_ASSET_ID INTEGER, POSITION_IN_STACK INTEGER, X_POSITION REAL, Y_POSITION REAL, PIXEL_SIZE REAL, DEFOCUS_1 REAL, "
                      "DEFOCUS_2 REAL, DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, SPHERICAL_ABERRATION REAL, MICROSCOPE_VOLTAGE REAL, AMPLITUDE_CONTRAST REAL, "
-                     "ASSIGNED_SUBSET INTEGER)".format(package_id))
+                     "ASSIGNED_SUBSET INTEGER, OPTICS_GROUP INTEGER)".format(package_id))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_CURRENT_REFERENCES_{}(CLASS_NUMBER INTEGER PRIMARY KEY, VOLUME_ASSET_ID INTEGER)".format(package_id))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_REFINEMENTS_LIST_{}(REFINEMENT_NUMBER INTEGER PRIMARY KEY, REFINEMENT_ID INTEGER)".format(package_id))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_{}(CLASSIFICATION_NUMBER INTEGER PRIMARY KEY, CLASSIFICATION_ID INTEGER)".format(package_id))
-        if isinstance(contained, str):   # a SELECT producing the table's fourteen columns: the copy stays inside SQLite
+        if isinstance(contained, str):   # a SELECT producing the table's fifteen columns: the copy stays inside SQLite
             conn.execute("INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} {}".format(package_id, contained))
         else:
             conn.executemany(
-                "INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)".format(package_id),
+                "INSERT INTO REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)".format(package_id),
                 [(c["position_id"], c["image_id"], c["position_in_stack"], c["x"], c["y"], c["pixel_size"], c["defocus1"], c["defocus2"],
-                  c["defocus_angle"], c["phase_shift"], c["cs"], c["voltage"], c["amplitude_contrast"], c["subset"]) for c in contained])
+                  c["defocus_angle"], c["phase_shift"], c["cs"], c["voltage"], c["amplitude_contrast"], c["subset"], int(c.get("optics_group") or 0))
+                 for c in contained])
         # "Generate from parameters" for every class: no reference volume yet.
         conn.executemany("INSERT INTO REFINEMENT_PACKAGE_CURRENT_REFERENCES_{} VALUES (?, -1)".format(package_id),
                          [(k,) for k in range(1, number_of_classes + 1)])
@@ -965,14 +973,15 @@ def insert_initial_refinement(conn, refinement_id, package_id, name, class_rows,
         for k, rows in enumerate(class_rows, 1):
             conn.execute("INSERT INTO REFINEMENT_DETAILS_{} VALUES (?, -1, 0,0,0,0,0,0, 0, 0,0,0,0, 0, 0,0,0,0, 0, 0,0, ?, 0.0, -1, -1, 0, 1, 0, -1, 10.0, 0.0, 0, 30.0)".format(refinement_id),
                          (k, 100.0 / number_of_classes))
-            conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_RESULT_{}_{}(POSITION_IN_STACK INTEGER PRIMARY KEY, PSI REAL, THETA REAL, PHI REAL, XSHIFT REAL, YSHIFT REAL, "
-                         "DEFOCUS1 REAL, DEFOCUS2 REAL, DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, OCCUPANCY REAL, LOGP REAL, SIGMA REAL, SCORE REAL, IMAGE_IS_ACTIVE INTEGER, "
-                         "PIXEL_SIZE REAL, MICROSCOPE_VOLTAGE REAL, MICROSCOPE_CS REAL, AMPLITUDE_CONTRAST REAL, BEAM_TILT_X REAL, BEAM_TILT_Y REAL, IMAGE_SHIFT_X REAL, "
-                         "IMAGE_SHIFT_Y REAL, ASSIGNED_SUBSET INTEGER)".format(refinement_id, k))
-            if isinstance(rows, str):   # a SELECT producing the table's twenty-four columns: the copy stays inside SQLite
+            conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_RESULT_{}_{}({})".format(refinement_id, k, _refinements().RESULT_DDL))
+            if isinstance(rows, str):   # a SELECT producing the table's twenty-five columns: the copy stays inside SQLite
                 conn.execute("INSERT INTO REFINEMENT_RESULT_{}_{} {}".format(refinement_id, k, rows))
             else:
-                conn.executemany("INSERT INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(refinement_id, k, ",".join("?" * 24)), rows)
+                n = len(_refinements().RESULT_KEYS)
+                rows = list(rows)
+                if rows and len(rows[0]) < n:   # tuples in the pre-2026-11-17 shape: no optics group, so group 0
+                    rows = [tuple(r) + (0,) * (n - len(r)) for r in rows]
+                conn.executemany("INSERT INTO REFINEMENT_RESULT_{}_{} VALUES ({})".format(refinement_id, k, ",".join("?" * n)), rows)
             conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_RESOLUTION_STATISTICS_{}_{}(SHELL INTEGER PRIMARY KEY, RESOLUTION REAL, FSC REAL, PART_FSC REAL, "
                          "PART_SSNR REAL, REC_SSNR REAL)".format(refinement_id, k))
             conn.executemany("INSERT INTO REFINEMENT_RESOLUTION_STATISTICS_{}_{} VALUES (?,?,?,?,?,?)".format(refinement_id, k), stats)
@@ -1044,6 +1053,13 @@ def delete_package(conn, package_id, remove_stack=True):
         except OSError:
             pass
     return True
+
+
+def _group_column(conn, table, alias, column="OPTICS_GROUP"):
+    """`alias.column` when the table has it, else the literal 0: the optics group column came after projects
+    existed, and a package or refinement written before it has none."""
+    present = {row[1].upper() for row in conn.execute("PRAGMA table_info({})".format(table))}
+    return "{}.{}".format(alias, column) if column in present else "0"
 
 
 def _table_exists(conn, name):

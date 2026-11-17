@@ -1914,7 +1914,7 @@ From branch : <span id="versionBranch">—</span></p>
           <th class="num">Defocus Angle (°)</th><th class="num">Phase Shift (°)</th><th class="num">Beam Tilt X (mrad)</th><th class="num">Beam Tilt Y (mrad)</th>
           <th class="num">Image Shift X (Å)</th><th class="num">Image Shift Y (Å)</th><th class="num">Voltage (kV)</th><th class="num">Cs (mm)</th>
           <th class="num">Amplitude Contrast</th><th class="num">Pixel Size (Å)</th><th class="num">Occupancy</th><th class="num">logP</th>
-          <th class="num">Sigma</th><th class="num">Score</th><th>Image Active?</th>
+          <th class="num">Sigma</th><th class="num">Score</th><th>Image Active?</th><th class="num">Optics Group</th>
         </tr></thead>
         <tbody id="paramsBody"></tbody>
       </table>
@@ -5418,13 +5418,13 @@ From branch : <span id="versionBranch">—</span></p>
   // the class as a Frealign par file as cisTEM does, or as a cisTEM star file.
   var params = {refinement: null, classIndex: 0, rows: []};
   function fmtCell(v, digits){ return v == null ? "\u2014" : Number(v).toFixed(digits); }
-  var paramsVirtual = makeVirtualBody(els.paramsBody, 23, function(r, i){
+  var paramsVirtual = makeVirtualBody(els.paramsBody, 24, function(r, i){
     var deg = function(v){ return fmtCell(v, 2); };
     return "<tr" + (i % 2 ? " class='alt'" : "") + "><td class='num'>" + r[0] + "</td>" +
       ["<td class='num'>" + deg(r[1]), deg(r[2]), deg(r[3]), fmtCell(r[4], 2), fmtCell(r[5], 2), fmtCell(r[6], 1), fmtCell(r[7], 1), deg(r[8]), deg(r[9]),
        fmtCell(r[19] * 1000, 2), fmtCell(r[20] * 1000, 2), fmtCell(r[21], 2), fmtCell(r[22], 2), fmtCell(r[16], 1), fmtCell(r[17], 2), fmtCell(r[18], 3), fmtCell(r[15], 4),
        fmtCell(r[10], 2), fmtCell(r[11], 0), fmtCell(r[12], 4), fmtCell(r[13], 2)].join("</td><td class='num'>") + "</td>" +
-      "<td>" + (Number(r[14]) >= 0 ? "Yes" : "No") + "</td></tr>";
+      "<td>" + (Number(r[14]) >= 0 ? "Yes" : "No") + "</td><td class='num'>" + (r.length > 24 && Number(r[24]) ? r[24] : "\u2014") + "</td></tr>";   // the optics group (cisTEM's beam tilt group), 0 for none
   });
   function openParamsDialog(refinement, classIndex){
     params.refinement = refinement; params.classIndex = classIndex || 0;

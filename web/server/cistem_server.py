@@ -3330,12 +3330,28 @@ def volume_preview(project_id, volume_id):
     return response
 
 
+def _attach_job_inputs(conn, d, job_id):
+    """Show Job Details: the result tables keep what cisTEM's panels print, the job's row keeps every
+    input the Actions panel sent (PARAMS_JSON). `job_stage` and `job_params` on a single-result answer
+    let the page list the inputs the tables have no column for; both None for a result with no job
+    (an import, a job row since deleted)."""
+    job = conn.execute("SELECT STAGE, PARAMS_JSON FROM JOBS WHERE JOB_ID=?", (job_id,)).fetchone() if job_id else None
+    d["job_stage"] = job["STAGE"] if job is not None else None
+    try:
+        d["job_params"] = json.loads(job["PARAMS_JSON"]) if job is not None and job["PARAMS_JSON"] else None
+    except ValueError:
+        d["job_params"] = None
+    return d
+
+
 @app.route("/api/projects/<project_id>/startups", methods=["GET"])
 @auth.project_access_required
 def list_startups(project_id):
-    """Every ab-initio run (STARTUP_LIST) with its settings and result volumes."""
+    """Every ab-initio run (STARTUP_LIST) with its settings, its job's inputs and result volumes."""
     conn = db.get_conn(project_id)
     out = volumes.list_startups(conn)
+    for d in out:
+        _attach_job_inputs(conn, d, d.get("job_id"))
     conn.close()
     return jsonify({"startups": out})
 
@@ -3452,6 +3468,8 @@ def get_refinement(project_id, refinement_id):
     conn = db.get_conn(project_id)
     try:
         d = refinements.get_refinement(conn, refinement_id)
+        if d is not None:
+            _attach_job_inputs(conn, d, d.get("job_id"))
         if d is not None and d.get("job_id"):
             job = conn.execute("SELECT * FROM JOBS WHERE JOB_ID=?", (d["job_id"],)).fetchone()
             if job is not None and job["STAGE"] == refinectf.STAGE:
@@ -3777,6 +3795,8 @@ def class2d_defaults(project_id):
 def get_classification(project_id, classification_id):
     conn = db.get_conn(project_id)
     d = classification.get_classification(conn, classification_id)
+    if d is not None:
+        _attach_job_inputs(conn, d, d.get("job_id"))
     conn.close()
     if d is None:
         return jsonify({"error": "no such classification"}), 404
@@ -4031,6 +4051,7 @@ def get_alignment(project_id, alignment_id):
         conn.close()
         return jsonify({"error": "no such alignment"}), 404
     d = _alignment_json(row, conn)
+    _attach_job_inputs(conn, d, row["ALIGNMENT_JOB_ID"])
     try:
         d["shifts"] = [
             {"frame": r["FRAME_NUMBER"], "x": r["X_SHIFT"], "y": r["Y_SHIFT"]}
@@ -4144,10 +4165,11 @@ def get_ctf_estimate(project_id, estimate_id):
     quality), or null if that file is missing."""
     conn = db.get_conn(project_id)
     row = conn.execute(_CTF_SELECT + "WHERE ce.CTF_ESTIMATION_ID = ?", (estimate_id,)).fetchone()
-    conn.close()
     if row is None:
+        conn.close()
         return jsonify({"error": "no such CTF estimate"}), 404
-    d = _ctf_json(row)
+    d = _attach_job_inputs(conn, _ctf_json(row), row["CTF_ESTIMATION_JOB_ID"])
+    conn.close()
     d["plot"] = stages.ADAPTERS["ctf_estimation"].read_avrot(d["output_diagnostic_file"]) if d["output_diagnostic_file"] else None
     return jsonify(d)
 
@@ -4244,7 +4266,7 @@ def get_pick(project_id, picking_id):
     if row is None:
         conn.close()
         return jsonify({"error": "no such picking"}), 404
-    d = _pick_json(row, conn)
+    d = _attach_job_inputs(conn, _pick_json(row, conn), row["PICKING_JOB_ID"])
     d["positions"] = stages.find_particles.picks_for(conn, picking_id)
     conn.close()
     return jsonify(d)

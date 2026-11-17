@@ -547,6 +547,10 @@ def _refinement_json(conn, row, with_classes=False):
         c["volume_filename"] = vol["FILENAME"] if vol else None
         c["volume_file_exists"] = bool(vol and vol["FILENAME"] and os.path.isfile(vol["FILENAME"]))
         if with_classes:
+            # The reconstruction job's own settings (Database::GetReconstructionJob), the second block of
+            # MyRefinementResultsPanel::WriteJobInfo; None for a refinement that made no reconstruction.
+            rj = conn.execute("SELECT * FROM RECONSTRUCTION_LIST WHERE RECONSTRUCTION_ID=?", (det.get("RECONSTRUCTION_ID", -1),)).fetchone() if det.get("RECONSTRUCTION_ID") is not None else None
+            c["reconstruction"] = {kk.lower(): rj[kk] for kk in rj.keys()} if rj is not None else None
             c["statistics"] = load_statistics(conn, row["REFINEMENT_ID"], k)
             table = "REFINEMENT_ANGULAR_DISTRIBUTION_{}_{}".format(row["REFINEMENT_ID"], k)
             c["angular_distribution"] = [r[0] for r in conn.execute("SELECT NUMBER_IN_BIN FROM {} ORDER BY BIN_NUMBER".format(table)).fetchall()] if _table_exists(conn, table) else None

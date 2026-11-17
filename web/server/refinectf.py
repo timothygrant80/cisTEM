@@ -484,7 +484,8 @@ def _start(conn, project_id, job_id, params, profile):
         "package_id": pkg["REFINEMENT_PACKAGE_ASSET_ID"], "package_name": pkg["NAME"], "stack_filename": pkg["STACK_FILENAME"],
         "pixel_size": float(pkg["OUTPUT_PIXEL_SIZE"] or 1.0), "box_size": int(pkg["STACK_BOX_SIZE"]), "invert_contrast": bool(pkg["STACK_HAS_WHITE_PROTEIN"]),
         "symmetry": pkg["SYMMETRY"] or "C1", "molecular_weight": float(pkg["MOLECULAR_WEIGHT"] or 300.0), "particle_size": float(pkg["PARTICLE_SIZE"] or 150.0),
-        "voltage": float(first["voltage"]) if first is not None and first["voltage"] else 300.0, "cs": float(first["cs"]) if first is not None and first["cs"] else 2.7,
+        "voltage": float(first["voltage"]) if first is not None and first["voltage"] else 300.0,
+        "cs": 2.7 if first is None or first["cs"] is None else float(first["cs"]),   # 0 is a real value (a Cs-corrected microscope): the tilt is then "not applicable"
         "number_of_particles": n, "number_of_classes": classes,
         "refinement_profile": profile["name"], "refinement_jobs": int(profile["total_jobs"]),
         "reconstruction_profile": recon_profile["name"], "reconstruction_jobs": int(recon_profile["total_jobs"]),

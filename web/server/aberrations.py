@@ -142,16 +142,25 @@ def odd_coefficients_for_beam_tilt(tilt_x_mrad, tilt_y_mrad, shift_x_a, shift_y_
 
 def beam_tilt_from_odd(coefficients, cs_mm, voltage_kv):
     """The beam tilt (mrad) and particle shift (A) an odd set contains, and the
-    set with them taken out (trefoil and higher): TiltHelper::extractTilt."""
+    set with them taken out (trefoil and higher): TiltHelper::extractTilt.
+
+    With a Cs of 0 (a Cs-corrected microscope) the tilt's phase term, which
+    goes through Cs, vanishes: no finite tilt is equivalent to the order-3
+    m = +-1 (coma) coefficients, so the tilt comes back as None and those
+    coefficients stay in `rest`, where the programs apply them as they are.
+    The shift is independent of Cs and is still taken out."""
     c = np.array(coefficients, dtype=np.float64)
     if c.size < 6:
         c = np.concatenate([c, np.zeros(6 - c.size)])
-    scale = 2.0 * math.pi * cs_mm * 1.0e7 * wavelength_a(voltage_kv) ** 2
-    tilt_x = -3.0 * c[4] / scale * 1.0e3
-    tilt_y = -3.0 * c[3] / scale * 1.0e3
     shift_x = (c[1] - 2.0 * c[4]) / (2.0 * math.pi)
     shift_y = (c[0] - 2.0 * c[3]) / (2.0 * math.pi)
     rest = c.copy()
+    if cs_mm == 0.0:
+        rest[[0, 1]] = 0.0
+        return None, None, shift_x, shift_y, rest
+    scale = 2.0 * math.pi * cs_mm * 1.0e7 * wavelength_a(voltage_kv) ** 2
+    tilt_x = -3.0 * c[4] / scale * 1.0e3
+    tilt_y = -3.0 * c[3] / scale * 1.0e3
     rest[[0, 1, 3, 4]] = 0.0
     return tilt_x, tilt_y, shift_x, shift_y, rest
 

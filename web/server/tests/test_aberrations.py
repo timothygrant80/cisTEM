@@ -53,6 +53,18 @@ class BasisTest(unittest.TestCase):
         scale = 2 * math.pi * 2.7e7 * aberrations.wavelength_a(300.0) ** 2
         self.assertAlmostEqual(c[4], -scale * 0.3e-3 / 3.0)
 
+    def test_a_cs_of_zero_gives_no_tilt_and_keeps_the_coma_terms(self):
+        # A Cs-corrected microscope: the tilt's phase term goes through Cs, so no finite tilt stands
+        # for the order-3 m = +-1 coefficients; they stay in the set, the shift still comes out.
+        c = np.array([2.0 * math.pi * -0.7, 2.0 * math.pi * 1.5, 4.0, 0.25, -0.5, -3.0])
+        tilt_x, tilt_y, shift_x, shift_y, rest = aberrations.beam_tilt_from_odd(c, 0.0, 300.0)
+        self.assertIsNone(tilt_x)
+        self.assertIsNone(tilt_y)
+        self.assertAlmostEqual(shift_x, 1.5 - 2.0 * -0.5 / (2.0 * math.pi), places=9)
+        self.assertAlmostEqual(shift_y, -0.7 - 2.0 * 0.25 / (2.0 * math.pi), places=9)
+        np.testing.assert_allclose(rest, [0, 0, 4.0, 0.25, -0.5, -3.0])
+        np.testing.assert_allclose(aberrations.odd_coefficients_for_beam_tilt(0.3, -0.2, 0.0, 0.0, 0.0, 300.0), np.zeros(6))
+
     def test_full_grid_symmetry(self):
         rho, phi = aberrations.half_plane_frequencies(16, 16, 1.0)
         odd = aberrations.zernike(1, 3, rho, phi)                     # antisymmetric in frequency

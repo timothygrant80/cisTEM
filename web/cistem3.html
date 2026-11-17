@@ -5560,7 +5560,9 @@ From branch : <span id="versionBranch">—</span></p>
         tiltFigs.forEach(function(f){
           f.root.hidden = !has(f.which, true);
           if (f.root.hidden) return;
-          f.right.textContent = f.which === "beam_tilt" ? (bt.significant ? bt.beam_tilt_x_mrad.toFixed(2) + ", " + bt.beam_tilt_y_mrad.toFixed(2) + " mrad \u00b7 shift " + bt.particle_shift_x_a.toFixed(2) + ", " + bt.particle_shift_y_a.toFixed(2) + " \u00c5" : "not significant \u2014 set to zero")
+          f.right.textContent = f.which === "beam_tilt" ? (!bt.significant ? "not significant \u2014 set to zero"
+              : (bt.beam_tilt_x_mrad == null ? "beam tilt not applicable with a Cs of 0 (coma kept in the set)" : bt.beam_tilt_x_mrad.toFixed(2) + ", " + bt.beam_tilt_y_mrad.toFixed(2) + " mrad")
+                + " \u00b7 shift " + bt.particle_shift_x_a.toFixed(2) + ", " + bt.particle_shift_y_a.toFixed(2) + " \u00c5")
             : bt.method === "zernike" ? "from the Zernike fit" : "significance " + Number(bt.significance).toFixed(2);
           figLoading(f.img, f.status, "Loading\u2026"); f.img.style.maxWidth = "360px";
           loadFigure(f.img, f.status, "/jobs/" + jobId + "/refinectf/" + f.which + ".png", true, "phase image", urls);
@@ -5696,7 +5698,7 @@ From branch : <span id="versionBranch">—</span></p>
           o.textContent = p.name + " (" + n + " refinement" + (n === 1 ? "" : "s") + ")"; o.selected = p.refinement_package_asset_id === page.packageId; pkgSelect.appendChild(o);
         });
         renderList();
-      }).catch(function(){});
+      }).catch(function(err){ empty.textContent = "Could not load the refinements: " + (err && err.message || err); page.loadedProject = null; });
     };
     function visible(){ return page.items.filter(function(r){ return r.refinement_package_asset_id === page.packageId; }); }
     // The refinement JSON by id, kept while the list stands (cleared when it reloads), and the
@@ -5760,7 +5762,7 @@ From branch : <span id="versionBranch">—</span></p>
         full.classes.forEach(function(c, i){ var o = document.createElement("option"); o.value = i; o.textContent = "#" + c.class_number + (c.estimated_resolution ? " (" + Number(c.estimated_resolution).toFixed(2) + " Å" + (full.classes.length > 1 ? ", " + Number(c.average_occupancy).toFixed(1) + "%" : "") + ")" : ""); o.selected = i === page.classIndex; classSelect.appendChild(o); });
         classRow.hidden = full.classes.length <= 1;
         showCtf(full); showClass(); prefetchNeighbours();
-      }).catch(function(err){ fig.status.textContent = "Could not load this refinement: " + err.message; });
+      }).catch(function(err){ figLoading(fig.img, fig.status, "Could not load this refinement: " + err.message); });
     }
     function showClass(){
       var full = page.current; if (!full) return;
@@ -8328,8 +8330,8 @@ From branch : <span id="versionBranch">—</span></p>
   // wants at least one file and a pixel size. The header's pixel size is
   // offered as the default when the files are chosen.
   var VOLUME_IMPORT_FIELDS = [
-    {key:"input_glob", label:"Volume files", unit:"", type:"text", placeholder:"/data/maps/*.mrc", group:"Input",
-     tooltip:"MRC volumes on the machine running the API server; a wildcard imports every match."},
+    {key:"input_glob", label:"Volume file", unit:"", type:"text", placeholder:"/data/maps/map.mrc", group:"Input",
+     tooltip:"An MRC volume on the machine running the API server. Browse chooses one file; a typed wildcard still imports every match."},
     {key:"pixel_size_a", label:"Pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"1.00", group:"Volume",
      tooltip:"The pixel size recorded for every imported volume. Prefilled from the first file's header when it carries one."}
   ];
@@ -8339,7 +8341,7 @@ From branch : <span id="versionBranch">—</span></p>
     var row = document.createElement("div"); row.className = "field-row";
     globInput.parentNode.insertBefore(row, globInput); row.appendChild(globInput);
     var browseBtn = document.createElement("button"); browseBtn.type = "button"; browseBtn.className = "small"; browseBtn.textContent = "Browse…";
-    browseBtn.addEventListener("click", function(){ openBrowseModal({input: globInput, noun: "volume", article: "a", types: "volume"}); });
+    browseBtn.addEventListener("click", function(){ openBrowseModal({input: globInput, noun: "volume", article: "a", types: "volume", single: true}); });
     row.appendChild(browseBtn);
   })();
   var volumeImportPaths = {seq: 0, glob: null, globCount: 0, newCount: 0, dupCount: 0, hint: null, boxSizes: []};
@@ -8386,7 +8388,7 @@ From branch : <span id="versionBranch">—</span></p>
   function validateVolumeImportForm(){
     var problems = [];
     var glob = volumeImportFieldValue("input_glob");
-    if (!glob) problems.push("choose the volume files to import");
+    if (!glob) problems.push("choose the volume file to import");
     else if (volumeImportPaths.glob !== glob) problems.push("checking that path…");
     else if (!volumeImportPaths.globCount) problems.push("no MRC files match that path");
     else if (!volumeImportPaths.newCount && volumeImportPaths.notVolumes && !volumeImportPaths.dupCount) problems.push(volumeImportPaths.notVolumes === 1 ? "that file is not an MRC volume" : "none of the " + volumeImportPaths.notVolumes + " matching files is an MRC volume");
@@ -9610,6 +9612,7 @@ From branch : <span id="versionBranch">—</span></p>
     var parts = [];
     var tiltSource = (summary && summary.beam_tilt_x_mrad != null) ? summary : (set && set.beam_tilt_x_mrad != null ? set : null);
     if (tiltSource) parts.push("beam tilt " + Number(tiltSource.beam_tilt_x_mrad).toFixed(3) + ", " + Number(tiltSource.beam_tilt_y_mrad).toFixed(3) + " mrad");
+    else if ((summary && "beam_tilt_x_mrad" in summary) || (set && "beam_tilt_x_mrad" in set)){ tiltSource = summary || set; parts.push("beam tilt not applicable (Cs 0; coma kept in the set)"); }   // the server sends null for a Cs of 0
     if (tiltSource && tiltSource.particle_shift_x_a != null && (Math.abs(tiltSource.particle_shift_x_a) > 1e-3 || Math.abs(tiltSource.particle_shift_y_a) > 1e-3)) parts.push("shift " + Number(tiltSource.particle_shift_x_a).toFixed(2) + ", " + Number(tiltSource.particle_shift_y_a).toFixed(2) + " Å");
     var trefoil = summary ? summary.trefoil : (odd.length >= 6 ? [odd[2], odd[5]] : null);
     if (trefoil && (trefoil[0] || trefoil[1])) parts.push("trefoil Z3\u00b1\u00b3 " + Number(trefoil[0]).toFixed(1) + ", " + Number(trefoil[1]).toFixed(1));

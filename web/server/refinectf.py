@@ -158,7 +158,9 @@ def fit_refinement_aberrations(sums_path, box_size, pixel_size, cs_mm, voltage_k
         maps["even_measured"], maps["even_fitted"] = fit["measured_phase"], fit["fitted_phase"]
         summary["even_phase_rms"] = _weighted_rms(fit)
     tilt_x, tilt_y, shift_x, shift_y, rest = aberrations.beam_tilt_from_odd(new["odd"], cs_mm, voltage_kv) if new["odd"] else (0.0, 0.0, 0.0, 0.0, np.zeros(6))
-    summary.update({"beam_tilt_x_mrad": float(tilt_x), "beam_tilt_y_mrad": float(tilt_y), "particle_shift_x_a": float(shift_x), "particle_shift_y_a": float(shift_y),
+    # the tilt is None with a Cs of 0 (aberrations.beam_tilt_from_odd): the coma terms stay in the set and `rest`
+    summary.update({"beam_tilt_x_mrad": None if tilt_x is None else float(tilt_x), "beam_tilt_y_mrad": None if tilt_y is None else float(tilt_y),
+                    "particle_shift_x_a": float(shift_x), "particle_shift_y_a": float(shift_y),
                     "trefoil": [float(rest[2]), float(rest[5])] if rest.size >= 6 else [0.0, 0.0],
                     "fourfold": [new["even"][4], new["even"][8]] if len(new["even"]) >= 9 else [0.0, 0.0],
                     "odd_order": new["odd_order"], "even_order": new["even_order"]})
@@ -646,8 +648,10 @@ def _fit_aberrations(conn, project_id, job_id, state):
                           "particle_shift_x_a": summary["particle_shift_x_a"], "particle_shift_y_a": summary["particle_shift_y_a"],
                           "score": None, "significance": None, "significant": True, "method": "zernike",
                           "phase_difference_file": files.get("odd_measured"), "beam_tilt_file": files.get("odd_fitted")}
-    _log(project_id, job_id, "Aberrations fitted from {:.0f} to {:.2f} Å: beam tilt {:.3f}, {:.3f} mrad, shift {:.2f}, {:.2f} Å{}{}".format(
-        summary["low_resolution_limit_a"], summary["high_resolution_limit_a"], summary["beam_tilt_x_mrad"], summary["beam_tilt_y_mrad"],
+    _log(project_id, job_id, "Aberrations fitted from {:.0f} to {:.2f} Å: {}, shift {:.2f}, {:.2f} Å{}{}".format(
+        summary["low_resolution_limit_a"], summary["high_resolution_limit_a"],
+        "beam tilt not applicable with a Cs of 0 (its coma terms stay in the set)" if summary["beam_tilt_x_mrad"] is None
+        else "beam tilt {:.3f}, {:.3f} mrad".format(summary["beam_tilt_x_mrad"], summary["beam_tilt_y_mrad"]),
         summary["particle_shift_x_a"], summary["particle_shift_y_a"],
         "; trefoil {:.1f}, {:.1f}".format(*summary["trefoil"]) if state["settings"]["estimate_trefoil"] else "",
         "; four-fold astigmatism {:.1f}, {:.1f}; even residual {:.3f} rad RMS".format(summary["fourfold"][0], summary["fourfold"][1], summary.get("even_phase_rms", 0.0))

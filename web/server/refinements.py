@@ -521,7 +521,9 @@ def _refinement_json(conn, row, with_classes=False):
         for st in d["aberrations"]:
             if any(st.get("odd")):
                 tx, ty, sx, sy, _rest = aberrations.beam_tilt_from_odd(st["odd"], cs, kv)
-                st.update({"beam_tilt_x_mrad": float(tx), "beam_tilt_y_mrad": float(ty), "particle_shift_x_a": float(sx), "particle_shift_y_a": float(sy)})
+                # None with a Cs of 0: no finite tilt stands for the coma terms then (the page says so)
+                st.update({"beam_tilt_x_mrad": None if tx is None else float(tx), "beam_tilt_y_mrad": None if ty is None else float(ty),
+                           "particle_shift_x_a": float(sx), "particle_shift_y_a": float(sy)})
     details = load_details(conn, row["REFINEMENT_ID"])
     d["classes"] = []
     for k in range(1, int(row["NUMBER_OF_CLASSES"] or 1) + 1):

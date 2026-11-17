@@ -52,6 +52,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, abort, g, jsonify, request, send_from_directory
+from flask.json.provider import DefaultJSONProvider
 from werkzeug.exceptions import HTTPException, InternalServerError
 from flask_cors import CORS
 
@@ -83,6 +84,19 @@ DRIVERS = {classification.STAGE: classification, abinitio.STAGE: abinitio, refin
            refinectf.STAGE: refinectf, generate3d.STAGE: generate3d}
 
 app = Flask(__name__)
+
+
+class _StrictJSONProvider(DefaultJSONProvider):
+    """JSON with no NaN or Infinity: Python's encoder writes them as bare tokens by default, which no browser
+    parses, and the page then sat on "Loading..." with the cause nowhere (a beam tilt divided by a Cs of 0,
+    2026-11-16). Now such a value raises, and the /api/ error handler below returns a logged 500 that names it."""
+
+    def dumps(self, obj, **kwargs):
+        kwargs.setdefault("allow_nan", False)
+        return super().dumps(obj, **kwargs)
+
+
+app.json = _StrictJSONProvider(app)
 # Responses go gzipped to a browser that accepts it: the page is 770 KB (170 KB
 # gzipped) and the job list the Jobs tab polls every few seconds is mostly
 # repeated text, so on a slow link this is most of the difference between a

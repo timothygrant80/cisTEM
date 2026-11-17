@@ -2,6 +2,7 @@
 inheritance along the refinement chain, the aberration file the programs read, and the Refine CTF driver's
 fit of a refinement from a synthetic sums file."""
 import math
+import json
 import os
 import sys
 import tempfile
@@ -102,6 +103,21 @@ class StorageTest(unittest.TestCase):
         self.assertIn("beam_tilt_x_mrad", got_json[0])     # the JSON adds the tilt the odd set contains
         refinements.save_aberrations(self.conn, 1, [])
         self.assertEqual(refinements.load_aberrations(self.conn, 1), [])
+
+    def test_a_cs_of_zero_lists_the_tilt_as_null(self):
+        # Apo2, 2026-11-16: the list and the refinement derived the tilt by dividing by the particles' Cs,
+        # which was 0, and the Infinity that wrote left the Refine 3D results page on "Loading...".
+        self._add(2, 1, self.sets)
+        self.conn.execute("UPDATE REFINEMENT_RESULT_2_1 SET MICROSCOPE_CS=0.0")
+        for d in (refinements.get_refinement(self.conn, 2), [r for r in refinements.list_refinements(self.conn, None) if r["refinement_id"] == 2][0]):
+            st = d["aberrations"][0]
+            self.assertIsNone(st["beam_tilt_x_mrad"])
+            self.assertIsNone(st["beam_tilt_y_mrad"])
+            self.assertAlmostEqual(st["particle_shift_x_a"], (-0.2 - 2.0 * -0.4) / (2.0 * math.pi))
+            json.dumps(d, allow_nan=False)
+        # and with a Cs the tilt is a number
+        self.conn.execute("UPDATE REFINEMENT_RESULT_2_1 SET MICROSCOPE_CS=2.7")
+        self.assertNotEqual(refinements.get_refinement(self.conn, 2)["aberrations"][0]["beam_tilt_x_mrad"], None)
 
     def test_a_refinement_inherits_its_input_sets_unless_given_new_ones(self):
         refinements.save_aberrations(self.conn, 1, self.sets)

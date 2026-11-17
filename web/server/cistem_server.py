@@ -68,6 +68,7 @@ import generate3d
 import refinectf
 import sharpen
 import refinements
+import optics_groups
 import job_runner
 import progress_store
 import refinement_packages
@@ -2133,18 +2134,20 @@ def _import_movies_work(project_id, body, progress=None):
             x_size = header["x_size"]
             y_size = header["y_size"]
             n_frames = header["number_of_frames"]
+            meta = optics_groups.metadata_for_movie(path)    # the EPU XML / mdoc beside the movie, for the optics groups
             cur = conn.execute(
                 "INSERT INTO MOVIE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, X_SIZE, Y_SIZE, NUMBER_OF_FRAMES, "
                 "VOLTAGE, PIXEL_SIZE, DOSE_PER_FRAME, SPHERICAL_ABERRATION, GAIN_FILENAME, "
                 "DARK_FILENAME, OUTPUT_BINNING_FACTOR, PROTEIN_IS_WHITE, EER_SUPER_RES_FACTOR, "
-                "EER_FRAMES_PER_IMAGE) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "EER_FRAMES_PER_IMAGE, OPTICS_GROUP, BEAM_SHIFT_X, BEAM_SHIFT_Y, ACQUISITION_TIME) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)",
                 (
                     name, path, 1, x_size, y_size, n_frames,
                     voltage_kv, pixel_size_a, dose_per_frame, cs_mm, gain_ref, dark_ref,
                     output_binning_factor, int(protein_is_white),
                     asset_eer_super_res_factor, asset_eer_frames_per_image,
+                    meta["beam_shift_x"], meta["beam_shift_y"], meta["acquisition_time"],
                 ),
             )
             movie_id = cur.lastrowid
@@ -2440,16 +2443,17 @@ def _import_images_work(project_id, body, progress=None):
         image_ids = []
         for path, header in headers:
             name = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+            meta = optics_groups.metadata_for_movie(path)
             cur = conn.execute(
                 "INSERT INTO IMAGE_ASSETS("
                 "NAME, FILENAME, POSITION_IN_STACK, PARENT_MOVIE_ID, ALIGNMENT_ID, "
                 "CTF_ESTIMATION_ID, X_SIZE, Y_SIZE, PIXEL_SIZE, VOLTAGE, "
-                "SPHERICAL_ABERRATION, PROTEIN_IS_WHITE) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                "SPHERICAL_ABERRATION, PROTEIN_IS_WHITE, OPTICS_GROUP, BEAM_SHIFT_X, BEAM_SHIFT_Y, ACQUISITION_TIME) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)",
                 (
                     name, path, 1, -1, -1, -1,
                     header["x_size"], header["y_size"], pixel_size_a, voltage_kv,
-                    cs_mm, int(protein_is_white),
+                    cs_mm, int(protein_is_white), meta["beam_shift_x"], meta["beam_shift_y"], meta["acquisition_time"],
                 ),
             )
             image_id = cur.lastrowid
@@ -2534,6 +2538,74 @@ def remove_images_from_group(project_id, group_id):
 @auth.project_access_required
 def add_images_to_group(project_id):
     return _add_to_group(project_id, IMAGE_KIND)
+
+
+# Optics groups (optics_groups.py; web/CLAUDE.md, "Optics groups"): the images' grouping for per-group
+# aberration fits, made from image groups, the filenames, the acquisition times or the beam shifts.
+@app.route("/api/projects/<project_id>/optics-groups", methods=["GET"])
+@auth.project_access_required
+def list_optics_groups(project_id):
+    conn = db.get_conn(project_id)
+    try:
+        return jsonify(optics_groups.current(conn))
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/optics-groups/preview", methods=["POST"])
+@auth.project_access_required
+def preview_optics_groups(project_id):
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        return jsonify(optics_groups.preview(conn, body))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/optics-groups/apply", methods=["POST"])
+@auth.project_access_required
+def apply_optics_groups(project_id):
+    body = request.get_json(force=True, silent=True) or {}
+    conn = db.get_conn(project_id)
+    try:
+        result = optics_groups.apply(conn, body)
+        result["current"] = optics_groups.current(conn)
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/optics-groups/clear", methods=["POST"])
+@auth.project_access_required
+def clear_optics_groups(project_id):
+    conn = db.get_conn(project_id)
+    try:
+        with conn:
+            conn.execute("UPDATE IMAGE_ASSETS SET OPTICS_GROUP=0")
+            conn.execute("UPDATE MOVIE_ASSETS SET OPTICS_GROUP=0")
+            conn.execute("DELETE FROM OPTICS_GROUPS")
+        return jsonify(optics_groups.current(conn))
+    finally:
+        conn.close()
+
+
+@app.route("/api/projects/<project_id>/optics-groups/read-metadata", methods=["POST"])
+@auth.project_access_required
+def read_optics_metadata(project_id):
+    """Reads the EPU XML / mdoc beside every movie and image that has no beam shift or time yet (a project from
+    before the import recorded them, or sidecars that arrived later)."""
+    conn = db.get_conn(project_id)
+    try:
+        result = optics_groups.read_metadata(conn)
+        result["current"] = optics_groups.current(conn)
+        return jsonify(result)
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------

@@ -1267,6 +1267,7 @@ From branch : <span id="versionBranch">—</span></p>
               </div>
               <div class="asset-toolbar">
                 <button class="small primary" id="imageImportOpenBtn">Import</button>
+                <button class="small" id="opticsGroupsOpenBtn" title="Which images share one beam tilt and higher-order aberration fit in Refine CTF: by image group, filename, acquisition time or beam shift.">Optics Groups…</button>
                 <button class="small danger-hover" id="imageRemoveBtn" disabled title="Select one or more images first.">Remove</button>
                 <button class="small danger" id="imageRemoveAllBtn" disabled title="No images in this group yet.">Remove All</button>
                 <button class="small" id="imageRenameBtn" disabled title="Select exactly one image first.">Rename</button>
@@ -1288,6 +1289,8 @@ From branch : <span id="versionBranch">—</span></p>
               <div class="details-item"><span class="details-key">Pixel Size</span><span class="details-val" id="dImagePixelSize">&mdash;</span></div>
               <div class="details-item"><span class="details-key">Voltage</span><span class="details-val" id="dImageVoltage">&mdash;</span></div>
               <div class="details-item"><span class="details-key">Cs</span><span class="details-val" id="dImageCs">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Optics group</span><span class="details-val" id="dImageOpticsGroup">&mdash;</span></div>
+              <div class="details-item"><span class="details-key">Beam shift</span><span class="details-val" id="dImageBeamShift">&mdash;</span></div>
               <div class="details-item details-item-wide"><span class="details-key">Filename</span><span class="details-val" id="dImageFilename">&mdash;</span></div>
             </div>
           </div>
@@ -1842,6 +1845,54 @@ From branch : <span id="versionBranch">—</span></p>
     </div>
     <div class="np-progress" id="importImagesProgress" hidden><div class="progress-track"><div class="progress-fill running" id="importImagesProgressFill"></div></div><div class="progress-eta" id="importImagesProgressText"></div></div>
     <p class="form-note" id="importImagesNote"></p>
+  </div>
+</div>
+
+<div class="scrim" id="opticsGroupsScrim"></div>
+<div class="modal" id="opticsGroupsModal">
+  <div class="modal-head">
+    <div class="modal-title">Optics Groups</div>
+    <button class="log-close" id="opticsGroupsModalClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="page-sub" style="margin:0 0 12px;">Images in one optics group share a beam tilt and higher-order aberration fit in Refine CTF (RELION&rsquo;s optics groups): the image-shift positions of a beam-image-shift collection, different days, different sessions. The grouping is a property of the images; a refinement package copies it when it is cut, so regrouping later never changes an existing package.</p>
+    <p class="form-note" id="opticsGroupsCurrent"></p>
+    <div class="submit-row" style="justify-content:flex-start; gap:8px; margin:0 0 12px;">
+      <button class="small" id="opticsGroupsReadBtn" title="Read the beam shift and acquisition time from the EPU XML or SerialEM mdoc beside every movie or image that has none yet (the import reads them on its own since 2026-11-17).">Read EPU / mdoc metadata</button>
+      <button class="small" id="opticsGroupsClearBtn" title="Every image back to no group; the names are dropped.">Clear groups</button>
+    </div>
+    <div class="field-group-label">Make groups</div>
+    <div class="field"><label>Images <select id="opticsGroupsScope"></select></label></div>
+    <div class="field"><label>From
+      <select id="opticsGroupsMethod">
+        <option value="beam_shift">the beam shift (EPU XML / mdoc), clustered</option>
+        <option value="filename">the filename</option>
+        <option value="time">the acquisition time</option>
+        <option value="image_groups">image groups</option>
+      </select></label></div>
+    <div id="opticsGroupsBeamShift">
+      <div class="field"><label>Number of groups <input type="number" id="opticsGroupsK" min="1" step="1" placeholder="found from the data" style="width:9em" /></label>
+        <span class="form-note">Empty: found from the jump between within-cluster and between-cluster distances.</span></div>
+    </div>
+    <div id="opticsGroupsFilename" hidden>
+      <div class="field"><label>Preset <select id="opticsGroupsPreset"></select></label></div>
+      <div class="field"><label>Pattern <input type="text" id="opticsGroupsPattern" style="width:24em" placeholder="a regular expression with one capture group" /></label>
+        <span class="form-note">The text the capture group matches names the group; images it does not match get no group.</span></div>
+    </div>
+    <div id="opticsGroupsTime" hidden>
+      <div class="field"><label>By <select id="opticsGroupsTimeMode"><option value="day">calendar day (UTC)</option><option value="gap">gap between successive images</option></select></label>
+        <label>Gap <input type="number" id="opticsGroupsGap" min="0.1" step="0.5" value="4" style="width:6em" /> hours</label></div>
+    </div>
+    <div id="opticsGroupsImageGroups" hidden>
+      <div class="field"><span class="form-note">Each ticked image group becomes an optics group (an image in two goes with the first):</span><div id="opticsGroupsImageGroupList"></div></div>
+    </div>
+    <div class="field"><label><input type="checkbox" id="opticsGroupsReplace" checked /> Replace the existing groups (unticked: the new groups are numbered after them)</label></div>
+    <div class="submit-row">
+      <button class="small" id="opticsGroupsPreviewBtn">Preview</button>
+      <button class="primary" id="opticsGroupsApplyBtn" disabled>Apply</button>
+    </div>
+    <p class="form-note validation-note" id="opticsGroupsNote"></p>
+    <div id="opticsGroupsPreview"></div>
   </div>
 </div>
 
@@ -3051,6 +3102,10 @@ From branch : <span id="versionBranch">—</span></p>
    "dMovieExpFrame","dMovieTotalExp","dMovieVoltage","dMovieCs",
    "importPositionsScrim","importPositionsModal","importPositionsModalClose","importPositionsFile","importPositionsPath","importPositionsBrowseBtn","importPositionsBtn","importPositionsNote","ppImportBtn",
    "importImagesScrim","importImagesModal","importImagesModalClose","importImagesFields",
+   "opticsGroupsOpenBtn","opticsGroupsScrim","opticsGroupsModal","opticsGroupsModalClose","opticsGroupsCurrent","opticsGroupsReadBtn","opticsGroupsClearBtn",
+   "opticsGroupsScope","opticsGroupsMethod","opticsGroupsBeamShift","opticsGroupsK","opticsGroupsFilename","opticsGroupsPreset","opticsGroupsPattern",
+   "opticsGroupsTime","opticsGroupsTimeMode","opticsGroupsGap","opticsGroupsImageGroups","opticsGroupsImageGroupList","opticsGroupsReplace",
+   "opticsGroupsPreviewBtn","opticsGroupsApplyBtn","opticsGroupsNote","opticsGroupsPreview","dImageOpticsGroup","dImageBeamShift",
    "importVolumesScrim","importVolumesModal","importVolumesModalClose","importVolumesFields","importVolumesValidationNote","importVolumesBtn","importVolumesNote","volImportOpenBtn",
    "importImagesBtn","importImagesNote","importImagesValidationNote",
    "imageListBody","imageGroupList","imageImportOpenBtn","imageSelectAllCheckbox",
@@ -8198,6 +8253,124 @@ From branch : <span id="versionBranch">—</span></p>
   els.importImagesModalClose.addEventListener("click", closeImportImagesModal);
   els.importImagesScrim.addEventListener("click", closeImportImagesModal);
 
+  // ---------- optics groups (web/CLAUDE.md, "Optics groups") ----------
+  // The images' grouping for per-group aberration fits: the current groups, the four ways to make them
+  // (GET/POST /optics-groups...), a preview as a table (and a beam-shift scatter) before Apply.
+  var opticsGroups = {current: null, preview: null};
+  var OPTICS_COLOURS = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac", "#1f77b4", "#d62728"];
+  function opticsGroupsParams(){
+    var method = els.opticsGroupsMethod.value, p = {method: method, image_group_id: Number(els.opticsGroupsScope.value || 0), replace: els.opticsGroupsReplace.checked};
+    if (method === "beam_shift"){ if (els.opticsGroupsK.value) p.k = Number(els.opticsGroupsK.value); }
+    else if (method === "filename"){ p.pattern = els.opticsGroupsPattern.value.trim(); p.preset = els.opticsGroupsPreset.value; }
+    else if (method === "time"){ p.mode = els.opticsGroupsTimeMode.value; p.gap_hours = Number(els.opticsGroupsGap.value || 4); }
+    else { p.group_ids = Array.from(els.opticsGroupsImageGroupList.querySelectorAll("input:checked")).map(function(i){ return Number(i.value); }); }
+    return p;
+  }
+  function renderOpticsGroupsCurrent(cur){
+    opticsGroups.current = cur;
+    if (!cur){ els.opticsGroupsCurrent.textContent = ""; return; }
+    var parts = [];
+    if (cur.groups.length){
+      parts.push(cur.groups.length + " optics group" + (cur.groups.length === 1 ? "" : "s") + " over " + (cur.image_count - cur.unassigned) + " of " + cur.image_count + " images" +
+        (cur.groups[0].source ? " (from " + ({beam_shift: "the beam shift", filename: "the filename", time: "the acquisition time", image_groups: "image groups"}[cur.groups[0].source] || cur.groups[0].source) + ")" : "") + ": " +
+        cur.groups.map(function(g){ return "#" + g.group + " " + g.name + " (" + g.images + ")"; }).join(", "));
+    } else parts.push("No optics groups yet: every image is fitted together.");
+    parts.push(cur.images_with_beam_shift + " of " + cur.image_count + " images carry a beam shift, " + cur.images_with_time + " an acquisition time.");
+    els.opticsGroupsCurrent.textContent = parts.join(" ");
+    els.opticsGroupsClearBtn.disabled = !cur.groups.length;
+    els.opticsGroupsPreset.innerHTML = "";
+    (cur.filename_presets || []).forEach(function(p){ var o = document.createElement("option"); o.value = p.key; o.textContent = p.label; o.dataset.pattern = p.pattern; els.opticsGroupsPreset.appendChild(o); });
+    var custom = document.createElement("option"); custom.value = ""; custom.textContent = "custom pattern"; els.opticsGroupsPreset.appendChild(custom);
+    if (!els.opticsGroupsPattern.value && els.opticsGroupsPreset.options.length) els.opticsGroupsPattern.value = els.opticsGroupsPreset.options[0].dataset.pattern || "";
+  }
+  function renderOpticsGroupsChoices(){
+    var groups = state.imageGroups || [];
+    els.opticsGroupsScope.innerHTML = "";
+    groups.forEach(function(g){ var o = document.createElement("option"); o.value = g.group_id; o.textContent = g.group_name + " (" + g.image_count + ")"; els.opticsGroupsScope.appendChild(o); });
+    els.opticsGroupsImageGroupList.innerHTML = "";
+    groups.filter(function(g){ return g.group_id !== 0; }).forEach(function(g){
+      var l = document.createElement("label"); l.style.display = "block";
+      var i = document.createElement("input"); i.type = "checkbox"; i.value = g.group_id; l.appendChild(i); l.appendChild(document.createTextNode(" " + g.group_name + " (" + g.image_count + ")"));
+      els.opticsGroupsImageGroupList.appendChild(l);
+    });
+    if (!groups.filter(function(g){ return g.group_id !== 0; }).length) els.opticsGroupsImageGroupList.textContent = "No image groups besides All Images.";
+  }
+  function showOpticsGroupsMethod(){
+    var m = els.opticsGroupsMethod.value;
+    els.opticsGroupsBeamShift.hidden = m !== "beam_shift"; els.opticsGroupsFilename.hidden = m !== "filename";
+    els.opticsGroupsTime.hidden = m !== "time"; els.opticsGroupsImageGroups.hidden = m !== "image_groups";
+    els.opticsGroupsGap.disabled = els.opticsGroupsTimeMode.value !== "gap";
+    els.opticsGroupsApplyBtn.disabled = true; els.opticsGroupsPreview.innerHTML = ""; els.opticsGroupsNote.textContent = "";
+  }
+  function renderOpticsGroupsPreview(p){
+    opticsGroups.preview = p;
+    var box = els.opticsGroupsPreview; box.innerHTML = "";
+    var head = document.createElement("p"); head.className = "form-note";
+    head.textContent = p.groups.length + " group" + (p.groups.length === 1 ? "" : "s") + " over " + (p.image_count - p.unassigned) + " of " + p.image_count + " images" + (p.unassigned ? "; " + p.unassigned + " without a group" : "") + ".";
+    box.appendChild(head);
+    var table = document.createElement("table"); table.className = "queue"; table.style.maxWidth = "32em";
+    table.innerHTML = "<thead><tr><th class='num'>Group</th><th>Name</th><th class='num'>Images</th></tr></thead>";
+    var tb = document.createElement("tbody");
+    p.groups.forEach(function(g){ var tr = document.createElement("tr"); tr.innerHTML = "<td class='num'><span style='display:inline-block;width:.8em;height:.8em;border-radius:50%;background:" + OPTICS_COLOURS[(g.group - 1) % OPTICS_COLOURS.length] + ";margin-right:.4em'></span>" + g.group + "</td><td></td><td class='num'>" + g.images + "</td>"; tr.children[1].textContent = g.name; tb.appendChild(tr); });
+    table.appendChild(tb); box.appendChild(table);
+    if (p.points && p.points.length){
+      var xs = p.points.map(function(q){ return q[0]; }), ys = p.points.map(function(q){ return q[1]; });
+      var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+      var pad = 0.08, W = 320, H = 320, sx = (x1 - x0) || 1, sy = (y1 - y0) || 1;
+      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.style.display = "block"; svg.style.marginTop = "8px";
+      svg.innerHTML = "<rect x='0' y='0' width='" + W + "' height='" + H + "' fill='none' stroke='currentColor' opacity='.3'/>";
+      p.points.forEach(function(q){
+        var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", (pad + (1 - 2 * pad) * (q[0] - x0) / sx) * W); c.setAttribute("cy", (1 - pad - (1 - 2 * pad) * (q[1] - y0) / sy) * H); c.setAttribute("r", 3);
+        c.setAttribute("fill", q[2] ? OPTICS_COLOURS[(q[2] - 1) % OPTICS_COLOURS.length] : "currentColor"); c.setAttribute("opacity", q[2] ? "0.85" : "0.3");
+        svg.appendChild(c);
+      });
+      var cap = document.createElement("p"); cap.className = "form-note"; cap.textContent = "Beam shift of every image, coloured by group (x " + x0.toPrecision(3) + " to " + x1.toPrecision(3) + ", y " + y0.toPrecision(3) + " to " + y1.toPrecision(3) + ").";
+      box.appendChild(svg); box.appendChild(cap);
+    }
+    els.opticsGroupsApplyBtn.disabled = !p.groups.length;
+  }
+  function opticsGroupsPost(path, body, busy){
+    els.opticsGroupsNote.textContent = busy || "";
+    return apiFetch(projectApiUrl("/optics-groups" + path), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})})
+      .then(function(r){ return r.json().then(function(d){ if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); return d; }); });
+  }
+  function openOpticsGroupsModal(){
+    els.opticsGroupsModal.classList.add("open"); els.opticsGroupsScrim.classList.add("open");
+    els.opticsGroupsNote.textContent = ""; els.opticsGroupsPreview.innerHTML = ""; els.opticsGroupsApplyBtn.disabled = true;
+    renderOpticsGroupsChoices(); showOpticsGroupsMethod();
+    apiFetch(projectApiUrl("/optics-groups")).then(function(r){ return r.json(); }).then(renderOpticsGroupsCurrent)
+      .catch(function(err){ els.opticsGroupsNote.textContent = "Could not load the optics groups: " + err.message; });
+  }
+  function closeOpticsGroupsModal(){ els.opticsGroupsModal.classList.remove("open"); els.opticsGroupsScrim.classList.remove("open"); }
+  els.opticsGroupsOpenBtn.addEventListener("click", openOpticsGroupsModal);
+  els.opticsGroupsModalClose.addEventListener("click", closeOpticsGroupsModal);
+  els.opticsGroupsScrim.addEventListener("click", closeOpticsGroupsModal);
+  els.opticsGroupsMethod.addEventListener("change", showOpticsGroupsMethod);
+  els.opticsGroupsTimeMode.addEventListener("change", showOpticsGroupsMethod);
+  els.opticsGroupsPreset.addEventListener("change", function(){ var o = els.opticsGroupsPreset.selectedOptions[0]; if (o && o.dataset.pattern) els.opticsGroupsPattern.value = o.dataset.pattern; });
+  els.opticsGroupsPattern.addEventListener("input", function(){ els.opticsGroupsPreset.value = ""; });
+  els.opticsGroupsPreviewBtn.addEventListener("click", function(){
+    opticsGroupsPost("/preview", opticsGroupsParams(), "Grouping\u2026").then(function(p){ els.opticsGroupsNote.textContent = ""; renderOpticsGroupsPreview(p); })
+      .catch(function(err){ els.opticsGroupsApplyBtn.disabled = true; els.opticsGroupsPreview.innerHTML = ""; els.opticsGroupsNote.textContent = err.message; });
+  });
+  els.opticsGroupsApplyBtn.addEventListener("click", function(){
+    opticsGroupsPost("/apply", opticsGroupsParams(), "Applying\u2026").then(function(r){
+      els.opticsGroupsNote.textContent = "Applied: " + r.groups.length + " group" + (r.groups.length === 1 ? "" : "s") + ". A package cut from now on carries them; existing packages keep the grouping they were cut with.";
+      renderOpticsGroupsCurrent(r.current); els.opticsGroupsApplyBtn.disabled = true; loadImages();
+    }).catch(function(err){ els.opticsGroupsNote.textContent = err.message; });
+  });
+  els.opticsGroupsReadBtn.addEventListener("click", function(){
+    opticsGroupsPost("/read-metadata", {}, "Reading the sidecars\u2026").then(function(r){
+      els.opticsGroupsNote.textContent = "Read " + r.movies_read + " movie" + (r.movies_read === 1 ? "" : "s") + " and " + r.images_read + " image" + (r.images_read === 1 ? "" : "s") + ".";
+      renderOpticsGroupsCurrent(r.current); loadImages();
+    }).catch(function(err){ els.opticsGroupsNote.textContent = err.message; });
+  });
+  els.opticsGroupsClearBtn.addEventListener("click", function(){
+    opticsGroupsPost("/clear", {}, "Clearing\u2026").then(function(cur){ els.opticsGroupsNote.textContent = "Cleared."; renderOpticsGroupsCurrent(cur); els.opticsGroupsApplyBtn.disabled = true; els.opticsGroupsPreview.innerHTML = ""; loadImages(); })
+      .catch(function(err){ els.opticsGroupsNote.textContent = err.message; });
+  });
+
   // ---------- Import Images validation ----------
   // Mirrors CheckImportButtonStatus() in MyImageImportDialog.cpp: Import stays
   // disabled until files are chosen and voltage / Cs / pixel size are all
@@ -8533,6 +8706,8 @@ From branch : <span id="versionBranch">—</span></p>
     els.dImagePixelSize.textContent = m ? fmtNum(m.PIXEL_SIZE) : "—";
     els.dImageVoltage.textContent = m ? fmtNum(m.VOLTAGE) : "—";
     els.dImageCs.textContent = m ? fmtNum(m.SPHERICAL_ABERRATION) : "—";
+    els.dImageOpticsGroup.textContent = m ? (m.OPTICS_GROUP ? String(m.OPTICS_GROUP) : "none") : "—";
+    els.dImageBeamShift.textContent = m ? (m.BEAM_SHIFT_X != null ? Number(m.BEAM_SHIFT_X).toFixed(4) + ", " + Number(m.BEAM_SHIFT_Y).toFixed(4) : "—") : "—";
   }
 
   // ---------- image preview (the Display button) ----------

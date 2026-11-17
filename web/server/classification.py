@@ -906,7 +906,7 @@ def validate(conn, params):
     if len(particles) == 0:
         raise ValueError("refinement package {!r} contains no particles".format(pkg["NAME"]))
     if not pkg["STACK_FILENAME"] or not os.path.isfile(pkg["STACK_FILENAME"]):
-        raise ValueError("the particle stack {} is missing".format(pkg["STACK_FILENAME"]))
+        raise ValueError("the particle stack {} is missing; if it was deleted to save space, regenerate it on the Assets tab under Refinement Packages".format(pkg["STACK_FILENAME"]))
     start = None
     start_id = params.get("starting_classification_id")
     if start_id not in (None, "", 0, "0", "new"):

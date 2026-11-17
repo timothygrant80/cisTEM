@@ -616,7 +616,7 @@ def import_package(conn, project_id, params, log=None):
     refinement_id = refinements.next_refinement_id(conn)
     name = (params.get("name") or "").strip() or "Refinement Package #{} ({})".format(package_id, label)
     rp.insert_package(conn, package_id, name, stack_path, box, pixel_size, symmetry, molecular_weight, largest_dimension, 1, contained,
-                      refinement_id, white_protein=white)
+                      refinement_id, white_protein=white, stack_source="import")
     rp.insert_initial_refinement(conn, refinement_id, package_id, "Imported Parameters", [rows], box, pixel_size, molecular_weight, angular=True)
     if fmt == "relion":
         sets = read_relion_optics(metadata_path)   # a RELION 3.1 optics table's Zernike sets (or beam tilts), per group

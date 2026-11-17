@@ -402,6 +402,7 @@ _ALTER_STATEMENTS = [
     # point at; the same addition PARTICLE_PICKING_LIST.PICKING_JOB_ID is.
     "ALTER TABLE CLASSIFICATION_LIST ADD COLUMN JOB_ID TEXT",
     "ALTER TABLE STARTUP_LIST ADD COLUMN JOB_ID TEXT",
+    "ALTER TABLE REFINEMENT_PACKAGE_ASSETS ADD COLUMN STACK_SOURCE TEXT",
     "ALTER TABLE REFINEMENT_LIST ADD COLUMN JOB_ID TEXT",
     # Optics groups (web/CLAUDE.md, "Optics groups", 2026-11-17): a movie's or image's group, 0 or NULL for
     # none; the beam shift read from the EPU XML or SerialEM mdoc beside the movie at import, when there is one;

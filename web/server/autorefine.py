@@ -230,7 +230,7 @@ def validate(conn, params):
     if pkg is None:
         raise ValueError("refinement package {} does not exist".format(package_id))
     if not pkg["STACK_FILENAME"] or not os.path.isfile(pkg["STACK_FILENAME"]):
-        raise ValueError("the particle stack {} is missing".format(pkg["STACK_FILENAME"]))
+        raise ValueError("the particle stack {} is missing; if it was deleted to save space, regenerate it on the Assets tab under Refinement Packages".format(pkg["STACK_FILENAME"]))
     first = conn.execute("SELECT REFINEMENT_ID FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_{} ORDER BY REFINEMENT_NUMBER LIMIT 1".format(int(package_id))).fetchone()
     ref = refinements.refinement_row(conn, first[0]) if first else None
     if ref is None:

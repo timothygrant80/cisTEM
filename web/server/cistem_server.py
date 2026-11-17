@@ -3124,6 +3124,88 @@ def get_refinement_package(project_id, package_id):
     return jsonify(d)
 
 
+def _package_in_use(conn, package_id):
+    """The queued or running jobs whose parameters name the package (its stack is being read), by number."""
+    out = []
+    for r in conn.execute("SELECT JOB_NUMBER, PARAMS_JSON FROM JOBS WHERE STATUS IN ('queued', 'running')").fetchall():
+        try:
+            params = json.loads(r["PARAMS_JSON"]) if r["PARAMS_JSON"] else {}
+        except ValueError:
+            params = {}
+        if any(str(params.get(k)) == str(package_id) for k in ("refinement_package_id", "source_package_id")):
+            out.append(r["JOB_NUMBER"])
+    return out
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/stack", methods=["GET"])
+@auth.project_access_required
+def refinement_package_stack(project_id, package_id):
+    """The package's stack as a file that can be dropped and cut again (refinement_packages.stack_status):
+    {on_disk, size, shared_with, source, regenerable, reason, in_use: [job numbers]}."""
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            st = refinement_packages.stack_status(conn, package_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 404
+        st["in_use"] = _package_in_use(conn, package_id)
+    finally:
+        conn.close()
+    return jsonify(st)
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/stack", methods=["DELETE"])
+@auth.project_access_required
+def delete_refinement_package_stack(project_id, package_id):
+    """Remove the stack file from disk to save space, keeping the package, its particles and every
+    refinement; only a stack that can be cut again (GET .../stack says so), and not while a job reads it
+    (409). Returns {freed: bytes}."""
+    conn = db.get_conn(project_id)
+    try:
+        busy = _package_in_use(conn, package_id)
+        if busy:
+            return jsonify({"error": "job{} {} {} using this package; wait for {} to finish".format(
+                "s" if len(busy) > 1 else "", ", ".join(str(n) for n in busy), "are" if len(busy) > 1 else "is", "them" if len(busy) > 1 else "it")}), 409
+        try:
+            freed = refinement_packages.delete_stack(conn, package_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 409
+        except OSError as exc:
+            return jsonify({"error": "could not remove the stack: {}".format(exc)}), 500
+    finally:
+        conn.close()
+    return jsonify({"freed": freed})
+
+
+@app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/stack/regenerate", methods=["POST"])
+@auth.project_access_required
+def regenerate_refinement_package_stack(project_id, package_id):
+    """Cut the deleted stack again from the images, as a background task (202 with `task_id` to poll at
+    GET /tasks/:id, like creating a package); 409 when it is on disk or cannot be regenerated."""
+    conn = db.get_conn(project_id)
+    try:
+        try:
+            st = refinement_packages.stack_status(conn, package_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 404
+        if st["on_disk"]:
+            return jsonify({"error": "the stack is already on disk"}), 409
+        if not st["regenerable"]:
+            return jsonify({"error": "the stack cannot be regenerated: " + (st["reason"] or "unknown")}), 409
+        name = conn.execute("SELECT NAME FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (package_id,)).fetchone()[0]
+    finally:
+        conn.close()
+
+    def work(progress):
+        c = db.get_conn(project_id)
+        try:
+            return refinement_packages.regenerate_stack(c, project_id, package_id, progress=progress)
+        finally:
+            c.close()
+    task_id = _start_task(project_id, "stack", name or "", work, "could not regenerate the stack")
+    return jsonify({"task_id": task_id}), 202
+
+
 @app.route("/api/projects/<project_id>/refinement-packages/<int:package_id>/particles", methods=["GET"])
 @auth.project_access_required
 def refinement_package_particles(project_id, package_id):

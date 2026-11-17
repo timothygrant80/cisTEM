@@ -444,6 +444,52 @@ def selection_defaults(conn, selection_ids):
             "parent_package_ids": pkg_ids}
 
 
+def _cut_from_images(particles, box_size, writer, total, log, progress, on_batch, n=0):
+    """The cut itself, shared by create_package() and regenerate_stack(): `particles` are rows sorted by
+    image (PARENT_IMAGE_ASSET_ID, FILENAME, X_POSITION, Y_POSITION in A, PIXEL_SIZE, PROTEIN_IS_WHITE).
+    Image by image, each image read once on a worker thread ahead of its turn so the file reads overlap
+    the cutting, its particles cut and normalised in batches, inverted for a white-protein image, and
+    appended to `writer`; `on_batch(chunk, image, first_position)` after each batch. Returns the count
+    cut; the same inputs give the same stack, byte for byte, which is what regeneration relies on."""
+    by_image = []
+    for p in particles:
+        if not by_image or by_image[-1][0] != p["PARENT_IMAGE_ASSET_ID"]:
+            by_image.append((p["PARENT_IMAGE_ASSET_ID"], p["FILENAME"], []))
+        by_image[-1][2].append(p)
+    pool = ThreadPoolExecutor(max_workers=_READ_AHEAD, thread_name_prefix="package-read") if _READ_AHEAD > 0 else None
+    pending = {}
+    try:
+        for i, (image_id, filename, group) in enumerate(by_image):
+            if pool is not None:
+                for j in range(i, min(i + _READ_AHEAD + 1, len(by_image))):
+                    if j not in pending:
+                        pending[j] = pool.submit(_load_image_for_cutting, by_image[j][1])
+                image, edge = pending.pop(i).result()
+            else:
+                image, edge = _load_image_for_cutting(filename)
+            if log:
+                log("cutting particles from image {}".format(image_id))
+            for start in range(0, len(group), _CUT_BATCH):
+                chunk = group[start:start + _CUT_BATCH]
+                boxes = np.empty((len(chunk), box_size, box_size), dtype=np.float32)
+                for k, p in enumerate(chunk):
+                    ps = float(p["PIXEL_SIZE"] or 1.0)
+                    _cut_box(image, edge, int(round(p["X_POSITION"] / ps)), int(round(p["Y_POSITION"] / ps)), box_size, boxes[k])
+                _normalize_batch(boxes)
+                if chunk[0]["PROTEIN_IS_WHITE"]:
+                    np.negative(boxes, out=boxes)
+                first = writer.count + 1
+                writer.append_many(boxes)
+                on_batch(chunk, image, first)
+                n += len(chunk)
+                if progress:
+                    progress(n, total, "Cutting particles from image {}".format(image_id))
+    finally:
+        if pool is not None:
+            pool.shutdown(wait=False, cancel_futures=True)
+    return n
+
+
 def create_package(conn, project_id, params, log=None, progress=None):
     """MyNewRefinementPackageWizard::OnFinished() for a new package from a
     particle position group (`particle_group_id`) or from 2D class-average
@@ -507,41 +553,9 @@ def create_package(conn, project_id, params, log=None, progress=None):
     writer = MrcStackWriter(stack_path, box_size, output_pixel_size)
     contained = []
     total = len(particles) + len(copies)
-    by_image = []
-    for p in particles:
-        if not by_image or by_image[-1][0] != p["PARENT_IMAGE_ASSET_ID"]:
-            by_image.append((p["PARENT_IMAGE_ASSET_ID"], p["FILENAME"], []))
-        by_image[-1][2].append(p)
-    pool = ThreadPoolExecutor(max_workers=_READ_AHEAD, thread_name_prefix="package-read") if _READ_AHEAD > 0 else None
-    pending = {}
-    n = 0
     try:
-        for i, (image_id, filename, group) in enumerate(by_image):
-            if pool is not None:
-                for j in range(i, min(i + _READ_AHEAD + 1, len(by_image))):
-                    if j not in pending:
-                        pending[j] = pool.submit(_load_image_for_cutting, by_image[j][1])
-                image, edge = pending.pop(i).result()
-            else:
-                image, edge = _load_image_for_cutting(filename)
-            if log:
-                log("cutting particles from image {}".format(image_id))
-            for start in range(0, len(group), _CUT_BATCH):
-                chunk = group[start:start + _CUT_BATCH]
-                boxes = np.empty((len(chunk), box_size, box_size), dtype=np.float32)
-                for k, p in enumerate(chunk):
-                    ps = float(p["PIXEL_SIZE"] or 1.0)
-                    _cut_box(image, edge, int(round(p["X_POSITION"] / ps)), int(round(p["Y_POSITION"] / ps)), box_size, boxes[k])
-                _normalize_batch(boxes)
-                if chunk[0]["PROTEIN_IS_WHITE"]:
-                    np.negative(boxes, out=boxes)
-                first = writer.count + 1
-                writer.append_many(boxes)
-                for k, p in enumerate(chunk):
-                    _record_particle(contained, p, image, first + k)
-                n += len(chunk)
-                if progress:
-                    progress(n, total, "Cutting particles from image {}".format(image_id))
+        n = _cut_from_images(particles, box_size, writer, total, log, progress,
+                             lambda chunk, image, first: [_record_particle(contained, p, image, first + k) for k, p in enumerate(chunk)])
         # ---- the copies: particles with no image, taken from their package's stack ----
         # Cropped or padded (with the particle's own edge average) to the new box, moved by the
         # classification's shift in whole pixels when re-centring, inverted if their stack holds white
@@ -585,8 +599,6 @@ def create_package(conn, project_id, params, log=None, progress=None):
                 if progress:
                     progress(n, total, "Copying particles from the stack of package {}".format(pid))
     finally:
-        if pool is not None:
-            pool.shutdown(wait=False, cancel_futures=True)
         writer.close()
     # Half-sets: the wizard's rule over the cut particles (by parent image); a copy keeps its source's.
     cut = [c for c in contained if c["image_id"] >= 0]
@@ -597,7 +609,7 @@ def create_package(conn, project_id, params, log=None, progress=None):
 
     # ---- the database: Database::AddRefinementPackageAsset() + AddRefinement() ----
     insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
-                   number_of_classes, contained, refinement_id)
+                   number_of_classes, contained, refinement_id, stack_source="mixed" if copies else "picks")
     rng = random.Random()
     assigned = hard_class_assignment([c["position_in_stack"] for c in contained], number_of_classes, rng)
     class_rows = []
@@ -825,7 +837,7 @@ def create_package_from_package(conn, project_id, params, log=None, progress=Non
         class_rows.append(" UNION ALL ".join(parts))
 
     insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
-                   number_of_classes, contained, refinement_id, white_protein=bool(pkg["STACK_HAS_WHITE_PROTEIN"]))
+                   number_of_classes, contained, refinement_id, white_protein=bool(pkg["STACK_HAS_WHITE_PROTEIN"]), stack_source="package")
     insert_initial_refinement(conn, refinement_id, package_id, "Parameters from {}".format(ref["NAME"]), class_rows, box_size, output_pixel_size, molecular_weight, angular=False,
                               number_of_particles=len(kept_positions))
     refinements.copy_aberrations(conn, ref["REFINEMENT_ID"], refinement_id)   # the higher-order aberrations come along with the parameters
@@ -907,8 +919,15 @@ def hard_class_assignment(positions, number_of_classes, rng):
     return {p: assigned[p] for p in positions}
 
 
+# STACK_SOURCE: how the package's stack came to be, which says whether it can be cut again from the
+# images (stack_status): "picks" (cut from picks, create_package), "mixed" (picks plus particles copied
+# from other stacks), "package" (made over another package's particles, create_package_from_package),
+# "import" (an imported stack). NULL on packages from before the column: inferred in stack_status().
+STACK_SOURCES = ("picks", "mixed", "package", "import")
+
+
 def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension,
-                   number_of_classes, contained, refinement_id, white_protein=False):
+                   number_of_classes, contained, refinement_id, white_protein=False, stack_source=None):
     _refinements().release_id("package", package_id)
     """Database::AddRefinementPackageAsset(): the REFINEMENT_PACKAGE_ASSETS row
     and the package's four tables. `contained` are dicts with position_id,
@@ -920,10 +939,10 @@ def insert_package(conn, package_id, name, stack_path, box_size, output_pixel_si
     with conn:
         conn.execute(
             "INSERT INTO REFINEMENT_PACKAGE_ASSETS(REFINEMENT_PACKAGE_ASSET_ID, NAME, STACK_FILENAME, STACK_BOX_SIZE, OUTPUT_PIXEL_SIZE, "
-            "SYMMETRY, MOLECULAR_WEIGHT, PARTICLE_SIZE, NUMBER_OF_CLASSES, NUMBER_OF_REFINEMENTS, LAST_REFINEMENT_ID, STACK_HAS_WHITE_PROTEIN) "
-            "VALUES (?,?,?,?,?,?,?,?,?,0,?,?)",
+            "SYMMETRY, MOLECULAR_WEIGHT, PARTICLE_SIZE, NUMBER_OF_CLASSES, NUMBER_OF_REFINEMENTS, LAST_REFINEMENT_ID, STACK_HAS_WHITE_PROTEIN, STACK_SOURCE) "
+            "VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?)",
             (package_id, name, stack_path, box_size, output_pixel_size, symmetry, molecular_weight, largest_dimension, number_of_classes, refinement_id,
-             1 if white_protein else 0))
+             1 if white_protein else 0, stack_source))
         conn.execute("CREATE TABLE IF NOT EXISTS REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}(ORIGINAL_PARTICLE_POSITION_ASSET_ID INTEGER PRIMARY KEY, "
                      "PARENT_IMAGE_ASSET_ID INTEGER, POSITION_IN_STACK INTEGER, X_POSITION REAL, Y_POSITION REAL, PIXEL_SIZE REAL, DEFOCUS_1 REAL, "
                      "DEFOCUS_2 REAL, DEFOCUS_ANGLE REAL, PHASE_SHIFT REAL, SPHERICAL_ABERRATION REAL, MICROSCOPE_VOLTAGE REAL, AMPLITUDE_CONTRAST REAL, "
@@ -998,8 +1017,135 @@ def list_packages(conn):
         d["particle_count"] = conn.execute("SELECT COUNT(*) FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(pid)).fetchone()[0] \
             if _table_exists(conn, "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(pid)) else 0
         d["stack_file_exists"] = bool(r["STACK_FILENAME"]) and os.path.isfile(r["STACK_FILENAME"])
+        d["stack_size"] = os.path.getsize(r["STACK_FILENAME"]) if d["stack_file_exists"] else None
+        d["stack_source"] = r["STACK_SOURCE"] if "STACK_SOURCE" in r.keys() else None
+        d["stack_shared_with"] = [x[0] for x in conn.execute("SELECT REFINEMENT_PACKAGE_ASSET_ID FROM REFINEMENT_PACKAGE_ASSETS WHERE STACK_FILENAME=? "
+                                                             "AND REFINEMENT_PACKAGE_ASSET_ID<>?", (r["STACK_FILENAME"], pid)).fetchall()] if r["STACK_FILENAME"] else []
         out.append(d)
     return out
+
+
+# ---------------------------------------------------------------------------
+# The stack as a thing to drop and cut again (the project cleanup's first piece): a stack cut from
+# picks is a function of the package's contained-particles table and the images, so it can go from
+# disk and come back byte for byte.
+# ---------------------------------------------------------------------------
+
+def _contained_for_cutting(conn, package_id):
+    """The package's contained particles in stack order with what the cut needs from their images."""
+    table = "REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{}".format(int(package_id))
+    if not _table_exists(conn, table):
+        return []
+    return conn.execute(
+        "SELECT c.ORIGINAL_PARTICLE_POSITION_ASSET_ID, c.PARENT_IMAGE_ASSET_ID, c.POSITION_IN_STACK, c.X_POSITION, c.Y_POSITION, c.PIXEL_SIZE, "
+        "ia.FILENAME, ia.PROTEIN_IS_WHITE, pp.X_POSITION AS PICK_X, pp.Y_POSITION AS PICK_Y, pp.PARENT_IMAGE_ASSET_ID AS PICK_IMAGE "
+        "FROM {} c LEFT JOIN IMAGE_ASSETS ia ON ia.IMAGE_ASSET_ID = c.PARENT_IMAGE_ASSET_ID "
+        "LEFT JOIN PARTICLE_POSITION_ASSETS pp ON pp.PARTICLE_POSITION_ASSET_ID = c.ORIGINAL_PARTICLE_POSITION_ASSET_ID "
+        "ORDER BY c.POSITION_IN_STACK".format(table)).fetchall()
+
+
+def stack_status(conn, package_id):
+    """Whether the package's stack can be cut again from the images, and why not when it cannot:
+    {on_disk, size, shared_with, source, regenerable, reason}. Regenerable means the stack came from
+    picks (STACK_SOURCE "picks"; a package from before the column counts when its first refinement is
+    the "Random Parameters" one a cut from picks starts with, not the carried-over parameters of a
+    package made over another), every particle still has its pick at the position it was cut at
+    (an edited or deleted pick would change the stack) on an image whose file is on disk, no
+    other package shares the file, and the particle order is the complete 1..N."""
+    pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (int(package_id),)).fetchone()
+    if pkg is None:
+        raise ValueError("no such refinement package")
+    path = pkg["STACK_FILENAME"] or ""
+    on_disk = bool(path) and os.path.isfile(path)
+    shared = [x[0] for x in conn.execute("SELECT REFINEMENT_PACKAGE_ASSET_ID FROM REFINEMENT_PACKAGE_ASSETS WHERE STACK_FILENAME=? AND REFINEMENT_PACKAGE_ASSET_ID<>?",
+                                         (path, int(package_id))).fetchall()] if path else []
+    out = {"on_disk": on_disk, "size": os.path.getsize(path) if on_disk else None, "shared_with": shared,
+           "source": pkg["STACK_SOURCE"] if "STACK_SOURCE" in pkg.keys() else None, "regenerable": False, "reason": None}
+    source = out["source"]
+    if source is None:
+        first = conn.execute("SELECT NAME FROM REFINEMENT_LIST WHERE REFINEMENT_PACKAGE_ASSET_ID=? ORDER BY REFINEMENT_ID LIMIT 1", (int(package_id),)).fetchone()
+        source = "picks" if first is not None and first["NAME"] == "Random Parameters" else "unknown"
+    if source != "picks":
+        out["reason"] = {"mixed": "some of its particles were copied from other packages' stacks, not cut from images",
+                         "package": "it was made over another package's particles, whose boxes came from that package's stack",
+                         "import": "its stack was imported, so the images are not in this project"}.get(source, "how its stack was made is not recorded")
+        return out
+    if shared:
+        out["reason"] = "package{} {} share{} the same stack file".format("s" if len(shared) > 1 else "", ", ".join(str(x) for x in shared), "" if len(shared) > 1 else "s")
+        return out
+    if not path:
+        out["reason"] = "the package has no stack filename"
+        return out
+    rows = _contained_for_cutting(conn, package_id)
+    if not rows:
+        out["reason"] = "the package has no contained particles"
+        return out
+    if [r["POSITION_IN_STACK"] for r in rows] != list(range(1, len(rows) + 1)):
+        out["reason"] = "its particles are not numbered 1 to N"
+        return out
+    no_pick = sum(1 for r in rows if r["PICK_IMAGE"] is None or r["PICK_IMAGE"] != r["PARENT_IMAGE_ASSET_ID"])
+    moved = sum(1 for r in rows if r["PICK_IMAGE"] is not None and r["PICK_IMAGE"] == r["PARENT_IMAGE_ASSET_ID"]
+                and (abs(float(r["PICK_X"]) - float(r["X_POSITION"])) > 1e-3 or abs(float(r["PICK_Y"]) - float(r["Y_POSITION"])) > 1e-3))
+    if no_pick or moved:
+        out["reason"] = "{} of its {} particles no longer have their pick{}".format(no_pick + moved, len(rows), " (deleted or moved since the stack was cut)")
+        return out
+    missing = sorted({r["PARENT_IMAGE_ASSET_ID"] for r in rows if not r["FILENAME"] or not os.path.isfile(r["FILENAME"])})
+    if missing:
+        out["reason"] = "the image file{} of image{} {} {} missing".format("s" if len(missing) > 1 else "", "s" if len(missing) > 1 else "",
+                                                                          ", ".join(str(i) for i in missing[:5]) + ("\u2026" if len(missing) > 5 else ""), "are" if len(missing) > 1 else "is")
+        return out
+    out["regenerable"] = True
+    return out
+
+
+def delete_stack(conn, package_id):
+    """Remove the package's stack file from disk, keeping the package, its particles and every
+    refinement; only when stack_status() says it can be cut again. Returns the bytes freed."""
+    st = stack_status(conn, package_id)
+    if not st["regenerable"]:
+        raise ValueError("the stack cannot be deleted because it could not be regenerated: " + (st["reason"] or "unknown"))
+    if not st["on_disk"]:
+        raise ValueError("the stack is not on disk")
+    path = conn.execute("SELECT STACK_FILENAME FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (int(package_id),)).fetchone()[0]
+    size = os.path.getsize(path)
+    os.remove(path)
+    return size
+
+
+def regenerate_stack(conn, project_id, package_id, log=None, progress=None):
+    """Cut the package's stack again from its contained particles and their images, into the package's
+    STACK_FILENAME (written beside it and moved into place when complete, so a failed cut leaves no
+    half stack). The same code and inputs as the original cut, so the file comes back byte for byte,
+    and every refinement's rows (keyed by position in stack) still fit. Returns {particles, stack_filename, size}."""
+    st = stack_status(conn, package_id)
+    if not st["regenerable"]:
+        raise ValueError("the stack cannot be regenerated: " + (st["reason"] or "unknown"))
+    if st["on_disk"]:
+        raise ValueError("the stack is already on disk")
+    pkg = conn.execute("SELECT * FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=?", (int(package_id),)).fetchone()
+    rows = _contained_for_cutting(conn, package_id)
+    path = pkg["STACK_FILENAME"]
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = path + ".regenerating"
+    box_size = int(pkg["STACK_BOX_SIZE"])
+    writer = MrcStackWriter(tmp, box_size, float(pkg["OUTPUT_PIXEL_SIZE"] or 1.0))
+    try:
+        n = _cut_from_images(rows, box_size, writer, len(rows), log, progress, lambda chunk, image, first: None)
+    except BaseException:
+        writer.close()
+        if os.path.isfile(tmp):
+            os.remove(tmp)
+        raise
+    writer.close()
+    try:
+        os.replace(tmp, path)
+    except OSError:
+        if os.path.isfile(tmp):
+            os.remove(tmp)
+        raise
+    if progress:
+        progress(n, n, "Done")
+    return {"particles": n, "stack_filename": path, "size": os.path.getsize(path)}
 
 
 def package_particles(conn, package_id, limit=5000, offset=0):

@@ -1378,6 +1378,8 @@ From branch : <span id="versionBranch">—</span></p>
                 </div>
                 <div class="btn-group">
                   <button class="small secondary" id="rpkgDisplayBtn" disabled title="Open the package’s particle stack in the Display window.">Display</button>
+                  <button class="small" id="rpkgDeleteStackBtn" disabled title="Remove the particle stack file from disk to save space. The package, its particles and its refinements stay; the stack can be cut again from the images with Regenerate Stack.">Delete Stack</button>
+                  <button class="small" id="rpkgRegenerateBtn" disabled title="Cut the deleted particle stack again from the images, byte for byte as it was.">Regenerate Stack</button>
                   <button class="small danger push-right" id="rpkgDeleteBtn" disabled>Delete</button>
                 </div>
               </div>
@@ -1389,6 +1391,7 @@ From branch : <span id="versionBranch">—</span></p>
               <div id="rpkgDetails" hidden>
                 <div class="details-grid rpkg-grid">
                   <div class="details-item details-item-wide"><span class="details-key">Stack Filename</span><span class="details-val" id="dRpkgStack">&mdash;</span></div>
+                  <div class="details-item details-item-wide"><span class="details-key">Stack on Disk</span><span class="details-val" id="dRpkgStackState">&mdash;</span></div>
                   <div class="details-item"><span class="details-key">Stack Box Size</span><span class="details-val" id="dRpkgBox">&mdash;</span></div>
                   <div class="details-item"><span class="details-key">Output Pixel Size</span><span class="details-val" id="dRpkgPixel">&mdash;</span></div>
                   <div class="details-item"><span class="details-key">Symmetry</span><span class="details-val" id="dRpkgSymmetry">&mdash;</span></div>
@@ -3089,7 +3092,7 @@ From branch : <span id="versionBranch">—</span></p>
    "filterScrim","filterModal","filterModalClose","filterTitle","filterRows","filterSortOptions","filterSortDir","filterClearBtn","filterApplyBtn",
    "exportPackageScrim","exportPackageModal","exportPackageModalClose","epRefinement","epClass","epFormat","epStackPath","epStackBrowseBtn","epMetaPath","epMetaBrowseBtn","epExportBtn","epNote",
    "importPackageScrim","importPackageModal","importPackageModalClose","ipFormat","ipStackPath","ipStackBrowseBtn","ipMetaPath","ipMetaBrowseBtn","ipName",
-   "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipHelix","ipRise","ipTwist","ipStarts","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgBox","dRpkgPixel",
+   "ipPixelField","ipPixel","ipVoltageField","ipVoltage","ipCs","ipAcField","ipAc","ipWhite","ipMw","ipSize","ipSymmetry","ipHelix","ipRise","ipTwist","ipStarts","ipImportBtn","ipNote","rpkgDetailsLabel","rpkgEmpty","rpkgDetails","dRpkgStack","dRpkgStackState","rpkgDeleteStackBtn","rpkgRegenerateBtn","dRpkgBox","dRpkgPixel",
    "dRpkgSymmetry","dRpkgMw","dRpkgSize","dRpkgClasses","dRpkgRefinements","dRpkgLastRef","rpkgParticlesHead","rpkgParticlesBody","rpkgParticlesNote",
    "newPackageScrim","newPackageModal","newPackageModalClose","npIntro","npGroupField","npGroup","npSelectionField","npSelectionLabel","npSourceField","npSource","npSrcPackageField","npSrcPackage","npSrcRefinementField","npSrcRefinement","npCarryAllField","npCarryAll","npCarryClassesField","npCarryClasses","npClassSourcesField","npClassSources","npMultiRuleField","npMultiRule","npProgress","npProgressFill","npProgressText","importProgress","importProgressFill","importProgressText","importImagesProgress","importImagesProgressFill","importImagesProgressText",
    "npRecentreField","npRecentre","npDedupField","npDedup","npDedupThresholdField","npDedupThreshold","npName","npMw","npSize","npSymmetry","npHelix","npRise","npTwist","npStarts","npBox","npBoxHint","npPixel","npClasses","npCreateBtn","npNote",
@@ -9619,8 +9622,59 @@ From branch : <span id="versionBranch">—</span></p>
     var sel = pkgs.filter(function(p){ return p.refinement_package_asset_id === state.selectedPackageId; })[0];
     els.rpkgDisplayBtn.disabled = !(sel && sel.stack_file_exists);
     els.rpkgDisplayBtn.title = sel && !sel.stack_file_exists ? "The package’s particle stack is missing from disk." : "Open the package’s particle stack in the Display window.";
+    els.rpkgDeleteStackBtn.disabled = els.rpkgRegenerateBtn.disabled = true;
     showPackage(state.selectedPackageId);
   }
+  function fmtBytes(n){
+    if (n == null) return "—";
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + " GB";
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + " MB";
+    return Math.round(n / 1e3) + " kB";
+  }
+  // The stack as a file to drop and cut again (GET /refinement-packages/:id/stack): the Stack on Disk row and the
+  // two buttons follow its answer -- Delete Stack only for a stack that can come back, Regenerate Stack only for
+  // one that is gone. `rpkg.regenerating` keeps the row showing a cut in progress across re-renders.
+  var rpkg = {regenerating: {}};
+  function showStackStatus(id){
+    if (rpkg.regenerating[id]){ els.dRpkgStackState.textContent = rpkg.regenerating[id]; return; }
+    apiFetch(projectApiUrl("/refinement-packages/" + id + "/stack")).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(st){
+        if (id !== state.selectedPackageId || rpkg.regenerating[id]) return;
+        var text;
+        if (st.on_disk) text = fmtBytes(st.size) + (st.regenerable ? " — can be deleted to save space and cut again from the images" : " — cannot be regenerated (" + st.reason + ")");
+        else text = st.regenerable ? "deleted — can be regenerated from the images" : "missing — cannot be regenerated (" + st.reason + ")";
+        if (st.in_use && st.in_use.length) text += " · in use by job " + st.in_use.join(", ");
+        els.dRpkgStackState.textContent = text;
+        els.rpkgDeleteStackBtn.disabled = !(st.on_disk && st.regenerable && !(st.in_use && st.in_use.length));
+        els.rpkgRegenerateBtn.disabled = !(!st.on_disk && st.regenerable);
+      }).catch(function(){ els.dRpkgStackState.textContent = "—"; });
+  }
+  els.rpkgDeleteStackBtn.addEventListener("click", function(){
+    var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0]; if (!p) return;
+    if (!confirm('Delete the particle stack of "' + p.name + '" (' + fmtBytes(p.stack_size) + ') from disk? The package, its particles and its refinements stay, and the stack can be cut again from the images with Regenerate Stack. Jobs on this package need the stack back first.')) return;
+    els.rpkgDeleteStackBtn.disabled = true;
+    apiFetch(projectApiUrl("/refinement-packages/" + p.refinement_package_asset_id + "/stack"), {method: "DELETE"})
+      .then(function(r){ if (!r.ok) return responseError(r); return r.json(); })
+      .then(function(d){ loadPackages(); })
+      .catch(function(err){ alert("Could not delete the stack: " + err.message); showStackStatus(p.refinement_package_asset_id); });
+  });
+  els.rpkgRegenerateBtn.addEventListener("click", function(){
+    var p = (state.packages || []).filter(function(x){ return x.refinement_package_asset_id === state.selectedPackageId; })[0]; if (!p) return;
+    var id = p.refinement_package_asset_id;
+    els.rpkgRegenerateBtn.disabled = true;
+    rpkg.regenerating[id] = "regenerating…";
+    els.dRpkgStackState.textContent = rpkg.regenerating[id];
+    apiFetch(projectApiUrl("/refinement-packages/" + id + "/stack/regenerate"), {method: "POST"})
+      .then(function(r){ if (!r.ok) return responseError(r); return r.json(); })
+      .then(function(d){
+        return followTask(d.task_id, function(t){
+          rpkg.regenerating[id] = "regenerating… " + (t.total ? fmtCount(t.done) + " of " + fmtCount(t.total) + " particles" : (t.message || ""));
+          if (id === state.selectedPackageId) els.dRpkgStackState.textContent = rpkg.regenerating[id];
+        });
+      })
+      .then(function(){ delete rpkg.regenerating[id]; loadPackages(); })
+      .catch(function(err){ delete rpkg.regenerating[id]; alert("Could not regenerate the stack: " + err.message); if (id === state.selectedPackageId) showStackStatus(id); });
+  });
   function showPackage(id){
     if (id == null){ els.rpkgEmpty.hidden = false; els.rpkgDetails.hidden = true; els.rpkgDetailsLabel.textContent = "Refinement Package"; return; }
     apiFetch(projectApiUrl("/refinement-packages/" + id)).then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
@@ -9628,7 +9682,9 @@ From branch : <span id="versionBranch">—</span></p>
         if (p.refinement_package_asset_id !== state.selectedPackageId) return;
         els.rpkgEmpty.hidden = true; els.rpkgDetails.hidden = false;
         els.rpkgDetailsLabel.textContent = p.name;
-        els.dRpkgStack.textContent = p.stack_filename + (p.stack_file_exists ? "" : " (missing)");
+        els.dRpkgStack.textContent = p.stack_filename + (p.stack_file_exists ? "" : " (not on disk)");
+        els.dRpkgStackState.textContent = "\u2026";
+        showStackStatus(p.refinement_package_asset_id);
         els.dRpkgBox.textContent = p.stack_box_size + " px";
         els.dRpkgPixel.textContent = Number(p.output_pixel_size).toFixed(4) + " \u00c5";
         els.dRpkgSymmetry.textContent = describeSymmetry(p.symmetry);

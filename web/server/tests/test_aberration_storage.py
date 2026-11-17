@@ -179,13 +179,19 @@ class DriverFitTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.box, self.pixel = 96, 1.2
-        rng = np.random.default_rng(5)
-        rho, phi = aberrations.half_plane_frequencies(self.box, self.box, self.pixel)
         self.odd_truth = aberrations.odd_coefficients_for_beam_tilt(0.8, -0.3, 0.0, 0.0, 2.7, 300.0) + np.array([0, 0, 40.0, 0, 0, -30.0])
         self.even_truth = np.zeros(9)
         self.even_truth[4], self.even_truth[8] = 80.0, -60.0
+        self.sums_path = os.path.join(self.tmp, "sums.mrc")
+        self._write_sums(self.sums_path, self.odd_truth, self.even_truth, 5)
+        self.settings = dict(refinectf.DEFAULTS, high_resolution_limit_a=3.0, low_resolution_limit_a=60.0)
+
+    def _write_sums(self, path, odd_truth, even_truth, seed):
+        """A sums file in refine_ctf's layout from a known set."""
+        rng = np.random.default_rng(seed)
+        rho, phi = aberrations.half_plane_frequencies(self.box, self.box, self.pixel)
         Zo, Ze = aberrations.basis(3, True, rho, phi), aberrations.basis(4, False, rho, phi)
-        odd_phase, delta = np.tensordot(self.odd_truth, Zo, 1), np.tensordot(self.even_truth, Ze, 1)
+        odd_phase, delta = np.tensordot(odd_truth, Zo, 1), np.tensordot(even_truth, Ze, 1)
         sums = np.zeros((7,) + rho.shape)
         for _ in range(40):
             gamma = math.pi * 0.02 * rng.uniform(8000, 20000) * rho ** 2 + rng.uniform(0, 0.3)
@@ -199,9 +205,7 @@ class DriverFitTest(unittest.TestCase):
             sums[4] += b * X * V
         S = np.exp(-1j * (odd_phase + rng.normal(0, 0.05, rho.shape)))      # refine_ctf's sum: minus the aberration
         sums[5], sums[6] = S.real, S.imag
-        self.sums_path = os.path.join(self.tmp, "sums.mrc")
-        volumes.write_mrc_volume(self.sums_path, sums.astype(np.float32), self.pixel)
-        self.settings = dict(refinectf.DEFAULTS, high_resolution_limit_a=3.0, low_resolution_limit_a=60.0)
+        volumes.write_mrc_volume(path, sums.astype(np.float32), self.pixel)
 
     def test_uses_zernike(self):
         self.assertFalse(refinectf.uses_zernike(self.settings, []))
@@ -221,6 +225,44 @@ class DriverFitTest(unittest.TestCase):
         self.assertEqual((r["set"]["odd_order"], r["set"]["even_order"]), (3, 4))
         self.assertEqual(set(r["maps"]), {"odd_measured", "odd_fitted", "even_measured", "even_fitted"})
         self.assertLess(r["summary"]["odd_phase_rms"], 0.1)
+
+    def test_each_optics_group_gets_its_own_fit_under_the_minimum_size_rule(self):
+        # group 1 (big): its own tilt and its own even set; group 2 (between the minimums): its own tilt, the
+        # whole data set's even set; group 3 (tiny): no set of its own; group 4: counted but no sums file
+        odd2 = aberrations.odd_coefficients_for_beam_tilt(-0.5, 0.6, 0.0, 0.0, 2.7, 300.0) + np.array([0, 0, -20.0, 0, 0, 25.0])
+        even1 = np.zeros(9); even1[4], even1[8] = -50.0, 30.0
+        self._write_sums(refinectf.group_sums_path(self.sums_path, 1), self.odd_truth, even1, 6)
+        self._write_sums(refinectf.group_sums_path(self.sums_path, 2), odd2, self.even_truth, 7)
+        self._write_sums(refinectf.group_sums_path(self.sums_path, 3), odd2, self.even_truth, 8)
+        with open(os.path.join(self.tmp, "sums_groups.txt"), "w") as fh:
+            fh.write("1 3000\n2 800\n3 100\n4 900\n")
+        self.assertEqual(refinectf.read_group_counts(self.sums_path), {1: 3000, 2: 800, 3: 100, 4: 900})
+        s = dict(self.settings, estimate_trefoil=True, estimate_fourth_order=True)
+        r = refinectf.fit_all_groups(self.sums_path, self.box, self.pixel, 2.7, 300.0, s, [], names={1: "day one"})
+        self.assertEqual([st["group"] for st in r["sets"]], [0, 1, 2])
+        by_group = {g["group"]: g for g in r["groups"]}
+        self.assertEqual(sorted(by_group), [1, 2, 3, 4])
+        self.assertEqual((by_group[1]["fitted"], by_group[1]["name"], by_group[1]["images"], by_group[1]["even_shared"]), (True, "day one", 3000, False))
+        self.assertAlmostEqual(by_group[1]["beam_tilt_x_mrad"], 0.8, delta=0.05)
+        np.testing.assert_allclose(by_group[1]["fourfold"], [-50.0, 30.0], atol=8.0)
+        self.assertEqual((by_group[2]["fitted"], by_group[2]["even_shared"]), (True, True))
+        self.assertAlmostEqual(by_group[2]["beam_tilt_x_mrad"], -0.5, delta=0.05)
+        self.assertAlmostEqual(by_group[2]["beam_tilt_y_mrad"], 0.6, delta=0.05)
+        np.testing.assert_allclose(by_group[2]["trefoil"], [-20.0, 25.0], atol=1.0)
+        self.assertEqual(r["sets"][2]["even"], r["sets"][0]["even"])                 # the whole data set's even set
+        np.testing.assert_allclose(by_group[2]["fourfold"], r["summary"]["fourfold"])
+        self.assertFalse(by_group[3]["fitted"]); self.assertIn("fewer than 500", by_group[3]["reason"])
+        self.assertFalse(by_group[4]["fitted"]); self.assertIn("no sums file", by_group[4]["reason"])
+        self.assertEqual(set(r["group_maps"]), {1, 2})
+        # the aberration file carries the three lines
+        path = refinements.write_aberration_sets(r["sets"], os.path.join(self.tmp, "ab.txt"))
+        lines = [ln for ln in Path(path).read_text().splitlines() if not ln.startswith("#")]
+        self.assertEqual([ln.split()[0] for ln in lines], ["0", "1", "2"])
+        # without a groups file: the whole data set only, as before
+        os.remove(os.path.join(self.tmp, "sums_groups.txt"))
+        r0 = refinectf.fit_all_groups(self.sums_path, self.box, self.pixel, 2.7, 300.0, s, [])
+        self.assertEqual([st["group"] for st in r0["sets"]], [0])
+        self.assertEqual(r0["groups"], [])
 
     def test_beam_tilt_only_drops_the_trefoil_and_even_is_added_to_the_input(self):
         r = refinectf.fit_refinement_aberrations(self.sums_path, self.box, self.pixel, 2.7, 300.0, self.settings, [])

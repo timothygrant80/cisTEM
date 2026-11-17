@@ -64,6 +64,9 @@ DEFAULTS = {
     "refine_defocus": True, "refine_beam_tilt": True, "high_resolution_limit_a": 3.5,
     # the higher-order aberrations (RELION's three choices; the orders are RELION's defaults)
     "estimate_trefoil": False, "estimate_fourth_order": False, "odd_zernike_order": 3, "even_zernike_order": 4,
+    # optics groups (web/CLAUDE.md, "Optics groups"): a group with fewer particles than these is not fitted on its own --
+    # below the odd minimum it takes the whole data set's set, between the two its even set is the whole data set's
+    "min_particles_per_group_odd": 500, "min_particles_per_group_even": 2000,
     "defocus_search_range_a": 500.0, "defocus_search_step_a": 20.0, "inner_mask_radius_a": 0.0,
     "score_to_weight_constant": 2.0, "adjust_score_for_defocus": True, "score_threshold": 0.0, "reconstruction_resolution_limit_a": 0.0,
     "autocrop_images": False, "apply_blurring": False, "smoothing_factor": 1.0,
@@ -110,8 +113,37 @@ def uses_zernike(settings, input_sets):
 
 
 def _default_set(sets):
-    found = next((st for st in sets or [] if int(st.get("group", 0)) == 0), None)
-    return dict(found) if found else {"group": 0, "odd": [], "even": [], "odd_order": 0, "even_order": 0}
+    return _set_for_group(sets, 0)
+
+
+def _set_for_group(sets, group):
+    """The set a group's particles were refined with: the group's own line, else group 0's (AberrationTable::ForGroup's
+    fallback), else nothing."""
+    found = next((st for st in sets or [] if int(st.get("group", 0)) == int(group)), None)
+    if found is None and int(group) != 0:
+        found = next((st for st in sets or [] if int(st.get("group", 0)) == 0), None)
+    return dict(found) if found else {"group": int(group), "odd": [], "even": [], "odd_order": 0, "even_order": 0}
+
+
+def _sums_base(sums_path):
+    return sums_path[:-4] if str(sums_path).lower().endswith(".mrc") else str(sums_path)
+
+
+def group_sums_path(sums_path, group):
+    """refine_ctf's per-group sums file beside the whole-data-set one: <base>_group_<g>.mrc."""
+    return "{}_group_{}.mrc".format(_sums_base(sums_path), int(group))
+
+
+def read_group_counts(sums_path):
+    """<base>_groups.txt, "<group> <images>" per line, as {group: images}; {} when refine_ctf wrote none (no groups)."""
+    path = _sums_base(sums_path) + "_groups.txt"
+    counts = {}
+    if os.path.isfile(path):
+        for line in open(path):
+            parts = line.split()
+            if len(parts) >= 2:
+                counts[int(parts[0])] = int(parts[1])
+    return counts
 
 
 def _weighted_rms(fit):
@@ -122,19 +154,21 @@ def _weighted_rms(fit):
     return float(np.sqrt(np.sum(w * r * r) / np.sum(w))) if np.sum(w) > 0 else 0.0
 
 
-def fit_refinement_aberrations(sums_path, box_size, pixel_size, cs_mm, voltage_kv, settings, input_sets):
-    """The fits from refine_ctf's sums file for a refinement (one optics group, 0): the odd set is fitted whole
-    (the sum measures the total odd phase, the projections carrying none) whenever beam tilt, trefoil or an
-    existing odd set is in play, and trimmed to beam tilt and shift unless trefoil was asked for; the even
-    residual is added to the input's even set when fourth-order estimation was asked for. Returns the new set,
-    the beam tilt the odd set contains (mrad, A), the diagnostic half-plane maps and a summary."""
+def fit_refinement_aberrations(sums_path, box_size, pixel_size, cs_mm, voltage_kv, settings, input_sets, group=0, fit_even=True):
+    """The fits from one of refine_ctf's sums files for a refinement, for one optics group (0 is the whole data
+    set, the default set for every particle without a group line): the odd set is fitted whole (the sum
+    measures the total odd phase, the projections carrying none) whenever beam tilt, trefoil or an existing odd
+    set is in play, and trimmed to beam tilt and shift unless trefoil was asked for; the even residual is added
+    to the even set the group's particles were refined with (its own line, else group 0's) when fourth-order
+    estimation was asked for and `fit_even` allows it. Returns the new set, the beam tilt the odd set contains
+    (mrad, A), the diagnostic half-plane maps and a summary. fit_all_groups() runs this per group."""
     s = settings
-    current = _default_set(input_sets)
+    current = _set_for_group(input_sets, group)
     odd_order, even_order = max(1, int(s["odd_zernike_order"])), max(0, int(s["even_zernike_order"]))
     rho, phi = aberrations.half_plane_frequencies(box_size, box_size, pixel_size)
     even_sums, S = aberrations.load_sums(sums_path)
     high, low = float(s["high_resolution_limit_a"]), float(s["low_resolution_limit_a"])
-    new = {"group": 0, "odd": [float(v) for v in current["odd"]], "even": [float(v) for v in current["even"]],
+    new = {"group": int(group), "odd": [float(v) for v in current["odd"]], "even": [float(v) for v in current["even"]],
            "odd_order": int(current.get("odd_order") or 0), "even_order": int(current.get("even_order") or 0)}
     maps, summary = {}, {"high_resolution_limit_a": high, "low_resolution_limit_a": low}
     if s["refine_beam_tilt"] or s["estimate_trefoil"] or any(v != 0.0 for v in current["odd"]):
@@ -148,7 +182,7 @@ def fit_refinement_aberrations(sums_path, box_size, pixel_size, cs_mm, voltage_k
         new["odd"], new["odd_order"] = [float(v) for v in odd], odd_order
         maps["odd_measured"], maps["odd_fitted"] = fit["measured_phase"], fit["fitted_phase"]
         summary["odd_phase_rms"] = _weighted_rms(fit)
-    if s["estimate_fourth_order"]:
+    if s["estimate_fourth_order"] and fit_even:
         fit = aberrations.fit_even(even_sums, rho, phi, even_order, high, low)
         residual = np.array(fit["coefficients"], dtype=np.float64)
         base = np.zeros(max(residual.size, len(current["even"])))
@@ -165,6 +199,43 @@ def fit_refinement_aberrations(sums_path, box_size, pixel_size, cs_mm, voltage_k
                     "fourfold": [new["even"][4], new["even"][8]] if len(new["even"]) >= 9 else [0.0, 0.0],
                     "odd_order": new["odd_order"], "even_order": new["even_order"]})
     return {"set": new, "maps": maps, "summary": summary}
+
+
+def fit_all_groups(sums_path, box_size, pixel_size, cs_mm, voltage_kv, settings, input_sets, group_counts=None, names=None):
+    """The whole data set's fit (group 0) and one per optics group from refine_ctf's per-group sums files
+    (group_sums_path; the counts from read_group_counts unless given). The minimum-size rule: a group with fewer
+    particles than min_particles_per_group_odd gets no set of its own and so takes the whole data set's; one
+    with fewer than min_particles_per_group_even gets its own odd set but the whole data set's even set.
+    Returns the whole-data-set result's fields plus `sets` (group 0's set first, then each fitted group's, the
+    aberration file's lines), `groups` (one summary per group: group, name, images, fitted, and the fit's
+    numbers when fitted) and `group_maps` ({group: the half-plane maps})."""
+    s = settings
+    whole = fit_refinement_aberrations(sums_path, box_size, pixel_size, cs_mm, voltage_kv, s, input_sets, 0)
+    counts = read_group_counts(sums_path) if group_counts is None else dict(group_counts)
+    min_odd, min_even = int(s.get("min_particles_per_group_odd") or 0), int(s.get("min_particles_per_group_even") or 0)
+    sets, groups, group_maps = [whole["set"]], [], {}
+    for g in sorted(int(k) for k in counts):
+        n = int(counts[g])
+        if g == 0:
+            continue
+        path = group_sums_path(sums_path, g)
+        entry = {"group": g, "name": (names or {}).get(g) or (names or {}).get(str(g)), "images": n, "fitted": False, "even_shared": False}
+        if n < min_odd or not os.path.isfile(path):
+            entry["reason"] = ("fewer than {} particles".format(min_odd) if n < min_odd else "no sums file") + ": uses the whole data set's set"
+            groups.append(entry)
+            continue
+        r = fit_refinement_aberrations(path, box_size, pixel_size, cs_mm, voltage_kv, s, input_sets, g, fit_even=n >= min_even)
+        if n < min_even and s["estimate_fourth_order"]:
+            r["set"]["even"], r["set"]["even_order"] = list(whole["set"]["even"]), whole["set"]["even_order"]
+            r["summary"]["fourfold"], r["summary"]["even_order"] = list(whole["summary"]["fourfold"]), whole["summary"]["even_order"]
+            entry["even_shared"] = True
+            entry["reason"] = "fewer than {} particles: the even set is the whole data set's".format(min_even)
+        entry.update(r["summary"])
+        entry["fitted"] = True
+        sets.append(r["set"])
+        groups.append(entry)
+        group_maps[g] = r["maps"]
+    return {"set": whole["set"], "maps": whole["maps"], "summary": whole["summary"], "sets": sets, "groups": groups, "group_maps": group_maps}
 
 
 def defocus_histogram(changes, search_range, step):
@@ -423,7 +494,13 @@ def _start(conn, project_id, job_id, params, profile):
         "volume_ids": [], "beam_tilt": None, "defocus_histogram": None, "progress_files": [],
         "input_aberrations": refinements.load_aberrations(conn, ref["REFINEMENT_ID"]), "aberrations": None,
     }
-    state["zernike"] = uses_zernike(s, state["input_aberrations"])
+    # the optics groups of the particles (their beam_tilt_group column): with any, the beam tilt goes through the
+    # Zernike fit, which gives each group its own, where the grid search knows one tilt for the whole data set
+    groups_of = class_rows[0]["beam_tilt_group"].astype(int) if class_rows and len(class_rows[0]) and "beam_tilt_group" in class_rows[0].dtype.names else np.zeros(0, dtype=int)
+    values, counts = np.unique(groups_of[groups_of != 0], return_counts=True)
+    names = {int(r["GROUP_ID"]): r["NAME"] for r in conn.execute("SELECT GROUP_ID, NAME FROM OPTICS_GROUPS")}
+    state["optics_groups"] = [{"group": int(g), "images": int(c), "name": names.get(int(g))} for g, c in zip(values.tolist(), counts.tolist())]
+    state["zernike"] = uses_zernike(s, state["input_aberrations"]) or bool(s["refine_beam_tilt"] and state["optics_groups"])
     _store_rows(state, "input", class_rows)
     with conn:
         conn.execute("UPDATE JOBS SET STATUS='running', STARTED_AT=?, PROGRESS=0 WHERE JOB_ID=?", (now_iso(), job_id))
@@ -433,6 +510,10 @@ def _start(conn, project_id, job_id, params, profile):
     _log(project_id, job_id, "Refine CTF ({}) of {!r} from {!r}: {} particles, {} class{}, {:.2f} Å limit, ±{:.0f} Å in {:.0f} Å steps; refinement profile {!r}, reconstruction profile {!r}".format(
         what, pkg["NAME"], ref["NAME"], n, classes, "" if classes == 1 else "es", s["high_resolution_limit_a"], s["defocus_search_range_a"], s["defocus_search_step_a"],
         profile["name"], recon_profile["name"]))
+    if state["optics_groups"]:
+        _log(project_id, job_id, "{} optics group{} ({} particles without one): each gets its own aberration fit; a group under {} particles takes the whole data set's, under {} its even set".format(
+            len(state["optics_groups"]), "" if len(state["optics_groups"]) == 1 else "s", int((groups_of == 0).sum()),
+            int(s["min_particles_per_group_odd"]), int(s["min_particles_per_group_even"])))
     _mask_then_refine(conn, project_id, job_id, state)
     _save(conn, job_id, state)
     return state
@@ -634,16 +715,35 @@ def _fit_aberrations(conn, project_id, job_id, state):
     path = state["aberration_sums"]
     if not os.path.isfile(path):
         raise ValueError("refine_ctf did not write the aberration sums {}".format(path))
-    result = fit_refinement_aberrations(path, state["box_size"], state["pixel_size"], state["cs"], state["voltage"], state["settings"], state["input_aberrations"])
+    names = {g["group"]: g["name"] for g in state.get("optics_groups") or []}
+    result = fit_all_groups(path, state["box_size"], state["pixel_size"], state["cs"], state["voltage"], state["settings"], state["input_aberrations"], names=names)
     rid = state["output_refinement_id"]
     out_dir = phase_difference_dir(project_id)
     files = {}
-    for name, half in result["maps"].items():
-        full = aberrations.full_grid(np.nan_to_num(aberrations._wrap(half)), odd=name.startswith("odd"))     # wrapped: the fitted surface is shown modulo 2 pi
-        files[name] = str(out_dir / "refinement_{}_{}.mrc".format(rid, name))
-        volumes.write_mrc_volume(files[name], full[None, :, :].astype(np.float32), state["pixel_size"])
+
+    def write_maps(maps, prefix):
+        out = {}
+        for name, half in maps.items():
+            full = aberrations.full_grid(np.nan_to_num(aberrations._wrap(half)), odd=name.startswith("odd"))     # wrapped: the fitted surface is shown modulo 2 pi
+            out[name] = str(out_dir / "{}_{}.mrc".format(prefix, name))
+            volumes.write_mrc_volume(out[name], full[None, :, :].astype(np.float32), state["pixel_size"])
+        return out
+
+    files = write_maps(result["maps"], "refinement_{}".format(rid))
+    group_files = {str(g): write_maps(maps, "refinement_{}_group_{}".format(rid, g)) for g, maps in result["group_maps"].items()}
     summary = result["summary"]
-    state["aberrations"] = {"sets": [result["set"]], "files": files, "summary": summary}
+    state["aberrations"] = {"sets": result["sets"], "files": files, "summary": summary, "groups": result["groups"], "group_files": group_files}
+    for g in result["groups"]:
+        if g["fitted"]:
+            _log(project_id, job_id, "Group {}{}: {} particles, {}, shift {:.2f}, {:.2f} Å{}{}{}".format(
+                g["group"], " ({})".format(g["name"]) if g.get("name") else "", g["images"],
+                "beam tilt not applicable with a Cs of 0" if g["beam_tilt_x_mrad"] is None else "beam tilt {:.3f}, {:.3f} mrad".format(g["beam_tilt_x_mrad"], g["beam_tilt_y_mrad"]),
+                g["particle_shift_x_a"], g["particle_shift_y_a"],
+                "; trefoil {:.1f}, {:.1f}".format(*g["trefoil"]) if state["settings"]["estimate_trefoil"] else "",
+                "; four-fold {:.1f}, {:.1f}".format(*g["fourfold"]) if state["settings"]["estimate_fourth_order"] and not g["even_shared"] else "",
+                "; " + g["reason"] if g.get("reason") else ""))
+        else:
+            _log(project_id, job_id, "Group {}{}: {} particles, {}".format(g["group"], " ({})".format(g["name"]) if g.get("name") else "", g["images"], g["reason"]))
     state["beam_tilt"] = {"beam_tilt_x_mrad": summary["beam_tilt_x_mrad"], "beam_tilt_y_mrad": summary["beam_tilt_y_mrad"],
                           "particle_shift_x_a": summary["particle_shift_x_a"], "particle_shift_y_a": summary["particle_shift_y_a"],
                           "score": None, "significance": None, "significant": True, "method": "zernike",
@@ -1083,6 +1183,7 @@ def ctf_refinement_result(conn, row):
         "defocus_search_range_a": s.get("defocus_search_range_a"), "defocus_search_step_a": s.get("defocus_search_step_a"),
         "low_resolution_limit_a": s.get("low_resolution_limit_a"), "high_resolution_limit_a": s.get("high_resolution_limit_a"),
         "defocus_histogram": state.get("defocus_histogram"), "beam_tilt": bt or None,
-        "aberrations": {"summary": ab.get("summary"), "sets": ab.get("sets")} if ab else None,
+        "aberrations": {"summary": ab.get("summary"), "sets": ab.get("sets"), "groups": ab.get("groups")} if ab else None,
+        "optics_groups": state.get("optics_groups") or [],
         "pictures": pictures,
     }

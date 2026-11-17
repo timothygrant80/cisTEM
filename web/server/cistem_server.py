@@ -4615,11 +4615,36 @@ def list_jobs(project_id):
 @auth.project_access_required
 def create_job(project_id):
     body = request.get_json(force=True, silent=True) or {}
-    stage = body.get("stage")
+    return _submit_job(project_id, body.get("stage"), body.get("params") or {})
+
+
+@app.route("/api/projects/<project_id>/jobs/<job_id>/resubmit", methods=["POST"])
+@auth.project_access_required
+def resubmit_job(project_id, job_id):
+    """A new job with a failed or terminated job's stage and exact parameters (its PARAMS_JSON, the body
+    the Actions panel sent), through the same validation and launch as a fresh submission. The inputs the
+    parameters name by id (the package, the input refinement, the reference) are used as they are now;
+    a multi-round job starts again from its input, not from the round it failed in. 409 while the job is
+    still queued or running, 400 for a job with no stored parameters (an old row)."""
+    row = _fetch_job_row(project_id, job_id)
+    if row is None:
+        return jsonify({"error": "not found"}), 404
+    if row["STATUS"] in ("queued", "running"):
+        return jsonify({"error": "job {} is still {}; terminate it first".format(row["JOB_NUMBER"], row["STATUS"])}), 409
+    try:
+        params = json.loads(row["PARAMS_JSON"]) if row["PARAMS_JSON"] else None
+    except ValueError:
+        params = None
+    if not isinstance(params, dict) or not params:
+        return jsonify({"error": "job {} has no stored parameters to resubmit".format(row["JOB_NUMBER"])}), 400
+    return _submit_job(project_id, row["STAGE"], params)
+
+
+def _submit_job(project_id, stage, params):
+    """POST /jobs' work: validate the stage's inputs, write the JOBS row (number, name and id the
+    server's), and launch -- the runner, a driver, or the simulation."""
     if stage not in STAGE_COMMANDS:
         return jsonify({"error": "unknown stage '{}'".format(stage)}), 400
-
-    params = body.get("params") or {}
 
     movie_group_id = None
     if stage == "motion_correction":

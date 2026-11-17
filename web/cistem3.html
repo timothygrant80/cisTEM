@@ -11112,10 +11112,31 @@ From branch : <span id="versionBranch">—</span></p>
         stopBtn.addEventListener("click", function(e){ e.stopPropagation(); terminateJob(job, stopBtn); });
         tdActions.appendChild(stopBtn);
       }
+      // A failed or terminated job can be run again with its exact parameters (POST /jobs/:id/resubmit):
+      // a new job, numbered afresh, through the same validation and launch as a submission from Actions.
+      if (job.status === "failed" || job.status === "cancelled"){
+        var againBtn = document.createElement("button");
+        againBtn.className = "small";
+        againBtn.textContent = "Resubmit";
+        againBtn.title = "Run this job again as a new job with exactly the same parameters. Inputs named by id (package, input refinement, reference) are used as they are now.";
+        againBtn.addEventListener("click", function(e){ e.stopPropagation(); resubmitJob(job, againBtn); });
+        tdActions.appendChild(againBtn);
+      }
       tr.appendChild(tdActions);
 
       els.queueBody.appendChild(tr);
     });
+  }
+
+  // POST /jobs/:id/resubmit: the new job is shown in the Latest Result panel, as a submission from Actions is.
+  function resubmitJob(job, btn){
+    if (!state.projectId || !job) return;
+    if (btn){ btn.disabled = true; btn.textContent = "Submitting\u2026"; }
+    apiFetch(projectApiUrl("/jobs/" + encodeURIComponent(job.id) + "/resubmit"), {method: "POST"})
+      .then(function(r){ if (!r.ok) return responseError(r); return r.json(); })
+      .then(function(created){ return fetchJobs().then(function(){ if (created && created.id) selectJob(created.id); }); })
+      .catch(function(err){ alert("Could not resubmit " + (job.name || job.id) + ": " + err.message); })
+      .finally(function(){ if (btn){ btn.disabled = false; btn.textContent = "Resubmit"; } });
   }
 
   // POST /jobs/:id/cancel, then refresh the table so the row shows the

@@ -5598,7 +5598,68 @@ From branch : <span id="versionBranch">—</span></p>
       var fig = classMontageFigure(spec[1] + " (centred Fourier plane, radians)"); fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); abRow.appendChild(fig.root);
       fig.left.textContent = spec[1]; fig.which = spec[0]; return fig;
     });
-    var views = {hist: hist, tiltRow: tiltRow, abRow: abRow, abSummary: abSummary, last: null};
+    // The optics groups (web/CLAUDE.md, "Optics groups"): one row per group with its fit, a radio per row
+    // choosing whose maps the four figures show (the whole data set first), and the tilts on a small plot.
+    var abGroups = document.createElement("div"); abGroups.className = "hint"; abGroups.style.marginTop = "8px"; abGroups.hidden = true;
+    var views = {hist: hist, tiltRow: tiltRow, abRow: abRow, abSummary: abSummary, abGroups: abGroups, last: null, group: 0};
+    var OG_COLOURS = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac", "#1f77b4", "#d62728"];
+    function fmtTilt(g){ return g.beam_tilt_x_mrad == null ? "n/a" : Number(g.beam_tilt_x_mrad).toFixed(3) + ", " + Number(g.beam_tilt_y_mrad).toFixed(3); }
+    views.renderGroups = function(ab, jobId, urls, has){
+      var groups = (ab && ab.groups) || [];
+      abGroups.hidden = !groups.length;
+      abGroups.innerHTML = "";
+      if (!groups.length){ views.group = 0; return; }
+      if (views.group && !groups.some(function(g){ return g.group === views.group && g.fitted; })) views.group = 0;
+      var fitted = groups.filter(function(g){ return g.fitted; });
+      var head = document.createElement("div"); head.textContent = "Optics groups: " + fitted.length + " of " + groups.length + " fitted on their own" + (groups.length - fitted.length ? " (the rest take the whole data set\u2019s set)" : "") + ". The maps above show the chosen row.";
+      abGroups.appendChild(head);
+      var wrap = document.createElement("div"); wrap.style.display = "flex"; wrap.style.gap = "16px"; wrap.style.alignItems = "flex-start"; wrap.style.flexWrap = "wrap"; abGroups.appendChild(wrap);
+      var table = document.createElement("table"); table.className = "queue"; table.style.fontSize = "12px";
+      table.innerHTML = "<thead><tr><th></th><th class='num'>Group</th><th>Name</th><th class='num'>Particles</th><th class='num'>Beam tilt x, y (mrad)</th><th class='num'>Shift x, y (\u00c5)</th><th class='num'>Trefoil</th><th class='num'>Four-fold</th><th class='num'>Odd / even residual (rad)</th><th>Note</th></tr></thead>";
+      var tb = document.createElement("tbody");
+      var rowsSpec = [{group: 0, name: "whole data set", images: null, summary: ab.summary, fitted: true}].concat(groups);
+      rowsSpec.forEach(function(g){
+        var s = g.group ? g : (g.summary || {}), tr = document.createElement("tr");
+        var radio = "<input type='radio' name='og-map-" + jobId + "' " + (g.fitted ? "" : "disabled ") + (views.group === g.group ? "checked" : "") + " title='Show this group\u2019s maps'>";
+        var dot = g.group ? "<span style='display:inline-block;width:.7em;height:.7em;border-radius:50%;background:" + OG_COLOURS[(g.group - 1) % OG_COLOURS.length] + ";margin-right:.3em'></span>" : "";
+        tr.innerHTML = "<td>" + radio + "</td><td class='num'>" + dot + (g.group || "\u2014") + "</td><td></td><td class='num'>" + (g.images == null ? "all" : g.images) + "</td>" +
+          "<td class='num'>" + (g.fitted ? fmtTilt(s) : "\u2014") + "</td><td class='num'>" + (g.fitted && s.particle_shift_x_a != null ? Number(s.particle_shift_x_a).toFixed(2) + ", " + Number(s.particle_shift_y_a).toFixed(2) : "\u2014") + "</td>" +
+          "<td class='num'>" + (g.fitted && s.trefoil ? Number(s.trefoil[0]).toFixed(1) + ", " + Number(s.trefoil[1]).toFixed(1) : "\u2014") + "</td>" +
+          "<td class='num'>" + (g.fitted && s.fourfold ? Number(s.fourfold[0]).toFixed(1) + ", " + Number(s.fourfold[1]).toFixed(1) + (g.even_shared ? " (shared)" : "") : "\u2014") + "</td>" +
+          "<td class='num'>" + (g.fitted ? (s.odd_phase_rms != null ? Number(s.odd_phase_rms).toFixed(3) : "\u2014") + " / " + (s.even_phase_rms != null && !g.even_shared ? Number(s.even_phase_rms).toFixed(3) : "\u2014") : "\u2014") + "</td><td></td>";
+        tr.children[2].textContent = g.name || ""; tr.children[9].textContent = g.reason || "";
+        var input = tr.querySelector("input");
+        input.addEventListener("change", function(){ if (input.checked){ views.group = g.group; views.showMaps(ab, jobId, urls, has); } });
+        tb.appendChild(tr);
+      });
+      table.appendChild(tb); wrap.appendChild(table);
+      // the tilts of the fitted groups, x against y: an image-shift collection shows its characteristic pattern
+      var pts = fitted.filter(function(g){ return g.beam_tilt_x_mrad != null; });
+      if (pts.length >= 2){
+        var xs = pts.map(function(g){ return g.beam_tilt_x_mrad; }), ys = pts.map(function(g){ return g.beam_tilt_y_mrad; });
+        var lim = Math.max.apply(null, xs.concat(ys).map(Math.abs)) * 1.15 || 1, W = 180;
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("width", W); svg.setAttribute("height", W); svg.setAttribute("viewBox", "0 0 " + W + " " + W);
+        svg.innerHTML = "<rect x='0' y='0' width='" + W + "' height='" + W + "' fill='none' stroke='currentColor' opacity='.3'/><line x1='" + W / 2 + "' y1='0' x2='" + W / 2 + "' y2='" + W + "' stroke='currentColor' opacity='.2'/><line x1='0' y1='" + W / 2 + "' x2='" + W + "' y2='" + W / 2 + "' stroke='currentColor' opacity='.2'/>";
+        pts.forEach(function(g){
+          var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          c.setAttribute("cx", W / 2 + g.beam_tilt_x_mrad / lim * W / 2); c.setAttribute("cy", W / 2 - g.beam_tilt_y_mrad / lim * W / 2); c.setAttribute("r", 4);
+          c.setAttribute("fill", OG_COLOURS[(g.group - 1) % OG_COLOURS.length]); var t = document.createElementNS("http://www.w3.org/2000/svg", "title"); t.textContent = "group " + g.group + (g.name ? " " + g.name : "") + ": " + fmtTilt(g) + " mrad"; c.appendChild(t);
+          svg.appendChild(c);
+        });
+        var plotBox = document.createElement("div"); plotBox.appendChild(svg);
+        var cap = document.createElement("div"); cap.textContent = "beam tilt x against y, \u00b1" + lim.toFixed(2) + " mrad"; plotBox.appendChild(cap); wrap.appendChild(plotBox);
+      }
+    };
+    views.showMaps = function(ab, jobId, urls, has){
+      var abFiles = (ab && ab.files) || {}, prefix = views.group ? "group_" + views.group + "_" : "";
+      abFigs.forEach(function(f){
+        f.root.hidden = !has(prefix + f.which, !!abFiles[f.which]);
+        if (f.root.hidden) return;
+        f.right.textContent = views.group ? "group " + views.group : "";
+        figLoading(f.img, f.status, "Loading\u2026"); f.img.style.maxWidth = "360px";
+        loadFigure(f.img, f.status, "/jobs/" + jobId + "/refinectf/" + prefix + f.which + ".png", true, "phase map", urls);
+      });
+    };
     views.drawHistogram = function(svg){
       var r = views.last || {}, h = r.defocus_histogram;
       drawLinePlot(svg, r.refine_defocus && h && h.centres && h.centres.length ? [{xs: h.centres, ys: h.counts, cls: "line-x", dots: "dot-x"}] : [],
@@ -5627,18 +5688,13 @@ From branch : <span id="versionBranch">—</span></p>
           loadFigure(f.img, f.status, "/jobs/" + jobId + "/refinectf/" + f.which + ".png", true, "phase image", urls);
         });
       }
-      var ab = result.aberrations, abFiles = (ab && ab.files) || {};
+      var ab = result.aberrations;
       abRow.hidden = !ab; abSummary.hidden = !ab;
       if (ab){
-        abFigs.forEach(function(f){
-          f.root.hidden = !has(f.which, !!abFiles[f.which]);
-          if (f.root.hidden) return;
-          f.right.textContent = "";
-          figLoading(f.img, f.status, "Loading\u2026"); f.img.style.maxWidth = "360px";
-          loadFigure(f.img, f.status, "/jobs/" + jobId + "/refinectf/" + f.which + ".png", true, "phase map", urls);
-        });
+        views.renderGroups(ab, jobId, urls, has);
+        views.showMaps(ab, jobId, urls, has);
         abSummary.textContent = describeAberrationSummary(ab.summary, ab.sets);
-      }
+      } else abGroups.hidden = true;
     };
     return views;
   }
@@ -5716,7 +5772,7 @@ From branch : <span id="versionBranch">—</span></p>
     var ctf = makeCtfRefinementViews();
     ctf.hist.root.style.marginTop = "6px"; ctfBox.appendChild(ctf.hist.root);
     addPlotZoom(ctf.hist, function(){ return "Defocus change \u2014 " + (page.current ? page.current.name : ""); }, function(svg){ ctf.drawHistogram(svg); });
-    ctfBox.appendChild(ctf.tiltRow); ctfBox.appendChild(ctf.abRow); ctfBox.appendChild(ctf.abSummary);
+    ctfBox.appendChild(ctf.tiltRow); ctfBox.appendChild(ctf.abRow); ctfBox.appendChild(ctf.abSummary); ctfBox.appendChild(ctf.abGroups);
     function showCtf(full){
       var r = full.ctf_refinement;
       ctfBox.hidden = !r;
@@ -9787,6 +9843,7 @@ From branch : <span id="versionBranch">—</span></p>
   function describeAberrationSummary(summary, sets){
     var set = (sets || []).filter(function(s){ return !s.group; })[0] || (sets || [])[0];
     if (!summary && !set) return "";
+    var groupSets = (sets || []).filter(function(s){ return s.group; }).length;   // the optics groups with a set of their own
     var odd = (set && set.odd) || [], even = (set && set.even) || [];
     var parts = [];
     var tiltSource = (summary && summary.beam_tilt_x_mrad != null) ? summary : (set && set.beam_tilt_x_mrad != null ? set : null);
@@ -9799,6 +9856,7 @@ From branch : <span id="versionBranch">—</span></p>
     if (four && (four[0] || four[1])) parts.push("four-fold Z4\u00b1\u2074 " + Number(four[0]).toFixed(1) + ", " + Number(four[1]).toFixed(1));
     if (even.length >= 7 && even[6]) parts.push("Z4\u2070 " + Number(even[6]).toFixed(1));
     var orders = [];
+    if (groupSets) parts.push(groupSets + " optics group" + (groupSets === 1 ? "" : "s") + " with a set of their own");
     if ((summary && summary.odd_order) || (set && set.odd_order)) orders.push("odd order " + ((summary && summary.odd_order) || set.odd_order));
     if ((summary && summary.even_order) || (set && set.even_order)) orders.push("even order " + ((summary && summary.even_order) || set.even_order));
     if (orders.length) parts.push(orders.join(", "));
@@ -11448,7 +11506,7 @@ From branch : <span id="versionBranch">—</span></p>
       var fscPlot = makePlotBlock("Fourier Shell Correlation", [["ra-swatch-logp", "FSC"], ["ra-swatch-sigma", "Part. FSC"]]); plots.appendChild(fscPlot.root);
       var lastFsc = {stats: [], ps: null, title: "Fourier Shell Correlation"};
       addPlotZoom(fscPlot, function(){ return lastFsc.title; }, function(svg){ drawFscPlot(svg, lastFsc.stats, lastFsc.ps); }, function(){ return fscText(lastFsc); });
-      box.appendChild(ctf.tiltRow); box.appendChild(ctf.abRow); box.appendChild(ctf.abSummary);
+      box.appendChild(ctf.tiltRow); box.appendChild(ctf.abRow); box.appendChild(ctf.abSummary); box.appendChild(ctf.abGroups);
       var fig = classMontageFigure("Orthogonal projections and slices of the reconstruction"); fig.root.style.marginTop = "12px"; fig.frame.classList.add("c2d-orth"); fig.root.classList.add("c2d-orth-fig"); box.appendChild(fig.root);
       return function(result, base, urls){
         ctf.render(result, live.jobId, urls);

@@ -153,6 +153,45 @@ class PackageIOTests(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_relion3_optics_groups_round_trip(self):
+        # two optics groups with their own Zernike sets and one ungrouped particle: one optics row per group,
+        # the particles numbered by group, and the import brings groups and sets back
+        conn = db.get_conn(self.project)
+        with conn:
+            conn.execute("UPDATE REFINEMENT_PACKAGE_CONTAINED_PARTICLES_1 SET OPTICS_GROUP = CASE WHEN POSITION_IN_STACK <= 2 THEN 1 WHEN POSITION_IN_STACK <= 4 THEN 2 ELSE 0 END")
+            conn.execute("UPDATE REFINEMENT_RESULT_1_1 SET BEAM_TILT_GROUP = CASE WHEN POSITION_IN_STACK <= 2 THEN 1 WHEN POSITION_IN_STACK <= 4 THEN 2 ELSE 0 END")
+            conn.execute("INSERT INTO OPTICS_GROUPS(GROUP_ID, NAME, SOURCE) VALUES (1, 'day one', 'time'), (2, 'day two', 'time')")
+        sets = [{"group": 0, "odd_order": 3, "even_order": 4, "odd": [0.1, 0.0, 0.0, 0.0, 0.0, 0.0], "even": []},
+                {"group": 2, "odd_order": 3, "even_order": 4, "odd": [0.0, 0.0, 30.0, 0.0, 0.0, 5.0], "even": [0.0] * 4 + [20.0, 0.0, 2.0, 0.0, -15.0]}]
+        refinements.save_aberrations(conn, 1, sets)
+        conn.close()
+        r = self._export("relion3", "og")
+        star = [f for f in r["files"] if f.endswith("og_params.star")][0]
+        text = Path(star).read_text()
+        optics = text.split("data_particles")[0]
+        optics_rows = [l for l in optics.splitlines() if l.strip() and not l.startswith("_") and not l.startswith("data_") and l.strip() != "loop_"]
+        self.assertEqual([l.split()[:2] for l in optics_rows], [["1", "day_one"], ["2", "day_two"], ["3", "opticsGroup3"]])
+        self.assertIn("[0,0,30,0,0,5]", optics_rows[1])
+        self.assertIn("[0.1,0,0,0,0,0]", optics_rows[0])          # group 1 has no set of its own: group 0's
+        self.assertIn("[0.1,0,0,0,0,0]", optics_rows[2])
+        lines = [l for l in text.splitlines() if l.startswith("unknown.mrc")]
+        self.assertEqual([l.split()[18] for l in lines], ["1", "1", "2", "2", "3"])
+        micro = Path([f for f in r["files"] if f.endswith("_corrected_micrographs.star")][0]).read_text()
+        self.assertIn("day_two 2", micro)
+        res, conn = self._import(format="relion", stack_path=r["files"][0], metadata_path=star, symmetry="C1", molecular_weight_kda=120,
+                                 largest_dimension_a=80, pixel_size_a=1.25, voltage_kv=300, cs_mm=2.7, amplitude_contrast=0.07, protein_is_white=True)
+        try:
+            back = refinements.load_table(conn, res["refinement_id"], 1)
+            self.assertEqual(back["beam_tilt_group"].tolist(), [1, 1, 2, 2, 3])
+            got = {s["group"]: s for s in refinements.load_aberrations(conn, res["refinement_id"])}
+            self.assertEqual(sorted(got), [1, 2, 3])
+            self.assertEqual(got[2]["odd"], [0.0, 0.0, 30.0, 0.0, 0.0, 5.0])
+            self.assertEqual(got[1]["odd"], [0.1, 0.0, 0.0, 0.0, 0.0, 0.0])
+            contained = [r[0] for r in conn.execute("SELECT OPTICS_GROUP FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_{} ORDER BY POSITION_IN_STACK".format(res["refinement_package_asset_id"]))]
+            self.assertEqual(contained, [1, 1, 2, 2, 3])
+        finally:
+            conn.close()
+
     def test_relion2_shifts_are_pixels(self):
         r = self._export("relion", "r2")
         star = r["files"][1]

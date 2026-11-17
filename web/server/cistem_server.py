@@ -3601,7 +3601,7 @@ def refinectf_picture(project_id, job_id, which):
     predicts (`beam_tilt`), from Assets/PhaseDifferences; or, from the
     Zernike fit, the measured and fitted odd and even phase maps
     (`odd_measured`, `odd_fitted`, `even_measured`, `even_fitted`)."""
-    if which not in ("phase_difference", "beam_tilt") + refinectf.ABERRATION_PICTURES:
+    if which not in ("phase_difference", "beam_tilt") + refinectf.ABERRATION_PICTURES and not refinectf.GROUP_PICTURE_RE.match(which):
         return jsonify({"error": "unknown picture"}), 404
     row = _fetch_job_row(project_id, job_id)
     if row is None or row["STAGE"] != refinectf.STAGE:

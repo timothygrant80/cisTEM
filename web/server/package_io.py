@@ -203,24 +203,30 @@ def write_relion(conn, pkg, particles, rows, stack_path, star_path, relion3=Fals
     image_names = {r["IMAGE_ASSET_ID"]: r["FILENAME"] for r in conn.execute("SELECT IMAGE_ASSET_ID, FILENAME FROM IMAGE_ASSETS").fetchall()}
     base = os.path.splitext(star_path)[0]
     with open(star_path, "w") as fh:
+        relion_group = relion_optics_numbers(particles, rows)
         if relion3:
+            # one optics row per group the particles carry (web/CLAUDE.md, "Optics groups"): a group's own Zernike
+            # sets, else group 0's (what the programs apply to it), else the rows' beam tilt
+            sets_of = {int(s.get("group", 0)): s for s in (aberrations or [])}
+            any_zernike = any(any(s.get("odd")) or any(s.get("even")) for s in sets_of.values())
+            tilt_rows = bool(rows and (float(rows[0].get("beam_tilt_x") or 0.0) or float(rows[0].get("beam_tilt_y") or 0.0)))
             optics_labels = ["_rlnOpticsGroup", "_rlnOpticsGroupName", "_rlnAmplitudeContrast", "_rlnSphericalAberration",
                              "_rlnVoltage", "_rlnImagePixelSize", "_rlnImageSize", "_rlnImageDimensionality"]
-            optics_values = ["%i %s %f %f %f %f %i %i" % (1, "opticsGroup1", float(first["AMPLITUDE_CONTRAST"] or 0.07), float(first["SPHERICAL_ABERRATION"] or 2.7),
-                                                      float(first["MICROSCOPE_VOLTAGE"] or 300.0), pixel_size, box, 2)]
-            default_set = next((s for s in (aberrations or []) if int(s.get("group", 0)) == 0), None)
-            if default_set and (any(default_set.get("odd")) or any(default_set.get("even"))):
-                if any(default_set.get("odd")):
-                    optics_labels.append("_rlnOddZernike")
-                    optics_values.append("[" + ",".join("%.8g" % v for v in default_set["odd"]) + "]")
-                if any(default_set.get("even")):
-                    optics_labels.append("_rlnEvenZernike")
-                    optics_values.append("[" + ",".join("%.8g" % v for v in default_set["even"]) + "]")
-            elif rows and (float(rows[0].get("beam_tilt_x") or 0.0) or float(rows[0].get("beam_tilt_y") or 0.0)):
+            if any_zernike:
+                optics_labels += ["_rlnOddZernike", "_rlnEvenZernike"]
+            elif tilt_rows:
                 optics_labels += ["_rlnBeamTiltX", "_rlnBeamTiltY"]
-                optics_values.append("%f %f" % (float(rows[0]["beam_tilt_x"]), float(rows[0]["beam_tilt_y"])))
             _star_loop(fh, "data_optics", optics_labels)
-            fh.write(" ".join(optics_values) + "\n")
+            for group, number in sorted(relion_group.items(), key=lambda kv: kv[1]):
+                values = ["%i %s %f %f %f %f %i %i" % (number, _relion_optics_name(conn, group, number), float(first["AMPLITUDE_CONTRAST"] or 0.07),
+                                                     float(first["SPHERICAL_ABERRATION"] or 2.7), float(first["MICROSCOPE_VOLTAGE"] or 300.0), pixel_size, box, 2)]
+                if any_zernike:
+                    st = sets_of.get(group) or sets_of.get(0) or {}
+                    values.append("[" + ",".join("%.8g" % v for v in (st.get("odd") or [0.0])) + "]")
+                    values.append("[" + ",".join("%.8g" % v for v in (st.get("even") or [0.0])) + "]")
+                elif tilt_rows:
+                    values.append("%f %f" % (float(rows[0]["beam_tilt_x"]), float(rows[0]["beam_tilt_y"])))
+                fh.write(" ".join(values) + "\n")
             _star_loop(fh, "data_particles", _RELION_PARTICLE_LABELS + ["_rlnOriginXAngst", "_rlnOriginYAngst", "_rlnOpticsGroup", "_rlnRandomSubset"])
         else:
             _star_loop(fh, "data_", _RELION_PARTICLE_LABELS + ["_rlnOriginX", "_rlnOriginY"])
@@ -240,19 +246,49 @@ def write_relion(conn, pkg, particles, rows, stack_path, star_path, relion3=Fals
                     random_subset = int(r["assigned_subset"])
                 else:
                     random_subset = 1 if random_subset == 2 else 2
-                fh.write(common + " %f %f %i %i\n" % (-r["x_shift"], -r["y_shift"], 1, random_subset))
+                fh.write(common + " %f %f %i %i\n" % (-r["x_shift"], -r["y_shift"], relion_group[_particle_group(p, r)], random_subset))
             else:
                 fh.write(common + " %f %f\n" % (-r["x_shift"] / ps, -r["y_shift"] / ps))
     files.append(star_path)
 
     if relion3:
-        files.extend(_write_relion3_micrographs(conn, particles, first, pixel_size, base))
+        files.extend(_write_relion3_micrographs(conn, particles, first, pixel_size, base, relion_group))
     return files
 
 
-def _write_relion3_micrographs(conn, particles, first, pixel_size, base):
+def _particle_group(p, r):
+    """A particle's optics group: the refinement row's beam_tilt_group, else the contained row's OPTICS_GROUP, else 0."""
+    g = r.get("beam_tilt_group")
+    if g is None and "OPTICS_GROUP" in p.keys():
+        g = p["OPTICS_GROUP"]
+    return int(g or 0)
+
+
+def relion_optics_numbers(particles, rows):
+    """cisTEM group -> RELION optics group number (1-based) for the groups the particles carry: a group of its own
+    keeps its number (RELION's are 1-based, as ours are above 0), the ungrouped (0) become the next number after
+    the last, so a star exported and imported again comes back with the same groups."""
+    groups = sorted({_particle_group(p, r) for p, r in zip(particles, rows)})
+    numbers = {g: g for g in groups if g > 0}
+    if 0 in groups:
+        numbers[0] = (max(numbers.values()) + 1) if numbers else 1
+    return numbers
+
+
+def _relion_optics_name(conn, group, number):
+    if group == 0:
+        return "opticsGroup%i" % number
+    row = conn.execute("SELECT NAME FROM OPTICS_GROUPS WHERE GROUP_ID=?", (int(group),)).fetchone() if rp._table_exists(conn, "OPTICS_GROUPS") else None
+    name = (row["NAME"] if row and row["NAME"] else "opticsGroup%i" % number)
+    return "".join(c if c.isalnum() or c in "_-." else "_" for c in str(name)) or "opticsGroup%i" % number
+
+
+def _write_relion3_micrographs(conn, particles, first, pixel_size, base, relion_group=None):
     """`<base>_corrected_micrographs.star` and a `<base>_motioncorr_<image>.star`
-    per parent image with a movie alignment in the project."""
+    per parent image with a movie alignment in the project. `relion_group` maps
+    the cisTEM optics groups to RELION's numbers (relion_optics_numbers); each
+    micrograph goes with its image's group."""
+    relion_group = relion_group or {0: 1}
     files = []
     image_ids = []
     for p in particles:
@@ -269,8 +305,9 @@ def _write_relion3_micrographs(conn, particles, first, pixel_size, base):
                 movie_ps = float(movie["PIXEL_SIZE"] or pixel_size)
         _star_loop(mf, "data_optics", ["_rlnOpticsGroupName", "_rlnOpticsGroup", "_rlnMicrographOriginalPixelSize", "_rlnVoltage",
                                        "_rlnSphericalAberration", "_rlnAmplitudeContrast", "_rlnMicrographPixelSize"])
-        mf.write("%s %i %f %f %f %f %f\n" % ("opticsGroup1", 1, movie_ps if movie_ps is not None else pixel_size, float(first["MICROSCOPE_VOLTAGE"] or 300.0),
-                                             float(first["SPHERICAL_ABERRATION"] or 2.7), float(first["AMPLITUDE_CONTRAST"] or 0.07), pixel_size))
+        for group, number in sorted(relion_group.items(), key=lambda kv: kv[1]):
+            mf.write("%s %i %f %f %f %f %f\n" % (_relion_optics_name(conn, group, number), number, movie_ps if movie_ps is not None else pixel_size, float(first["MICROSCOPE_VOLTAGE"] or 300.0),
+                                                 float(first["SPHERICAL_ABERRATION"] or 2.7), float(first["AMPLITUDE_CONTRAST"] or 0.07), pixel_size))
         _star_loop(mf, "data_micrographs", ["_rlnMicrographName", "_rlnMicrographMetadata", "_rlnOpticsGroup"])
         for iid in image_ids:
             image = conn.execute("SELECT * FROM IMAGE_ASSETS WHERE IMAGE_ASSET_ID=?", (iid,)).fetchone()
@@ -282,7 +319,8 @@ def _write_relion3_micrographs(conn, particles, first, pixel_size, base):
             if movie is None or alignment is None or not rp._table_exists(conn, shifts_table):
                 continue  # an imported micrograph: no motion correction to describe
             mc_path = "{}_motioncorr_{:06d}.star".format(base, int(iid))
-            mf.write("%s %s %i\n" % (image["FILENAME"], mc_path, 1))
+            image_group = int((image["OPTICS_GROUP"] if "OPTICS_GROUP" in image.keys() else 0) or 0)
+            mf.write("%s %s %i\n" % (image["FILENAME"], mc_path, relion_group.get(image_group, relion_group.get(0, 1))))
             mps = float(movie["PIXEL_SIZE"] or pixel_size)
             with open(mc_path, "w") as cf:
                 cf.write(" \ndata_general\n \n")
@@ -378,16 +416,11 @@ def read_frealign_par(path):
 _RELION_COLUMNS = {"_rlnAngleRot": "phi", "_rlnAngleTilt": "theta", "_rlnAnglePsi": "psi", "_rlnCoordinateX": "x_coord", "_rlnCoordinateY": "y_coord",
                    "_rlnOriginX": "x_shift", "_rlnOriginY": "y_shift", "_rlnOriginXAngst": "x_shift_angst", "_rlnOriginYAngst": "y_shift_angst",
                    "_rlnDefocusU": "defocus_1", "_rlnDefocusV": "defocus_2", "_rlnDefocusAngle": "defocus_angle", "_rlnPhaseShift": "phase_shift",
-                   "_rlnRandomSubset": "assigned_subset", "_rlnImageName": "image_name", "_rlnMicrographName": "micrograph_name"}
+                   "_rlnRandomSubset": "assigned_subset", "_rlnImageName": "image_name", "_rlnMicrographName": "micrograph_name",
+                   "_rlnOpticsGroup": "optics_group"}
 
 
-def read_relion_star(path):
-    """BasicStarFileReader::ReadFile(): the particle rows of a Relion star
-    file (the `data_particles` block of a 3.1 file, else the first loop that
-    carries `_rlnAngleRot`). Requires the three angles, the origins and
-    DefocusU; the rest default. Positions in the stack are the line numbers,
-    shifts in pixels unless the Angst columns are present, phase shifts in
-    degrees (converted to radians as the reader does)."""
+def _star_blocks(path):
     blocks, current = [], None
     with open(path) as fh:
         for line in fh:
@@ -405,6 +438,52 @@ def read_relion_star(path):
                 current["labels"].append(s.split()[0])
             else:
                 current["rows"].append(s.split())
+    return blocks
+
+
+def _zernike_list(text):
+    return [float(v) for v in text.strip("[]").split(",") if v.strip()]
+
+
+def read_relion_optics(path):
+    """The Zernike sets of a RELION 3.1 star's data_optics block, as refinements.save_aberrations takes them
+    (group = rlnOpticsGroup); [] when the block or the Zernike columns are absent. A row's beam tilt
+    (rlnBeamTiltX/Y, mrad) becomes the odd set RELION's insertTilt would give, so it is applied the same way."""
+    blocks = [b for b in _star_blocks(path) if b["name"] == "data_optics"]
+    if not blocks:
+        return []
+    labels = blocks[0]["labels"]
+    idx = {l: i for i, l in enumerate(labels)}
+    if "_rlnOpticsGroup" not in idx or not ({"_rlnOddZernike", "_rlnEvenZernike", "_rlnBeamTiltX"} & set(idx)):
+        return []
+    sets = []
+    for tok in blocks[0]["rows"]:
+        if len(tok) < len(labels):
+            continue
+        group = int(float(tok[idx["_rlnOpticsGroup"]]))
+        odd = _zernike_list(tok[idx["_rlnOddZernike"]]) if "_rlnOddZernike" in idx else []
+        even = _zernike_list(tok[idx["_rlnEvenZernike"]]) if "_rlnEvenZernike" in idx else []
+        if not any(odd) and "_rlnBeamTiltX" in idx and "_rlnBeamTiltY" in idx:
+            tx, ty = float(tok[idx["_rlnBeamTiltX"]]), float(tok[idx["_rlnBeamTiltY"]])
+            if tx or ty:
+                cs = float(tok[idx["_rlnSphericalAberration"]]) if "_rlnSphericalAberration" in idx else 2.7
+                kv = float(tok[idx["_rlnVoltage"]]) if "_rlnVoltage" in idx else 300.0
+                import aberrations
+                odd = [float(v) for v in aberrations.odd_coefficients_for_beam_tilt(tx, ty, 0.0, 0.0, cs, kv)]
+        if any(odd) or any(even):
+            sets.append({"group": group, "odd": odd, "even": even,
+                         "odd_order": 3 if len(odd) <= 6 else 5 if len(odd) <= 12 else 7, "even_order": 4 if len(even) <= 9 else 6 if len(even) <= 16 else 8})
+    return sets
+
+
+def read_relion_star(path):
+    """BasicStarFileReader::ReadFile(): the particle rows of a Relion star
+    file (the `data_particles` block of a 3.1 file, else the first loop that
+    carries `_rlnAngleRot`). Requires the three angles, the origins and
+    DefocusU; the rest default. Positions in the stack are the line numbers,
+    shifts in pixels unless the Angst columns are present, phase shifts in
+    degrees (converted to radians as the reader does)."""
+    blocks = _star_blocks(path)
     wanted = [b for b in blocks if b["name"] == "data_particles"] or [b for b in blocks if "_rlnAngleRot" in b["labels"]]
     if not wanted:
         raise ValueError("Couldn't find _rlnAngleRot in star file ({})".format(path))
@@ -433,7 +512,8 @@ def read_relion_star(path):
         row = {"position_in_stack": n, "phi": val("phi"), "theta": val("theta"), "psi": val("psi"),
                "x_shift": val("x_shift_angst") if in_angst else val("x_shift"), "y_shift": val("y_shift_angst") if in_angst else val("y_shift"),
                "defocus_1": val("defocus_1"), "defocus_angle": val("defocus_angle"), "phase_shift": math.radians(val("phase_shift")),
-               "x_coord": val("x_coord"), "y_coord": val("y_coord"), "assigned_subset": int(val("assigned_subset", -1))}
+               "x_coord": val("x_coord"), "y_coord": val("y_coord"), "assigned_subset": int(val("assigned_subset", -1)),
+               "optics_group": int(val("optics_group", 0))}
         row["defocus_2"] = val("defocus_2", row["defocus_1"])
         rows.append(row)
     return rows, in_angst
@@ -538,6 +618,10 @@ def import_package(conn, project_id, params, log=None):
     rp.insert_package(conn, package_id, name, stack_path, box, pixel_size, symmetry, molecular_weight, largest_dimension, 1, contained,
                       refinement_id, white_protein=white)
     rp.insert_initial_refinement(conn, refinement_id, package_id, "Imported Parameters", [rows], box, pixel_size, molecular_weight, angular=True)
+    if fmt == "relion":
+        sets = read_relion_optics(metadata_path)   # a RELION 3.1 optics table's Zernike sets (or beam tilts), per group
+        if sets:
+            refinements.save_aberrations(conn, refinement_id, sets)
     if log:
         log("imported {} particles as package #{} ({})".format(len(contained), package_id, name))
     return {"refinement_package_asset_id": package_id, "name": name, "particles": len(contained), "stack_filename": stack_path,

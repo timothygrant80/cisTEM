@@ -37,6 +37,7 @@ to zero regardless of the box.
 import json
 import math
 import os
+import re
 import threading
 from pathlib import Path
 
@@ -1153,12 +1154,28 @@ def beam_tilt_picture(conn, row, which):
     (Assets/PhaseDifferences), as a PNG through the image preview renderer."""
     state = _load_state(conn, row["JOB_ID"])
     bt = (state or {}).get("beam_tilt") or {}
-    files = ((state or {}).get("aberrations") or {}).get("files") or {}
-    path = files.get(which) if which in ABERRATION_PICTURES else bt.get("phase_difference_file" if which == "phase_difference" else "beam_tilt_file")
+    ab = (state or {}).get("aberrations") or {}
+    files = ab.get("files") or {}
+    m = GROUP_PICTURE_RE.match(which)
+    if m:   # one optics group's map: group_<g>_<name>
+        path = (ab.get("group_files") or {}).get(m.group(1), {}).get(m.group(2))
+    else:
+        path = files.get(which) if which in ABERRATION_PICTURES else bt.get("phase_difference_file" if which == "phase_difference" else "beam_tilt_file")
     return path if path and os.path.isfile(path) else None
 
 
 ABERRATION_PICTURES = ("odd_measured", "odd_fitted", "even_measured", "even_fitted")
+GROUP_PICTURE_RE = re.compile(r"^group_(\d+)_(odd_measured|odd_fitted|even_measured|even_fitted)$")
+
+
+def group_pictures(state):
+    """The per-group map names on disk, group_<g>_<name>, for ctf_refinement_result's `pictures`."""
+    out = []
+    for g, files in sorted(((ab := (state or {}).get("aberrations") or {}).get("group_files") or {}).items(), key=lambda kv: int(kv[0])):
+        for name in ABERRATION_PICTURES:
+            if files.get(name) and os.path.isfile(files[name]):
+                out.append("group_{}_{}".format(g, name))
+    return out
 
 
 def ctf_refinement_result(conn, row):
@@ -1176,7 +1193,7 @@ def ctf_refinement_result(conn, row):
     for k in ("phase_difference_file", "beam_tilt_file"):
         bt.pop(k, None)
     ab = state.get("aberrations")
-    pictures = [w for w in ("phase_difference", "beam_tilt") + ABERRATION_PICTURES if beam_tilt_picture(conn, row, w)]
+    pictures = [w for w in ("phase_difference", "beam_tilt") + ABERRATION_PICTURES if beam_tilt_picture(conn, row, w)] + group_pictures(state)
     return {
         "job_id": row["JOB_ID"], "job_number": row["JOB_NUMBER"], "status": row["STATUS"],
         "refine_defocus": bool(s.get("refine_defocus")), "refine_beam_tilt": bool(s.get("refine_beam_tilt")), "zernike": bool(state.get("zernike")),

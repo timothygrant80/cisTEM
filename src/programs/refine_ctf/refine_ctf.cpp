@@ -1,4 +1,29 @@
 #include "../../core/core_headers.h"
+#include <map>
+
+/*
+ * The same sums per optics group -- the particles' beam_tilt_group column (cisTEM's name for it; web/CLAUDE.md,
+ * "Optics groups") -- so the server can fit each group its own beam tilt and aberration set: the image-shift
+ * positions of a beam-image-shift collection, different sessions. Accumulated beside the whole-dataset sums (which
+ * the beam-tilt grid search and a single-group fit still use) whenever any particle's group is not 0, and written
+ * as one file per group next to the whole-dataset file, <base>_group_<g>.mrc in the same seven-section layout,
+ * with <base>_groups.txt listing "<group> <number of images>" per line. Unsent and unwritten when every group is 0.
+ */
+class GroupSums {
+  public:
+    Image even_sums; // the five even sums, (nx/2+1) x ny x 5
+    Image phase_sum; // the complex phase-difference sum (the odd sum), before normalisation
+    long  number_of_images = 0;
+
+    void Allocate(int x_size, int y_size) {
+        even_sums.Allocate(x_size / 2 + 1, y_size, 5, true);
+        even_sums.SetToConstant(0.0f);
+        phase_sum.Allocate(x_size, y_size, false);
+        phase_sum.SetToConstant(0.0f);
+        number_of_images = 0;
+    }
+};
+
 
 class
         RefineCTFApp : public MyApp {
@@ -17,6 +42,7 @@ class
     ReconstructedVolume input_3d, unbinned_3d;
     Image               sum_for_master;
     Image               even_sums_for_master; // the five even-aberration sums (AccumulateEvenAberrationSums), added over the workers
+    std::map<int, GroupSums> group_sums_for_master;       // the same sums per optics group, added over the workers (WriteGroupSums)
     long                total_results_for_master;
     int                 number_of_received_results;
     float               voltage_for_master;
@@ -238,6 +264,35 @@ static void WriteAberrationSums(const std::string& filename, Image& even_sums, I
     stack.QuickAndDirtyWriteSlices(filename, 1, 7, true, pixel_size);
 }
 
+static std::string GroupSumsBase(const std::string& filename) {
+    const size_t dot   = filename.rfind('.');
+    const size_t slash = filename.rfind('/');
+    if ( dot == std::string::npos || (slash != std::string::npos && dot < slash) )
+        return filename;
+    return filename.substr(0, dot);
+}
+
+static void WriteGroupSums(const std::string& filename, std::map<int, GroupSums>& groups, float pixel_size, float mask_falloff_pixels) {
+    if ( filename.empty( ) || filename == "/dev/null" || groups.empty( ) )
+        return;
+    const std::string base = GroupSumsBase(filename);
+    FILE*             list = fopen((base + "_groups.txt").c_str( ), "w");
+    for ( auto& entry : groups ) {
+        GroupSums& g = entry.second;
+        if ( g.number_of_images <= 0 )
+            continue;
+        Image odd_sum;
+        odd_sum.CopyFrom(&g.phase_sum);
+        odd_sum.DivideByConstant(float(g.number_of_images));
+        odd_sum.CosineMask(0.45f, mask_falloff_pixels);
+        WriteAberrationSums(base + Format("_group_%i.mrc", entry.first), g.even_sums, odd_sum, pixel_size);
+        if ( list != NULL )
+            fprintf(list, "%i %li\n", entry.first, g.number_of_images);
+    }
+    if ( list != NULL )
+        fclose(list);
+}
+
 bool RefineCTFApp::DoCalculation( ) {
     DateTime start_time = DateTime::Now( );
 
@@ -354,9 +409,14 @@ bool RefineCTFApp::DoCalculation( ) {
     // (AccumulateEvenAberrationSums), the complex CTF (-sin gamma - i cos gamma) and the CTF-free projection they need
     Image even_sums;
     Image even_sums_local;
+    Image even_sums_particle; // one particle's five sums, added to the thread's total and to its group's
     Image complex_ctf_image_local;
     Image projection_without_ctf_local;
     CTF   input_ctf;
+    // the per-group sums (GroupSums), shared by the threads and added to under a lock -- a particle's refinement costs
+    // far more than the add; has_groups is whether any particle's beam_tilt_group is not 0
+    std::map<int, GroupSums> group_sums;
+    bool                     has_groups = false;
     //	RandomNumberGenerator 		random_particle(true);
     ReconstructedVolume       input_3d_local, unbinned_3d_local;
     ImageProjectionComparison comparison_object;
@@ -600,6 +660,8 @@ bool RefineCTFApp::DoCalculation( ) {
         phase_difference_sum.SetToConstant(0.0f);
         even_sums.Allocate(input_stack.ReturnXSize( ) / 2 + 1, input_stack.ReturnYSize( ), 5, true);
         even_sums.SetToConstant(0.0f);
+        for ( long line = 0; line < input_star_file.ReturnNumberofLines( ) && ! has_groups; line++ )
+            has_groups = input_star_file.ReturnBeamTiltGroup(line) != 0;
     }
 
     SetupNewReference3D(currently_open_3d_filename, inner_mask_radius, outer_mask_radius, pixel_size, mask_falloff, threshold_input_3d, padding, beamtilt_refinement, low_resolution_limit, high_resolution_limit, molecular_mass_kDa);
@@ -747,13 +809,13 @@ bool RefineCTFApp::DoCalculation( ) {
         SetupNewReference3D(currently_open_3d_filename, inner_mask_radius, outer_mask_radius, pixel_size, mask_falloff, threshold_input_3d, padding, beamtilt_refinement, low_resolution_limit, high_resolution_limit, molecular_mass_kDa);
 
 // firstprivate(I) is necessary for GCC-9 compatibility, see "OpenMP data sharing" at https://gcc.gnu.org/gcc-9/porting_to.html
-#pragma omp parallel num_threads(max_threads) default(none) shared(aberration_table, even_sums, parameter_average, parameter_variance, input_star_file, input_stack, phase_difference_sum, max_threads,                                                            \
+#pragma omp parallel num_threads(max_threads) default(none) shared(aberration_table, even_sums, group_sums, has_groups, parameter_average, parameter_variance, input_star_file, input_stack, phase_difference_sum, max_threads,                                   \
                                                                    first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d, \
                                                                    refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, binned_image_box_size,                     \
                                                                    binning_factor_refine, cg_accuracy, low_resolution_limit, input_statistics, output_star_file, beamtilt_refinement, currently_open_3d_filename, filename_counter)   \
         firstprivate(I) private(image_counter, refine_particle, current_line_local, phase_difference_sum_local, input_parameters, temp_float, output_parameters, input_ctf, variance, average, comparison_object,                     \
                                 best_score, defocus_i, score, cg_starting_point, input_image_local, phase_difference_image_local, input_3d_local, unbinned_3d_local,                                                                  \
-                                binned_image, projection_image_local, best_defocus_i, ctf_image_local, padded_projection_image_local, even_sums_local, complex_ctf_image_local, projection_without_ctf_local)
+                                binned_image, projection_image_local, best_defocus_i, ctf_image_local, padded_projection_image_local, even_sums_local, even_sums_particle, complex_ctf_image_local, projection_without_ctf_local)
         { // for omp
 
             CTF   ctf_copy;
@@ -784,6 +846,7 @@ bool RefineCTFApp::DoCalculation( ) {
                 phase_difference_sum_local.SetToConstant(0.0f);
                 even_sums_local.Allocate(input_stack.ReturnXSize( ) / 2 + 1, input_stack.ReturnYSize( ), 5, true);
                 even_sums_local.SetToConstant(0.0f);
+                even_sums_particle.Allocate(input_stack.ReturnXSize( ) / 2 + 1, input_stack.ReturnYSize( ), 5, true);
                 complex_ctf_image_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
                 projection_without_ctf_local.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ), false);
             }
@@ -949,7 +1012,9 @@ bool RefineCTFApp::DoCalculation( ) {
                     unbinned_3d_local.density_map->ExtractSlice(projection_without_ctf_local, refine_particle.alignment_parameters, 1.0);
                     projection_without_ctf_local.PhaseShift(refine_particle.alignment_parameters.ReturnShiftX( ) / unbinned_3d_local.pixel_size, refine_particle.alignment_parameters.ReturnShiftY( ) / unbinned_3d_local.pixel_size);
                     projection_without_ctf_local.SwapRealSpaceQuadrants( );
-                    AccumulateEvenAberrationSums(even_sums_local, projection_without_ctf_local, input_image_local, complex_ctf_image_local);
+                    even_sums_particle.SetToConstant(0.0f);
+                    AccumulateEvenAberrationSums(even_sums_particle, projection_without_ctf_local, input_image_local, complex_ctf_image_local);
+                    even_sums_local.AddImage(&even_sums_particle);
                     //				if (padding != 1.0)
                     //				{
                     //					unbinned_3d_local.CalculateProjection(padded_projection_image_local, ctf_image_local, refine_particle.alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
@@ -967,6 +1032,17 @@ bool RefineCTFApp::DoCalculation( ) {
                     phase_difference_image_local.CosineMask(0.95f / 2.0f, 2.0f / phase_difference_image_local.logical_x_dimension);
                     phase_difference_image_local.DivideByConstant(temp_float);
                     phase_difference_sum_local.AddImage(&phase_difference_image_local);
+                    if ( has_groups ) {
+#pragma omp critical(group_sums)
+                        {
+                            GroupSums& group = group_sums[input_parameters.beam_tilt_group];
+                            if ( ! group.phase_sum.is_in_memory )
+                                group.Allocate(input_stack.ReturnXSize( ), input_stack.ReturnYSize( ));
+                            group.even_sums.AddImage(&even_sums_particle);
+                            group.phase_sum.AddImage(&phase_difference_image_local);
+                            group.number_of_images++;
+                        }
+                    }
                 }
 
                 if ( refine_particle.snr > 0.0f )
@@ -1020,6 +1096,7 @@ bool RefineCTFApp::DoCalculation( ) {
                 phase_difference_image_local.Deallocate( );
                 phase_difference_sum_local.Deallocate( );
                 even_sums_local.Deallocate( );
+                even_sums_particle.Deallocate( );
                 complex_ctf_image_local.Deallocate( );
                 projection_without_ctf_local.Deallocate( );
             }
@@ -1048,6 +1125,7 @@ bool RefineCTFApp::DoCalculation( ) {
             //phase_difference_sum.DivideByConstant(float(148436));
             phase_difference_sum.CosineMask(0.45f, pixel_size / mask_falloff);
             WriteAberrationSums(output_aberration_sums, even_sums, phase_difference_sum, pixel_size);
+            WriteGroupSums(output_aberration_sums, group_sums, pixel_size, pixel_size / mask_falloff);
 
             score = FLT_MAX;
 
@@ -1169,6 +1247,15 @@ bool RefineCTFApp::DoCalculation( ) {
             number_of_result_floats += phase_difference_sum.real_memory_allocated;
             const long number_of_even_sum_floats = 5 * long(even_sums.logical_x_dimension) * even_sums.logical_y_dimension;
             number_of_result_floats += number_of_even_sum_floats; // the master tells them apart from the phase sum by the array size
+            // then, when there are optics groups: the number of groups, and per group its number, its image count,
+            // its phase sum and its even sums, in the same layouts as the whole-dataset ones above
+            const long number_of_group_floats = 2 + long(phase_difference_sum.real_memory_allocated) + number_of_even_sum_floats;
+            long       groups_to_send         = 0;
+            for ( auto& entry : group_sums )
+                if ( entry.second.number_of_images > 0 )
+                    groups_to_send++;
+            if ( groups_to_send > 0 )
+                number_of_result_floats += 1 + groups_to_send * number_of_group_floats;
 
             float* result = new float[number_of_result_floats];
             result[0]     = phase_difference_sum.logical_x_dimension;
@@ -1191,6 +1278,23 @@ bool RefineCTFApp::DoCalculation( ) {
                         result[result_array_counter] = even_sums.real_values[even_sums.ReturnReal1DAddressFromPhysicalCoord(i, j, section)];
                         result_array_counter++;
                     }
+
+            if ( groups_to_send > 0 ) {
+                result[result_array_counter++] = groups_to_send;
+                for ( auto& entry : group_sums ) {
+                    GroupSums& group = entry.second;
+                    if ( group.number_of_images <= 0 )
+                        continue;
+                    result[result_array_counter++] = entry.first;
+                    result[result_array_counter++] = group.number_of_images;
+                    for ( pixel_counter = 0; pixel_counter < group.phase_sum.real_memory_allocated; pixel_counter++ )
+                        result[result_array_counter++] = group.phase_sum.real_values[pixel_counter];
+                    for ( int section = 0; section < 5; section++ )
+                        for ( int j = 0; j < group.even_sums.logical_y_dimension; j++ )
+                            for ( int i = 0; i < group.even_sums.logical_x_dimension; i++ )
+                                result[result_array_counter++] = group.even_sums.real_values[group.even_sums.ReturnReal1DAddressFromPhysicalCoord(i, j, section)];
+                }
+            }
 
             SendProgramDefinedResultToMaster(result, number_of_result_floats, job_number_from_gui, expected_number_of_jobs_from_gui);
         }
@@ -1224,9 +1328,10 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float* result_array, long ar
     // the even-aberration sums, when the worker sent them (5 sections of (nx/2+1) x ny after the phase sum)
     const long even_sums_offset = 6 + long(result_array[2]);
     if ( array_size > even_sums_offset ) {
-        const int half_x = int(result_array[0]) / 2 + 1;
-        const int size_y = int(result_array[1]);
-        if ( array_size - even_sums_offset != 5L * half_x * size_y ) {
+        const int  half_x          = int(result_array[0]) / 2 + 1;
+        const int  size_y          = int(result_array[1]);
+        const long even_sum_floats = 5L * half_x * size_y;
+        if ( array_size - even_sums_offset < even_sum_floats ) {
             MyPrintWithDetails("Error: Unexpected size of the even-aberration sums (%li floats for %i x %i)\n\n", array_size - even_sums_offset, half_x, size_y);
         }
         else {
@@ -1241,6 +1346,31 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float* result_array, long ar
                         even_sums_for_master.real_values[even_sums_for_master.ReturnReal1DAddressFromPhysicalCoord(i, j, section)] += result_array[counter];
                         counter++;
                     }
+            // the per-group blocks, when the worker's particles had optics groups (see the worker's send)
+            if ( counter < array_size ) {
+                const long phase_floats       = long(result_array[2]);
+                const long number_of_groups   = long(result_array[counter++]);
+                const long floats_per_group   = 2 + phase_floats + even_sum_floats;
+                if ( array_size - counter != number_of_groups * floats_per_group ) {
+                    MyPrintWithDetails("Error: Unexpected size of the per-group sums (%li floats for %li groups)\n\n", array_size - counter, number_of_groups);
+                }
+                else {
+                    for ( long n = 0; n < number_of_groups; n++ ) {
+                        const int  group_number = int(result_array[counter++]);
+                        const long group_images = long(result_array[counter++]);
+                        GroupSums& group        = group_sums_for_master[group_number];
+                        if ( ! group.phase_sum.is_in_memory )
+                            group.Allocate(int(result_array[0]), size_y);
+                        group.number_of_images += group_images;
+                        for ( long pixel_counter = 0; pixel_counter < phase_floats; pixel_counter++ )
+                            group.phase_sum.real_values[pixel_counter] += result_array[counter++];
+                        for ( int section = 0; section < 5; section++ )
+                            for ( int j = 0; j < size_y; j++ )
+                                for ( int i = 0; i < half_x; i++ )
+                                    group.even_sums.real_values[group.even_sums.ReturnReal1DAddressFromPhysicalCoord(i, j, section)] += result_array[counter++];
+                    }
+                }
+            }
         }
     }
 
@@ -1269,8 +1399,10 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float* result_array, long ar
 
         //		temp.QuickAndDirtyWriteSlice("/tmp/ori.mrc", 1);
         sum_for_master.QuickAndDirtyWriteSlice(phase_error_filename, 1, true);
-        if ( even_sums_for_master.is_in_memory && current_job_package.jobs[0].number_of_arguments > 32 )
+        if ( even_sums_for_master.is_in_memory && current_job_package.jobs[0].number_of_arguments > 32 ) {
             WriteAberrationSums(current_job_package.jobs[0].arguments[32].ReturnStringArgument( ), even_sums_for_master, sum_for_master, pixel_size);
+            WriteGroupSums(current_job_package.jobs[0].arguments[32].ReturnStringArgument( ), group_sums_for_master, pixel_size, pixel_size / 20.0f);
+        }
 
         /*		Printf("Estimating Beam Tilt...\n");
 		std::string phase_error_filename = current_job_package.jobs[0].arguments[7].ReturnStringArgument();

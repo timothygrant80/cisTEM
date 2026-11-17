@@ -73,7 +73,15 @@ class WriteVersionTests(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             info = json.loads(out.read_text())
         self.assertIsNone(info["commit"])
-        self.assertIn("not a git checkout", r.stderr)
+        # the message carries git's own reason (a compile server's old python or git had been reported only as "not a checkout")
+        self.assertIn("git could not describe", r.stderr)
+        self.assertIn("not a git repository", r.stderr)
+
+    def test_the_script_needs_nothing_newer_than_python_3_6(self):
+        # It runs under the installing machine's python3 (CentOS 7: 3.6): no capture_output / text on subprocess.run.
+        src = WRITE_VERSION.read_text()
+        self.assertNotIn("capture_output", src)
+        self.assertNotIn("text=True", src)
 
 
 if __name__ == "__main__":

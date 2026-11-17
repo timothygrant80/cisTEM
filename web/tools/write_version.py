@@ -20,12 +20,19 @@ import subprocess
 import sys
 
 
+# This runs under whatever python3 the machine that installs has -- a CentOS 7 compile server has
+# 3.6 -- so subprocess.run with PIPEs and universal_newlines, not the 3.7 keyword arguments for the same.
+FAILURES = []   # why git had nothing to say, for the message at the end
+
+
 def git(repo, args):
     try:
-        result = subprocess.run(["git"] + args, cwd=repo, capture_output=True, text=True, timeout=10)
-    except Exception:  # noqa: BLE001 -- git missing, not executable, ...
+        result = subprocess.run(["git"] + args, cwd=repo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=10)
+    except Exception as exc:  # noqa: BLE001 -- git missing, not executable, ...
+        FAILURES.append("git {}: {}: {}".format(" ".join(args), type(exc).__name__, exc))
         return None
     if result.returncode != 0:
+        FAILURES.append("git {} (exit {}): {}".format(" ".join(args), result.returncode, " ".join((result.stderr or "").split()) or "no message"))
         return None
     return result.stdout.strip() or None
 
@@ -55,7 +62,8 @@ def main(argv=None):
         json.dump(info, f, indent=2)
         f.write("\n")
     if info["commit"] is None:
-        print("write_version: {} is not a git checkout (or git is not installed); wrote {} with no version".format(args.repo, args.out), file=sys.stderr)
+        print("write_version: git could not describe {}; wrote {} with no version. The reason: {}".format(
+            os.path.abspath(args.repo), args.out, "; ".join(FAILURES[:1]) or "unknown"), file=sys.stderr)
     else:
         print("wrote {}: {} ({})".format(args.out, info["commit"], info["branch"]))
     return 0
